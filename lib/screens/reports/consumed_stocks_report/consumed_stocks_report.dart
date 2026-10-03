@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -74,14 +75,7 @@ class _ConsumedStocksReportScreenState
   void _showLoadError(Object error) {
     debugPrint('Error fetching consumed stocks report: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('consumed_stocks_report.unavailable'.tr),
-          backgroundColor: Colors.red,
-        ),
-      );
+    AppToast.error(context, 'consumed_stocks_report.unavailable'.tr);
   }
 
   void loadInitData({int page = 1}) async {

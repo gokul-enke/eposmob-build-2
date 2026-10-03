@@ -200,7 +200,10 @@
     "btn_save_address": "حفظ العنوان",
     "btn_update_address": "تحديث العنوان",
     "required": "مطلوب",
-    "pincode_required": "الرمز البريدي مطلوب"
+    "pincode_required": "الرمز البريدي مطلوب",
+    "section_title": "معلومات العنوان",
+    "refresh": "تحديث",
+    "refresh_failed": "تعذر تحديث العناوين"
   },
   "notifications": {
     "page_title": "الإشعارات"
@@ -1487,7 +1490,25 @@
     "empty_subtitle": "حاول تغيير الفلاتر أعلاه أو مسحها.",
     "count_on_page": "@count عملاء في هذه الصفحة",
     "count_on_page_one": "عميل واحد في هذه الصفحة",
-    "not_provided": "غير متوفر"
+    "not_provided": "غير متوفر",
+    "filters_title": "البحث والفلاتر",
+    "filters_summary": "الاسم والبريد الإلكتروني والهاتف والرصيد",
+    "filters_hide": "إخفاء عناصر التصفية",
+    "form": {
+      "section_details": "بيانات العميل",
+      "section_address": "العنوان",
+      "section_business": "بيانات النشاط التجاري",
+      "section_account": "الحساب"
+    },
+    "export": "تصدير إلى Excel",
+    "exporting": "جارٍ التصدير...",
+    "export_failed": "تعذّر تصدير العملاء",
+    "export_share_text": "قائمة العملاء",
+    "export_col_no": "م",
+    "export_col_alt_phone": "هاتف بديل",
+    "export_col_type": "النوع",
+    "show_filters": "إظهار الفلاتر",
+    "hide_filters": "إخفاء الفلاتر"
   },
   "suppliers": {
     "title": "الموردون",
@@ -1506,14 +1527,16 @@
     "zero": "صفر",
     "number": "الرقم",
     "action": "الإجراء",
-    "reset": "إعادة تعيين"
+    "reset": "إعادة تعيين",
+    "search_name": "البحث بالاسم",
+    "search_email": "البحث بالبريد الإلكتروني",
+    "search_phone": "البحث بالهاتف"
   },
   "supplier_list": {
     "subtitle": "إدارة بيانات الموردين وجهات الاتصال والأرصدة.",
     "find": "البحث عن الموردين",
     "find_hint": "تتحدث النتائج أثناء الكتابة.",
     "count_on_page": "@count موردين في هذه الصفحة",
-
     "error_fetching": "خطأ في جلب الموردين",
     "error_searching": "خطأ في البحث عن الموردين",
     "no_suppliers_desktop": "لم يتم العثور على موردين",
@@ -4345,7 +4368,36 @@
     "label_id": "المعرف:",
     "error_update_failed": "فشل تحديث العميل",
     "error_update_retry": "فشل تحديث العميل. يرجى المحاولة مرة أخرى.",
-    "updated_successfully": "تم تحديث العميل بنجاح"
+    "updated_successfully": "تم تحديث العميل بنجاح",
+    "view_transactions_count": "@count معاملات",
+    "view_more_transactions_count": "و@count معاملات أخرى...",
+    "view_label_transaction": "معاملة",
+    "col_reference": "المرجع",
+    "col_date": "التاريخ",
+    "col_type": "النوع",
+    "col_payment_method": "طريقة الدفع",
+    "col_amount": "المبلغ",
+    "col_status": "الحالة",
+    "col_action": "الإجراء",
+    "col_order": "رقم الطلب",
+    "col_payment_status": "الدفع",
+    "col_items": "الأصناف",
+    "col_total": "الإجمالي",
+    "col_qty": "الكمية",
+    "col_price": "السعر",
+    "type_credit": "دائن",
+    "type_debit": "مدين",
+    "label_amount": "المبلغ",
+    "tx_total_credit": "إجمالي الدائن",
+    "tx_total_debit": "إجمالي المدين",
+    "tx_net": "الصافي",
+    "tx_on_page": "المعاملات في هذه الصفحة: @count",
+    "orders_on_page": "الطلبات في هذه الصفحة: @count",
+    "tx_load_failed": "تعذر تحميل المعاملات",
+    "tx_date_range": "نطاق التاريخ",
+    "tx_date_range_hint": "اختر تاريخ البداية والنهاية",
+    "history_last_purchases": "آخر @count عمليات شراء",
+    "history_last_purchase_one": "آخر عملية شراء"
   },
   "login": {
     "title": "تسجيل الدخول",
@@ -5414,7 +5466,8 @@
     "min_redeemable": "الحد الأدنى للنقاط القابلة للاسترداد",
     "price_per_point": "السعر لكل نقطة",
     "valid_from": "صالح من",
-    "valid_until": "صالح حتى"
+    "valid_until": "صالح حتى",
+    "tier_default": "برونزي"
   },
   "customer_chat": {
     "err_load": "فشل تحميل سجل المحادثة",
@@ -5425,7 +5478,8 @@
     "btn_try_again": "حاول مرة أخرى",
     "title_no_messages": "لا توجد رسائل بعد",
     "msg_start_conversation": "ابدأ محادثة مع",
-    "hint_message": "اكتب رسالتك هنا..."
+    "hint_message": "اكتب رسالتك هنا...",
+    "btn_send": "إرسال"
   },
   "customer_orders": {
     "err_no_customer_id": "معرف العميل غير متاح.",
@@ -5551,7 +5605,18 @@
     "trans_detail_payment_method": "طريقة الدفع",
     "trans_detail_date": "التاريخ",
     "trans_label_no_reference": "لا يوجد مرجع",
-    "id_prefix": "ID: "
+    "id_prefix": "ID: ",
+    "trans_type_credit": "دائن",
+    "trans_type_debit": "مدين",
+    "trans_label_date_range": "نطاق التاريخ",
+    "trans_hint_date_range": "اختر نطاق التاريخ",
+    "trans_on_page": "@count معاملة في هذه الصفحة",
+    "trans_load_failed": "تعذر تحميل المعاملات",
+    "col_amount": "المبلغ",
+    "col_items": "الأصناف",
+    "orders_purchase_title": "مشتريات رقم @number",
+    "orders_on_page": "@count أمر شراء في هذه الصفحة",
+    "orders_load_failed": "تعذر تحميل أوامر الشراء"
   },
   "customer_transactions": {
     "msg_preparing_report": "جارٍ إعداد تقرير المعاملات...",
@@ -6159,6 +6224,10 @@
     "export_overwrite_title": "استبدال الملف الموجود؟",
     "export_overwrite_message": "الملف @name موجود بالفعل. هل تريد استبداله؟",
     "export_cancel": "إلغاء",
-    "export_overwrite": "استبدال"
+    "export_overwrite": "استبدال",
+    "filters": "الفلاتر",
+    "hide_filters": "إخفاء الفلاتر",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير..."
   }
 }

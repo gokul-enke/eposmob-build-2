@@ -9,11 +9,11 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_title.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/add_to_order.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/kiosk/kiosk.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 
+import 'package:pos_machine/core/utils/phone_number_formatter.dart';
 import '../../extensions/widget_functions.dart';
 
 class KioskBillingPage extends StatefulWidget {
@@ -275,7 +276,7 @@ class KioskBillingPageState extends State<KioskBillingPage> {
           width: size.width,
           child: TextFormField(
             keyboardType: TextInputType.number,
-            inputFormatters: [PhoneNumberFormatter()],
+            inputFormatters: [const PhoneNumberFormatter()],
             cursorColor: ColorManager.kPrimaryColor,
             decoration: const InputDecoration(
               border: InputBorder.none,

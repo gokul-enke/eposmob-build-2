@@ -7,7 +7,7 @@ import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';

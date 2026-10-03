@@ -8,7 +8,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

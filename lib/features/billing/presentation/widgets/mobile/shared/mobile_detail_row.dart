@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -97,14 +98,9 @@ class MobileCopyChip extends StatelessWidget {
     return InkWell(
       onTap: () {
         Clipboard.setData(ClipboardData(text: value));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(label != null
+        AppToast.success(context, label != null
                 ? '$label copied to clipboard'
-                : 'Copied to clipboard'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+                : 'Copied to clipboard', duration: const Duration(seconds: 1));
       },
       borderRadius: BorderRadius.circular(6),
       child: Container(

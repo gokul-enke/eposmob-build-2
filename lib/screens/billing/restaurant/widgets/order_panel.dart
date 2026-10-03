@@ -10,13 +10,13 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/order_submission_payload.dart';
@@ -31,7 +31,7 @@ import '../../../../components/build_round_button.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
 import '../../../../resources/style_manager.dart';
-import '../../../../screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 import '../../../../features/billing/presentation/widgets/payment_method_modal.dart';
 import '../../../../providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -6101,9 +6101,7 @@ class OrderPanelState extends State<OrderPanel> {
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
-            final result = await showAddCustomerModal(
-                context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill, customerName: initialName);
+            final result = await showAddCustomerDialog(context, mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];

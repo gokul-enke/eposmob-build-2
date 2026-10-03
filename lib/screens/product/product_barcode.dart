@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -56,17 +57,16 @@ class BarcodeRow {
       final newNames = <dynamic, dynamic>{};
       originalNames.forEach((key, value) {
         if (value is String) {
-          newNames[key] = value.trim().isNotEmpty
-              ? '${value.trim()}$suffix'
-              : value;
+          newNames[key] =
+              value.trim().isNotEmpty ? '${value.trim()}$suffix' : value;
         } else if (value is Map) {
           final newSubMap = <dynamic, dynamic>{};
           value.forEach((subKey, subValue) {
             if (subKey == 'name' || subKey == 'value') {
               newSubMap[subKey] =
                   (subValue != null && subValue.toString().trim().isNotEmpty)
-                  ? '${subValue.toString().trim()}$suffix'
-                  : subValue;
+                      ? '${subValue.toString().trim()}$suffix'
+                      : subValue;
             } else {
               newSubMap[subKey] = subValue;
             }
@@ -86,8 +86,8 @@ class BarcodeRow {
             if (key == 'name' || key == 'value') {
               newItem[key] =
                   (value != null && value.toString().trim().isNotEmpty)
-                  ? '${value.toString().trim()}$suffix'
-                  : value;
+                      ? '${value.toString().trim()}$suffix'
+                      : value;
             } else {
               newItem[key] = value;
             }
@@ -250,7 +250,7 @@ class BarcodeRow {
     // bleed into the base row's print output.
     final baseStock =
         product.stock?.where((s) => s.productVariantId == null).toList() ??
-        const [];
+            const [];
     return product.copyWith(stock: baseStock);
   }
 }
@@ -342,9 +342,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       ).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('product_barcode.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'product_barcode.auth_token_missing'.tr);
         if (mounted) setState(() => initLoading = false);
         return;
       }
@@ -379,16 +377,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     } catch (error) {
       debugPrint("Error loading products: $error");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'product_barcode.error_loading_products'.tr.replaceAll(
-                '@error',
-                error.toString(),
-              ),
-            ),
-          ),
-        );
+        AppToast.error(
+            context,
+            'product_barcode.error_loading_products'.tr.replaceAll(
+                  '@error',
+                  error.toString(),
+                ));
         setState(() => initLoading = false);
       }
     }
@@ -440,9 +434,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           ? null
           : productNameController.text,
       categoryId: catId,
-      filterBarcode: barcodeController.text.isEmpty
-          ? null
-          : barcodeController.text,
+      filterBarcode:
+          barcodeController.text.isEmpty ? null : barcodeController.text,
       page: pageNo,
     );
   }
@@ -641,8 +634,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           .toList();
 
       if (validRows.length < selectedRows.length) {
-        final bool shouldContinue =
-            await showDialog(
+        final bool shouldContinue = await showDialog(
               context: context,
               builder: (context) => AlertDialog(
                 title: Text('product_barcode.missing_barcode_title'.tr),
@@ -675,9 +667,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         }
       }
 
-      final validProducts = validRows
-          .map((r) => r.toProductForPrint())
-          .toList();
+      final validProducts =
+          validRows.map((r) => r.toProductForPrint()).toList();
 
       if (!mounted) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
@@ -794,9 +785,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
-      items: categories
-          .where((category) => category != "All Categories")
-          .toList(),
+      items:
+          categories.where((category) => category != "All Categories").toList(),
       onChanged: (String? newValue) {
         setState(() {
           categoryController.text = newValue ?? "All Categories";
@@ -909,9 +899,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       title: _isPrinting
           ? 'product_barcode.printing'.tr
           : 'product_barcode.print_selected'.tr.replaceAll(
-              '@count',
-              _selectedProductKeys.length.toString(),
-            ),
+                '@count',
+                _selectedProductKeys.length.toString(),
+              ),
       fct: () {
         if (_isPrinting) return;
         final selectedRows = _selectedProductsByKey.values.toList();
@@ -1074,7 +1064,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       Clipboard.setData(ClipboardData(text: value));
                       showScaffold(
                         context: context,
-                        message: 'product_barcode.copied_to_clipboard'.tr
+                        message: 'product_barcode.copied_to_clipboard'
+                            .tr
                             .replaceAll('@label', label),
                       );
                     },
@@ -1215,8 +1206,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
-    final allSelected =
-        barcodeRows.isNotEmpty &&
+    final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
 
     return Column(
@@ -1299,8 +1289,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   alpha: 0.07,
                                 )
                               : index % 2 == 0
-                              ? Colors.white
-                              : Colors.grey.withValues(alpha: 0.06),
+                                  ? Colors.white
+                                  : Colors.grey.withValues(alpha: 0.06),
                         ),
                         children: [
                           _buildTableCell(serialNumber.toString()),
@@ -1470,8 +1460,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   Widget _buildMobileList(List<BarcodeRow> barcodeRows, int fromIndex) {
     // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
-    final allSelected =
-        barcodeRows.isNotEmpty &&
+    final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
 
     return Column(
@@ -1632,8 +1621,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 child: Column(
                   children: [
                     Expanded(
-                      child:
-                          initLoading ||
+                      child: initLoading ||
                               Provider.of<LocalProductProvider>(
                                 context,
                                 listen: true,

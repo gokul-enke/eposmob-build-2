@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/screens/print/print.dart';
 

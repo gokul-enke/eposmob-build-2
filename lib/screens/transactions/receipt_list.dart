@@ -1,26 +1,23 @@
-import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/utils/search_debouncer.dart';
 import 'package:provider/provider.dart';
+
 import '../../components/build_calendar_selection.dart';
 import '../../components/build_dialog_box.dart';
-import '../../components/filter_toggle_button.dart';
-import '../../components/export_share_button.dart';
-import '../../core/ui/app_colors.dart';
-import '../../core/ui/app_surface.dart';
-import '../../core/ui/list_page/filter_panel.dart';
-import '../../core/ui/list_page/list_page_header.dart';
-import '../../core/ui/list_page/list_page_scaffold.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
 import '../../helpers/ui_code_labels.dart';
 import '../../models/list_receipt.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/invoice_provider.dart';
-import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -29,8 +26,19 @@ import 'create_receipt_modal.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
 
+/// The receipts list: header, filters, table/cards and pagination, built on
+/// the shared [ListPageScaffold]. Receipts are paged locally from the
+/// complete cache in [InvoiceProvider].
 class ReceiptListScreen extends StatefulWidget {
-  const ReceiptListScreen({super.key});
+  const ReceiptListScreen({super.key, this.export});
+
+  /// Replaces the export controller (tests).
+  final ExportController? export;
+
+  static const filtersKey = ValueKey('receipt-desktop-filters');
+  static const filterToggleKey = ValueKey('receipt-list-filter-toggle');
+  static const exportKey = ValueKey('receipt-list-export');
+  static const refreshKey = ValueKey('receipt-list-refresh');
 
   @override
   State<ReceiptListScreen> createState() => _ReceiptListScreenState();
@@ -49,20 +57,23 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   String? selectedStatus;
   String? paymentMethod;
 
-  final FocusNode receiptNoFocusNode = FocusNode();
-  final FocusNode referenceNoFocusNode = FocusNode();
-  final FocusNode nameFocusNode = FocusNode();
-  final FocusNode phoneFocusNode = FocusNode();
-  final FocusNode emailFocusNode = FocusNode();
-  final FocusNode statusFocusNode = FocusNode();
-  final FocusNode paymentMethodFocusNode = FocusNode();
-
   bool isInitialized = false;
   bool _showFilters = true;
   bool _visibilityInitialized = false;
-  Timer? _searchDebounce;
+  late final SearchDebouncer _search =
+      SearchDebouncer(searchReceipts, delay: const Duration(milliseconds: 350));
+  late final ExportController _export = widget.export ?? ExportController();
   final _tableScroll = ScrollController();
-  final _exportProgress = ValueNotifier<String?>(null);
+
+  List<TextEditingController> get _textInputs => [
+        receiptNumberController,
+        paymentReferenceController,
+        searchTextController,
+        phoneController,
+        emailController,
+        dateFromController,
+        dateToController,
+      ];
 
   @override
   void initState() {
@@ -73,24 +84,24 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Filters start open on wide screens and closed on phones.
+    if (!_visibilityInitialized) {
+      _showFilters = MediaQuery.sizeOf(context).width >=
+          ListLayoutBreakpoints.mobileBelow;
+      _visibilityInitialized = true;
+    }
+  }
+
+  @override
   void dispose() {
-    _searchDebounce?.cancel();
+    _search.dispose();
+    if (widget.export == null) _export.dispose();
     _tableScroll.dispose();
-    _exportProgress.dispose();
-    searchTextController.dispose();
-    receiptNumberController.dispose();
-    paymentReferenceController.dispose();
-    phoneController.dispose();
-    emailController.dispose();
-    dateFromController.dispose();
-    dateToController.dispose();
-    receiptNoFocusNode.dispose();
-    referenceNoFocusNode.dispose();
-    nameFocusNode.dispose();
-    phoneFocusNode.dispose();
-    emailFocusNode.dispose();
-    statusFocusNode.dispose();
-    paymentMethodFocusNode.dispose();
+    for (final input in _textInputs) {
+      input.dispose();
+    }
     super.dispose();
   }
 
@@ -102,9 +113,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'receipt.auth_token_missing'.tr);
         return;
       }
 
@@ -132,9 +141,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('receipt.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'receipt.auth_token_missing'.tr);
         return;
       }
 
@@ -203,7 +210,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   }
 
   void searchReceipts() {
-    _searchDebounce?.cancel();
+    _search.cancel();
     final String searchText = searchTextController.text.trim();
     debugPrint("Searching for receipts with name: '$searchText'");
 
@@ -223,17 +230,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         page: 1);
   }
 
+  /// Clears every input; the provider reloads the complete receipt cache.
   void resetSearch() {
-    _searchDebounce?.cancel();
+    _search.cancel();
     debugPrint("Resetting all filters");
     setState(() {
-      searchTextController.clear();
-      receiptNumberController.clear();
-      paymentReferenceController.clear();
-      phoneController.clear();
-      emailController.clear();
-      dateFromController.clear();
-      dateToController.clear();
+      for (final input in _textInputs) {
+        input.clear();
+      }
       selectedStatus = null;
       paymentMethod = null;
     });
@@ -258,112 +262,100 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_visibilityInitialized) {
-      _showFilters =
-          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
-      _visibilityInitialized = true;
-    }
+  Future<void> _createReceipt() async {
+    final result =
+        await showCreateReceiptModal(context, MediaQuery.sizeOf(context));
+    if (mounted && result == true) await refreshReceipts();
   }
 
   bool get _hasFilters =>
-      [
-        receiptNumberController,
-        paymentReferenceController,
-        searchTextController,
-        phoneController,
-        emailController,
-        dateFromController,
-        dateToController
-      ].any((c) => c.text.isNotEmpty) ||
+      _textInputs.any((c) => c.text.isNotEmpty) ||
       selectedStatus != null ||
       paymentMethod != null;
 
-  Widget _text(TextEditingController controller, FocusNode focus, String label,
-          IconData icon,
-          {TextInputType? keyboardType}) =>
-      TextField(
-          controller: controller,
-          focusNode: focus,
-          keyboardType: keyboardType,
-          decoration: listFilterDecoration(label, icon),
-          onChanged: (_) {
-            _searchDebounce?.cancel();
-            _searchDebounce =
-                Timer(const Duration(milliseconds: 350), searchReceipts);
-          },
-          onSubmitted: (_) => searchReceipts());
+  // ---------------------------------------------------------------- filters
 
-  Widget _date(bool from) => TextField(
-      controller: from ? dateFromController : dateToController,
-      readOnly: true,
-      decoration: listFilterDecoration(
-          from ? 'receipt.from_date'.tr : 'receipt.to_date'.tr,
-          Icons.calendar_today_outlined),
-      onTap: () => _selectDate(context, isFromDate: from));
+  FilterFieldDef _text(
+          TextEditingController controller, String label, IconData icon,
+          {TextInputType keyboardType = TextInputType.text}) =>
+      TextFilterField(
+          controller: controller,
+          label: label,
+          hint: label,
+          icon: icon,
+          keyboardType: keyboardType);
+
+  FilterFieldDef _date(bool from) {
+    final label = from ? 'receipt.from_date'.tr : 'receipt.to_date'.tr;
+    return CustomFilterField(
+        child: TextField(
+            controller: from ? dateFromController : dateToController,
+            readOnly: true,
+            textAlignVertical: TextAlignVertical.center,
+            style: AppTextStyles.input,
+            decoration: AppInputDecoration.filter(
+                label: label, hint: label, icon: Icons.calendar_today_outlined),
+            onTap: () => _selectDate(context, isFromDate: from)));
+  }
+
+  /// The provider's options plus the current value, without the "All"
+  /// placeholder (shown as the `null` option instead).
+  List<FilterOption<String?>> _options(String allLabel, List<String> values,
+          String placeholder, String? current, String Function(String) label) =>
+      [
+        FilterOption<String?>(null, allLabel),
+        for (final v in {
+          ...values.where((v) => v != placeholder),
+          if (current != null) current,
+        })
+          FilterOption<String?>(v, label(v)),
+      ];
 
   Widget _filters(InvoiceProvider p) => FilterPanel(
-          key: const ValueKey('receipt-desktop-filters'),
+          key: ReceiptListScreen.filtersKey,
           title: 'receipt.find'.tr,
           hint: 'receipt.filter_hint'.tr,
+          resetLabel: 'list.reset'.tr,
+          onSearch: _search.schedule,
+          onSubmit: _search.flush,
           onReset: resetSearch,
           fields: [
-            _text(receiptNumberController, receiptNoFocusNode,
-                'receipt.receipt_no_hint'.tr, Icons.receipt_long_outlined),
-            _text(paymentReferenceController, referenceNoFocusNode,
-                'receipt.reference_no_hint'.tr, Icons.tag_outlined),
-            _text(searchTextController, nameFocusNode, 'receipt.name_hint'.tr,
+            _text(receiptNumberController, 'receipt.receipt_no_hint'.tr,
+                Icons.receipt_long_outlined),
+            _text(paymentReferenceController, 'receipt.reference_no_hint'.tr,
+                Icons.tag_outlined),
+            _text(searchTextController, 'receipt.name_hint'.tr,
                 Icons.person_outline),
-            _text(phoneController, phoneFocusNode, 'receipt.phone_hint'.tr,
+            _text(phoneController, 'receipt.phone_hint'.tr,
                 Icons.phone_outlined,
                 keyboardType: TextInputType.phone),
-            _text(emailController, emailFocusNode, 'receipt.email_hint'.tr,
+            _text(emailController, 'receipt.email_hint'.tr,
                 Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress),
-            DropdownButtonFormField<String>(
-                key: ValueKey('receipt-status-$selectedStatus'),
-                initialValue: selectedStatus,
-                focusNode: statusFocusNode,
-                isExpanded: true,
-                decoration: listFilterDecoration(
-                    'receipt.col_status'.tr, Icons.check_circle_outline),
-                items: [
-                  DropdownMenuItem<String>(
-                      value: null, child: Text('receipt.hint_all_status'.tr)),
-                  for (final v in {
-                    ...p
-                        .getReceiptStatusOptions()
-                        .where((v) => v != 'All Status'),
-                    if (selectedStatus != null) selectedStatus!
-                  })
-                    DropdownMenuItem(
-                        value: v, child: Text(UiCodeLabels.status(v)))
-                ],
+            DropdownFilterField<String?>(
+                label: 'receipt.col_status'.tr,
+                icon: Icons.check_circle_outline,
+                value: selectedStatus,
+                options: _options(
+                    'receipt.hint_all_status'.tr,
+                    p.getReceiptStatusOptions(),
+                    'All Status',
+                    selectedStatus,
+                    UiCodeLabels.status),
                 onChanged: (v) {
                   setState(() => selectedStatus = v);
                   searchReceipts();
                 }),
-            DropdownButtonFormField<String>(
-                key: ValueKey('receipt-method-$paymentMethod'),
-                initialValue: paymentMethod,
-                focusNode: paymentMethodFocusNode,
-                isExpanded: true,
-                decoration: listFilterDecoration(
-                    'receipt.col_method'.tr, Icons.payment_outlined),
-                items: [
-                  DropdownMenuItem<String>(
-                      value: null, child: Text('receipt.hint_all_payment'.tr)),
-                  for (final v in {
-                    ...p
-                        .getPaymentMethodOptions()
-                        .where((v) => v != 'All Payment Methods'),
-                    if (paymentMethod != null) paymentMethod!
-                  })
-                    DropdownMenuItem(
-                        value: v, child: Text(UiCodeLabels.payment(v)))
-                ],
+            DropdownFilterField<String?>(
+                label: 'receipt.col_method'.tr,
+                icon: Icons.payment_outlined,
+                value: paymentMethod,
+                options: _options(
+                    'receipt.hint_all_payment'.tr,
+                    p.getPaymentMethodOptions(),
+                    'All Payment Methods',
+                    paymentMethod,
+                    UiCodeLabels.payment),
                 onChanged: (v) {
                   setState(() => paymentMethod = v);
                   searchReceipts();
@@ -372,24 +364,17 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             _date(false),
           ]);
 
-  Widget _badge(String text, Color color) => Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-              color: color.withValues(alpha: .1),
-              borderRadius: BorderRadius.circular(8)),
-          child: Text(text,
-              style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.w600))));
+  // ------------------------------------------------------------ list cells
 
-  Widget _status(Receipt r) => _badge(
-      UiCodeLabels.status(r.receiptStatus),
-      switch (r.receiptStatus.toLowerCase()) {
-        'paid' => AppColors.green,
-        'pending' => const Color(0xFF9A6700),
-        'fail' || 'failed' => AppColors.red,
-        _ => AppColors.muted
+  static String _orDash(String value) => value.trim().isEmpty ? '—' : value;
+
+  Widget _status(Receipt r) => AppBadge(
+      label: UiCodeLabels.status(r.receiptStatus),
+      tone: switch (r.receiptStatus.toLowerCase()) {
+        'paid' => AppBadgeTone.success,
+        'pending' => AppBadgeTone.warning,
+        'fail' || 'failed' => AppBadgeTone.danger,
+        _ => AppBadgeTone.neutral,
       });
 
   String _type(Receipt r) {
@@ -403,62 +388,117 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         .tr;
   }
 
-  Widget _typeBadge(Receipt r) => _badge(
-      _type(r),
-      r.receiptPayments.any((p) => p.invoiceId != null)
-          ? (r.receiptPayments.any((p) => p.invoiceId == null)
-              ? const Color(0xFF9A6700)
-              : ColorManager.kPrimaryColor)
-          : AppColors.green);
+  Widget _typeBadge(Receipt r) {
+    final invoice = r.receiptPayments.any((p) => p.invoiceId != null);
+    final general = r.receiptPayments.any((p) => p.invoiceId == null);
+    return AppBadge(
+        label: _type(r),
+        tone: invoice
+            ? (general ? AppBadgeTone.warning : AppBadgeTone.info)
+            : AppBadgeTone.success);
+  }
 
-  Widget _copy(String text) => Row(children: [
-        Expanded(child: TableCells.text(text)),
-        if (text.isNotEmpty)
-          IconButton(
-              icon: const Icon(Icons.copy_outlined, size: 16),
-              tooltip: 'receipt.copy'.tr,
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: text));
-                showScaffold(
-                    context: context,
-                    message: 'receipt.copied_to_clipboard'.tr);
-              })
+  Widget _copyButton(String text) => IconButton(
+      icon: const Icon(Icons.copy_outlined, size: 16),
+      color: AppColors.muted,
+      tooltip: 'receipt.copy'.tr,
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: text));
+        AppToast.success(context, 'receipt.copied_to_clipboard'.tr);
+      });
+
+  /// Table cell: the value with a copy button (when there is a value).
+  Widget _copyCell(String text) => Row(children: [
+        Expanded(child: TableCells.text(_orDash(text))),
+        if (text.isNotEmpty) _copyButton(text),
       ]);
 
-  Widget _actions(Receipt r) => Wrap(
-          spacing: 6,
+  /// Card line: label, value and a copy button (when there is a value).
+  Widget _copyInfo(String label, String text) => InfoRow(
+      label: label,
+      value: _orDash(text),
+      trailing: text.isEmpty ? null : _copyButton(text));
+
+  Widget _actionButtons(Receipt r) => Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            TableCells.viewButton(() => _showReceiptDetails(r)),
-            SizedBox(
-                width: 36,
-                height: 36,
-                child: IconButton.outlined(
-                    tooltip: 'receipt.share_action'.tr,
-                    style: IconButton.styleFrom(
-                        foregroundColor: ColorManager.kPrimaryColor,
-                        side: const BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10))),
-                    icon: const Icon(Icons.share_outlined, size: 18),
-                    onPressed: () => ShareHelper.showShareReceiptSheet(
-                        context: context, receipt: r))),
+            AppOutlinedButton(
+                label: 'list.view'.tr,
+                icon: Icons.visibility_outlined,
+                iconSize: 15,
+                height: AppSizes.compactControl,
+                radius: AppRadius.tile,
+                onPressed: () => _showReceiptDetails(r)),
+            AppSquareIconButton(
+                icon: Icons.share_outlined,
+                tooltip: 'receipt.share_action'.tr,
+                size: AppSizes.compactControl,
+                iconSize: 18,
+                radius: AppRadius.tile,
+                foreground: AppColors.primary,
+                onPressed: () => ShareHelper.showShareReceiptSheet(
+                    context: context, receipt: r)),
           ]);
 
-  Widget _card(Receipt r) => AppSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TableCells.identity(r.customer.user.name),
-        _copy(r.receiptNumber),
-        Text('${'receipt.field_amount'.tr}: ${r.amount}'),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [_typeBadge(r), _status(r)]),
-        _copy(r.paymentReference),
-        _actions(r),
+  Widget _card(Receipt r) => AppListCard(
+      title: _orDash(r.customer.user.name),
+      leading: AppAvatar(
+          name: r.customer.user.name, semanticLabel: r.customer.user.name),
+      trailing: _status(r),
+      body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _copyInfo('receipt.col_receipt_number'.tr, r.receiptNumber),
+        InfoRow(label: 'receipt.field_amount'.tr, value: _orDash(r.amount)),
+        _copyInfo('receipt.col_payment_reference'.tr, r.paymentReference),
+        const SizedBox(height: AppSpacing.sm),
+        _typeBadge(r),
+        const SizedBox(height: AppSpacing.md),
+        _actionButtons(r),
       ]));
 
+  List<TableColumnDef<Receipt>> _columns() => [
+        TableColumnDef(
+            label: 'receipt.col_receipt_number'.tr,
+            flex: 1.6,
+            cellBuilder: (r, _) => _copyCell(r.receiptNumber)),
+        TableColumnDef(
+            label: 'receipt.col_customer_name'.tr,
+            flex: 1.8,
+            cellBuilder: (r, _) => TableCells.avatarName(
+                name: _orDash(r.customer.user.name),
+                avatar: AppAvatar(
+                    name: r.customer.user.name,
+                    semanticLabel: r.customer.user.name,
+                    size: 36))),
+        TableColumnDef(
+            label: 'receipt.field_amount'.tr,
+            cellBuilder: (r, _) => TableCells.text(_orDash(r.amount))),
+        TableColumnDef(
+            label: 'receipt.col_type'.tr,
+            flex: 1.6,
+            cellBuilder: (r, _) => TableCells.widget(_typeBadge(r))),
+        TableColumnDef(
+            label: 'receipt.col_status'.tr,
+            cellBuilder: (r, _) => TableCells.widget(_status(r))),
+        TableColumnDef(
+            label: 'receipt.col_payment_reference'.tr,
+            flex: 1.6,
+            cellBuilder: (r, _) => _copyCell(r.paymentReference)),
+        TableColumnDef(
+            label: 'receipt.col_action'.tr,
+            flex: 1.6,
+            cellBuilder: (r, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+                child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: _actionButtons(r)))),
+      ];
+
+  // ---------------------------------------------------------------- export
+
   Future<File> _createExport() async {
-    if (_searchDebounce?.isActive ?? false) searchReceipts();
+    _search.flushPending();
     final token = context.read<AuthModel>().token;
     if (token == null || token.isEmpty) {
       throw StateError('Missing access token');
@@ -477,11 +517,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         fromDate: dateFromController.text,
         toDate: dateToController.text,
         onProgress: (page, total) {
-          if (mounted)
-            _exportProgress.value = 'receipt.export_fetching'
-                .trParams({'page': '$page', 'total': '$total'});
+          if (mounted) {
+            _export.setStage('receipt.export_fetching'
+                .trParams({'page': '$page', 'total': '$total'}));
+          }
         });
-    if (mounted) _exportProgress.value = 'receipt.export_creating'.tr;
+    if (mounted) _export.setStage('receipt.export_creating'.tr);
     return ListExcelExportService.export<Receipt>(
         items: rows,
         fileNamePrefix: 'receipts',
@@ -522,105 +563,87 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         ]);
   }
 
+  Future<void> _runExport() async {
+    final exported = await _export.run(context, createFile: _createExport);
+    if (!exported && mounted) {
+      AppToast.error(context, 'receipt.export_failed'.tr);
+    }
+  }
+
+  // ----------------------------------------------------------------- build
+
+  /// Filters, Export, Refresh — left to right, before Add.
+  List<HeaderAction> _headerActions({required bool canExport}) => [
+        HeaderAction(
+            key: ReceiptListScreen.filterToggleKey,
+            icon: _showFilters
+                ? Icons.filter_alt_rounded
+                : Icons.filter_alt_outlined,
+            label: _showFilters
+                ? 'receipt.hide_filters'.tr
+                : 'receipt.show_filters'.tr,
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            active: _showFilters,
+            badge: !_showFilters && _hasFilters),
+        HeaderAction(
+            key: ReceiptListScreen.exportKey,
+            icon: Icons.ios_share_rounded,
+            label: _export.busy
+                ? (_export.stage ?? 'receipt.export_creating'.tr)
+                : 'receipt.export_tooltip'.tr,
+            onPressed: canExport ? _runExport : null,
+            busy: _export.busy),
+        HeaderAction(
+            key: ReceiptListScreen.refreshKey,
+            icon: Icons.refresh_rounded,
+            label: 'list.refresh'.tr,
+            onPressed: refreshData),
+      ];
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<InvoiceProvider>();
     final rows = p.getListReceipt ?? <Receipt>[];
-    return LayoutBuilder(
-        builder: (context, bounds) => ListPageScaffold<Receipt>(
-              header: ListPageHeader(
+    return ListenableBuilder(
+        listenable: Listenable.merge([_export, ..._textInputs]),
+        builder: (context, _) => ListPageScaffold<Receipt>(
+              header: PageHeader(
                   icon: Icons.receipt_long_outlined,
                   title: 'receipt.list_title'.tr,
                   subtitle: 'receipt.subtitle'.tr,
-                  onRefresh: refreshData,
-                  onAdd: () async {
-                    final result = await showCreateReceiptModal(
-                        context, MediaQuery.sizeOf(context));
-                    if (mounted && result == true) await refreshReceipts();
-                  },
+                  actions: _headerActions(
+                      canExport: !p.isLoading && rows.isNotEmpty),
+                  onAdd: _createReceipt,
                   addLabel: 'receipt.create_receipt_button'.tr,
-                  addShortLabel: 'receipt.mobile_create_button'.tr,
-                  extraActions: [
-                    FilterToggleButton(
-                        showFilters: _showFilters,
-                        hasActiveFilters: _hasFilters,
-                        activeFiltersListenable: Listenable.merge([
-                          receiptNumberController,
-                          paymentReferenceController,
-                          searchTextController,
-                          phoneController,
-                          emailController,
-                          dateFromController,
-                          dateToController
-                        ]),
-                        activeFiltersBuilder: () => _hasFilters,
-                        onPressed: () =>
-                            setState(() => _showFilters = !_showFilters),
-                        showTooltip: 'receipt.show_filters'.tr,
-                        hideTooltip: 'receipt.hide_filters'.tr),
-                    ExportShareButton(
-                        createFile: _createExport,
-                        label: 'supplier_transactions.export'.tr,
-                        loadingLabel: 'receipt.export_creating'.tr,
-                        progressLabel: _exportProgress,
-                        tooltip: 'receipt.export_tooltip'.tr,
-                        errorMessage: 'receipt.export_failed'.tr,
-                        mimeType:
-                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        compact: bounds.maxWidth < 560,
-                        enabled: !p.isLoading && rows.isNotEmpty)
-                  ]),
+                  addShortLabel: 'receipt.mobile_create_button'.tr),
               filters: _filters(p),
               showFilters: _showFilters,
               isLoading: p.isLoading,
               items: rows,
               tableScrollController: _tableScroll,
-              tableMinWidth: 1100,
-              columns: [
-                TableColumnDef(
-                    label: 'receipt.col_receipt_number'.tr,
-                    flex: 1.6,
-                    cellBuilder: (r, _) => _copy(r.receiptNumber)),
-                TableColumnDef(
-                    label: 'receipt.col_customer_name'.tr,
-                    flex: 1.8,
-                    cellBuilder: (r, _) =>
-                        TableCells.identity(r.customer.user.name)),
-                TableColumnDef(
-                    label: 'receipt.field_amount'.tr,
-                    cellBuilder: (r, _) => TableCells.text(r.amount)),
-                TableColumnDef(
-                    label: 'receipt.col_type'.tr,
-                    flex: 1.6,
-                    cellBuilder: (r, _) => _typeBadge(r)),
-                TableColumnDef(
-                    label: 'receipt.col_status'.tr,
-                    cellBuilder: (r, _) => _status(r)),
-                TableColumnDef(
-                    label: 'receipt.col_payment_reference'.tr,
-                    flex: 1.6,
-                    cellBuilder: (r, _) => _copy(r.paymentReference)),
-                TableColumnDef(
-                    label: 'receipt.col_action'.tr,
-                    flex: 1.6,
-                    cellBuilder: (r, _) => _actions(r)),
-              ],
+              minTableWidth: 1100,
+              columns: _columns(),
               cardBuilder: (r, _) => _card(r),
-              emptyState:
-                  Center(child: Text('receipt.no_receipts_available'.tr)),
+              emptyState: AppEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'receipt.no_receipts_available'.tr,
+                  subtitle: 'receipt.try_adjusting_filters'.tr),
               onRefresh: refreshData,
-              currentPage: p.receiptCurrentPage,
-              totalPages: p.receiptTotalPages,
-              itemsPerPage: p.receiptItemsPerPage,
-              countLabel:
-                  'receipt.page_count'.trParams({'count': '${rows.length}'}),
-              onPageChanged: (page) {
-                if (_searchDebounce?.isActive ?? false) {
-                  searchReceipts();
-                  return;
-                }
-                p.goToReceiptPage(page);
-              },
+              pagination: ListPagination(
+                  currentPage: p.receiptCurrentPage,
+                  totalPages: p.receiptTotalPages,
+                  itemsPerPage: p.receiptItemsPerPage,
+                  countLabel: 'receipt.page_count'
+                      .trParams({'count': '${rows.length}'}),
+                  onPageChanged: (page) {
+                    // A search still waiting on the debounce wins: it goes
+                    // back to page 1 with the typed filters.
+                    if (_search.isPending) {
+                      _search.flush();
+                      return;
+                    }
+                    p.goToReceiptPage(page);
+                  }),
             ));
   }
 
@@ -785,7 +808,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -11,8 +12,8 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -190,18 +191,15 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
         _inlineCustomerNameController.text.trim().isNotEmpty &&
             _inlineCustomerPhoneController.text.trim().isNotEmpty;
     if (!_useInlineCustomer && !customerProvider.hasSelectedCustomer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('create_quotation.msg_select_customer'.tr)));
+      AppToast.warning(context, 'create_quotation.msg_select_customer'.tr);
       return;
     }
     if (_useInlineCustomer && !hasInlineCustomer) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('create_quotation.msg_enter_customer_info'.tr)));
+      AppToast.warning(context, 'create_quotation.msg_enter_customer_info'.tr);
       return;
     }
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('create_quotation.msg_add_item'.tr)));
+      AppToast.warning(context, 'create_quotation.msg_add_item'.tr);
       return;
     }
 
@@ -249,20 +247,15 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
 
       if (!mounted) return;
       if (response['success'] == true || response['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('create_quotation.msg_success'.tr)));
+        AppToast.success(context, 'create_quotation.msg_success'.tr);
         Get.find<SideBarController>().index.value = 87;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                response['message'] ?? 'create_quotation.msg_failed'.tr)));
+        AppToast.error(context, response['message'] ?? 'create_quotation.msg_failed'.tr);
       }
     } catch (e) {
       debugPrint('💥 QUOTATION ERROR: $e');
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(
-                content: Text('${'general.error_prefix'.tr} $e')));
+        AppToast.error(context, '${'general.error_prefix'.tr} $e');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

@@ -1,44 +1,45 @@
 import 'dart:io';
-import '../../components/export_share_button.dart';
-import '../../core/ui/app_surface.dart';
-import '../../core/ui/list_page/filter_panel.dart';
-import '../../core/ui/list_page/list_page_header.dart';
-import '../../core/ui/list_page/list_page_scaffold.dart';
-import '../../services/list_excel_export_service.dart';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:get/get.dart';
-import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:intl/intl.dart';
-import '../../components/build_calendar_selection.dart';
-
-import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/utils/search_debouncer.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/models/customer_voucher.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:flutter/foundation.dart';
 
-import '../../components/filter_toggle_button.dart';
-
+import '../../components/build_calendar_selection.dart';
 import '../../controllers/sidebar_controller.dart';
-import '../../providers/auth_model.dart';
 import '../../providers/app_settings_provider.dart';
-
+import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import 'widgets/customer_voucher_print.dart';
+import '../../services/list_excel_export_service.dart';
 import 'widgets/common_details_dialog.dart';
+import 'widgets/customer_voucher_print.dart';
 import 'widgets/share_helper.dart';
 
 class CustomerVoucherListScreen extends StatefulWidget {
-  const CustomerVoucherListScreen({super.key});
+  const CustomerVoucherListScreen({super.key, this.export});
+
+  /// Replaces the export controller (tests).
+  final ExportController? export;
+
+  static const filtersKey = ValueKey('customer-voucher-desktop-filters');
+  static const filterToggleKey = ValueKey('customer-voucher-filter-toggle');
+  static const exportKey = ValueKey('customer-voucher-export');
+  static const refreshKey = ValueKey('customer-voucher-refresh');
 
   @override
   State<CustomerVoucherListScreen> createState() =>
@@ -49,8 +50,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool isInitialized = false;
   bool _visibilityInitialized = false;
-  final _nameKey = GlobalKey<TextFilterFieldState>();
-  final _numberKey = GlobalKey<TextFilterFieldState>();
+  late final SearchDebouncer _search = SearchDebouncer(searchVouchers);
+  late final ExportController _export = widget.export ?? ExportController();
   final _tableController = ScrollController();
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController voucherNumberController = TextEditingController();
@@ -59,11 +60,6 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   String? selectedType;
   String? selectedStatus;
   bool _showFilters = true;
-
-  final FocusNode nameFocusNode = FocusNode();
-  final FocusNode voucherNoFocusNode = FocusNode();
-  final FocusNode typeFocusNode = FocusNode();
-  final FocusNode statusFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -77,23 +73,22 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_visibilityInitialized) {
-      _showFilters =
-          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      // Filters start open on wide screens and closed on phones.
+      _showFilters = MediaQuery.sizeOf(context).width >=
+          ListLayoutBreakpoints.mobileBelow;
       _visibilityInitialized = true;
     }
   }
 
   @override
   void dispose() {
+    _search.dispose();
+    if (widget.export == null) _export.dispose();
     _tableController.dispose();
     searchTextController.dispose();
     voucherNumberController.dispose();
     dateFromController.dispose();
     dateToController.dispose();
-    nameFocusNode.dispose();
-    voucherNoFocusNode.dispose();
-    typeFocusNode.dispose();
-    statusFocusNode.dispose();
     super.dispose();
   }
 
@@ -105,9 +100,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('customer_voucher.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'customer_voucher.auth_token_missing'.tr);
         return;
       }
 
@@ -121,12 +114,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('customer_voucher.error_loading_vouchers'
-                .tr
-                .replaceAll('@error', error.toString()))),
-      );
+      AppToast.error(context, 'customer_voucher.error_loading_vouchers'
+          .tr.replaceAll('@error', error.toString()));
     }
   }
 
@@ -195,8 +184,7 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   }
 
   void resetSearch() {
-    _nameKey.currentState?.cancelPendingSearch();
-    _numberKey.currentState?.cancelPendingSearch();
+    _search.cancel();
     setState(() {
       searchTextController.clear();
       voucherNumberController.clear();
@@ -475,79 +463,106 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     }
   }
 
-  Widget _filters(CustomerVoucherProvider provider) => FilterPanel(
-        key: const ValueKey('customer-voucher-desktop-filters'),
+  bool get _hasActiveFilters =>
+      searchTextController.text.isNotEmpty ||
+      dateFromController.text.isNotEmpty ||
+      dateToController.text.isNotEmpty ||
+      selectedType != null ||
+      selectedStatus != null ||
+      voucherNumberController.text.isNotEmpty;
+
+  FilterPanel _filters(CustomerVoucherProvider provider) => FilterPanel(
+        key: CustomerVoucherListScreen.filtersKey,
         title: 'customer_voucher.find'.tr,
         hint: 'customer_voucher.filter_hint'.tr,
+        resetLabel: 'list.reset'.tr,
+        onSearch: _search.schedule,
+        onSubmit: _search.flush,
         onReset: resetSearch,
         fields: [
           TextFilterField(
-              key: _nameKey,
               controller: searchTextController,
               label: 'customer_voucher.customer_name_hint'.tr,
-              icon: Icons.person_outline,
-              onSearch: searchVouchers),
+              hint: 'customer_voucher.customer_name_hint'.tr,
+              icon: Icons.person_outline),
           TextFilterField(
-              key: _numberKey,
               controller: voucherNumberController,
               label: 'customer_voucher.voucher_no_hint'.tr,
-              icon: Icons.receipt_long_outlined,
-              onSearch: searchVouchers),
+              hint: 'customer_voucher.voucher_no_hint'.tr,
+              icon: Icons.receipt_long_outlined),
           _dropdown(
-              'customer_voucher.col_type'.tr,
-              selectedType,
-              {
+              label: 'customer_voucher.col_type'.tr,
+              allLabel: 'customer_voucher.hint_all_types'.tr,
+              icon: Icons.swap_vert,
+              value: selectedType,
+              options: {
                 ...provider.getTypeOptions().where((v) => v != 'All Types'),
                 if (selectedType != null) selectedType!
-              }.toList(),
-              UiCodeLabels.voucherType, (v) {
-            setState(() => selectedType = v);
-            searchVouchers();
-          }),
+              },
+              display: UiCodeLabels.voucherType,
+              onChanged: (v) {
+                setState(() => selectedType = v);
+                searchVouchers();
+              }),
           _dropdown(
-              'customer_voucher.col_status'.tr,
-              selectedStatus,
-              provider
-                  .getStatusOptions()
-                  .where((v) => v != 'All Status')
-                  .toList(),
-              UiCodeLabels.status, (v) {
-            setState(() => selectedStatus = v);
-            searchVouchers();
-          }),
+              label: 'customer_voucher.col_status'.tr,
+              allLabel: 'customer_voucher.hint_all_status'.tr,
+              icon: Icons.check_circle_outline,
+              value: selectedStatus,
+              options:
+                  provider.getStatusOptions().where((v) => v != 'All Status'),
+              display: UiCodeLabels.status,
+              onChanged: (v) {
+                setState(() => selectedStatus = v);
+                searchVouchers();
+              }),
           for (final from in [true, false])
-            TextField(
-                controller: from ? dateFromController : dateToController,
-                readOnly: true,
-                decoration: listFilterDecoration(
-                    from
-                        ? 'customer_voucher.from_date'.tr
-                        : 'customer_voucher.to_date'.tr,
-                    Icons.calendar_today_outlined),
-                onTap: () => _selectDate(context, isFromDate: from)),
+            CustomFilterField(
+                child: TextField(
+                    controller: from ? dateFromController : dateToController,
+                    readOnly: true,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: AppTextStyles.input,
+                    decoration: AppInputDecoration.filter(
+                        label: from
+                            ? 'customer_voucher.from_date'.tr
+                            : 'customer_voucher.to_date'.tr,
+                        icon: Icons.calendar_today_outlined),
+                    onTap: () => _selectDate(context, isFromDate: from))),
         ],
       );
-  Widget _dropdown(String label, String? value, List<String> options,
-          String Function(String) display, ValueChanged<String?> onChanged) =>
-      DropdownButtonFormField<String>(
-          key: ValueKey('$label:$value'),
-          initialValue: value,
-          isExpanded: true,
-          decoration: listFilterDecoration(label, Icons.swap_vert),
-          items: [
-            DropdownMenuItem<String>(
-                value: null,
-                child: Text(label == 'customer_voucher.col_type'.tr
-                    ? 'customer_voucher.hint_all_types'.tr
-                    : 'customer_voucher.hint_all_status'.tr)),
-            for (final option in options)
-              DropdownMenuItem(value: option, child: Text(display(option)))
-          ],
-          onChanged: onChanged);
+
+  /// Type/status dropdown whose empty choice (`null`) means "all".
+  DropdownFilterField<String?> _dropdown({
+    required String label,
+    required String allLabel,
+    required IconData icon,
+    required String? value,
+    required Iterable<String> options,
+    required String Function(String) display,
+    required ValueChanged<String?> onChanged,
+  }) =>
+      DropdownFilterField<String?>(
+        label: label,
+        icon: icon,
+        value: value,
+        options: [
+          FilterOption<String?>(null, allLabel),
+          for (final option in options)
+            FilterOption<String?>(option, display(option)),
+        ],
+        onChanged: onChanged,
+      );
+
+  Future<void> _exportVouchers() async {
+    final exported = await _export.run(context, createFile: _createExport);
+    if (!exported && mounted) {
+      AppToast.error(context, 'customer_voucher.export_failed'.tr);
+    }
+  }
 
   Future<File> _createExport() {
-    _nameKey.currentState?.cancelPendingSearch();
-    _numberKey.currentState?.cancelPendingSearch();
+    _search.cancel();
     final provider = context.read<CustomerVoucherProvider>();
     if (provider.isLoading || provider.loadError != null) {
       throw StateError('Refresh vouchers before exporting.');
@@ -606,219 +621,260 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         ]);
   }
 
-  Widget _buildStatusChip(String status) {
-    final color = status.toLowerCase() == 'paid'
-        ? const Color(0xff2c6e49)
-        : status.toLowerCase() == 'pending'
-            ? Colors.orange.shade800
-            : status.toLowerCase() == 'cancelled'
-                ? const Color(0xffb42318)
-                : Colors.grey;
-    return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10)),
-            child: Text(UiCodeLabels.status(status),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w600))));
-  }
+  /// Blank values show as a dash, as in the other list columns.
+  static String _orDash(String value) => value.trim().isEmpty ? '—' : value;
 
-  Widget _reference(CustomerVoucher voucher) => Row(children: [
-        Expanded(child: TableCells.text(voucher.voucherNumber)),
-        IconButton(
-            icon: const Icon(Icons.copy_outlined, size: 16),
-            tooltip: 'customer_voucher.copy_voucher_number'.tr,
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
-              showScaffold(
-                  context: context,
-                  message: 'customer_voucher.voucher_number_copied'.tr);
-            }),
+  Widget _statusBadge(String status) => AppBadge(
+        label: UiCodeLabels.status(status),
+        tone: switch (status.toLowerCase()) {
+          'paid' => AppBadgeTone.success,
+          'pending' => AppBadgeTone.warning,
+          'cancelled' => AppBadgeTone.danger,
+          _ => AppBadgeTone.neutral,
+        },
+      );
+
+  Widget _copyButton(CustomerVoucher voucher) => IconButton(
+      icon: const Icon(Icons.copy_outlined, size: 16),
+      tooltip: 'customer_voucher.copy_voucher_number'.tr,
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: voucher.voucherNumber));
+        AppToast.success(context, 'customer_voucher.voucher_number_copied'.tr);
+      });
+
+  Widget _referenceCell(CustomerVoucher voucher) => Row(children: [
+        Expanded(child: TableCells.text(_orDash(voucher.voucherNumber))),
+        _copyButton(voucher),
       ]);
 
-  Widget _actions(CustomerVoucher voucher) =>
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        TableCells.viewButton(() => _showVoucherDetails(voucher)),
-        _action(
-            Icons.print_outlined,
-            'general.print'.tr,
-            () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => CustomerVoucherPrintPage(
-                        voucher: voucher, returnToPreviousRoute: true)))),
-        _action(Icons.more_vert, 'customer_voucher.more_options_title'.tr,
-            () => _showVoucherActionsSheet(voucher)),
-      ]);
+  /// View, Print and More — the same in the table and on cards.
+  Widget _actions(CustomerVoucher voucher) => Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            AppOutlinedButton(
+                label: 'list.view'.tr,
+                icon: Icons.visibility_outlined,
+                iconSize: 15,
+                height: AppSizes.compactControl,
+                radius: AppRadius.tile,
+                onPressed: () => _showVoucherDetails(voucher)),
+            _iconAction(
+                Icons.print_outlined,
+                'general.print'.tr,
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => CustomerVoucherPrintPage(
+                            voucher: voucher, returnToPreviousRoute: true)))),
+            _iconAction(Icons.more_vert, 'customer_voucher.more_options_title'.tr,
+                () => _showVoucherActionsSheet(voucher)),
+          ]);
 
-  Widget _action(IconData icon, String tooltip, VoidCallback onPressed) =>
-      IconButton.outlined(
-          icon: Icon(icon, size: 18),
+  Widget _iconAction(IconData icon, String tooltip, VoidCallback onPressed) =>
+      AppSquareIconButton(
+          icon: icon,
           tooltip: tooltip,
           onPressed: onPressed,
-          style: IconButton.styleFrom(
-              foregroundColor: ColorManager.kPrimaryColor,
-              side: const BorderSide(color: Color(0xFFE1E3E5)),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10))));
+          size: AppSizes.compactControl,
+          iconSize: 18,
+          radius: AppRadius.tile,
+          foreground: AppColors.primary);
 
   String _amount(CustomerVoucher voucher) =>
       '${context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR'} ${voucher.amount}';
 
-  Widget _card(CustomerVoucher voucher, int number) => AppSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TableCells.identity(voucher.customer.user.name),
-        const SizedBox(height: 10),
-        _reference(voucher),
-        Text(
-            '${'customer_voucher.col_type'.tr}: ${UiCodeLabels.voucherType(voucher.type)}'),
-        Text(
-            '${'customer_voucher.col_voucher_date'.tr}: ${voucher.voucherDate}'),
-        Text('${'customer_voucher.col_due_date'.tr}: ${voucher.dueDate}'),
-        Text(
-            '${'customer_voucher.col_payment_method'.tr}: ${UiCodeLabels.payment(voucher.paymentMethod)}'),
-        Text('${'customer_voucher.col_paid_amount'.tr}: ${_amount(voucher)}'),
-        const SizedBox(height: 10),
-        _buildStatusChip(voucher.status),
-        const SizedBox(height: 10),
-        _actions(voucher),
-      ]));
+  Widget _card(CustomerVoucher voucher, int number) => AppListCard(
+        leading: AppAvatar(
+            name: voucher.customer.user.name,
+            semanticLabel: voucher.customer.user.name,
+            size: 42),
+        title: _orDash(voucher.customer.user.name),
+        subtitle: '#$number',
+        trailing: _statusBadge(voucher.status),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppMetricStrip(metrics: [
+              AppMetric(
+                  icon: Icons.payments_outlined,
+                  label: 'customer_voucher.col_paid_amount'.tr,
+                  value: _amount(voucher)),
+              AppMetric(
+                  icon: Icons.event_outlined,
+                  label: 'customer_voucher.col_voucher_date'.tr,
+                  value: _orDash(voucher.voucherDate)),
+            ]),
+            const SizedBox(height: AppSpacing.sm),
+            InfoRow(
+                icon: Icons.receipt_long_outlined,
+                label: 'customer_voucher.col_voucher_number'.tr,
+                value: _orDash(voucher.voucherNumber),
+                trailing: _copyButton(voucher)),
+            InfoRow(
+                icon: Icons.swap_vert,
+                label: 'customer_voucher.col_type'.tr,
+                value: _orDash(UiCodeLabels.voucherType(voucher.type))),
+            InfoRow(
+                icon: Icons.event_busy_outlined,
+                label: 'customer_voucher.col_due_date'.tr,
+                value: _orDash(voucher.dueDate)),
+            InfoRow(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'customer_voucher.col_payment_method'.tr,
+                value: _orDash(UiCodeLabels.payment(voucher.paymentMethod))),
+            const SizedBox(height: AppSpacing.sm),
+            _actions(voucher),
+          ],
+        ),
+      );
+
+  /// Filters, Export, Refresh — left to right, before Add.
+  List<HeaderAction> _headerActions(CustomerVoucherProvider provider) {
+    final canExport = !provider.isLoading &&
+        provider.loadError == null &&
+        (provider.allVouchers?.isNotEmpty ?? false);
+    return [
+      HeaderAction(
+        key: CustomerVoucherListScreen.filterToggleKey,
+        icon: _showFilters ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        label: _showFilters
+            ? 'customer_voucher.hide_filters'.tr
+            : 'customer_voucher.show_filters'.tr,
+        onPressed: () => setState(() => _showFilters = !_showFilters),
+        active: _showFilters,
+        badge: _hasActiveFilters,
+      ),
+      HeaderAction(
+        key: CustomerVoucherListScreen.exportKey,
+        icon: Icons.ios_share_rounded,
+        label: _export.busy
+            ? (_export.stage ?? 'customer_voucher.export_creating'.tr)
+            : 'customer_voucher.export_tooltip'.tr,
+        onPressed: canExport ? _exportVouchers : null,
+        busy: _export.busy,
+      ),
+      HeaderAction(
+        key: CustomerVoucherListScreen.refreshKey,
+        icon: Icons.refresh_rounded,
+        label: 'list.refresh'.tr,
+        onPressed: refreshData,
+      ),
+    ];
+  }
+
+  Widget _staleRowsWarning(CustomerVoucherProvider provider) => AppSurface(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('customer_voucher.stale_rows_warning'.tr,
+                style: const TextStyle(color: AppColors.red)),
+            TextButton.icon(
+                onPressed: provider.isLoading ? null : refreshData,
+                icon: const Icon(Icons.refresh),
+                label: Text('customer_voucher.retry_loading'.tr)),
+          ],
+        ),
+      );
+
+  List<TableColumnDef<CustomerVoucher>> get _columns => [
+        TableColumnDef(
+            label: 'customer_voucher.col_voucher_number'.tr,
+            flex: 1.6,
+            cellBuilder: (v, _) => _referenceCell(v)),
+        TableColumnDef(
+            label: 'customer_voucher.col_customer_name'.tr,
+            flex: 2,
+            cellBuilder: (v, _) => TableCells.avatarName(
+                name: _orDash(v.customer.user.name),
+                avatar: AppAvatar(
+                    name: v.customer.user.name,
+                    semanticLabel: v.customer.user.name,
+                    size: 36))),
+        TableColumnDef(
+            label: 'customer_voucher.col_type'.tr,
+            cellBuilder: (v, _) =>
+                TableCells.text(_orDash(UiCodeLabels.voucherType(v.type)))),
+        TableColumnDef(
+            label: 'customer_voucher.col_voucher_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => TableCells.text(_orDash(v.voucherDate))),
+        TableColumnDef(
+            label: 'customer_voucher.col_due_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => TableCells.text(_orDash(v.dueDate))),
+        TableColumnDef(
+            label: 'customer_voucher.col_payment_method'.tr,
+            flex: 1.2,
+            cellBuilder: (v, _) => TableCells.text(
+                _orDash(UiCodeLabels.payment(v.paymentMethod)))),
+        TableColumnDef(
+            label: 'customer_voucher.col_paid_amount'.tr,
+            flex: 1.4,
+            cellBuilder: (v, _) => TableCells.text(_amount(v))),
+        TableColumnDef(
+            label: 'customer_voucher.col_status'.tr,
+            cellBuilder: (v, _) => TableCells.widget(_statusBadge(v.status))),
+        TableColumnDef(
+            label: 'customer_voucher.col_action'.tr,
+            flex: 2.5,
+            cellBuilder: (v, _) => TableCells.widget(_actions(v))),
+      ];
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CustomerVoucherProvider>();
-    return LayoutBuilder(
-        builder: (context, bounds) => ListPageScaffold<CustomerVoucher>(
-              header: ListPageHeader(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'customer_voucher.mobile_header_title'.tr,
-                  subtitle: 'customer_voucher.subtitle'.tr,
-                  onRefresh: refreshData,
-                  onAdd: () {
-                    final controller = Get.put(SideBarController());
-                    controller.index.value = 71;
-                  },
-                  addLabel: 'customer_voucher.create_voucher_button'.tr,
-                  addShortLabel: 'customer_voucher.mobile_create_button'.tr,
-                  extraActions: [
-                    FilterToggleButton(
-                        showFilters: _showFilters,
-                        hasActiveFilters:
-                            searchTextController.text.isNotEmpty ||
-                                dateFromController.text.isNotEmpty ||
-                                dateToController.text.isNotEmpty ||
-                                selectedType != null ||
-                                selectedStatus != null ||
-                                voucherNumberController.text.isNotEmpty,
-                        activeFiltersListenable: Listenable.merge([
-                          searchTextController,
-                          voucherNumberController,
-                          dateFromController,
-                          dateToController
-                        ]),
-                        activeFiltersBuilder: () =>
-                            searchTextController.text.isNotEmpty ||
-                            dateFromController.text.isNotEmpty ||
-                            dateToController.text.isNotEmpty ||
-                            selectedType != null ||
-                            selectedStatus != null ||
-                            voucherNumberController.text.isNotEmpty,
-                        showTooltip: 'customer_voucher.show_filters'.tr,
-                        hideTooltip: 'customer_voucher.hide_filters'.tr,
-                        onPressed: () =>
-                            setState(() => _showFilters = !_showFilters)),
-                    ExportShareButton(
-                        createFile: _createExport,
-                        label: 'supplier_transactions.export'.tr,
-                        tooltip: 'customer_voucher.export_tooltip'.tr,
-                        loadingLabel: 'customer_voucher.export_creating'.tr,
-                        errorMessage: 'customer_voucher.export_failed'.tr,
-                        enabled: !provider.isLoading &&
-                            provider.loadError == null &&
-                            (provider.allVouchers?.isNotEmpty ?? false),
-                        compact: bounds.maxWidth < ListLayoutBreakpoints.header,
-                        mimeType:
-                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
-                  ]),
-              toolbar: provider.loadError == null
-                  ? null
-                  : AppSurface(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('customer_voucher.stale_rows_warning'.tr,
-                                style:
-                                    const TextStyle(color: Color(0xffb42318))),
-                            TextButton.icon(
-                                onPressed:
-                                    provider.isLoading ? null : refreshData,
-                                icon: const Icon(Icons.refresh),
-                                label:
-                                    Text('customer_voucher.retry_loading'.tr)),
-                          ]),
-                    ),
-              filters: _filters(provider),
-              showFilters: _showFilters,
-              isLoading: provider.isLoading,
-              items: provider.voucherListDetails ?? [],
-              tableMinWidth: 1440,
-              tableScrollController: _tableController,
-              columns: [
-                TableColumnDef(
-                    label: 'customer_voucher.col_voucher_number'.tr,
-                    flex: 1.6,
-                    cellBuilder: (v, _) => _reference(v)),
-                TableColumnDef(
-                    label: 'customer_voucher.col_customer_name'.tr,
-                    flex: 2,
-                    cellBuilder: (v, _) =>
-                        TableCells.identity(v.customer.user.name)),
-                TableColumnDef(
-                    label: 'customer_voucher.col_type'.tr,
-                    cellBuilder: (v, _) =>
-                        TableCells.text(UiCodeLabels.voucherType(v.type))),
-                TableColumnDef(
-                    label: 'customer_voucher.col_voucher_date'.tr,
-                    flex: 1.3,
-                    cellBuilder: (v, _) => TableCells.text(v.voucherDate)),
-                TableColumnDef(
-                    label: 'customer_voucher.col_due_date'.tr,
-                    flex: 1.3,
-                    cellBuilder: (v, _) => TableCells.text(v.dueDate)),
-                TableColumnDef(
-                    label: 'customer_voucher.col_payment_method'.tr,
-                    flex: 1.2,
-                    cellBuilder: (v, _) =>
-                        TableCells.text(UiCodeLabels.payment(v.paymentMethod))),
-                TableColumnDef(
-                    label: 'customer_voucher.col_paid_amount'.tr,
-                    flex: 1.4,
-                    cellBuilder: (v, _) => TableCells.text(_amount(v))),
-                TableColumnDef(
-                    label: 'customer_voucher.col_status'.tr,
-                    cellBuilder: (v, _) => _buildStatusChip(v.status)),
-                TableColumnDef(
-                    label: 'customer_voucher.col_action'.tr,
-                    flex: 2.5,
-                    cellBuilder: (v, _) => _actions(v)),
-              ],
-              cardBuilder: _card,
-              emptyState:
-                  Center(child: Text('customer_voucher.no_vouchers_found'.tr)),
-              onRefresh: refreshData,
-              currentPage: provider.currentPage,
-              totalPages: provider.totalPages,
-              itemsPerPage: provider.itemsPerPage,
-              countLabel: 'customer_voucher.page_count'.trParams(
-                  {'count': '${provider.voucherListDetails?.length ?? 0}'}),
-              onPageChanged: provider.goToPage,
-            ));
+    final vouchers = provider.voucherListDetails ?? const <CustomerVoucher>[];
+    return ListenableBuilder(
+      // Rebuilds the filter badge while typing and the export progress.
+      listenable: Listenable.merge([
+        _export,
+        searchTextController,
+        voucherNumberController,
+        dateFromController,
+        dateToController,
+      ]),
+      builder: (context, _) => ListPageScaffold<CustomerVoucher>(
+        header: PageHeader(
+          icon: Icons.receipt_long_outlined,
+          title: 'customer_voucher.mobile_header_title'.tr,
+          subtitle: 'customer_voucher.subtitle'.tr,
+          actions: _headerActions(provider),
+          onAdd: () {
+            final controller = Get.put(SideBarController());
+            controller.index.value = 71;
+          },
+          addLabel: 'customer_voucher.create_voucher_button'.tr,
+          addShortLabel: 'customer_voucher.mobile_create_button'.tr,
+        ),
+        toolbar:
+            provider.loadError == null ? null : _staleRowsWarning(provider),
+        filters: _filters(provider),
+        showFilters: _showFilters,
+        isLoading: provider.isLoading,
+        items: vouchers,
+        minTableWidth: 1440,
+        tableScrollController: _tableController,
+        columns: _columns,
+        cardBuilder: _card,
+        emptyState: AppEmptyState(
+          icon: Icons.receipt_long_outlined,
+          title: 'customer_voucher.no_vouchers_found'.tr,
+          subtitle: 'customer_voucher.try_adjusting_filters'.tr,
+        ),
+        onRefresh: refreshData,
+        pagination: ListPagination(
+          currentPage: provider.currentPage,
+          totalPages: provider.totalPages,
+          itemsPerPage: provider.itemsPerPage,
+          onPageChanged: provider.goToPage,
+          countLabel: 'customer_voucher.page_count'
+              .trParams({'count': '${vouchers.length}'}),
+        ),
+      ),
+    );
   }
 
   void _showVoucherDetails(CustomerVoucher voucher) {

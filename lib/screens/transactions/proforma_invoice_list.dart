@@ -1,38 +1,44 @@
-import 'package:flutter/foundation.dart';
 import 'dart:io';
-import '../../components/export_share_button.dart';
-import '../../core/ui/app_surface.dart';
-import '../../core/ui/list_page/filter_panel.dart';
-import '../../core/ui/list_page/list_page_header.dart';
-import '../../core/ui/list_page/list_page_scaffold.dart';
-import '../../services/list_excel_export_service.dart';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
-
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/utils/search_debouncer.dart';
+import 'package:pos_machine/helpers/ui_code_labels.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
-
-import '../../components/filter_toggle_button.dart';
+import 'package:provider/provider.dart';
 
 import '../../providers/auth_model.dart';
 import '../../providers/quotations_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import '../../services/list_excel_export_service.dart';
 import 'widgets/common_details_dialog.dart';
-import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 @visibleForTesting
-const double proformaMobileBreakpoint = 700;
+const double proformaMobileBreakpoint = ListLayoutBreakpoints.mobileBelow;
 
 @visibleForTesting
 bool useProformaMobileLayout(double width) {
   return width < proformaMobileBreakpoint;
 }
 
+/// The proforma invoices list: header, filters, table/cards and pagination,
+/// built on the shared [ListPageScaffold]. Pages come from the API.
 class ProformaInvoiceListScreen extends StatefulWidget {
-  const ProformaInvoiceListScreen({super.key});
+  const ProformaInvoiceListScreen({super.key, this.export});
+
+  /// Replaces the export controller (tests).
+  final ExportController? export;
+
+  static const filtersKey = ValueKey('proforma-desktop-filters');
+  static const filterToggleKey = ValueKey('proforma-list-filter-toggle');
+  static const exportKey = ValueKey('proforma-list-export');
+  static const refreshKey = ValueKey('proforma-list-refresh');
 
   @override
   State<ProformaInvoiceListScreen> createState() =>
@@ -49,10 +55,9 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   bool _showFilters = true;
   bool _visibilityInitialized = false;
   int _requestGeneration = 0;
-  final _invoiceKey = GlobalKey<TextFilterFieldState>();
-  final _customerKey = GlobalKey<TextFilterFieldState>();
+  late final SearchDebouncer _search = SearchDebouncer(() => _fetchInvoices());
+  late final ExportController _export = widget.export ?? ExportController();
   final _tableController = ScrollController();
-  final _exportProgress = ValueNotifier<String?>(null);
   Map<String, String> _loadedFilters = {};
   String? _errorMessage;
   int _currentPage = 1;
@@ -95,17 +100,19 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Filters start open on wide screens and closed on phones.
     if (!_visibilityInitialized) {
       _showFilters =
-          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+          !useProformaMobileLayout(MediaQuery.sizeOf(context).width);
       _visibilityInitialized = true;
     }
   }
 
   @override
   void dispose() {
+    _search.dispose();
+    if (widget.export == null) _export.dispose();
     _tableController.dispose();
-    _exportProgress.dispose();
     _invoiceNumberController.dispose();
     _customerSearchController.dispose();
     super.dispose();
@@ -188,19 +195,16 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     }
   }
 
-  void _cancelPendingSearches() {
-    _invoiceKey.currentState?.cancelPendingSearch();
-    _customerKey.currentState?.cancelPendingSearch();
-  }
-
+  /// Reloads the visible page, or page 1 when the inputs changed since it
+  /// was loaded (a search was still waiting on the debounce).
   Future<void> _refreshInvoices() {
-    _cancelPendingSearches();
+    _search.cancel();
     return _fetchInvoices(
         page: mapEquals(_filtersSnapshot(), _loadedFilters) ? _currentPage : 1);
   }
 
   Future<File> _createExport() async {
-    _cancelPendingSearches();
+    _search.cancel();
     final snapshot = _filtersSnapshot();
     final provider = context.read<QuotationsProvider>();
     final token = context.read<AuthModel>().token ?? '';
@@ -216,8 +220,8 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     int? expectedTotal;
     for (int page = 1; page <= last; page++) {
       if (mounted) {
-        _exportProgress.value = 'proforma_invoice.export_fetching'
-            .trParams({'page': '$page', 'total': '$last'});
+        _export.setStage('proforma_invoice.export_fetching'
+            .trParams({'page': '$page', 'total': '$last'}));
       }
       final response = await provider.fetchProformaInvoices(
           accessToken: token,
@@ -248,7 +252,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       throw const FormatException(
           'Proforma export count does not match API total');
     }
-    if (mounted) _exportProgress.value = 'proforma_invoice.export_creating'.tr;
+    if (mounted) _export.setStage('proforma_invoice.export_creating'.tr);
     return ListExcelExportService.export<Map<String, dynamic>>(
         items: items,
         fileNamePrefix: 'proforma-invoices',
@@ -280,8 +284,15 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         ]);
   }
 
+  Future<void> _runExport() async {
+    final exported = await _export.run(context, createFile: _createExport);
+    if (!exported && mounted) {
+      AppToast.error(context, 'proforma_invoice.export_failed'.tr);
+    }
+  }
+
   void _resetFilters() {
-    _cancelPendingSearches();
+    _search.cancel();
     setState(() {
       _invoiceNumberController.clear();
       _customerSearchController.clear();
@@ -414,226 +425,251 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
   }
 
   bool get _hasActiveFilters => _filtersSnapshot().isNotEmpty;
+
   Widget _filters() => FilterPanel(
-        key: const ValueKey('proforma-desktop-filters'),
+        key: ProformaInvoiceListScreen.filtersKey,
         title: 'proforma_invoice.find'.tr,
         hint: 'proforma_invoice.filter_hint'.tr,
+        resetLabel: 'list.reset'.tr,
+        onSearch: _search.schedule,
+        onSubmit: _search.flush,
         onReset: _resetFilters,
         fields: [
           TextFilterField(
-              key: _invoiceKey,
               controller: _invoiceNumberController,
               label: 'proforma_invoice.search_invoice_number_hint'.tr,
-              icon: Icons.receipt_long_outlined,
-              onSearch: () => _fetchInvoices()),
+              hint: 'proforma_invoice.search_invoice_number_hint'.tr,
+              icon: Icons.receipt_long_outlined),
           TextFilterField(
-              key: _customerKey,
               controller: _customerSearchController,
               label: 'proforma_invoice.name_or_phone_hint'.tr,
-              icon: Icons.person_outline,
-              onSearch: () => _fetchInvoices()),
-          DropdownButtonFormField<String>(
-              key: ValueKey(_selectedStatus),
-              initialValue: _selectedStatus,
-              isExpanded: true,
-              decoration: listFilterDecoration(
-                  'proforma_invoice.status_label'.tr,
-                  Icons.check_circle_outline),
-              items: [
+              hint: 'proforma_invoice.name_or_phone_hint'.tr,
+              icon: Icons.person_outline),
+          DropdownFilterField<String>(
+              label: 'proforma_invoice.status_label'.tr,
+              icon: Icons.check_circle_outline,
+              value: _selectedStatus,
+              options: [
                 for (final status in _statusOptions)
-                  DropdownMenuItem(
-                      value: status, child: Text(_getStatusLabel(status)))
+                  FilterOption(status, _getStatusLabel(status)),
               ],
               onChanged: (value) {
-                _cancelPendingSearches();
+                _search.cancel();
                 setState(() => _selectedStatus = value ?? 'All');
                 _fetchInvoices();
               }),
         ],
       );
+
+  Widget _copyButton(String text, {required bool quotation}) => IconButton(
+      icon: const Icon(Icons.copy_outlined, size: 16),
+      color: AppColors.muted,
+      tooltip: (quotation
+              ? 'proforma_invoice.copy_quotation'
+              : 'proforma_invoice.copy_invoice')
+          .tr,
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: text));
+        AppToast.success(
+            context,
+            (quotation
+                    ? 'proforma_invoice.quotation_number_copied'
+                    : 'proforma_invoice.invoice_number_copied')
+                .tr);
+      });
+
+  /// Table cell: the reference with a copy button (when there is one).
   Widget _reference(dynamic value, {required bool quotation}) {
     final text = _text(value);
     return Row(children: [
       Expanded(child: TableCells.text(text)),
-      if (text != '-')
-        IconButton(
-            icon: const Icon(Icons.copy_outlined, size: 16),
-            tooltip: (quotation
-                    ? 'proforma_invoice.copy_quotation'
-                    : 'proforma_invoice.copy_invoice')
-                .tr,
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: text));
-              showScaffold(
-                  context: context,
-                  message: (quotation
-                          ? 'proforma_invoice.quotation_number_copied'
-                          : 'proforma_invoice.invoice_number_copied')
-                      .tr);
-            })
+      if (text != '-') _copyButton(text, quotation: quotation),
     ]);
   }
 
-  Widget _status(String status) {
-    final color = _statusColor(status);
-    return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10)),
-            child: Text(_getStatusLabel(status),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w600))));
+  /// Card line: label, reference and a copy button (when there is one).
+  Widget _referenceInfo(String label, dynamic value,
+      {required bool quotation}) {
+    final text = _text(value);
+    return InfoRow(
+        label: label,
+        value: text,
+        trailing: text == '-' ? null : _copyButton(text, quotation: quotation));
   }
 
-  Widget _card(Map<String, dynamic> invoice, int number) => AppSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TableCells.identity(_text(_mapValue(invoice['customer'])['name'])),
-        const SizedBox(height: 10),
-        _reference(invoice['invoice_number'], quotation: false),
-        _reference(_mapValue(invoice['quotation'])['quotation_number'],
+  Widget _status(String status) => AppBadge(
+      label: _getStatusLabel(status),
+      tone: switch (status.toLowerCase()) {
+        'paid' || 'order created' => AppBadgeTone.success,
+        'overdue' => AppBadgeTone.danger,
+        'pending' => AppBadgeTone.warning,
+        _ => AppBadgeTone.neutral,
+      });
+
+  Widget _avatar(String name, double size) =>
+      AppAvatar(name: name == '-' ? '' : name, semanticLabel: name, size: size);
+
+  Widget _card(Map<String, dynamic> invoice, int number) {
+    final customer = _text(_mapValue(invoice['customer'])['name']);
+    return AppListCard(
+      title: customer,
+      leading: _avatar(customer, 40),
+      trailing: _status(_text(invoice['status'])),
+      body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _referenceInfo('proforma_invoice.invoice_number_label'.tr,
+            invoice['invoice_number'],
+            quotation: false),
+        _referenceInfo('proforma_invoice.field_quotation_number'.tr,
+            _mapValue(invoice['quotation'])['quotation_number'],
             quotation: true),
-        Text(
-            '${'proforma_invoice.field_invoice_date'.tr}: ${_text(invoice['invoice_date'])}'),
-        Text(
-            '${'proforma_invoice.field_due_date'.tr}: ${_text(invoice['due_date'])}'),
-        Text(
-            '${'proforma_invoice.field_amount'.tr}: ${_text(invoice['amount'])}'),
-        const SizedBox(height: 10),
-        _status(_text(invoice['status'])),
-        const SizedBox(height: 10),
-        TableCells.viewButton(() => _showDetails(invoice)),
+        const SizedBox(height: AppSpacing.xs),
+        AppMetricStrip(metrics: [
+          AppMetric(
+              icon: Icons.event_outlined,
+              label: 'proforma_invoice.field_invoice_date'.tr,
+              value: _text(invoice['invoice_date'])),
+          AppMetric(
+              icon: Icons.event_busy_outlined,
+              label: 'proforma_invoice.field_due_date'.tr,
+              value: _text(invoice['due_date'])),
+        ]),
+        InfoRow(
+            label: 'proforma_invoice.field_amount'.tr,
+            value: _text(invoice['amount'])),
+      ]),
+      actionLabel: 'list.view'.tr,
+      actionIcon: Icons.visibility_outlined,
+      onAction: () => _showDetails(invoice),
+    );
+  }
+
+  List<TableColumnDef<Map<String, dynamic>>> _columns() => [
+        TableColumnDef(
+            label: 'proforma_invoice.invoice_number_label'.tr,
+            flex: 1.7,
+            cellBuilder: (v, _) =>
+                _reference(v['invoice_number'], quotation: false)),
+        TableColumnDef(
+            label: 'proforma_invoice.customer_label'.tr,
+            flex: 2,
+            cellBuilder: (v, _) {
+              final name = _text(_mapValue(v['customer'])['name']);
+              return TableCells.avatarName(
+                  name: name, avatar: _avatar(name, 36));
+            }),
+        TableColumnDef(
+            label: 'proforma_invoice.field_quotation_number'.tr,
+            flex: 1.7,
+            cellBuilder: (v, _) => _reference(
+                _mapValue(v['quotation'])['quotation_number'],
+                quotation: true)),
+        TableColumnDef(
+            label: 'proforma_invoice.field_invoice_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => TableCells.text(_text(v['invoice_date']))),
+        TableColumnDef(
+            label: 'proforma_invoice.field_due_date'.tr,
+            flex: 1.3,
+            cellBuilder: (v, _) => TableCells.text(_text(v['due_date']))),
+        TableColumnDef(
+            label: 'proforma_invoice.field_amount'.tr,
+            flex: 1.2,
+            cellBuilder: (v, _) => TableCells.text(_text(v['amount']))),
+        TableColumnDef(
+            label: 'proforma_invoice.status_label'.tr,
+            flex: 1.4,
+            cellBuilder: (v, _) =>
+                TableCells.widget(_status(_text(v['status'])))),
+        TableColumnDef(
+            label: 'proforma_invoice.col_actions'.tr,
+            flex: 1.1,
+            cellBuilder: (v, _) => TableCells.action(
+                label: 'list.view'.tr,
+                icon: Icons.visibility_outlined,
+                onPressed: () => _showDetails(v))),
+      ];
+
+  /// Shown while the last load failed: the rows on screen may not match
+  /// the filters, so export stays off until a retry succeeds.
+  Widget _staleRowsWarning() => AppSurface(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('proforma_invoice.stale_rows_warning'.tr,
+            style: const TextStyle(color: AppColors.red)),
+        TextButton.icon(
+            onPressed: () => _fetchInvoices(),
+            icon: const Icon(Icons.refresh),
+            label: Text('proforma_invoice.retry'.tr)),
       ]));
 
+  /// Filters, Export, Refresh — left to right.
+  List<HeaderAction> _headerActions() => [
+        HeaderAction(
+            key: ProformaInvoiceListScreen.filterToggleKey,
+            icon: _showFilters
+                ? Icons.filter_alt_rounded
+                : Icons.filter_alt_outlined,
+            label: _showFilters
+                ? 'proforma_invoice.hide_filters'.tr
+                : 'proforma_invoice.show_filters'.tr,
+            onPressed: () => setState(() => _showFilters = !_showFilters),
+            active: _showFilters,
+            badge: !_showFilters && _hasActiveFilters),
+        HeaderAction(
+            key: ProformaInvoiceListScreen.exportKey,
+            icon: Icons.ios_share_rounded,
+            label: _export.busy
+                ? (_export.stage ?? 'proforma_invoice.export_creating'.tr)
+                : 'proforma_invoice.export_tooltip'.tr,
+            onPressed:
+                !_isLoading && _errorMessage == null && _invoices.isNotEmpty
+                    ? _runExport
+                    : null,
+            busy: _export.busy),
+        HeaderAction(
+            key: ProformaInvoiceListScreen.refreshKey,
+            icon: Icons.refresh_rounded,
+            label: 'list.refresh'.tr,
+            onPressed: _refreshInvoices),
+      ];
+
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-      builder: (context, bounds) => ListPageScaffold<Map<String, dynamic>>(
-            header: ListPageHeader(
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: Listenable.merge(
+          [_export, _invoiceNumberController, _customerSearchController]),
+      builder: (context, _) => ListPageScaffold<Map<String, dynamic>>(
+            header: PageHeader(
                 icon: Icons.receipt_long_outlined,
                 title: 'proforma_invoice.title'.tr,
                 subtitle: 'proforma_invoice.subtitle'.tr,
-                onRefresh: _refreshInvoices,
-                extraActions: [
-                  FilterToggleButton(
-                      showFilters: _showFilters,
-                      hasActiveFilters: _hasActiveFilters,
-                      activeFiltersListenable: Listenable.merge([
-                        _invoiceNumberController,
-                        _customerSearchController
-                      ]),
-                      activeFiltersBuilder: () => _hasActiveFilters,
-                      showTooltip: 'proforma_invoice.show_filters'.tr,
-                      hideTooltip: 'proforma_invoice.hide_filters'.tr,
-                      onPressed: () =>
-                          setState(() => _showFilters = !_showFilters)),
-                  ExportShareButton(
-                      createFile: _createExport,
-                      label: 'supplier_transactions.export'.tr,
-                      loadingLabel: 'proforma_invoice.export_creating'.tr,
-                      progressLabel: _exportProgress,
-                      tooltip: 'proforma_invoice.export_tooltip'.tr,
-                      errorMessage: 'proforma_invoice.export_failed'.tr,
-                      enabled: !_isLoading &&
-                          _errorMessage == null &&
-                          _invoices.isNotEmpty,
-                      compact: bounds.maxWidth < ListLayoutBreakpoints.header,
-                      mimeType:
-                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
-                ]),
+                actions: _headerActions()),
             filters: _filters(),
             showFilters: _showFilters,
             isLoading: _isLoading,
             items: _invoices,
-            toolbar: _errorMessage == null
-                ? null
-                : AppSurface(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                        Text('proforma_invoice.stale_rows_warning'.tr,
-                            style: const TextStyle(
-                                color: ColorManager.kButtonRed)),
-                        TextButton.icon(
-                            onPressed: () => _fetchInvoices(),
-                            icon: const Icon(Icons.refresh),
-                            label: Text('proforma_invoice.retry'.tr))
-                      ])),
-            tableMinWidth: 1250,
+            toolbar: _errorMessage == null ? null : _staleRowsWarning(),
+            minTableWidth: 1250,
             tableScrollController: _tableController,
-            columns: [
-              TableColumnDef(
-                  label: 'proforma_invoice.invoice_number_label'.tr,
-                  flex: 1.7,
-                  cellBuilder: (v, _) =>
-                      _reference(v['invoice_number'], quotation: false)),
-              TableColumnDef(
-                  label: 'proforma_invoice.customer_label'.tr,
-                  flex: 2,
-                  cellBuilder: (v, _) => TableCells.identity(
-                      _text(_mapValue(v['customer'])['name']))),
-              TableColumnDef(
-                  label: 'proforma_invoice.field_quotation_number'.tr,
-                  flex: 1.7,
-                  cellBuilder: (v, _) => _reference(
-                      _mapValue(v['quotation'])['quotation_number'],
-                      quotation: true)),
-              TableColumnDef(
-                  label: 'proforma_invoice.field_invoice_date'.tr,
-                  flex: 1.3,
-                  cellBuilder: (v, _) =>
-                      TableCells.text(_text(v['invoice_date']))),
-              TableColumnDef(
-                  label: 'proforma_invoice.field_due_date'.tr,
-                  flex: 1.3,
-                  cellBuilder: (v, _) => TableCells.text(_text(v['due_date']))),
-              TableColumnDef(
-                  label: 'proforma_invoice.field_amount'.tr,
-                  flex: 1.2,
-                  cellBuilder: (v, _) => TableCells.text(_text(v['amount']))),
-              TableColumnDef(
-                  label: 'proforma_invoice.status_label'.tr,
-                  flex: 1.4,
-                  cellBuilder: (v, _) => _status(_text(v['status']))),
-              TableColumnDef(
-                  label: 'proforma_invoice.col_actions'.tr,
-                  flex: 1.1,
-                  cellBuilder: (v, _) =>
-                      TableCells.viewButton(() => _showDetails(v))),
-            ],
+            columns: _columns(),
             cardBuilder: _card,
-            emptyState:
-                Center(child: Text('proforma_invoice.no_invoices_found'.tr)),
+            emptyState: AppEmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: 'proforma_invoice.no_invoices_found'.tr),
             onRefresh: _refreshInvoices,
-            currentPage: _currentPage,
-            totalPages: _lastPage,
-            itemsPerPage: 20,
-            countLabel: 'proforma_invoice.page_count'
-                .trParams({'count': '${_invoices.length}'}),
-            onPageChanged: (page) {
-              _cancelPendingSearches();
-              _fetchInvoices(
-                  page:
-                      mapEquals(_filtersSnapshot(), _loadedFilters) ? page : 1);
-            },
+            pagination: ListPagination(
+                currentPage: _currentPage,
+                totalPages: _lastPage,
+                itemsPerPage: 20,
+                countLabel: 'proforma_invoice.page_count'
+                    .trParams({'count': '${_invoices.length}'}),
+                onPageChanged: (page) {
+                  // New inputs (a search still waiting) start on page 1.
+                  _search.cancel();
+                  _fetchInvoices(
+                      page: mapEquals(_filtersSnapshot(), _loadedFilters)
+                          ? page
+                          : 1);
+                }),
           ));
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-      case 'order created':
-        return Colors.green;
-      case 'overdue':
-        return ColorManager.kButtonRed;
-      case 'pending':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
 
   Map<String, dynamic> _mapValue(dynamic value) {
     if (value is Map<String, dynamic>) return value;

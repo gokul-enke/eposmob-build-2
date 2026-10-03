@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_thermal.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_standard.dart';
 import 'package:share_plus/share_plus.dart';

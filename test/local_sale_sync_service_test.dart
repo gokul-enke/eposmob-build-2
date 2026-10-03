@@ -95,6 +95,81 @@ void main() {
     expect(result.message, 'Insufficient stock');
   });
 
+  for (final status in [401, 403]) {
+    test('an authorization failure ($status) is rejected, not ambiguous',
+        () async {
+      final service = LocalSaleSyncService(
+        store: _MemoryOutbox(),
+        sender: (_, __, ___) async =>
+            http.Response('{"message":"Unauthenticated."}', status),
+      );
+      await _enqueue(service);
+
+      final result = await service.submitOnce(
+        localOrderId: 'local-1',
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint),
+      );
+
+      expect(result.state, LocalSaleSyncState.rejected);
+      expect(result.message, 'Unauthenticated.');
+      expect(result.httpStatus, status);
+    });
+  }
+
+  test('an interrupted rejection rollback is finished for its cart only',
+      () async {
+    final store = _MemoryOutbox();
+    final service = LocalSaleSyncService(
+      store: store,
+      sender: (_, __, ___) async =>
+          http.Response('{"message":"Insufficient stock"}', 422),
+    );
+    await _enqueue(service);
+    await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+
+    // A restart finds the rejected record still stored.
+    final restarted = LocalSaleSyncService(
+      store: store,
+      sender: (_, __, ___) async => http.Response('{}', 500),
+    );
+
+    expect(await restarted.discardRejectedForCartSession('another-cart'),
+        isEmpty);
+    expect(restarted.hasRecordedCartSession('cart-1'), isTrue);
+
+    expect(await restarted.discardRejectedForCartSession('cart-1'),
+        ['local-1']);
+    expect(restarted.hasRecordedCartSession('cart-1'), isFalse);
+    expect(store.rows, isEmpty);
+  });
+
+  test('a sale that may have reached the server is never rolled back',
+      () async {
+    final store = _MemoryOutbox();
+    final service = LocalSaleSyncService(
+      store: store,
+      sender: (_, __, ___) async => http.Response('oops', 500),
+    );
+    await _enqueue(service);
+    await service.submitOnce(
+      localOrderId: 'local-1',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+
+    expect(await service.discardRejectedForCartSession('cart-1'), isEmpty);
+    expect(service.hasRecordedCartSession('cart-1'), isTrue);
+    expect(store.rows['local-1']?['state'], 'needs_review');
+  });
+
   test('existing-order confirmation accepts the update endpoint success shape',
       () async {
     final service = LocalSaleSyncService(

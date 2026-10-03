@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:provider/provider.dart';
 
 enum OfflineCacheTarget {

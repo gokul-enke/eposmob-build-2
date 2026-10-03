@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -342,21 +343,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
               if (success) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('product.deleted_success'.tr),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  AppToast.success(context, 'product.deleted_success'.tr);
                 }
               } else {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('product.delete_failed'.tr),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  AppToast.error(context, 'product.delete_failed'.tr);
                 }
               }
             },

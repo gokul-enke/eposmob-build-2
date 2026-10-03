@@ -19,7 +19,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/purchase_history/customer_purchase_history_dialog.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/show_product_details.dart';
 import 'package:provider/provider.dart';
 
@@ -482,7 +482,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
-      builder: (dialogContext) => CustomerPurchaseHistoryModal(
+      builder: (dialogContext) => CustomerPurchaseHistoryDialog(
         product: item.product,
         purchaseHistory: purchaseHistory.data.take(5).toList(),
         customerName: customerName,

@@ -9,10 +9,10 @@ import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
 import 'package:pos_machine/screens/category/edit_category_screen.dart';
 import 'package:pos_machine/screens/category/widgets/view_category.dart';
-import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart';
-import 'package:pos_machine/screens/customers/add_customers.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customer_profile_page.dart';
+import 'package:pos_machine/features/customers/presentation/pages/add_customer_page.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
-import 'package:pos_machine/screens/customers/customers.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customers_list_page.dart';
 import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
 
@@ -40,7 +40,7 @@ import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
 import 'package:pos_machine/screens/purchase_return/create_purchase_return.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
-import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
+import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
 // Adding import for the new simple transaction details screen
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart';
 // Adding imports for supplier transaction report screens
@@ -49,13 +49,13 @@ import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
-import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
-import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
+import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profile_page.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
@@ -91,8 +91,7 @@ import 'package:pos_machine/screens/transactions/view_expense_screen.dart';
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
 import '../widgets/category_list.dart';
-import 'package:pos_machine/screens/suppliers/supplier_list.dart';
-import 'package:pos_machine/screens/suppliers/supplier_details.dart';
+import 'package:pos_machine/features/suppliers/presentation/pages/suppliers_list_page.dart';
 import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
@@ -107,6 +106,25 @@ class SideBarController extends GetxController {
   /// caller navigates to it, and the list is positional — inserting a screen
   /// above it would otherwise silently point those callers elsewhere.
   static const int invoiceListScreenIndex = 21;
+
+  /// Customer screens in [screens]. Navigate through [CustomerNavigation]
+  /// rather than setting these indices directly.
+  static const int customersScreenIndex = 5;
+  static const int addCustomerScreenIndex = 9;
+  static const int userProfileScreenIndex = 10;
+  static const int customerProfileScreenIndex = 38;
+
+  /// Supplier screens in [screens]. Navigate through [SupplierNavigation].
+  static const int suppliersScreenIndex = 52;
+
+  /// Legacy "supplier details" slot; shows the supplier profile.
+  static const int supplierDetailsScreenIndex = 57;
+  static const int supplierProfileScreenIndex = 69;
+
+  /// Report screens in [screens]. Navigate through [ReportNavigation].
+  static const int mySalesReportScreenIndex = 58;
+  static const int customerTransactionsReportScreenIndex = 65;
+  static const int customerTransactionDetailsScreenIndex = 66;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -132,11 +150,11 @@ class SideBarController extends GetxController {
     SalesScreen(), //2
     CartScreen(), //3
     TransactionScreen(), //4
-    CustomersScreen(), //5
+    CustomersListPage(), //5
     LoyalityCardScreen(), //6
     NotificationScreen(), //7
     SupportScreen(), //8
-    AddCustomersScreen(), //9
+    AddCustomerPage(), //9
     OpenProfileScreen(), //10
     SalesOrderDetailsScreen(), //11
     AddCategoryScreen(), //12
@@ -165,7 +183,7 @@ class SideBarController extends GetxController {
     TabBarForEditProduct(), //35
     ViewPurchaseWidget(), //36
     AddVoucherDetailsWidget(), //37
-    OpenCustomerProfileScreen(), //38
+    CustomerProfilePage(), //38
     AccountBookScreen(), //39
     ProductSalesReportScreen(), //40
     SalesReportScreen(), //41
@@ -179,7 +197,7 @@ class SideBarController extends GetxController {
     SalesReturnScreen(), //49 Sales Return
     SalesReturnPage(), //50 Sales Return List
     EditOrder(), // 51 Edit Order
-    SupplierListScreen(), // 52 Suppliers List
+    SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
     RestaurantPage(
@@ -187,19 +205,19 @@ class SideBarController extends GetxController {
       defaultCounterBillingMode: false,
     ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
-    SupplierDetailsScreen(), // 57 Supplier Details
-    SalesExecutiveReportScreen(), // 58 Sales Executive Report
+    SupplierProfilePage(), // 57 Supplier Details (legacy slot, same page)
+    MySalesReportPage(), // 58 mySalesReportScreenIndex
     CompanyAccountsScreen(), // 59 Company Accounts
     AddCompanyAccountScreen(), // 60 Add Company Account
     AccountDetailsScreen(), // 61 Account Details Screen
     SettingsScreen(), // 62 Settings Home
     WhatsappSettingsScreen(), // 63 WhatsApp Settings
     CompanyInfoScreen(), // 64 Company Info
-    CustomerTransactionsReportScreen(), // 65 Customer Transactions Report
+    CustomerTransactionsReportPage(), // 65 customerTransactionsReportScreenIndex
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
-    OpenSupplierProfileScreen(), // 69 Open Supplier Profile Screen
+    SupplierProfilePage(), // 69 Supplier Profile
     CustomerVoucherListScreen(), // 70 Customer Voucher List
     CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
     SupplierVoucherListScreen(), // 72 Supplier Voucher List

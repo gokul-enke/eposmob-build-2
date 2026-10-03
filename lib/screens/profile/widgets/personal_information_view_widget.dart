@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_detail_row.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import '../../../components/build_container_box.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';

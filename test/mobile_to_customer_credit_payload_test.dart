@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 
 void main() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -61,9 +62,7 @@ class _BarcodeLayoutSettingsPanelState
     }).catchError((Object error, StackTrace stackTrace) {
       debugPrint('[BarcodeSettings] Save failed: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('barcode_layout.toast_save_error'.tr)),
-        );
+        AppToast.error(context, 'barcode_layout.toast_save_error'.tr);
       }
     });
   }
@@ -81,12 +80,7 @@ class _BarcodeLayoutSettingsPanelState
     _save(_settings);
     await _saveQueue;
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('barcode_layout.toast_reset_success'.tr),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      AppToast.success(context, 'barcode_layout.toast_reset_success'.tr, duration: const Duration(seconds: 2));
     }
   }
 

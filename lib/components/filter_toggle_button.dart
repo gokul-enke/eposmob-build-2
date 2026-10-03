@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../resources/color_manager.dart';
-import '../core/ui/app_colors.dart';
+import '../core/ui/tokens/app_colors.dart';
+import '../core/ui/tokens/app_spacing.dart';
 
 /// Shared button for showing and hiding list filters.
 class FilterToggleButton extends StatelessWidget {

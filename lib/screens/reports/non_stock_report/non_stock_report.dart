@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
@@ -102,14 +103,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     } catch (error) {
       debugPrint('Error loading non-stock report: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text('non_stock_report.unavailable'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+        AppToast.error(context, 'non_stock_report.unavailable'.tr);
       }
     } finally {
       if (mounted) {

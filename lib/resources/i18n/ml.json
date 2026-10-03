@@ -200,7 +200,10 @@
     "btn_save_address": "സേവ് വിലാസം",
     "btn_update_address": "അപ്ഡേറ്റ് വിലാസം",
     "required": "നിർബന്ധം",
-    "pincode_required": "പിൻകോഡ് നിർബന്ധമാണ്"
+    "pincode_required": "പിൻകോഡ് നിർബന്ധമാണ്",
+    "section_title": "വിലാസ വിവരങ്ങൾ",
+    "refresh": "പുതുക്കുക",
+    "refresh_failed": "വിലാസങ്ങൾ പുതുക്കാനായില്ല"
   },
   "notifications": {
     "page_title": "അറിയിപ്പുകൾ"
@@ -1487,7 +1490,25 @@
     "empty_subtitle": "ശ്രമിക്കുക മാറ്റുന്നു അല്ലെങ്കിൽ നീക്കുന്നു ഫിൽട്ടറുകൾ മുകളിൽ.",
     "count_on_page": "@count കസ്റ്റമേഴ്സ് ഈ പേജ്",
     "count_on_page_one": "1 കസ്റ്റമർ ഈ പേജ്",
-    "not_provided": "നൽകിയിട്ടില്ല"
+    "not_provided": "നൽകിയിട്ടില്ല",
+    "filters_title": "തിരയലും ഫിൽട്ടറുകളും",
+    "filters_summary": "പേര്, ഇമെയിൽ, ഫോൺ, ബാലൻസ്",
+    "filters_hide": "ഫിൽട്ടർ നിയന്ത്രണങ്ങൾ മറയ്ക്കുക",
+    "form": {
+      "section_details": "ഉപഭോക്താവിന്റെ വിവരങ്ങൾ",
+      "section_address": "വിലാസം",
+      "section_business": "ബിസിനസ് വിവരങ്ങൾ",
+      "section_account": "അക്കൗണ്ട്"
+    },
+    "export": "Excel-ലേക്ക് എക്സ്പോർട്ട് ചെയ്യുക",
+    "exporting": "എക്സ്പോർട്ട് ചെയ്യുന്നു...",
+    "export_failed": "കസ്റ്റമേഴ്സിനെ എക്സ്പോർട്ട് ചെയ്യാൻ കഴിഞ്ഞില്ല",
+    "export_share_text": "കസ്റ്റമർ ലിസ്റ്റ്",
+    "export_col_no": "ക്രമ നം",
+    "export_col_alt_phone": "മറ്റൊരു ഫോൺ",
+    "export_col_type": "തരം",
+    "show_filters": "ഫിൽട്ടറുകൾ കാണിക്കുക",
+    "hide_filters": "ഫിൽട്ടറുകൾ മറയ്ക്കുക"
   },
   "suppliers": {
     "title": "സപ്ലയേഴ്സ്",
@@ -1506,14 +1527,16 @@
     "zero": "പൂജ്യം (0)",
     "number": "ഇല്ല",
     "action": "ആക്ഷൻ",
-    "reset": "റീസെറ്റ്"
+    "reset": "റീസെറ്റ്",
+    "search_name": "പേര് ഉപയോഗിച്ച് തിരയുക",
+    "search_email": "ഇമെയിൽ ഉപയോഗിച്ച് തിരയുക",
+    "search_phone": "ഫോൺ ഉപയോഗിച്ച് തിരയുക"
   },
   "supplier_list": {
     "subtitle": "വിതരണക്കാരുടെ വിവരങ്ങളും ബന്ധപ്പെടാനുള്ള വിവരങ്ങളും ബാലൻസുകളും നിയന്ത്രിക്കുക.",
     "find": "വിതരണക്കാരെ കണ്ടെത്തുക",
     "find_hint": "ടൈപ്പ് ചെയ്യുമ്പോൾ ഫലങ്ങൾ പുതുക്കുന്നു.",
     "count_on_page": "ഈ പേജിൽ @count വിതരണക്കാർ",
-
     "error_fetching": "സപ്ലയേഴ്സ് എടുക്കുന്നതിൽ പിഴവ്",
     "error_searching": "പിഴവ്: തിരയുന്നു സപ്ലയേഴ്സ്",
     "no_suppliers_desktop": "സപ്ലയേഴ്സ് കണ്ടെത്തിയില്ല",
@@ -4512,7 +4535,36 @@
     "sidebar_loyalty_card": "ലോയൽറ്റി കാർഡ്",
     "sidebar_chat": "ചാറ്റ്",
     "placeholder_customer_name": "കസ്റ്റമർ പേര്",
-    "label_id": "ഐഡി:"
+    "label_id": "ഐഡി:",
+    "view_transactions_count": "@count ട്രാൻസാക്ഷനുകൾ",
+    "view_more_transactions_count": "കൂടാതെ @count ട്രാൻസാക്ഷനുകൾ കൂടി...",
+    "view_label_transaction": "ട്രാൻസാക്ഷൻ",
+    "col_reference": "റഫറൻസ്",
+    "col_date": "തീയതി",
+    "col_type": "തരം",
+    "col_payment_method": "പേയ്‌മെന്റ് രീതി",
+    "col_amount": "തുക",
+    "col_status": "സ്റ്റാറ്റസ്",
+    "col_action": "പ്രവർത്തനം",
+    "col_order": "ഓർഡർ #",
+    "col_payment_status": "പേയ്‌മെന്റ്",
+    "col_items": "ഇനങ്ങൾ",
+    "col_total": "ആകെ",
+    "col_qty": "അളവ്",
+    "col_price": "വില",
+    "type_credit": "ക്രെഡിറ്റ്",
+    "type_debit": "ഡെബിറ്റ്",
+    "label_amount": "തുക",
+    "tx_total_credit": "ആകെ ക്രെഡിറ്റ്",
+    "tx_total_debit": "ആകെ ഡെബിറ്റ്",
+    "tx_net": "നെറ്റ്",
+    "tx_on_page": "ഈ പേജിലെ ഇടപാടുകൾ: @count",
+    "orders_on_page": "ഈ പേജിലെ ഓർഡറുകൾ: @count",
+    "tx_load_failed": "ഇടപാടുകൾ ലോഡ് ചെയ്യാനായില്ല",
+    "tx_date_range": "തീയതി പരിധി",
+    "tx_date_range_hint": "ആരംഭ, അവസാന തീയതികൾ തിരഞ്ഞെടുക്കുക",
+    "history_last_purchases": "അവസാന @count വാങ്ങലുകൾ",
+    "history_last_purchase_one": "അവസാന വാങ്ങൽ"
   },
   "login": {
     "title": "ലോഗിൻ",
@@ -5593,7 +5645,8 @@
     "min_redeemable": "മിനി റിഡീം പോയിന്റുകൾ",
     "price_per_point": "വില ഓരോ പോയിന്റ്",
     "valid_from": "ശരിയായ ൽ നിന്ന്",
-    "valid_until": "ശരിയായ വരെ"
+    "valid_until": "ശരിയായ വരെ",
+    "tier_default": "ബ്രോൺസ്"
   },
   "customer_chat": {
     "err_load": "ലോഡ് ചാറ്റ് ചരിത്രം പരാജയപ്പെട്ടു",
@@ -5604,7 +5657,8 @@
     "btn_try_again": "വീണ്ടും ശ്രമിക്കുക",
     "title_no_messages": "സന്ദേശങ്ങൾ ഇതുവരെ ഇല്ല",
     "msg_start_conversation": "സംഭാഷണം തുടങ്ങുക:",
-    "hint_message": "തരം നിങ്ങളുടെ സന്ദേശം ഇവിടെ..."
+    "hint_message": "തരം നിങ്ങളുടെ സന്ദേശം ഇവിടെ...",
+    "btn_send": "അയയ്ക്കുക"
   },
   "customer_orders": {
     "err_no_customer_id": "കസ്റ്റമർ ഐഡി ലഭ്യമല്ല.",
@@ -5730,7 +5784,18 @@
     "trans_detail_payment_method": "പേയ്‌മെന്റ് രീതി",
     "trans_detail_date": "തീയതി",
     "trans_label_no_reference": "റഫറൻസ് ഇല്ല",
-    "id_prefix": "ഐഡി: "
+    "id_prefix": "ഐഡി: ",
+    "trans_type_credit": "ക്രെഡിറ്റ്",
+    "trans_type_debit": "ഡെബിറ്റ്",
+    "trans_label_date_range": "തീയതി പരിധി",
+    "trans_hint_date_range": "തീയതി പരിധി തിരഞ്ഞെടുക്കുക",
+    "trans_on_page": "ഈ പേജിൽ @count ഇടപാടുകൾ",
+    "trans_load_failed": "ഇടപാടുകൾ ലോഡ് ചെയ്യാനായില്ല",
+    "col_amount": "തുക",
+    "col_items": "ഇനങ്ങൾ",
+    "orders_purchase_title": "പർച്ചേസ് #@number",
+    "orders_on_page": "ഈ പേജിൽ @count പർച്ചേസ് ഓർഡറുകൾ",
+    "orders_load_failed": "പർച്ചേസ് ഓർഡറുകൾ ലോഡ് ചെയ്യാനായില്ല"
   },
   "customer_transactions": {
     "msg_preparing_report": "തയ്യാറാക്കുന്നു ട്രാൻസാക്ഷൻ റിപ്പോർട്ട്...",
@@ -6159,6 +6224,10 @@
     "export_overwrite_title": "നിലവിലുള്ള ഫയൽ മാറ്റിസ്ഥാപിക്കണോ?",
     "export_overwrite_message": "@name നിലവിലുണ്ട്. മാറ്റിസ്ഥാപിക്കണോ?",
     "export_cancel": "റദ്ദാക്കുക",
-    "export_overwrite": "മാറ്റിസ്ഥാപിക്കുക"
+    "export_overwrite": "മാറ്റിസ്ഥാപിക്കുക",
+    "filters": "ഫിൽട്ടറുകൾ",
+    "hide_filters": "ഫിൽട്ടറുകൾ മറയ്ക്കുക",
+    "export": "എക്സ്പോർട്ട്",
+    "exporting": "എക്സ്പോർട്ട് ചെയ്യുന്നു..."
   }
 }

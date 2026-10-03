@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -721,25 +722,4 @@ class _HomeWidgetState extends State<HomeWidget> {
       ],
     );
   }
-}
-
-// Helper functions
-void showScaffold({required BuildContext context, required String message}) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
-    ),
-  );
-}
-
-void showScaffoldError(
-    {required BuildContext context, required String message}) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red,
-      duration: const Duration(seconds: 3),
-    ),
-  );
 }

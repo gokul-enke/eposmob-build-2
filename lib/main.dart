@@ -23,7 +23,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/product_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/customer_voucher_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
@@ -47,7 +47,7 @@ import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
@@ -219,6 +219,17 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
           .run(() => localProducts.hydrated)
           .timeout(_maxBoxOpenTimeout);
       final localSales = LocalSaleSyncService.instance;
+      // A sale the server rejected never cleared its cart. If the app closed
+      // before that rollback finished, finish it here and keep the cart.
+      final rolledBack = await localSales
+          .discardRejectedForCartSession(localProducts.cartSessionId);
+      if (rolledBack.isNotEmpty) {
+        localProducts.deleteConfirmedOrders(rolledBack.toSet());
+        await localProducts.flushPersistence();
+        debugPrint(
+          '[Startup] rolled_back_rejected_sales count=${rolledBack.length}',
+        );
+      }
       if (localSales.hasRecordedCartSession(localProducts.cartSessionId)) {
         final confirmedDraftId = localProducts.currentOrder?.id;
         if (confirmedDraftId != null) {

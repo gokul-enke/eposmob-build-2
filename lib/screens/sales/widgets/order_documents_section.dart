@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
@@ -69,12 +70,7 @@ class _OrderDocumentsSectionState extends State<OrderDocumentsSection> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? ColorManager.kRed : null,
-      ),
-    );
+    AppToast.show(context, message, type: isError ? AppToastType.error : AppToastType.info);
   }
 
   @override

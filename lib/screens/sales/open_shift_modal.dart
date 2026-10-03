@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -187,9 +188,7 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('daily_sales_close.msg_shift_opened'.tr)),
-          );
+          AppToast.success(context, 'daily_sales_close.msg_shift_opened'.tr);
           Navigator.of(context).pop();
           widget.onSuccess();
         } else {

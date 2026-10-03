@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import '../components/build_payment_method_selector.dart';
 import '../components/build_simple_payment_selector.dart';
 import '../components/build_restricted_payment_selector.dart';
@@ -513,11 +514,6 @@ class _BillingWithPaymentExampleState extends State<BillingWithPaymentExample> {
   void _processPayment() {
     // Process payment logic here
     debugPrint('Processing payment: $paymentData');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Payment processed successfully!'),
-        backgroundColor: ColorManager.kSuccessColor,
-      ),
-    );
+    AppToast.success(context, 'Payment processed successfully!');
   }
 }

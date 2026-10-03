@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1309,9 +1310,7 @@ class OrderDetailWidget extends StatelessWidget {
       }
     }
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failureMessageKey.tr)),
-      );
+      AppToast.error(context, failureMessageKey.tr);
     }
   }
 

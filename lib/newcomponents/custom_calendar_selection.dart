@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -403,13 +404,7 @@ class _CustomCalendarPickerTableCellState
   }
 
   void _showDateValidationError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    AppToast.error(context, message, duration: const Duration(seconds: 3));
   }
 
   void _toggleInputMode() {

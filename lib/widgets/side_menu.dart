@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -17,7 +18,7 @@ import '../providers/authentication_providers.dart';
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
 import '../providers/store_session_provider.dart';
-import '../providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
@@ -788,13 +789,15 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value = 58;
+                      sideBarController.index.value =
+                          SideBarController.mySalesReportScreenIndex;
                     },
                     onTapTitle2: () {
                       sideBarController.index.value = 85;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 65;
+                      sideBarController.index.value = SideBarController
+                          .customerTransactionsReportScreenIndex;
                     },
                     onTapTitle4: () {
                       sideBarController.index.value = 67;
@@ -1009,13 +1012,9 @@ class _SideMenuState extends State<SideMenu> {
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.users,
                   title: 'nav.customers'.tr,
-                  onTap: () {
-                    sideBarController.index.value = 5;
-                  },
-                  selected: sideBarController.index.value == 5 ||
-                      sideBarController.index.value == 9 ||
-                      sideBarController.index.value == 10 ||
-                      sideBarController.index.value == 38,
+                  onTap: CustomerNavigation.openList,
+                  selected: CustomerNavigation.sectionIndices
+                      .contains(sideBarController.index.value),
                 ),
               );
             },

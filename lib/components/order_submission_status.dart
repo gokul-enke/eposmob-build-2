@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -132,9 +133,8 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
                 APPUrl.baseURL == baseUrl);
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(recoveryText(
-                'Stock refreshed. The review log has been kept.'))));
+        AppToast.info(context, recoveryText(
+                'Stock refreshed. The review log has been kept.'));
       }
     } catch (error) {
       debugPrint('[StockReview] refresh_failed type=${error.runtimeType}');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -34,10 +35,7 @@ class _SupplierSalesReportScreenState extends State<SupplierSalesReportScreen> {
   void _showLoadError(Object error) {
     debugPrint('Supplier sales report unavailable: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('supplier_sales_report.error_unavailable'.tr),
-      backgroundColor: Colors.red,
-    ));
+    AppToast.error(context, 'supplier_sales_report.error_unavailable'.tr);
   }
 
   @override

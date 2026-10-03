@@ -6,9 +6,9 @@ import 'package:internet_connection_checker_plus/internet_connection_checker_plu
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import '../models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import '../models/list_cart.dart';
-import '../providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/delivery_methods_provider.dart';
 import '../models/delivery_method.dart';

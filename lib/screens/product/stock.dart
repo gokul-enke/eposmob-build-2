@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -100,9 +101,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           Provider.of<AuthModel>(context, listen: false).token;
 
       if (accessToken == null || accessToken.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('stock.auth_token_missing'.tr)),
-        );
+        AppToast.error(context, 'stock.auth_token_missing'.tr);
         return;
       }
 
@@ -140,9 +139,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     } catch (error) {
       debugPrint("Error loading stocks: $error");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('stock.error_loading_stocks'.trParams({'error': '$error'}))),
-        );
+        AppToast.error(context, 'stock.error_loading_stocks'.trParams({'error': '$error'}));
         setState(() {
           initLoading = false;
         });

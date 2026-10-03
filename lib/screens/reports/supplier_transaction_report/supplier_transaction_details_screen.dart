@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -218,12 +219,7 @@ class _SupplierTransactionDetailsScreenState
     } catch (error) {
       debugPrint('Error loading supplier transaction data: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('supplier_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'supplier_transaction_report.err_loading_transaction_data'.tr.replaceAll('@error', error.toString()));
       }
     } finally {
       if (mounted) {

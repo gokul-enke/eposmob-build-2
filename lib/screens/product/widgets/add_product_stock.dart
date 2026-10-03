@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/suppliers/presentation/widgets/form/supplier_form_host.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -14,7 +15,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/category_list_scope.dart';
@@ -23,7 +24,7 @@ import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -37,7 +38,6 @@ import 'dart:convert';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/components/build_dynamic_payment_selector.dart';
 import 'package:pos_machine/components/build_stock_confirmation_dialog.dart';
-import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -3384,9 +3384,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   child: InkWell(
                     onTap: () async {
                       debugPrint("ADD NEW SUPPLIER BUTTON PRESSED");
-                      final result = await showAddSupplierModal(
+                      final result = await showAddSupplierDialog(
                         context,
-                        MediaQuery.of(context).size,
                         showCreateAnother: false,
                       );
                       if (result != null &&

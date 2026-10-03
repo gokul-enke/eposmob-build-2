@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'build_dialog_box.dart';
 import '../resources/color_manager.dart';
-import '../core/ui/app_colors.dart';
+import '../core/export/file_export_service.dart';
+import '../core/ui/tokens/app_spacing.dart';
 
 typedef ShareExportFile = Future<void> Function(File file, Rect? shareOrigin);
 
-/// Reusable action that creates a file and opens the platform share menu.
+/// Button that creates a file and hands it to the user (Save As on Windows,
+/// the share sheet elsewhere). Pages using [PageHeader] can use
+/// [ExportController] with a [HeaderAction] instead.
 class ExportShareButton extends StatefulWidget {
   const ExportShareButton({
     super.key,
@@ -93,65 +93,18 @@ class _ExportShareButtonState extends State<ExportShareButton> {
     }
   }
 
-  Future<void> _shareFile(File file, Rect? shareOrigin) async {
-    if (defaultTargetPlatform == TargetPlatform.windows) {
-      // Save exports directly on Windows instead of invoking the native
-      // DataTransferManager share UI, which can terminate the app process.
-      setState(() => _stage = 'list.export_waiting_save'.tr);
-      final destination = await FilePicker.platform.saveFile(
-        fileName: file.uri.pathSegments.last,
-        type: FileType.custom,
-        allowedExtensions: const ['xlsx'],
-        lockParentWindow: true,
-      );
-      debugPrint(destination == null
-          ? 'Export: Save As cancelled'
-          : 'Export: Save As destination selected');
-      if (destination == null) return;
-      final path = destination.toLowerCase().endsWith('.xlsx')
-          ? destination
-          : '$destination.xlsx';
-      // The native dialog only confirmed its returned path, not an appended extension.
-      if (path != destination && await File(path).exists()) {
-        if (!mounted) return;
-        final overwrite = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-                  title: Text('list.export_overwrite_title'.tr),
-                  content: Text('list.export_overwrite_message'
-                      .trParams({'name': File(path).uri.pathSegments.last})),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text('list.export_cancel'.tr)),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: Text('list.export_overwrite'.tr)),
-                  ],
-                ));
-        if (overwrite != true) return;
-      }
-      if (File(path).absolute.path.toLowerCase() !=
-          file.absolute.path.toLowerCase()) {
-        if (mounted) setState(() => _stage = 'list.export_saving'.tr);
-        await file.copy(path);
-      }
-      return;
-    }
-    setState(() => _stage = 'list.export_waiting_share'.tr);
-    final params = ShareParams(
-      files: [
-        XFile(
-          file.path,
-          name: file.uri.pathSegments.last,
-          mimeType: widget.mimeType,
-          length: await file.length(),
-        ),
-      ],
-      text: widget.shareText,
-      sharePositionOrigin: shareOrigin,
+  /// Save As on Windows, share sheet elsewhere (see [FileExportService]).
+  Future<void> _shareFile(File file, Rect? shareOrigin) {
+    return FileExportService.deliver(
+      context,
+      file,
+      mimeType: widget.mimeType,
+      shareText: widget.shareText,
+      shareOrigin: shareOrigin,
+      onStage: (stage) {
+        if (mounted) setState(() => _stage = stage);
+      },
     );
-    await SharePlus.instance.share(params);
   }
 
   @override

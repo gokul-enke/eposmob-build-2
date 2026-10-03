@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 
 class CustomerInput extends StatefulWidget {
   final Size size;
@@ -89,13 +89,13 @@ class _CustomerInputState extends State<CustomerInput> {
                             dynamic response;
                             if (RegExp(r'^[0-9]+$')
                                 .hasMatch(mobileNumberTextController.text)) {
-                              response = await CustomerProvider()
-                                  .findCustomerByPhone(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByPhone(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             } else {
-                              response = await CustomerProvider()
-                                  .findCustomerByName(accessToken ?? "",
-                                      mobileNumberTextController.text, context);
+                              response = await CustomerRepository()
+                                  .findByName(accessToken ?? "",
+                                      mobileNumberTextController.text);
                             }
 
                             if (response["status"] == "success") {
@@ -413,10 +413,7 @@ class _CustomerInputState extends State<CustomerInput> {
                     circleRadius: 5,
                     child: InkWell(
                       onTap: () async {
-                        final result = await showAddCustomerModal(
-                          context,
-                          widget.size,
-                          mobileNumber:
+                        final result = await showAddCustomerDialog(context, mobileNumber:
                               billingProvider.mobileNumberTextController.text,
                         );
                         if (result != null &&
@@ -429,9 +426,9 @@ class _CustomerInputState extends State<CustomerInput> {
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
-                            final response = await CustomerProvider()
-                                .findCustomerByPhone(
-                                    accessToken ?? '', createdPhone, context);
+                            final response = await CustomerRepository()
+                                .findByPhone(
+                                    accessToken ?? '', createdPhone);
                             if (!mounted) return;
                             if (response != null &&
                                 response['status'] == 'success') {

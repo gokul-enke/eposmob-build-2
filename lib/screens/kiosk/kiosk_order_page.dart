@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -11,16 +12,16 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form_host.dart';
 import 'package:pos_machine/screens/kiosk/kiosk_billing_page.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/widgets/product_card_list_kiosk.dart';
@@ -210,8 +211,8 @@ class KioskOrderPageState extends State<KioskOrderPage> {
             // debugPrint(mobileNumberTextController.text);
 
             try {
-              final response = await CustomerProvider().findCustomerByPhone(
-                  accessToken ?? "", mobileNumberTextController.text, context);
+              final response = await CustomerRepository().findByPhone(
+                  accessToken ?? "", mobileNumberTextController.text);
 
               if (response["status"] == "success") {
                 CustomerListModel customerListModel =
@@ -334,8 +335,7 @@ class KioskOrderPageState extends State<KioskOrderPage> {
       width: 50,
       circleRadius: 5,
       child: InkWell(
-        onTap: () => showAddCustomerModal(context, MediaQuery.of(context).size,
-            mobileNumber: mobileNumberText),
+        onTap: () => showAddCustomerDialog(context, mobileNumber: mobileNumberText),
         child: WebsafeSvg.asset(ImageAssets.userIcon, fit: BoxFit.none),
       ),
     );

@@ -1,5 +1,5 @@
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 
 /// Null-safe parsing helpers for mobile billing display paths.
 class BillingCrashGuards {

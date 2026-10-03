@@ -200,7 +200,10 @@
     "btn_save_address": "Save Address",
     "btn_update_address": "Update Address",
     "required": "Required",
-    "pincode_required": "Pincode is required"
+    "pincode_required": "Pincode is required",
+    "section_title": "Address Information",
+    "refresh": "Refresh",
+    "refresh_failed": "Could not refresh addresses"
   },
   "notifications": {
     "page_title": "Notifications"
@@ -1487,7 +1490,25 @@
     "empty_subtitle": "Try changing or clearing the filters above.",
     "count_on_page": "@count customers on this page",
     "count_on_page_one": "1 customer on this page",
-    "not_provided": "Not provided"
+    "not_provided": "Not provided",
+    "filters_title": "Search and filters",
+    "filters_summary": "Name, email, phone and balance",
+    "filters_hide": "Hide filter controls",
+    "form": {
+      "section_details": "Customer details",
+      "section_address": "Address",
+      "section_business": "Business details",
+      "section_account": "Account"
+    },
+    "export": "Export to Excel",
+    "exporting": "Exporting...",
+    "export_failed": "Could not export customers",
+    "export_share_text": "Customer list",
+    "export_col_no": "No.",
+    "export_col_alt_phone": "Alternate phone",
+    "export_col_type": "Type",
+    "show_filters": "Show filters",
+    "hide_filters": "Hide filters"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -1506,14 +1527,16 @@
     "zero": "Zero (0)",
     "number": "No",
     "action": "Action",
-    "reset": "Reset"
+    "reset": "Reset",
+    "search_name": "Search by name",
+    "search_email": "Search by email",
+    "search_phone": "Search by phone"
   },
   "supplier_list": {
     "subtitle": "Manage supplier details, contacts and balances.",
     "find": "Find suppliers",
     "find_hint": "Results update as you type.",
     "count_on_page": "@count suppliers on this page",
-
     "error_fetching": "Error fetching suppliers",
     "error_searching": "Error searching suppliers",
     "no_suppliers_desktop": "No suppliers found",
@@ -4512,7 +4535,36 @@
     "sidebar_loyalty_card": "Loyalty Card",
     "sidebar_chat": "Chat",
     "placeholder_customer_name": "Customer Name",
-    "label_id": "ID:"
+    "label_id": "ID:",
+    "view_transactions_count": "@count transactions",
+    "view_more_transactions_count": "And @count more transactions...",
+    "view_label_transaction": "Transaction",
+    "col_reference": "REFERENCE",
+    "col_date": "DATE",
+    "col_type": "TYPE",
+    "col_payment_method": "PAYMENT METHOD",
+    "col_amount": "AMOUNT",
+    "col_status": "STATUS",
+    "col_action": "ACTION",
+    "col_order": "ORDER #",
+    "col_payment_status": "PAYMENT",
+    "col_items": "ITEMS",
+    "col_total": "TOTAL",
+    "col_qty": "QTY",
+    "col_price": "PRICE",
+    "type_credit": "Credit",
+    "type_debit": "Debit",
+    "label_amount": "Amount",
+    "tx_total_credit": "Total credit",
+    "tx_total_debit": "Total debit",
+    "tx_net": "Net",
+    "tx_on_page": "Transactions on this page: @count",
+    "orders_on_page": "Orders on this page: @count",
+    "tx_load_failed": "Failed to load transactions",
+    "tx_date_range": "Date range",
+    "tx_date_range_hint": "Select from and to dates",
+    "history_last_purchases": "Last @count purchases",
+    "history_last_purchase_one": "Last purchase"
   },
   "login": {
     "title": "Login",
@@ -5593,7 +5645,8 @@
     "min_redeemable": "Min. Redeemable Points",
     "price_per_point": "Price Per Point",
     "valid_from": "Valid From",
-    "valid_until": "Valid Until"
+    "valid_until": "Valid Until",
+    "tier_default": "Bronze"
   },
   "customer_chat": {
     "err_load": "Failed to load chat history",
@@ -5604,7 +5657,8 @@
     "btn_try_again": "Try Again",
     "title_no_messages": "No Messages Yet",
     "msg_start_conversation": "Start a conversation with",
-    "hint_message": "Type your message here..."
+    "hint_message": "Type your message here...",
+    "btn_send": "Send"
   },
   "customer_orders": {
     "err_no_customer_id": "Customer ID is not available.",
@@ -5730,7 +5784,18 @@
     "trans_detail_payment_method": "Payment Method",
     "trans_detail_date": "Date",
     "trans_label_no_reference": "No Reference",
-    "id_prefix": "ID: "
+    "id_prefix": "ID: ",
+    "trans_type_credit": "Credit",
+    "trans_type_debit": "Debit",
+    "trans_label_date_range": "Date Range",
+    "trans_hint_date_range": "Select date range",
+    "trans_on_page": "@count transactions on this page",
+    "trans_load_failed": "Could not load transactions",
+    "col_amount": "Amount",
+    "col_items": "Items",
+    "orders_purchase_title": "Purchase #@number",
+    "orders_on_page": "@count purchase orders on this page",
+    "orders_load_failed": "Could not load purchase orders"
   },
   "customer_transactions": {
     "msg_preparing_report": "Preparing transaction report...",
@@ -6159,6 +6224,10 @@
     "export_overwrite_title": "Replace existing file?",
     "export_overwrite_message": "@name already exists. Replace it?",
     "export_cancel": "Cancel",
-    "export_overwrite": "Replace"
+    "export_overwrite": "Replace",
+    "filters": "Filters",
+    "hide_filters": "Hide Filters",
+    "export": "Export",
+    "exporting": "Exporting..."
   }
 }

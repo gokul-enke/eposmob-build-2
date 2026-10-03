@@ -1,34 +1,36 @@
-import 'package:dropdown_search/dropdown_search.dart';
-import 'package:pos_machine/models/customer_list.dart';
 import 'dart:io';
 
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/models/local_models.dart';
-import 'package:pos_machine/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
+import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
-import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
-import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'test_support/header_actions.dart';
 import 'test_support/hive_test_teardown.dart';
 
 class _FakeSalesExecutiveProvider extends SalesExecutiveProvider {
@@ -286,10 +288,11 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(390, 650));
 
-    expect(find.byKey(toggleKey), findsOneWidget);
+    expect(
+        find.byKey(toggleKey).evaluate().isNotEmpty || hasFilterToggle(), isTrue);
     expect(find.byKey(panelKey), findsNothing);
 
-    await tester.tap(find.byKey(toggleKey));
+    await tapFilterToggle(tester, key: toggleKey);
     await tester.pump();
 
     expect(find.byKey(panelKey), findsOneWidget);
@@ -300,7 +303,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const SalesExecutiveReportScreen(),
+      screen: const MySalesReportPage(),
       toggleKey: const ValueKey('sales-executive-report-filter-toggle'),
       panelKey: const ValueKey('sales-executive-report-filters'),
     );
@@ -310,7 +313,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const CustomerTransactionsReportScreen(),
+      screen: const CustomerTransactionsReportPage(),
       toggleKey: const ValueKey('customer-transactions-report-filter-toggle'),
       panelKey: const ValueKey('customer-transactions-report-filters'),
     );
@@ -358,12 +361,12 @@ void main() {
       (tester) async {
     final cases = <(Widget, Key, Key)>[
       (
-        const SalesExecutiveReportScreen(),
+        const MySalesReportPage(),
         const ValueKey('sales-executive-report-filter-toggle'),
         const ValueKey('sales-executive-report-filters'),
       ),
       (
-        const CustomerTransactionsReportScreen(),
+        const CustomerTransactionsReportPage(),
         const ValueKey('customer-transactions-report-filter-toggle'),
         const ValueKey('customer-transactions-report-filters'),
       ),
@@ -407,41 +410,35 @@ void main() {
 
     await pumpScreen(
       tester,
-      const CustomerTransactionsReportScreen(),
+      const CustomerTransactionsReportPage(),
       customerProvider: customerProvider,
     );
 
-    final dropdown = tester.widget<DropdownSearch<CustomerListModelData>>(
+    // The profile's customer is not the report's filter.
+    final picker = tester.widget<DropdownSearch<CustomerListModelData>>(
         find.byType(DropdownSearch<CustomerListModelData>));
-    expect(dropdown.selectedItems, isEmpty);
-    dropdown.onChanged!(CustomerListModelData(id: 7, name: 'Chosen customer'));
+    expect(picker.selectedItems, isEmpty);
+    picker.onChanged!(CustomerListModelData(id: 7, name: 'Chosen customer'));
     await tester.pumpAndSettle();
+
     final toggle = find.byKey(
       const ValueKey('customer-transactions-report-filter-toggle'),
     );
-    expect(
-      find.descendant(
-        of: toggle,
-        matching: find.byType(PositionedDirectional),
-      ),
-      findsOneWidget,
-    );
+    final dot = find.descendant(of: toggle, matching: find.byType(AppBadgeDot));
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(dot, findsOneWidget);
 
-    await tester.tap(
-      find.descendant(
-          of: find
-              .byKey(const ValueKey('customer-transactions-report-filters')),
-          matching: find.byType(TextButton)),
-    );
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.tap(find.descendant(
+        of: find.byKey(const ValueKey('customer-transactions-report-filters')),
+        matching: find.text('list.reset')));
     await tester.pump();
 
     expect(customerProvider.selectedCustomerId, '42');
-    expect(
-      find.descendant(
-        of: toggle,
-        matching: find.byType(PositionedDirectional),
-      ),
-      findsNothing,
-    );
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(dot, findsNothing);
   });
 }

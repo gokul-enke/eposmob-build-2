@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -162,23 +163,14 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
 
   bool _validateBeforeConfirm() {
     if (!printItems.any((item) => item.quantity > 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('product_barcode.enter_quantity_error'.tr)),
-      );
+      AppToast.warning(context, 'product_barcode.enter_quantity_error'.tr);
       return false;
     }
     for (final item in printItems) {
       final mfg = item.mfgDate;
       final exp = item.expDate;
       if (mfg != null && exp != null && exp.isBefore(mfg)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'product_barcode.expiry_before_mfg_error'.tr.replaceAll('@product', item.product.productName ?? 'product_barcode.a_product_fallback'.tr),
-            ),
-          ),
-        );
+        AppToast.warning(context, 'product_barcode.expiry_before_mfg_error'.tr.replaceAll('@product', item.product.productName ?? 'product_barcode.a_product_fallback'.tr));
         return false;
       }
     }

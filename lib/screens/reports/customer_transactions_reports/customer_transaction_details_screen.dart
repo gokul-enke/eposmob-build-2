@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -8,8 +10,8 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_transaction.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -246,23 +248,13 @@ class _SimpleTransactionDetailsScreenState
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('customer_transaction_report.failed_load_transaction_data'.tr),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.error(context, 'customer_transaction_report.failed_load_transaction_data'.tr);
         }
       }
     } catch (error) {
       debugPrint("Error loading transactions: $error");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('customer_transaction_report.err_loading_transactions'.tr.replaceAll('@error', error.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'customer_transaction_report.err_loading_transactions'.tr.replaceAll('@error', error.toString()));
       }
     } finally {
       if (mounted) {
@@ -954,16 +946,11 @@ class _SimpleTransactionDetailsScreenState
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
-          final customerProvider =
-              Provider.of<CustomerProvider>(context, listen: false);
-
           // Try to find customer by name
           debugPrint("Attempting to fetch customer details for: $customerName");
-          final customerResponse = await customerProvider.findCustomerByName(
+          final customerResponse = await CustomerRepository().findByName(
             accessToken,
-            customerName,
-            context,
-          );
+            customerName);
           debugPrint("Customer API response: $customerResponse");
 
           if (customerResponse['status'] == 'success' &&
@@ -1105,12 +1092,7 @@ class _SimpleTransactionDetailsScreenState
 
     // Show a message that the print process has started
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('customer_transaction_report.preparing_report_printing'.tr),
-          backgroundColor: ColorManager.kPrimaryColor,
-        ),
-      );
+      AppToast.info(context, 'customer_transaction_report.preparing_report_printing'.tr);
     }
   }
 

@@ -245,11 +245,11 @@ void main() {
       transactionNumber: '',
       whatsappReceipt: true,
     );
-    expect(whatsapp.toApiJson()['whatsappReceipt'], isTrue);
-    expect(whatsapp.toUpdateApiJson()['whatsappReceipt'], isTrue);
+    expect(whatsapp.toApiJson()['whatsapp_receipt'], isTrue);
+    expect(whatsapp.toUpdateApiJson()['whatsapp_receipt'], isTrue);
 
     final plain = OrderSubmissionPayload(items: const [], transactionNumber: '');
-    expect(plain.toApiJson().containsKey('whatsappReceipt'), isFalse);
-    expect(plain.toUpdateApiJson().containsKey('whatsappReceipt'), isFalse);
+    expect(plain.toApiJson().containsKey('whatsapp_receipt'), isFalse);
+    expect(plain.toUpdateApiJson().containsKey('whatsapp_receipt'), isFalse);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -8,7 +9,7 @@ import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';
@@ -760,9 +761,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerTile(
                   icon: Icons.people_rounded,
                   title: 'nav.customers'.tr,
-                  onTap: () => navigate(5),
-                  selected:
-                      [5, 9, 10, 38].contains(sideBarController.index.value),
+                  onTap: () => navigate(SideBarController.customersScreenIndex),
+                  selected: CustomerNavigation.sectionIndices
+                      .contains(sideBarController.index.value),
                 ),
               ),
             if (hasSuppliersGroup)

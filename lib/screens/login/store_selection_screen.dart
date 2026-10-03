@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -549,15 +550,7 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       debugPrint('Store selection/bootstrap failed: $e');
       debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // Keep implementation details and stack information in the debug
-            // log. A raw Dart exception is not actionable for the cashier and
-            // can expose backend/data-shape details on a production screen.
-            content: Text('login.error_saving_store'.tr),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'login.error_saving_store'.tr);
       }
     }
   }

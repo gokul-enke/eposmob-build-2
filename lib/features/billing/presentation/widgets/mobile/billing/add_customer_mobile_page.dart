@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/newcomponents/custom_customer_form.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/form/customer_form.dart';
 
 /// Full-screen mobile "Add New Customer" page with the same fields,
-/// validation, and submit logic as the desktop checkout modal form.
+/// validation, and submit logic as the add-customer dialog.
 class AddCustomerMobilePage extends StatelessWidget {
   const AddCustomerMobilePage({
     super.key,
@@ -16,7 +18,7 @@ class AddCustomerMobilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -28,12 +30,13 @@ class AddCustomerMobilePage extends StatelessWidget {
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                child: CustomCustomerForm(
-                  initialMobileNumber: initialMobileNumber,
-                  initialCustomerName: initialCustomerName,
-                  isModal: true,
-                  isMobileLayout: true,
+                child: CustomerForm.create(
+                  initialPhone: initialMobileNumber,
+                  initialName: initialCustomerName,
+                  autofocus: true,
+                  cancelLabel: 'add_customer.btn_close'.tr,
                   onCancel: () => Navigator.of(context).pop(),
+                  onCreated: (result) => Navigator.of(context).pop(result),
                 ),
               ),
             ),
@@ -45,23 +48,21 @@ class AddCustomerMobilePage extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppColors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            icon: const Icon(Icons.arrow_back, color: AppColors.heading),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
-                'Add New Customer',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                'add_customer.title'.tr,
+                style: AppTextStyles.pageTitleCompact,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -73,7 +74,7 @@ class AddCustomerMobilePage extends StatelessWidget {
 }
 
 /// Opens the mobile add-customer page and returns the same result map as
-/// [showAddCustomerModal] on success.
+/// `showAddCustomerDialog` on success.
 Future<dynamic> openAddCustomerMobilePage(
   BuildContext context, {
   String mobileNumber = '',

@@ -1,47 +1,65 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/utils/search_debouncer.dart';
 import 'package:provider/provider.dart';
-import '../../../core/ui/app_surface.dart';
-import '../../../core/ui/list_page/filter_panel.dart';
-import '../../../core/ui/list_page/list_page_header.dart';
-import '../../../core/ui/list_page/list_page_scaffold.dart';
-import '../../../components/filter_toggle_button.dart';
-import '../../../components/export_share_button.dart';
-import '../../../services/list_excel_export_service.dart';
+
 import '../../../helpers/date_helper.dart';
 import '../../../helpers/ui_code_labels.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/auth_model.dart';
 import '../../../providers/transaction_provider.dart';
-import '../../../newcomponents/custom_dialog_box.dart';
+import '../../../services/list_excel_export_service.dart';
 import '../widgets/common_details_dialog.dart';
 
+/// Supplier transactions (ledger) list on the shared [ListPageScaffold].
+///
+/// Supplier, transaction type and type are sent to the API. Search, Status
+/// and supplier names that do not match a known supplier are applied
+/// locally over all matching pages.
 class TransactionScreen extends StatefulWidget {
-  const TransactionScreen({super.key});
+  const TransactionScreen({super.key, this.export});
+
+  /// Replaces the export controller (tests).
+  final ExportController? export;
+
+  static const filterToggleKey =
+      ValueKey('supplier-transactions-filter-toggle');
+  static const exportKey = ValueKey('supplier-transactions-export');
+  static const refreshKey = ValueKey('supplier-transactions-refresh');
+  static const filtersKey = ValueKey('supplier-transactions-filters');
+
+  static const pageSize = 50;
+
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
+  static const _pageSize = TransactionScreen.pageSize;
+
   final searchController = TextEditingController();
   final supplierSearchController = TextEditingController();
   final typeController = TextEditingController(text: 'All Types');
   final transactionTypeController = TextEditingController(text: 'All');
   final statusController = TextEditingController(text: 'All Status');
   final _supplierFocus = FocusNode();
+  late final SearchDebouncer _search = SearchDebouncer(searchTransactions);
+  late final ExportController _export = widget.export ?? ExportController();
   bool initLoading = true;
   bool _showFilters = true;
   bool _visibilityInitialized = false;
-  TransactionModel? selectedTransaction;
-  final _exportProgress = ValueNotifier<String?>(null);
   List<TransactionModel>? _localItems;
   Future<List<TransactionModel>>? _localSource;
   String? _localSourceKey;
   int _localPage = 1;
   bool _localLoading = false;
   int _requestRevision = 0;
+
   bool get _usesLocalFilters =>
       searchController.text.trim().isNotEmpty ||
       statusController.text != 'All Status' ||
@@ -59,7 +77,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       statusController.text != 'All Status';
 
   Future<File> _createExport() async {
-    _exportProgress.value = 'supplier_transactions.exporting'.tr;
+    _export.setStage('supplier_transactions.exporting'.tr);
     final provider = context.read<TransactionProvider>();
     // Capture the applied API filter values before awaiting the export fetch.
     final items = await provider.fetchTransactionsForExport(
@@ -76,13 +94,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
       supplierName: supplierSearchController.text,
       onProgress: (page, total) {
         if (mounted) {
-          _exportProgress.value = 'supplier_transactions.export_fetching'
-              .trParams({'page': '$page', 'total': '$total'});
+          _export.setStage('supplier_transactions.export_fetching'
+              .trParams({'page': '$page', 'total': '$total'}));
         }
       },
     );
     if (mounted) {
-      _exportProgress.value = 'supplier_transactions.export_creating'.tr;
+      _export.setStage('supplier_transactions.export_creating'.tr);
     }
     return ListExcelExportService.export<TransactionModel>(
       items: items,
@@ -130,6 +148,17 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
+  Future<void> _runExport() async {
+    final exported = await _export.run(
+      context,
+      createFile: _createExport,
+      shareText: 'supplier_transactions.title'.tr,
+    );
+    if (!exported && mounted) {
+      AppToast.error(context, 'supplier_transactions.export_failed'.tr);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -147,8 +176,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_visibilityInitialized) {
-      _showFilters =
-          MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobile;
+      // Filters start open on wide screens and closed on phones.
+      _showFilters = MediaQuery.sizeOf(context).width >=
+          ListLayoutBreakpoints.mobileBelow;
       _visibilityInitialized = true;
     }
   }
@@ -156,7 +186,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void dispose() {
     _requestRevision++;
-    _exportProgress.dispose();
+    _search.dispose();
+    _export.dispose();
     searchController.dispose();
     supplierSearchController.dispose();
     typeController.dispose();
@@ -212,14 +243,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
             : transactionTypeController.text,
         type: typeController.text == 'All Types' ? null : typeController.text,
         page: page,
-        perPage: 50,
+        perPage: _pageSize,
       );
     } catch (error) {
       if (revision == _requestRevision) _localSource = null;
       if (!mounted || revision != _requestRevision) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('supplier_transactions.error_loading'
-              .trParams({'error': '$error'}))));
+      AppToast.error(context, 'supplier_transactions.error_loading'
+          .trParams({'error': '$error'}));
     } finally {
       if (mounted && revision == _requestRevision) {
         setState(() => _localLoading = false);
@@ -242,6 +272,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void resetSearch() {
+    _search.cancel();
     setState(() {
       searchController.clear();
       supplierSearchController.clear();
@@ -252,73 +283,29 @@ class _TransactionScreenState extends State<TransactionScreen> {
     searchTransactions();
   }
 
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    Color textColor;
+  static String _orDash(String? value) =>
+      value == null || value.trim().isEmpty ? '—' : value;
 
-    switch (status.toUpperCase()) {
-      case 'SUCC':
-      case 'SUCCESS':
-        backgroundColor = Colors.green.withValues(alpha: 0.1);
-        textColor = Colors.green;
-        break;
-      case 'INIT':
-      case 'INITIATED':
-        backgroundColor = Colors.orange.withValues(alpha: 0.1);
-        textColor = Colors.orange;
-        break;
-      case 'FAIL':
-      case 'FAILED':
-        backgroundColor = Colors.red.withValues(alpha: 0.1);
-        textColor = Colors.red;
-        break;
-      default:
-        backgroundColor = Colors.grey.withValues(alpha: 0.1);
-        textColor = Colors.grey;
-    }
+  static Widget _text(String? value) => TableCells.text(_orDash(value));
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        UiCodeLabels.status(status),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+  Widget _statusBadge(String status) {
+    final tone = switch (status.toUpperCase()) {
+      'SUCC' || 'SUCCESS' => AppBadgeTone.success,
+      'INIT' || 'INITIATED' => AppBadgeTone.warning,
+      'FAIL' || 'FAILED' => AppBadgeTone.danger,
+      _ => AppBadgeTone.neutral,
+    };
+    return AppBadge(label: UiCodeLabels.status(status), tone: tone);
   }
 
-  Widget _buildTypeCell(String type) {
-    final isCredit = type.toLowerCase() == 'credit';
-    final color = isCredit ? Colors.green : Colors.red;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        UiCodeLabels.documentKind(type),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
+  Widget _typeBadge(String type) => AppBadge(
+        label: UiCodeLabels.documentKind(type),
+        tone: type.toLowerCase() == 'credit'
+            ? AppBadgeTone.success
+            : AppBadgeTone.danger,
+      );
 
   void _showTransactionDetails(TransactionModel transaction) {
-    setState(() {
-      selectedTransaction = transaction;
-    });
-
     showDialog(
       context: context,
       builder: (context) => CommonDetailsDialog(
@@ -363,22 +350,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  Widget _dropdown(String label, TextEditingController controller,
-      List<String> options, IconData icon) {
-    return DropdownButtonFormField<String>(
-      key: ValueKey('$label:${controller.text}'),
-      initialValue: controller.text,
-      isExpanded: true,
-      decoration: listFilterDecoration(label, icon),
-      items: options
-          .map((value) => DropdownMenuItem(
-              value: value,
-              child: Text(
-                  controller == statusController
-                      ? UiCodeLabels.status(value)
-                      : UiCodeLabels.documentKind(value),
-                  overflow: TextOverflow.ellipsis)))
-          .toList(),
+  DropdownFilterField<String> _dropdown(
+    String label,
+    TextEditingController controller,
+    List<String> options,
+    IconData icon,
+    String Function(String value) optionLabel,
+  ) {
+    return DropdownFilterField<String>(
+      label: label,
+      icon: icon,
+      value: controller.text,
+      options: [
+        for (final value in options) FilterOption(value, optionLabel(value)),
+      ],
       onChanged: (value) {
         if (value == null) return;
         setState(() => controller.text = value);
@@ -387,6 +372,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
+  /// Supplier name with suggestions; every edit searches right away.
   Widget _supplierField(TransactionProvider provider) =>
       RawAutocomplete<String>(
         textEditingController: supplierSearchController,
@@ -399,227 +385,316 @@ class _TransactionScreenState extends State<TransactionScreen> {
         fieldViewBuilder: (context, controller, focus, submit) => TextField(
           controller: controller,
           focusNode: focus,
-          decoration: listFilterDecoration('supplier_transactions.supplier'.tr,
-              Icons.local_shipping_outlined),
+          textAlignVertical: TextAlignVertical.center,
+          style: AppTextStyles.input,
+          decoration: AppInputDecoration.filter(
+            label: 'supplier_transactions.supplier'.tr,
+            hint: 'supplier_transactions.supplier'.tr,
+            icon: Icons.local_shipping_outlined,
+          ),
           onChanged: (_) => searchTransactions(),
           onSubmitted: (_) => submit(),
         ),
         optionsViewBuilder: (context, select, options) => Align(
-          alignment: Alignment.topLeft,
+          alignment: AlignmentDirectional.topStart,
           child: Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                  width: 280,
-                  height: 200,
-                  child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: options.length,
-                      itemBuilder: (context, index) => ListTile(
-                            selected:
-                                AutocompleteHighlightedOption.of(context) ==
-                                    index,
-                            title: Text(options.elementAt(index)),
-                            onTap: () => select(options.elementAt(index)),
-                          )))),
+            elevation: 4,
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            child: SizedBox(
+              width: 280,
+              height: 200,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: options.length,
+                itemBuilder: (context, index) => ListTile(
+                  selected: AutocompleteHighlightedOption.of(context) == index,
+                  title: Text(options.elementAt(index)),
+                  onTap: () => select(options.elementAt(index)),
+                ),
+              ),
+            ),
+          ),
         ),
+      );
+
+  FilterPanel _filters(TransactionProvider provider, List<String> statuses) {
+    return FilterPanel(
+      key: TransactionScreen.filtersKey,
+      title: 'supplier_transactions.find'.tr,
+      hint: 'supplier_transactions.find_hint'.tr,
+      resetLabel: 'list.reset'.tr,
+      onSearch: _search.schedule,
+      onSubmit: _search.flush,
+      onReset: resetSearch,
+      fields: [
+        TextFilterField(
+          controller: searchController,
+          label: 'supplier_transactions.search'.tr,
+          hint: 'supplier_transactions.hint_search'.tr,
+          icon: Icons.search_rounded,
+        ),
+        CustomFilterField(child: _supplierField(provider)),
+        _dropdown(
+          'supplier_transactions.trans_type'.tr,
+          transactionTypeController,
+          const ['All', 'Invoice', 'Voucher'],
+          Icons.receipt_long_outlined,
+          UiCodeLabels.documentKind,
+        ),
+        _dropdown(
+          'supplier_transactions.type'.tr,
+          typeController,
+          const ['All Types', 'Credit', 'Debit'],
+          Icons.swap_vert_rounded,
+          UiCodeLabels.documentKind,
+        ),
+        _dropdown(
+          'supplier_transactions.status'.tr,
+          statusController,
+          statuses,
+          Icons.check_circle_outline,
+          UiCodeLabels.status,
+        ),
+      ],
+    );
+  }
+
+  void _copyReference(TransactionModel tx) {
+    Clipboard.setData(ClipboardData(text: tx.reference));
+    AppToast.success(context, 'supplier_transactions.ref_copied'.tr);
+  }
+
+  bool _canCopyReference(TransactionModel tx) =>
+      tx.reference.isNotEmpty && tx.reference != 'N/A';
+
+  Widget _copyReferenceButton(TransactionModel tx) => IconButton(
+        tooltip: 'supplier_transactions.copy_reference'.tr,
+        icon: const Icon(Icons.copy_outlined, size: 16),
+        color: AppColors.muted,
+        onPressed: () => _copyReference(tx),
       );
 
   Widget _reference(TransactionModel tx) => Row(children: [
         Expanded(
-            child: Tooltip(
-                message: tx.reference, child: TableCells.text(tx.reference))),
-        if (tx.reference.isNotEmpty && tx.reference != 'N/A')
-          IconButton(
-              tooltip: 'supplier_transactions.copy_reference'.tr,
-              icon: const Icon(Icons.copy_outlined, size: 16),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: tx.reference));
-                showScaffold(
-                    context: context,
-                    message: 'supplier_transactions.ref_copied'.tr);
-              }),
+          child: Tooltip(message: tx.reference, child: _text(tx.reference)),
+        ),
+        if (_canCopyReference(tx)) _copyReferenceButton(tx),
       ]);
 
-  Widget _card(TransactionModel tx, int number) => AppSurface(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        TableCells.identity(tx.supplier.user.name),
-        const SizedBox(height: 12),
-        Text('${'supplier_transactions.col_si_no'.tr}: ${tx.siNo}'),
-        Text(
-            '${'supplier_transactions.col_date'.tr}: ${DateHelper.formatISODate(tx.date)}'),
-        const SizedBox(height: 8),
-        Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [_buildTypeCell(tx.type), _buildStatusChip(tx.status)]),
-        const SizedBox(height: 8),
-        Text(
-            '${'supplier_transactions.col_transaction_type'.tr}: ${UiCodeLabels.documentKind(tx.transactionType)}'),
-        Text(
-            '${'supplier_transactions.col_payment_mode'.tr}: ${UiCodeLabels.payment(tx.paymentMode)}'),
-        Text(
-            '${'supplier_transactions.col_amount'.tr}: ${tx.currency} ${tx.amount}'),
-        _reference(tx),
-        SizedBox(
-            width: double.infinity,
-            child: TableCells.viewButton(() => _showTransactionDetails(tx))),
-      ]));
+  Widget _card(TransactionModel tx, int number) => AppListCard(
+        leading: AppAvatar(
+          name: tx.supplier.user.name,
+          semanticLabel: tx.supplier.user.name,
+          size: 42,
+        ),
+        title: _orDash(tx.supplier.user.name),
+        subtitle: '${'supplier_transactions.col_si_no'.tr}: ${tx.siNo}',
+        trailing: _statusBadge(tx.status),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppMetricStrip(metrics: [
+              AppMetric(
+                icon: Icons.payments_outlined,
+                label: 'supplier_transactions.col_amount'.tr,
+                value: '${tx.currency} ${tx.amount}',
+              ),
+              AppMetric(
+                icon: Icons.calendar_today_outlined,
+                label: 'supplier_transactions.col_date'.tr,
+                value: _orDash(DateHelper.formatISODate(tx.date)),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.sm),
+            InfoRow(
+              icon: Icons.swap_vert_rounded,
+              label: 'supplier_transactions.type'.tr,
+              value: _orDash(UiCodeLabels.documentKind(tx.type)),
+              valueColor: tx.type.toLowerCase() == 'credit'
+                  ? AppColors.green
+                  : AppColors.red,
+            ),
+            InfoRow(
+              icon: Icons.receipt_long_outlined,
+              label: 'supplier_transactions.col_transaction_type'.tr,
+              value: _orDash(UiCodeLabels.documentKind(tx.transactionType)),
+            ),
+            InfoRow(
+              icon: Icons.account_balance_wallet_outlined,
+              label: 'supplier_transactions.col_payment_mode'.tr,
+              value: _orDash(UiCodeLabels.payment(tx.paymentMode)),
+            ),
+            InfoRow(
+              icon: Icons.tag_rounded,
+              label: 'supplier_transactions.col_reference'.tr,
+              value: _orDash(tx.reference),
+              trailing:
+                  _canCopyReference(tx) ? _copyReferenceButton(tx) : null,
+            ),
+          ],
+        ),
+        actionLabel: 'list.view'.tr,
+        actionIcon: Icons.visibility_outlined,
+        onAction: () => _showTransactionDetails(tx),
+      );
+
+  List<TableColumnDef<TransactionModel>> _columns() => [
+        TableColumnDef(
+            label: 'supplier_transactions.col_si_no'.tr,
+            flex: .5,
+            cellBuilder: (tx, _) => _text('${tx.siNo}')),
+        TableColumnDef(
+            label: 'supplier_transactions.supplier'.tr,
+            flex: 2,
+            cellBuilder: (tx, _) => TableCells.avatarName(
+                  name: _orDash(tx.supplier.user.name),
+                  avatar: AppAvatar(
+                    name: tx.supplier.user.name,
+                    semanticLabel: tx.supplier.user.name,
+                    size: 36,
+                  ),
+                )),
+        TableColumnDef(
+            label: 'supplier_transactions.col_date'.tr,
+            flex: 1.2,
+            cellBuilder: (tx, _) => _text(DateHelper.formatISODate(tx.date))),
+        TableColumnDef(
+            label: 'supplier_transactions.type'.tr,
+            cellBuilder: (tx, _) => TableCells.widget(_typeBadge(tx.type))),
+        TableColumnDef(
+            label: 'supplier_transactions.col_transaction_type'.tr,
+            flex: 1.3,
+            cellBuilder: (tx, _) =>
+                _text(UiCodeLabels.documentKind(tx.transactionType))),
+        TableColumnDef(
+            label: 'supplier_transactions.col_payment_mode'.tr,
+            flex: 1.2,
+            cellBuilder: (tx, _) =>
+                _text(UiCodeLabels.payment(tx.paymentMode))),
+        TableColumnDef(
+            label: 'supplier_transactions.col_amount'.tr,
+            flex: 1.3,
+            cellBuilder: (tx, _) => _text('${tx.currency} ${tx.amount}')),
+        TableColumnDef(
+            label: 'supplier_transactions.col_reference'.tr,
+            flex: 1.6,
+            cellBuilder: (tx, _) => _reference(tx)),
+        TableColumnDef(
+            label: 'supplier_transactions.status'.tr,
+            flex: 1.1,
+            cellBuilder: (tx, _) => TableCells.widget(_statusBadge(tx.status))),
+        TableColumnDef(
+            label: 'supplier_transactions.col_action'.tr,
+            flex: 1.2,
+            cellBuilder: (tx, _) => TableCells.action(
+                  label: 'list.view'.tr,
+                  icon: Icons.visibility_outlined,
+                  onPressed: () => _showTransactionDetails(tx),
+                )),
+      ];
+
+  /// Filters, Export, Refresh — left to right.
+  List<HeaderAction> _headerActions({required bool canExport}) => [
+        HeaderAction(
+          key: TransactionScreen.filterToggleKey,
+          icon: _showFilters
+              ? Icons.filter_alt_rounded
+              : Icons.filter_alt_outlined,
+          label: _showFilters
+              ? 'supplier_transactions.hide_filters'.tr
+              : 'supplier_transactions.filters'.tr,
+          onPressed: () => setState(() => _showFilters = !_showFilters),
+          active: _showFilters,
+          badge: !_showFilters && _hasActiveFilters,
+        ),
+        HeaderAction(
+          key: TransactionScreen.exportKey,
+          icon: Icons.ios_share_rounded,
+          label: _export.busy
+              ? (_export.stage ?? 'supplier_transactions.exporting'.tr)
+              : 'supplier_transactions.export'.tr,
+          onPressed: canExport ? _runExport : null,
+          busy: _export.busy,
+        ),
+        HeaderAction(
+          key: TransactionScreen.refreshKey,
+          icon: Icons.refresh_rounded,
+          label: 'list.refresh'.tr,
+          onPressed: _onRefresh,
+        ),
+      ];
 
   @override
-  Widget build(BuildContext context) =>
-      Consumer<TransactionProvider>(builder: (context, provider, _) {
-        final local = _usesLocalFilters;
-        final allLocal = _localItems ?? <TransactionModel>[];
-        final localPages = ((allLocal.length + 49) ~/ 50).clamp(1, 1 << 30);
-        final currentPage = local
-            ? _localPage.clamp(1, localPages)
-            : provider.transactionCurrentPage;
-        final items = local
-            ? allLocal.skip((currentPage - 1) * 50).take(50).toList()
-            : provider.listTransactionModelDataList ?? <TransactionModel>[];
-        final statuses = <String>{
-          'All Status',
-          statusController.text,
-          ...?provider.listTransactionModelDataList?.map((tx) => tx.status),
-          ...allLocal.map((tx) => tx.status)
-        }.where((value) => value.isNotEmpty).toList();
-        return ListPageScaffold<TransactionModel>(
-          tableMinWidth: 1200,
-          header: ListPageHeader(
-              icon: Icons.swap_horiz_rounded,
-              title: 'supplier_transactions.title'.tr,
-              subtitle: 'supplier_transactions.subtitle'.tr,
-              onRefresh: _onRefresh,
-              extraActions: [
-                FilterToggleButton(
-                  key: const ValueKey('supplier-transactions-filter-toggle'),
-                  showFilters: _showFilters,
-                  hasActiveFilters: _hasActiveFilters,
-                  activeFiltersListenable: Listenable.merge(
-                      [searchController, supplierSearchController]),
-                  activeFiltersBuilder: () => _hasActiveFilters,
-                  showTooltip: 'supplier_transactions.filters'.tr,
-                  hideTooltip: 'supplier_transactions.hide_filters'.tr,
-                  onPressed: () => setState(() => _showFilters = !_showFilters),
-                ),
-                ExportShareButton(
-                  key: const ValueKey('supplier-transactions-export'),
-                  compact: MediaQuery.sizeOf(context).width <
-                      ListLayoutBreakpoints.actions,
-                  enabled: !initLoading &&
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: _export,
+        builder: (context, _) => Consumer<TransactionProvider>(
+          builder: (context, provider, _) {
+            final local = _usesLocalFilters;
+            final allLocal = _localItems ?? <TransactionModel>[];
+            final localPages = ((allLocal.length + _pageSize - 1) ~/ _pageSize)
+                .clamp(1, 1 << 30);
+            final currentPage = local
+                ? _localPage.clamp(1, localPages)
+                : provider.transactionCurrentPage;
+            final items = local
+                ? allLocal
+                    .skip((currentPage - 1) * _pageSize)
+                    .take(_pageSize)
+                    .toList()
+                : provider.listTransactionModelDataList ?? <TransactionModel>[];
+            final statuses = <String>{
+              'All Status',
+              statusController.text,
+              ...?provider.listTransactionModelDataList?.map((tx) => tx.status),
+              ...allLocal.map((tx) => tx.status)
+            }.where((value) => value.isNotEmpty).toList();
+            final loading =
+                initLoading || provider.transactionIsLoading || _localLoading;
+            return ListPageScaffold<TransactionModel>(
+              minTableWidth: 1200,
+              header: PageHeader(
+                icon: Icons.swap_horiz_rounded,
+                title: 'supplier_transactions.title'.tr,
+                subtitle: 'supplier_transactions.subtitle'.tr,
+                actions: _headerActions(
+                  canExport: !initLoading &&
                       !provider.transactionIsLoading &&
                       items.isNotEmpty,
-                  createFile: _createExport,
-                  progressLabel: _exportProgress,
-                  label: 'supplier_transactions.export'.tr,
-                  loadingLabel: 'supplier_transactions.exporting'.tr,
-                  tooltip: 'supplier_transactions.export_tooltip'.tr,
-                  errorMessage: 'supplier_transactions.export_failed'.tr,
-                  mimeType:
-                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  shareText: 'supplier_transactions.title'.tr,
                 ),
-              ]),
-          showFilters: _showFilters,
-          filters: FilterPanel(
-              key: const ValueKey('supplier-transactions-filters'),
-              title: 'supplier_transactions.find'.tr,
-              hint: 'supplier_transactions.find_hint'.tr,
-              onReset: resetSearch,
-              fields: [
-                TextFilterField(
-                    controller: searchController,
-                    label: 'supplier_transactions.search'.tr,
-                    icon: Icons.search_rounded,
-                    onSearch: searchTransactions),
-                _supplierField(provider),
-                _dropdown(
-                    'supplier_transactions.trans_type'.tr,
-                    transactionTypeController,
-                    const ['All', 'Invoice', 'Voucher'],
-                    Icons.receipt_long_outlined),
-                _dropdown(
-                    'supplier_transactions.type'.tr,
-                    typeController,
-                    const ['All Types', 'Credit', 'Debit'],
-                    Icons.swap_vert_rounded),
-                _dropdown('supplier_transactions.status'.tr, statusController,
-                    statuses, Icons.check_circle_outline),
-              ]),
-          isLoading:
-              initLoading || provider.transactionIsLoading || _localLoading,
-          items: items,
-          onRefresh: _onRefresh,
-          onItemTap: _showTransactionDetails,
-          cardBuilder: _card,
-          emptyState: AppSurface(
-              child: Column(children: [
-            const Icon(Icons.search_off, size: 48, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text((_hasActiveFilters
-                    ? 'supplier_transactions.no_filter_match'
-                    : 'supplier_transactions.no_transactions')
-                .tr),
-            if (_hasActiveFilters)
-              TextButton(
-                  onPressed: resetSearch,
-                  child: Text('supplier_transactions.btn_reset_filters'.tr)),
-          ])),
-          currentPage: currentPage,
-          totalPages: local ? localPages : provider.transactionTotalPages,
-          itemsPerPage: 50,
-          onPageChanged: _fetchPage,
-          countLabel: 'supplier_transactions.count_on_page'
-              .trParams({'count': '${items.length}'}),
-          columns: [
-            TableColumnDef(
-                label: 'supplier_transactions.col_si_no'.tr,
-                flex: .5,
-                cellBuilder: (tx, _) => TableCells.text('${tx.siNo}')),
-            TableColumnDef(
-                label: 'supplier_transactions.supplier'.tr,
-                flex: 2,
-                cellBuilder: (tx, _) =>
-                    TableCells.identity(tx.supplier.user.name)),
-            TableColumnDef(
-                label: 'supplier_transactions.col_date'.tr,
-                flex: 1.2,
-                cellBuilder: (tx, _) =>
-                    TableCells.text(DateHelper.formatISODate(tx.date))),
-            TableColumnDef(
-                label: 'supplier_transactions.type'.tr,
-                cellBuilder: (tx, _) => _buildTypeCell(tx.type)),
-            TableColumnDef(
-                label: 'supplier_transactions.col_transaction_type'.tr,
-                flex: 1.3,
-                cellBuilder: (tx, _) => TableCells.text(
-                    UiCodeLabels.documentKind(tx.transactionType))),
-            TableColumnDef(
-                label: 'supplier_transactions.col_payment_mode'.tr,
-                flex: 1.2,
-                cellBuilder: (tx, _) =>
-                    TableCells.text(UiCodeLabels.payment(tx.paymentMode))),
-            TableColumnDef(
-                label: 'supplier_transactions.col_amount'.tr,
-                flex: 1.3,
-                cellBuilder: (tx, _) =>
-                    TableCells.text('${tx.currency} ${tx.amount}')),
-            TableColumnDef(
-                label: 'supplier_transactions.col_reference'.tr,
-                flex: 1.6,
-                cellBuilder: (tx, _) => _reference(tx)),
-            TableColumnDef(
-                label: 'supplier_transactions.status'.tr,
-                flex: 1.1,
-                cellBuilder: (tx, _) => _buildStatusChip(tx.status)),
-            TableColumnDef(
-                label: 'supplier_transactions.col_action'.tr,
-                flex: 1.2,
-                cellBuilder: (tx, _) =>
-                    TableCells.viewButton(() => _showTransactionDetails(tx))),
-          ],
-        );
-      });
+              ),
+              showFilters: _showFilters,
+              filters: _filters(provider, statuses),
+              isLoading: loading,
+              items: items,
+              onRefresh: _onRefresh,
+              onRowTap: _showTransactionDetails,
+              cardBuilder: _card,
+              columns: _columns(),
+              emptyState: AppEmptyState(
+                icon: Icons.search_off_rounded,
+                title: (_hasActiveFilters
+                        ? 'supplier_transactions.no_filter_match'
+                        : 'supplier_transactions.no_transactions')
+                    .tr,
+                action: _hasActiveFilters
+                    ? AppOutlinedButton(
+                        label: 'supplier_transactions.btn_reset_filters'.tr,
+                        icon: Icons.restart_alt_rounded,
+                        onPressed: resetSearch,
+                      )
+                    : null,
+              ),
+              pagination: ListPagination(
+                currentPage: currentPage,
+                totalPages: local ? localPages : provider.transactionTotalPages,
+                itemsPerPage: _pageSize,
+                onPageChanged: _fetchPage,
+                countLabel: 'supplier_transactions.count_on_page'
+                    .trParams({'count': '${items.length}'}),
+              ),
+            );
+          },
+        ),
+      );
 }

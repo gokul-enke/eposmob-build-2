@@ -221,13 +221,3 @@ class ViewOrders extends StatelessWidget {
     );
   }
 }
-
-// Helper function to show snackbar messages
-void showScaffold({required BuildContext context, required String message}) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
-    ),
-  );
-}

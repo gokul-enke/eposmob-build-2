@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 
 class DeliveryMethodModal extends StatefulWidget {
   final String initialDeliveryMethod;

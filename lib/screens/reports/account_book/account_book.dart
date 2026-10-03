@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -33,10 +34,7 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
   void _showLoadError(Object error) {
     debugPrint('Customer account book unavailable: $error');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('account_book.error_unavailable'.tr),
-      backgroundColor: Colors.red,
-    ));
+    AppToast.error(context, 'account_book.error_unavailable'.tr);
   }
 
   @override

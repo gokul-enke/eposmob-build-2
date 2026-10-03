@@ -1,31 +1,3 @@
-import 'package:flutter/services.dart';
-
-class PhoneNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String formattedText = formatPhoneNumber(newValue.text);
-
-    return TextEditingValue(
-      text: formattedText,
-      selection: TextSelection.collapsed(offset: formattedText.length),
-    );
-  }
-
-  String formatPhoneNumber(String input) {
-    input = input.replaceAll(RegExp(r'\D'), '');
-    if (input.length > 3) {
-      input = '${input.substring(0, 3)}-${input.substring(3)}';
-    }
-    if (input.length > 7) {
-      input = '${input.substring(0, 7)}-${input.substring(7)}';
-    }
-    return input;
-  }
-}
-
 String? validateEmail(String? value) {
   const pattern = r"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'"
       r'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-'
