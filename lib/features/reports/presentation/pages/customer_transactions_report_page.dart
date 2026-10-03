@@ -63,8 +63,9 @@ class _CustomerTransactionsReportPageState
     _auth = context.read<AuthModel>();
     _customers = context.read<CustomerProvider>();
     final invoices = context.read<InvoiceProvider>();
+    // The customer filter is the report's own: it never starts from, or
+    // changes, the customer selected in profiles or the details screen.
     _report = CustomerTransactionsReportController(
-      customerId: _customers.selectedCustomerId,
       fetch: (query, page) => invoices.listAllTransaction(
         accessToken: _auth.token ?? '',
         customerId: query.customerId,
@@ -96,7 +97,7 @@ class _CustomerTransactionsReportPageState
   @override
   void dispose() {
     _report.dispose();
-    _export.dispose();
+    if (widget.export == null) _export.dispose();
     super.dispose();
   }
 
@@ -112,17 +113,10 @@ class _CustomerTransactionsReportPageState
   Future<void> _refresh() =>
       Future.wait([_report.load(), _loadCustomers()]).then((_) {});
 
-  void _selectCustomer(CustomerListModelData? customer) {
-    _customers.setSelectedCustomerId(customer?.id?.toString());
-    _customers.setSelectedCustomerName(customer?.name);
-    _report.setCustomer(customer?.id?.toString());
-  }
+  void _selectCustomer(CustomerListModelData? customer) =>
+      _report.setCustomer(customer?.id?.toString());
 
-  void _reset() {
-    _customers.setSelectedCustomerId(null);
-    _customers.setSelectedCustomerName(null);
-    _report.reset();
-  }
+  void _reset() => _report.reset();
 
   /// Opens the customer's transactions. Selects by ID, so customers with
   /// the same name stay apart.

@@ -1,9 +1,11 @@
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/features/reports/domain/customer_report.dart';
 import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
@@ -47,6 +49,12 @@ class _FakeInvoices extends InvoiceProvider {
 }
 
 class _FakeCustomers extends CustomerProvider {
+  @override
+  List<CustomerListModelData>? get allCustomers => [
+        CustomerListModelData(id: 42, name: 'Customer'),
+        CustomerListModelData(id: 99, name: 'Profile customer')
+      ];
+
   @override
   Future<void> fetchCustomers(
       {required String accessToken,
@@ -92,6 +100,15 @@ void main() {
 
   ListPageScaffold<CustomerReportRow> scaffold(WidgetTester tester) =>
       tester.widget(find.byType(ListPageScaffold<CustomerReportRow>));
+
+  DropdownSearch<CustomerListModelData> picker(WidgetTester tester) =>
+      tester.widget(find.byType(DropdownSearch<CustomerListModelData>));
+
+  /// Picks customer [id] in the report's own customer filter.
+  Future<void> choose(WidgetTester tester, int id) async {
+    picker(tester).onChanged!(CustomerListModelData(id: id, name: 'Customer'));
+    await tester.pumpAndSettle();
+  }
 
   for (final size in const [
     Size(1440, 900),
@@ -159,28 +176,75 @@ void main() {
         SideBarController.customerTransactionDetailsScreenIndex);
   });
 
-  testWidgets('Reset clears the selected customer and reloads page 1',
+  testWidgets('a customer selected in profiles never filters the report',
       (tester) async {
-    final customers = _FakeCustomers()..setSelectedCustomerId('42');
+    final customers = _FakeCustomers()
+      ..selectCustomer(CustomerListModelData(id: 99, name: 'Profile customer'));
+    final invoices = _FakeInvoices()
+      ..handler =
+          (p) async => customerReportResponse(p, [customerGroup(p)], last: 2);
+    await mount(tester, customers: customers, invoices: invoices);
+    expect(invoices.calls.single.customer, isNull);
+    expect(picker(tester).selectedItems, isEmpty);
+    expect(customers.selectedCustomerId, '99');
+
+    customers
+        .selectCustomer(CustomerListModelData(id: 42, name: 'Other profile'));
+    await tester.pumpAndSettle();
+    scaffold(tester).pagination!.onPageChanged(2);
+    await tester.pumpAndSettle();
+    await scaffold(tester).onRefresh!();
+    await tester.pumpAndSettle();
+    expect(invoices.calls.every((c) => c.customer == null), isTrue);
+  });
+
+  testWidgets(
+      'the report keeps its own customer and Reset leaves the profile one',
+      (tester) async {
+    final customers = _FakeCustomers()
+      ..selectCustomer(CustomerListModelData(id: 99, name: 'Profile customer'));
     final invoices = await mount(tester, customers: customers);
+    await choose(tester, 42);
+    expect(invoices.calls.last.customer, '42');
+    expect(customers.selectedCustomerId, '99');
+
+    customers.setSelectedCustomerId('7');
+    await tester.pumpAndSettle();
+    await scaffold(tester).onRefresh!();
+    await tester.pumpAndSettle();
     expect(invoices.calls.last.customer, '42');
 
     await tester.tap(find.descendant(
         of: find.byKey(CustomerTransactionsReportPage.filtersKey),
         matching: find.text('Reset')));
     await tester.pumpAndSettle();
-    expect(customers.selectedCustomerId, isNull);
     expect(invoices.calls.last.customer, isNull);
     expect(invoices.calls.last.page, 1);
+    expect(customers.selectedCustomerId, '7');
+  });
+
+  testWidgets('coming back from View opens an unfiltered report',
+      (tester) async {
+    final customers = _FakeCustomers();
+    final invoices = _FakeInvoices()
+      ..handler = (_) async => customerReportResponse(1, [customerGroup(42)]);
+    await mount(tester, customers: customers, invoices: invoices);
+    await tester.tap(find.text('View'));
+    await tester.pumpAndSettle();
+    expect(customers.selectedCustomerId, '42');
+
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, customers: customers, invoices: invoices);
+    expect(invoices.calls.last.customer, isNull);
   });
 
   testWidgets('the workbook has every page with the filters and numbers',
       (tester) async {
-    final customers = _FakeCustomers()..setSelectedCustomerId('42');
     final invoices = _FakeInvoices()
       ..handler = (p) async =>
           customerReportResponse(p, [customerGroup(p)], last: 2, total: 2);
-    await mount(tester, invoices: invoices, customers: customers);
+    await mount(tester, invoices: invoices);
+    await choose(tester, 42);
     final visible = scaffold(tester).items;
 
     await tester.tap(find.byKey(CustomerTransactionsReportPage.exportKey));
@@ -192,7 +256,7 @@ void main() {
     expect(sheet.maxRows, 3);
     expect(sheet.rows[1][0]!.value, isA<TextCellValue>());
     expect(sheet.rows[1][2]!.value, const DoubleCellValue(12.125));
-    expect(invoices.calls.map((c) => c.page).toList(), [1, 1, 2]);
+    expect(invoices.calls.map((c) => c.page).toList(), [1, 1, 1, 2]);
     expect(invoices.calls.every((c) => !c.update), isTrue);
     expect(invoices.calls.last.customer, '42');
     expect(scaffold(tester).items, same(visible));

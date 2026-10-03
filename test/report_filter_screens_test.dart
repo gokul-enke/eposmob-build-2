@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -10,6 +11,7 @@ import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
@@ -412,6 +414,13 @@ void main() {
       customerProvider: customerProvider,
     );
 
+    // The profile's customer is not the report's filter.
+    final picker = tester.widget<DropdownSearch<CustomerListModelData>>(
+        find.byType(DropdownSearch<CustomerListModelData>));
+    expect(picker.selectedItems, isEmpty);
+    picker.onChanged!(CustomerListModelData(id: 7, name: 'Chosen customer'));
+    await tester.pumpAndSettle();
+
     final toggle = find.byKey(
       const ValueKey('customer-transactions-report-filter-toggle'),
     );
@@ -427,7 +436,7 @@ void main() {
         matching: find.text('list.reset')));
     await tester.pump();
 
-    expect(customerProvider.selectedCustomerId, isNull);
+    expect(customerProvider.selectedCustomerId, '42');
     await tester.tap(toggle);
     await tester.pump();
     expect(dot, findsNothing);

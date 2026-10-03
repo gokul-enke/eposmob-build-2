@@ -84,7 +84,7 @@ class _MySalesReportPageState extends State<MySalesReportPage> {
   @override
   void dispose() {
     _report.dispose();
-    _export.dispose();
+    if (widget.export == null) _export.dispose();
     super.dispose();
   }
 
