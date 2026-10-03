@@ -248,9 +248,9 @@ class SideBarController extends GetxController {
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
     SalesScreen(isOnlineSales: true), // 92 Online Sales
-    ExpenseListPage(), // 93
-    CreateExpensePage(), // 94
-    ViewExpensePage(), // 95
+    ExpenseListPage(), // expenseListScreenIndex (93)
+    CreateExpensePage(), // createExpenseScreenIndex (94)
+    ViewExpensePage(), // viewExpenseScreenIndex (95)
     OfflineDataPage(), // 96 Offline Data
     RestaurantPage(
       allowCounterBillingFromAttender: true,
