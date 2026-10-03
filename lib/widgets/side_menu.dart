@@ -1,3 +1,4 @@
+import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
 import 'dart:io';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 
@@ -913,7 +914,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 91;
                     },
                     onTapTitle6: () {
-                      sideBarController.index.value = 93;
+                      ExpenseNavigation.openList();
                     },
                     listTitle1: 'nav.invoice'.tr,
                     listTitle2: 'nav.receipts'.tr,
@@ -943,9 +944,9 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 75 ||
                         sideBarController.index.value == 76 ||
                         sideBarController.index.value == 91 ||
-                        sideBarController.index.value == 93 ||
-                        sideBarController.index.value == 94 ||
-                        sideBarController.index.value == 95 ||
+                        sideBarController.index.value == SideBarController.expenseListScreenIndex ||
+                        sideBarController.index.value == SideBarController.createExpenseScreenIndex ||
+                        sideBarController.index.value == SideBarController.viewExpenseScreenIndex ||
                         sideBarController.index.value == 30),
               );
             },
