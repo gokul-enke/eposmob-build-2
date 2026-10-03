@@ -1,3 +1,5 @@
+import 'package:dropdown_search/dropdown_search.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -38,6 +40,7 @@ class _FakeSalesExecutiveProvider extends SalesExecutiveProvider {
     required BuildContext context,
     String? fromDate,
     String? toDate,
+    bool updateState = true,
   }) async =>
       {'status': 'success', 'data': <dynamic>[]};
 }
@@ -53,6 +56,7 @@ class _FakeInvoiceProvider extends InvoiceProvider {
     String? dateFrom,
     String? dateTo,
     int? page,
+    bool updateState = true,
   }) async =>
       {
         'status': 'success',
@@ -144,6 +148,7 @@ class _ReportTestTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
+          'pagination.page_of': 'Page @current of @total',
           'pagination.previous': 'Previous',
           'pagination.page': 'Page',
           'pagination.of': 'of',
@@ -406,6 +411,11 @@ void main() {
       customerProvider: customerProvider,
     );
 
+    final dropdown = tester.widget<DropdownSearch<CustomerListModelData>>(
+        find.byType(DropdownSearch<CustomerListModelData>));
+    expect(dropdown.selectedItems, isEmpty);
+    dropdown.onChanged!(CustomerListModelData(id: 7, name: 'Chosen customer'));
+    await tester.pumpAndSettle();
     final toggle = find.byKey(
       const ValueKey('customer-transactions-report-filter-toggle'),
     );
@@ -418,11 +428,14 @@ void main() {
     );
 
     await tester.tap(
-      find.byKey(const ValueKey('customer-transactions-report-reset')),
+      find.descendant(
+          of: find
+              .byKey(const ValueKey('customer-transactions-report-filters')),
+          matching: find.byType(TextButton)),
     );
     await tester.pump();
 
-    expect(customerProvider.selectedCustomerId, isNull);
+    expect(customerProvider.selectedCustomerId, '42');
     expect(
       find.descendant(
         of: toggle,

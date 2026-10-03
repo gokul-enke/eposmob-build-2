@@ -202,13 +202,16 @@ class SalesExecutiveProvider extends ChangeNotifier {
     required BuildContext context,
     String? fromDate,
     String? toDate,
+    bool updateState = true,
   }) async {
     debugPrint("📊 SalesExecutiveProvider: getSalesExecutiveReport called");
     debugPrint("📊 From Date: $fromDate, To Date: $toDate");
 
-    _isReportLoading = true;
-    _reportError = null;
-    notifyListeners();
+    if (updateState) {
+      _isReportLoading = true;
+      _reportError = null;
+      notifyListeners();
+    }
 
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -219,9 +222,11 @@ class SalesExecutiveProvider extends ChangeNotifier {
 
       if (token == null) {
         debugPrint("❌ SalesExecutiveProvider: No auth token available");
-        _reportError = 'Not authenticated';
-        _isReportLoading = false;
-        notifyListeners();
+        if (updateState) {
+          _reportError = 'Not authenticated';
+          _isReportLoading = false;
+          notifyListeners();
+        }
         return {
           "status": "error",
           "message": "Not authenticated",
@@ -264,16 +269,22 @@ class SalesExecutiveProvider extends ChangeNotifier {
           }
         }
       } catch (_) {
-        // ignore if store provider not available
+        // The saved store fallback is resolved below if no provider is available.
       }
 
       // Get API key from SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
+      final savedStoreId = prefs.getInt('active_store_id');
+      if (!queryParameters.containsKey('store_id') && savedStoreId != null) {
+        queryParameters['store_id'] = savedStoreId.toString();
+      }
 
       if (apiKey == null || apiKey.isEmpty) {
-        _isReportLoading = false;
-        notifyListeners();
+        if (updateState) {
+          _isReportLoading = false;
+          notifyListeners();
+        }
         throw const HttpException("API key not found. Please restart the app.");
       }
 
@@ -291,7 +302,7 @@ class SalesExecutiveProvider extends ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
       debugPrint('📊 API response status code: ${response.statusCode}');
       debugPrint(
@@ -303,30 +314,34 @@ class SalesExecutiveProvider extends ChangeNotifier {
 
           // Validate data structure before parsing
           if (jsonData is! Map<String, dynamic>) {
-            throw FormatException('Response is not a valid JSON object');
+            throw const FormatException('Response is not a valid JSON object');
           }
 
           if (jsonData['data'] != null && jsonData['data'] is! List) {
-            throw FormatException('Data field is not a list');
+            throw const FormatException('Data field is not a list');
           }
 
           SalesExecutiveReportModel reportModel =
               SalesExecutiveReportModel.fromJson(jsonData);
 
-          _salesExecutiveReportList = reportModel.data ?? [];
-          _isReportLoading = false;
-          notifyListeners();
+          if (updateState) {
+            _salesExecutiveReportList = reportModel.data ?? [];
+            _isReportLoading = false;
+            notifyListeners();
+          }
 
           debugPrint(
-              "✅ Successfully loaded ${_salesExecutiveReportList.length} sales executive reports");
+              "✅ Successfully loaded ${reportModel.data?.length ?? 0} sales executive reports");
 
           return jsonData;
         } catch (parseError) {
           debugPrint('❌ JSON parsing error: $parseError');
           debugPrint('❌ Response body: ${response.body}');
-          _reportError = 'Failed to parse response data: $parseError';
-          _isReportLoading = false;
-          notifyListeners();
+          if (updateState) {
+            _reportError = 'Failed to parse response data: $parseError';
+            _isReportLoading = false;
+            notifyListeners();
+          }
 
           return {
             "status": "error",
@@ -335,16 +350,23 @@ class SalesExecutiveProvider extends ChangeNotifier {
         }
       } else {
         debugPrint('❌ Error in API response: ${response.reasonPhrase}');
-        _reportError =
-            'Failed to load sales executive report: ${response.reasonPhrase}';
-        _isReportLoading = false;
-        notifyListeners();
+        if (updateState) {
+          _reportError =
+              'Failed to load sales executive report: ${response.reasonPhrase}';
+          _isReportLoading = false;
+          notifyListeners();
+        }
 
         // Try to parse error response
         if (response.body.isNotEmpty) {
           try {
             final errorJson = json.decode(response.body);
-            return errorJson;
+            return {
+              'status': 'error',
+              'message': errorJson is Map
+                  ? errorJson['message'] ?? 'Failed to load sales executive report'
+                  : 'Failed to load sales executive report',
+            };
           } catch (e) {
             return {
               "status": "error",
@@ -362,9 +384,11 @@ class SalesExecutiveProvider extends ChangeNotifier {
       }
     } catch (error) {
       debugPrint('❌ Exception in getSalesExecutiveReport: $error');
-      _reportError = 'Error: $error';
-      _isReportLoading = false;
-      notifyListeners();
+      if (updateState) {
+        _reportError = 'Error: $error';
+        _isReportLoading = false;
+        notifyListeners();
+      }
 
       return {
         "status": "error",

@@ -1,24 +1,97 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/components/filter_toggle_button.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/models/sales_executive_report.dart';
-import 'package:pos_machine/providers/sales_executive_provider.dart';
-import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/components/build_calendar_selection.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
+import '../../../components/export_share_button.dart';
+import '../../../components/filter_toggle_button.dart';
+import '../../../core/ui/app_colors.dart';
+import '../../../core/ui/app_surface.dart';
+import '../../../core/ui/list_page/filter_panel.dart';
+import '../../../core/ui/list_page/list_page_header.dart';
+import '../../../core/ui/list_page/list_page_scaffold.dart';
+import '../../../models/sales_executive_report.dart';
+import '../../../providers/app_settings_provider.dart';
+import '../../../providers/sales_executive_provider.dart';
+import '../../../resources/color_manager.dart';
+import '../../../resources/font_manager.dart';
+import '../../../resources/style_manager.dart';
+import '../../../services/list_excel_export_service.dart';
+
+@visibleForTesting
+List<SalesExecutiveReportData> parseMySalesReport(dynamic response) {
+  if (response is! Map<String, dynamic> ||
+      response['status'] != 'success' ||
+      response['data'] is! List) {
+    throw const FormatException('Invalid My Sales Report response.');
+  }
+  for (final row in response['data'] as List) {
+    if (row is! Map<String, dynamic>) {
+      throw const FormatException('Invalid sales report row.');
+    }
+    for (final key in [
+      'total_sales',
+      'totalSales',
+      'online_sales',
+      'onlineSales',
+      'upi_sales',
+      'upiSales',
+      'card_sales',
+      'cardSales',
+      'cash_sales',
+      'cashSales',
+      'credit_sales',
+      'creditSales',
+      'collected_sales',
+      'collectedSales',
+      'total_payment_received',
+      'payment_received',
+      'totalPaymentReceived',
+      'credit_collected_prev',
+      'prev_balance_collected',
+      'creditCollectedPrev',
+      'total_collected_on_sale',
+      'totalCollectedOnSale'
+    ]) {
+      final value = row[key];
+      if (value == null) continue;
+      final amount = double.tryParse(value.toString());
+      if (amount == null || !amount.isFinite) {
+        throw const FormatException('Invalid sales report amount.');
+      }
+    }
+    final count = row['order_count'] ?? row['orderCount'];
+    if (count != null &&
+        (int.tryParse(count.toString()) == null ||
+            int.parse(count.toString()) < 0)) {
+      throw const FormatException('Invalid sales report order count.');
+    }
+    final breakdown = row['payment_breakdown'];
+    if (breakdown != null &&
+        breakdown is! Map &&
+        !(breakdown is List && breakdown.isEmpty)) {
+      throw const FormatException('Invalid payment breakdown.');
+    }
+    if (breakdown is Map) {
+      for (final key in ['UPI', 'CARD']) {
+        final value = breakdown[key];
+        if (value != null) {
+          final amount = double.tryParse(value.toString());
+          if (amount == null || !amount.isFinite) {
+            throw const FormatException('Invalid payment breakdown amount.');
+          }
+        }
+      }
+    }
+  }
+  return List.unmodifiable(
+      SalesExecutiveReportModel.fromJson(response).data ?? []);
+}
+
+typedef _DateRange = ({String? from, String? to});
 
 class SalesExecutiveReportScreen extends StatefulWidget {
   const SalesExecutiveReportScreen({super.key});
-
   @override
   State<SalesExecutiveReportScreen> createState() =>
       _SalesExecutiveReportScreenState();
@@ -26,895 +99,334 @@ class SalesExecutiveReportScreen extends StatefulWidget {
 
 class _SalesExecutiveReportScreenState
     extends State<SalesExecutiveReportScreen> {
-  final TextEditingController fromDateController = TextEditingController();
-  final TextEditingController toDateController = TextEditingController();
-
-  SideBarController sideBarController = Get.put(SideBarController());
-  bool initLoading = false;
-  bool _showFilters = true;
-
-  bool _isMobile(BuildContext ctx) => MediaQuery.of(ctx).size.width < 768;
-
-  @override
-  void dispose() {
-    fromDateController.dispose();
-    toDateController.dispose();
-    super.dispose();
-  }
+  final fromDateController = TextEditingController(),
+      toDateController = TextEditingController();
+  final _table = ScrollController();
+  bool _showFilters = true, _loading = false;
+  int _request = 0, _page = 1;
+  String? _error;
+  String _loadedDay = '';
+  String get _currency =>
+      context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+  _DateRange? _loadedRange;
+  List<SalesExecutiveReportData> _reports = [];
+  _DateRange get _range => (
+        from: fromDateController.text.isEmpty ? null : fromDateController.text,
+        to: toDateController.text.isEmpty ? null : toDateController.text
+      );
+  int get _pages => ((_reports.length + 19) ~/ 20).clamp(1, 2147483647);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() => _showFilters = !_isMobile(context));
-      loadInitData();
+      setState(() => _showFilters = MediaQuery.sizeOf(context).width >= 768);
+      _fetch();
     });
-  }
-
-  void loadInitData() async {
-    try {
-      if (mounted) {
-        setState(() {
-          initLoading = true;
-        });
-      }
-
-      SalesExecutiveProvider salesExecutiveProvider =
-          Provider.of<SalesExecutiveProvider>(context, listen: false);
-
-      // Fetch sales executives first
-      await salesExecutiveProvider.fetchSalesExecutives(context);
-
-      // Then fetch sales executive report data
-      await fetchSalesExecutiveReport();
-    } catch (error) {
-      debugPrint('Error loading sales executive data: $error');
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'sales_executive_report.err_loading_data'.tr.replaceAll('@error', error.toString()),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          initLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> fetchSalesExecutiveReport() async {
-    // Return early if widget is disposed
-    if (!mounted) return;
-    if (!_isDateRangeValid()) return;
-
-    try {
-      SalesExecutiveProvider salesExecutiveProvider =
-          Provider.of<SalesExecutiveProvider>(context, listen: false);
-
-      String? fromDate;
-      String? toDate;
-
-      // Convert to YYYY-MM-DD HH:MM:SS format for API if dates are provided
-      if (fromDateController.text.isNotEmpty) {
-        fromDate = fromDateController.text;
-      }
-
-      if (toDateController.text.isNotEmpty) {
-        toDate = toDateController.text;
-      }
-
-      debugPrint(
-          '📊 Fetching report with dates - From: $fromDate, To: $toDate');
-
-      final response = await salesExecutiveProvider.getSalesExecutiveReport(
-        context: context,
-        fromDate: fromDate,
-        toDate: toDate,
-      );
-
-      // Check mounted again after async operation
-      if (!mounted) return;
-
-      if (response != null && response['status'] == 'error') {
-        showScaffoldError(
-          context: context,
-          message: response['message'] ?? 'sales_executive_report.failed_fetch_report'.tr,
-        );
-      }
-    } catch (error) {
-      debugPrint('❌ Error fetching sales executive report: $error');
-      if (mounted) {
-        showScaffoldError(
-          context: context,
-          message: 'sales_executive_report.err_fetching_report'.tr.replaceAll('@error', error.toString()),
-        );
-      }
-    }
-  }
-
-  bool _isDateRangeValid() {
-    final from = DateTime.tryParse(fromDateController.text.trim());
-    final to = DateTime.tryParse(toDateController.text.trim());
-    if (from == null || to == null || !from.isAfter(to)) return true;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text('sales_executive_report.from_date_after_to_date'.tr),
-        backgroundColor: Colors.orange,
-      ));
-    return false;
-  }
-
-  void searchSalesExecutives() {
-    // Fetch report data with current date filters
-    fetchSalesExecutiveReport();
-  }
-
-  void resetSearch() {
-    setState(() {
-      fromDateController.clear();
-      toDateController.clear();
-    });
-
-    // Clear report data and fetch fresh data
-    SalesExecutiveProvider salesExecutiveProvider =
-        Provider.of<SalesExecutiveProvider>(context, listen: false);
-    salesExecutiveProvider.clearReportData();
-
-    fetchSalesExecutiveReport();
-  }
-
-  bool _hasActiveFilters() =>
-      fromDateController.text.isNotEmpty || toDateController.text.isNotEmpty;
-
-  Widget _buildFilterToggleButton() {
-    return FilterToggleButton(
-      key: const ValueKey('sales-executive-report-filter-toggle'),
-      showFilters: _showFilters,
-      hasActiveFilters: _hasActiveFilters(),
-      activeFiltersListenable:
-          Listenable.merge([fromDateController, toDateController]),
-      activeFiltersBuilder: _hasActiveFilters,
-      onPressed: () => setState(() => _showFilters = !_showFilters),
-      showTooltip: 'sales_executive_report.filters'.tr,
-      hideTooltip: 'sales_executive_report.hide'.tr,
-    );
-  }
-
-  // Combined Date and Time selection method
-  Future<void> _selectDateTime(BuildContext context,
-      {required bool isFromDate}) async {
-    final DateTime? pickedDate = await showAutoDismissDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-
-    if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-        builder: (BuildContext context, Widget? child) {
-          return Theme(
-            data: ThemeData.light().copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: ColorManager.kPrimaryColor,
-                onPrimary: Colors.white,
-                surface: Colors.white,
-                onSurface: Colors.black,
-              ),
-              dialogBackgroundColor: Colors.white,
-            ),
-            child: child!,
-          );
-        },
-      );
-
-      if (pickedTime != null) {
-        final DateTime fullDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        final formattedDateTime =
-            DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
-        setState(() {
-          if (isFromDate) {
-            fromDateController.text = formattedDateTime;
-          } else {
-            toDateController.text = formattedDateTime;
-          }
-        });
-        // Trigger search immediately after selection
-        searchSalesExecutives();
-      }
-    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () async => loadInitData(),
-        child: Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: _isMobile(context) ? 5 : 10,
-            vertical: _isMobile(context) ? 10 : 20,
-          ),
-          padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: _isMobile(context) ? 12.0 : 20.0,
-              horizontal: _isMobile(context) ? 12.0 : 20.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(size),
-                const SizedBox(height: 15),
-                if (_showFilters)
-                  KeyedSubtree(
-                    key: const ValueKey('sales-executive-report-filters'),
-                    child: _buildSearchBar(size),
-                  ),
-                if (_showFilters) const SizedBox(height: 20),
-                _buildExecutiveTable(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _request++;
+    fromDateController.dispose();
+    toDateController.dispose();
+    _table.dispose();
+    super.dispose();
   }
 
-  Widget _buildHeader(Size size) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            'sales_executive_report.title'.tr,
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                0.30, ColorManager.textColor),
-          ),
-        ),
-        _buildFilterToggleButton(),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(Size size) {
-    if (_isMobile(context)) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildFromDateFilter()),
-              const SizedBox(width: 8),
-              Expanded(child: _buildToDateFilter()),
-            ],
-          ),
-          const SizedBox(height: 8),
-          CustomRoundButton(
-            title: 'sales_executive_report.reset'.tr,
-            boxColor: Colors.white,
-            textColor: ColorManager.kPrimaryColor,
-            fct: resetSearch,
-            height: 45,
-            width: double.infinity,
-            fontSize: FontSize.s12,
-          ),
-        ],
-      );
+  Future<void> _fetch() async {
+    final range = _range;
+    final from = DateTime.tryParse(range.from ?? ''),
+        to = DateTime.tryParse(range.to ?? '');
+    final request = ++_request;
+    if (from != null && to != null && from.isAfter(to)) {
+      setState(() {
+        _loading = false;
+        _error = 'sales_executive_report.from_date_after_to_date'.tr;
+      });
+      return;
     }
-    return Column(
-      children: [
-        SizedBox(
-          height: 90,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: _buildFromDateFilter(),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 1,
-                child: _buildToDateFilter(),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 42),
-                  child: CustomRoundButton(
-                    title: 'sales_executive_report.reset'.tr,
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: resetSearch,
-                    height: 45,
-                    width: double.infinity,
-                    fontSize: FontSize.s12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    final provider = context.read<SalesExecutiveProvider>();
+    final day = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final response = await provider.getSalesExecutiveReport(
+          context: context,
+          fromDate: range.from,
+          toDate: range.to,
+          updateState: false);
+      final rows = parseMySalesReport(response);
+      if (!mounted || request != _request) return;
+      setState(() {
+        _reports = rows;
+        _loadedRange = range;
+        _loadedDay = day;
+        _page = 1;
+      });
+    } catch (_) {
+      if (mounted && request == _request) {
+        setState(() => _error = 'sales_executive_report.load_error'.tr);
+      }
+    } finally {
+      if (mounted && request == _request) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
-  Widget _buildFromDateFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            'sales_executive_report.from_date'.tr,
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: fromDateController,
-            onTap: () => _selectDateTime(context, isFromDate: true),
-            readOnly: true,
-            cursorColor: ColorManager.kPrimaryColor,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: 'general.datetime_format_hint'.tr,
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIcon: Container(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
-    );
+  void _reset() {
+    fromDateController.clear();
+    toDateController.clear();
+    setState(() {});
+    _fetch();
   }
 
-  Widget _buildToDateFilter() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            'sales_executive_report.to_date'.tr,
-            style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                0.27, Colors.black.withOpacity(0.6)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        BuildBoxShadowContainer(
-          height: 45,
-          width: double.infinity,
-          circleRadius: 7,
-          child: TextFormField(
-            controller: toDateController,
-            onTap: () => _selectDateTime(context, isFromDate: false),
-            readOnly: true,
-            cursorColor: ColorManager.kPrimaryColor,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
-                0.18, ColorManager.textColor),
-            decoration: decoration.copyWith(
-              hintText: 'general.datetime_format_hint'.tr,
-              hintStyle: buildCustomStyle(FontWeightManager.medium,
-                  FontSize.s10, 0.18, ColorManager.textColor),
-              prefixIcon: Container(
-                padding: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: ColorManager.kPrimaryColor,
-                ),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
-    );
+  Future<void> _selectDateTime(bool from) async {
+    final controller = from ? fromDateController : toDateController;
+    final previous = DateTime.tryParse(controller.text) ?? DateTime.now();
+    final date = await showDatePicker(
+        context: context,
+        initialDate: previous,
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100));
+    if (!mounted || date == null) return;
+    final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(previous));
+    if (!mounted || time == null) return;
+    setState(() => controller.text = DateFormat('yyyy-MM-dd HH:mm:ss').format(
+        DateTime(date.year, date.month, date.day, time.hour, time.minute)));
+    await _fetch();
   }
 
-  Widget _buildMobileExecutiveCard(SalesExecutiveReportData report) {
-    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
-            .appSettings
-            ?.currency ??
-        'INR';
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    report.name ?? 'sales_executive_report.na'.tr,
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s14, 0.20, ColorManager.textColor),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.visibility,
-                      size: 18, color: ColorManager.kPrimaryColor),
-                  onPressed: () => _showExecutiveDetails(report),
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
-              ],
-            ),
-            SelectableText(
-              report.phone ?? 'sales_executive_report.na'.tr,
-              style: buildCustomStyle(
-                  FontWeightManager.regular, FontSize.s12, 0.18, Colors.grey),
-            ),
-            const Divider(height: 16),
-            Row(
-              children: [
-                _buildMobileCardStat(
-                    'sales_executive_report.orders'.tr, (report.orderCount ?? 0).toString()),
-                _buildMobileCardStat(
-                    'sales_executive_report.total_sales'.tr, '$currency ${report.formattedTotalSales}'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildMobileCardStat(
-                    'sales_executive_report.cash_sales'.tr, '$currency ${report.formattedCashSales}'),
-                _buildMobileCardStat(
-                    'sales_executive_report.online_sales'.tr, '$currency ${report.formattedOnlineSales}'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildMobileCardStat(
-                    'sales_executive_report.credit_sales'.tr, '$currency ${report.formattedCreditSales}'),
-                _buildMobileCardStat(
-                    'sales_executive_report.collected'.tr, '$currency ${report.formattedCollectedSales}'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _dateField(bool from) => TextFormField(
+      key: ValueKey(from ? 'my-sales-from-date' : 'my-sales-to-date'),
+      controller: from ? fromDateController : toDateController,
+      readOnly: true,
+      onTap: () => _selectDateTime(from),
+      decoration: listFilterDecoration(
+          from
+              ? 'sales_executive_report.from_date'.tr
+              : 'sales_executive_report.to_date'.tr,
+          Icons.calendar_today_outlined));
+  String _money(String? raw) =>
+      '$_currency ${double.parse(raw ?? '0').toStringAsFixed(2)}';
+  Future<File> _export() async {
+    if (_loading ||
+        _error != null ||
+        _loadedRange == null ||
+        _loadedRange != _range ||
+        _reports.isEmpty) {
+      throw StateError('Sales report is unavailable.');
+    }
+    final rows = List<SalesExecutiveReportData>.of(_reports);
+    final range = _loadedRange!;
+    final day = _loadedDay, currency = _currency;
+    ListExportColumn<SalesExecutiveReportData> money(
+            String key, String? Function(SalesExecutiveReportData) value) =>
+        ListExportColumn(
+            label: 'sales_executive_report.$key'.tr,
+            value: (r, _) => ListExcelExportService.numericValue(value(r)));
+    return ListExcelExportService.export<SalesExecutiveReportData>(
+        items: rows,
+        fileNamePrefix: 'my-sales-report',
+        sheetName: 'My Sales Report',
+        columns: [
+          ListExportColumn(
+              label: 'sales_executive_report.executive_name'.tr,
+              value: (r, _) => r.name),
+          ListExportColumn(
+              label: 'sales_executive_report.phone'.tr,
+              value: (r, _) => r.phone),
+          ListExportColumn(
+              label: 'sales_executive_report.total_orders'.tr,
+              value: (r, _) => r.orderCount),
+          money('total_sales', (r) => r.totalSales),
+          money('online_sales', (r) => r.onlineSales),
+          money('cash_sales', (r) => r.cashSales),
+          money('credit_sales', (r) => r.creditSales),
+          money('collected_sales', (r) => r.collectedSales),
+          money('total_upi_sales', (r) => r.upiSales),
+          money('total_card_sales', (r) => r.cardSales),
+          money('total_payment_received', (r) => r.totalPaymentReceived),
+          money(
+              'total_amount_collected_on_sale', (r) => r.totalCollectedOnSale),
+          money('total_credit_collected_prev', (r) => r.creditCollectedPrev),
+          ListExportColumn(
+              label: 'sales_executive_report.currency'.tr,
+              value: (_, __) => currency),
+          ListExportColumn(
+              label: 'sales_executive_report.from_date'.tr,
+              value: (_, __) => range.from ?? (range.to == null ? day : '')),
+          ListExportColumn(
+              label: 'sales_executive_report.to_date'.tr,
+              value: (_, __) => range.to ?? (range.from == null ? day : '')),
+        ]);
   }
 
-  Widget _buildMobileCardStat(String label, String value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: buildCustomStyle(
-                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
-          Text(value,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.18, Colors.black87)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExecutiveTable() {
-    return Expanded(
-      child: Consumer<SalesExecutiveProvider>(
-          builder: (context, salesExecutiveProvider, child) {
-        final isLoading = salesExecutiveProvider.isLoading ||
-            salesExecutiveProvider.isReportLoading;
-        final reportList = salesExecutiveProvider.salesExecutiveReportList;
-        final reportError = salesExecutiveProvider.reportError;
-
-        if (isLoading) {
-          return const Center(child: CircularProgressIndicator.adaptive());
-        }
-
-        if (_isMobile(context)) {
-          return Column(
-            children: [
-              Expanded(
-                child: reportError != null
-                    ? _buildErrorUI(reportError)
-                    : reportList.isEmpty
-                        ? _buildNoDataFoundUI()
-                        : ListView.builder(
-                            itemCount: reportList.length,
-                            itemBuilder: (ctx, i) =>
-                                _buildMobileExecutiveCard(reportList[i]),
-                          ),
-              ),
-            ],
-          );
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(top: 5),
-                circleRadius: 7,
-                offsetValue: const Offset(2, 2),
-                blurRadius: 8.0,
-                color: Colors.white,
-                child: Column(
-                  children: [
-                    // Fixed table header
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: ColorManager.tableBGColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            offset: Offset(0, 2),
-                            blurRadius: 2.0,
-                          ),
-                        ],
-                      ),
-                      child: Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(2.0), // Executive Name
-                          1: FlexColumnWidth(1.5), // Phone
-                          2: FlexColumnWidth(1.5), // Total Orders
-                          3: FlexColumnWidth(1.5), // Total Sales
-                          4: FlexColumnWidth(1.5), // Online Sales
-                          5: FlexColumnWidth(1.5), // Cash Sales
-                          6: FlexColumnWidth(1.5), // Credit Sales
-                          7: FlexColumnWidth(1.5), // Collected Sales
-                          8: FlexColumnWidth(1.2), // Actions
-                        },
-                        border: null,
-                        defaultVerticalAlignment:
-                            TableCellVerticalAlignment.middle,
-                        children: [
-                          TableRow(
-                            children: [
-                              _buildTableHeader('sales_executive_report.executive_name'.tr),
-                              _buildTableHeader('sales_executive_report.phone'.tr),
-                              _buildTableHeader('sales_executive_report.total_orders'.tr),
-                              _buildTableHeader('sales_executive_report.total_sales'.tr),
-                              _buildTableHeader('sales_executive_report.online_sales'.tr),
-                              _buildTableHeader('sales_executive_report.cash_sales'.tr),
-                              _buildTableHeader('sales_executive_report.credit_sales'.tr),
-                              _buildTableHeader('sales_executive_report.collected_sales'.tr),
-                              _buildTableHeader('sales_executive_report.actions'.tr),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Scrollable table body
-                    Expanded(
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: reportError != null
-                              ? _buildErrorUI(reportError)
-                              : reportList.isEmpty
-                                  ? _buildNoDataFoundUI()
-                                  : SingleChildScrollView(
-                                      physics: const BouncingScrollPhysics(),
-                                      scrollDirection: Axis.vertical,
-                                      child: Table(
-                                        columnWidths: const {
-                                          0: FlexColumnWidth(
-                                              2.0), // Executive Name
-                                          1: FlexColumnWidth(1.5), // Phone
-                                          2: FlexColumnWidth(
-                                              1.5), // Total Orders
-                                          3: FlexColumnWidth(
-                                              1.5), // Total Sales
-                                          4: FlexColumnWidth(
-                                              1.5), // Online Sales
-                                          5: FlexColumnWidth(1.5), // Cash Sales
-                                          6: FlexColumnWidth(
-                                              1.5), // Credit Sales
-                                          7: FlexColumnWidth(
-                                              1.5), // Collected Sales
-                                          8: FlexColumnWidth(1.2), // Actions
-                                        },
-                                        border: null,
-                                        defaultVerticalAlignment:
-                                            TableCellVerticalAlignment.middle,
-                                        children: reportList.map((report) {
-                                          return TableRow(
-                                            decoration: const BoxDecoration(
-                                              color: Colors.white,
-                                            ),
-                                            children: [
-                                              TableCell(
-                                                verticalAlignment:
-                                                    TableCellVerticalAlignment
-                                                        .middle,
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
-                                                  child: SelectableText(
-                                                    report.name ?? 'sales_executive_report.na'.tr,
-                                                    textAlign: TextAlign.center,
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              TableCell(
-                                                verticalAlignment:
-                                                    TableCellVerticalAlignment
-                                                        .middle,
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
-                                                  child: SelectableText(
-                                                    report.phone ?? 'sales_executive_report.na'.tr,
-                                                    textAlign: TextAlign.center,
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.medium,
-                                                      FontSize.s9,
-                                                      0.13,
-                                                      Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              _buildTableCell(report.orderCount
-                                                      ?.toString() ??
-                                                  "0"),
-                                              _buildTableCell(
-                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
-                                              _buildTableCell(
-                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedOnlineSales}"),
-                                              _buildTableCell(
-                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
-                                              _buildTableCell(
-                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCreditSales}"),
-                                              _buildTableCell(
-                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCollectedSales}"),
-                                              _buildActionsCell(report),
-                                            ],
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-
-  Widget _buildNoDataFoundUI() {
-    return Container(
-      height: double.infinity,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.bar_chart_outlined,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'sales_executive_report.no_report_data'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'sales_executive_report.adjust_date_filters'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorUI(String error) {
-    return Container(
-      height: double.infinity,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 60,
-            color: Colors.red.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'sales_executive_report.error_loading_report'.tr,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
+  Widget _card(SalesExecutiveReportData r, int index) => AppSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TableCells.identity(r.name ?? 'sales_executive_report.na'.tr),
+        const SizedBox(height: 12),
+        Text('${'sales_executive_report.phone'.tr}: ${r.phone ?? '—'}'),
+        Text(
+            '${'sales_executive_report.total_orders'.tr}: ${r.orderCount ?? 0}'),
+        for (final entry in <String, String?>{
+          'total_sales': r.totalSales,
+          'online_sales': r.onlineSales,
+          'cash_sales': r.cashSales,
+          'credit_sales': r.creditSales,
+          'collected_sales': r.collectedSales
+        }.entries)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              error,
-              textAlign: TextAlign.center,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s14,
-                0.20,
-                Colors.grey,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () => fetchSalesExecutiveReport(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorManager.kPrimaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text('sales_executive_report.retry'.tr),
-          ),
-        ],
-      ),
-    );
-  }
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                  '${'sales_executive_report.${entry.key}'.tr}: ${_money(entry.value)}')),
+        TableCells.viewButton(() => _showExecutiveDetails(r))
+      ]));
 
-  Widget _buildTableHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-      child: Text(
-        title,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
-        ),
-      ),
-    );
-  }
-
-  TableCell _buildTableCell(String content) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          content,
-          textAlign: TextAlign.center,
-          style: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s9,
-            0.13,
-            Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  TableCell _buildActionsCell(SalesExecutiveReportData report) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: BuildBoxShadowContainer(
-            margin: const EdgeInsets.only(left: 5, right: 5),
-            circleRadius: 5,
-            child: IconButton(
-              icon: Icon(
-                Icons.visibility,
-                size: 18,
-                color: ColorManager.kPrimaryColor.withOpacity(0.9),
-              ),
-              onPressed: () => _showExecutiveDetails(report),
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-              padding: EdgeInsets.zero,
-            ),
-          ),
-        ),
-      ),
-    );
+  @override
+  Widget build(BuildContext context) {
+    context.select<AppSettingsProvider, String?>(
+        (provider) => provider.appSettings?.currency);
+    return LayoutBuilder(
+        builder: (context, size) => ListPageScaffold<SalesExecutiveReportData>(
+              header: ListPageHeader(
+                  icon: Icons.assessment_outlined,
+                  title: 'sales_executive_report.title'.tr,
+                  subtitle: 'sales_executive_report.subtitle'.tr,
+                  onRefresh: _fetch,
+                  extraActions: [
+                    FilterToggleButton(
+                        key: const ValueKey(
+                            'sales-executive-report-filter-toggle'),
+                        showFilters: _showFilters,
+                        hasActiveFilters:
+                            _range.from != null || _range.to != null,
+                        activeFiltersListenable: Listenable.merge(
+                            [fromDateController, toDateController]),
+                        activeFiltersBuilder: () =>
+                            _range.from != null || _range.to != null,
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters),
+                        showTooltip: 'sales_executive_report.filters'.tr,
+                        hideTooltip: 'sales_executive_report.hide'.tr),
+                    ExportShareButton(
+                        key: const ValueKey('my-sales-export'),
+                        createFile: _export,
+                        label: 'supplier_transactions.export'.tr,
+                        loadingLabel:
+                            'supplier_transactions.export_creating'.tr,
+                        tooltip: 'sales_executive_report.export_tooltip'.tr,
+                        errorMessage: 'sales_executive_report.export_error'.tr,
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        compact: size.maxWidth < 560,
+                        enabled: !_loading &&
+                            _error == null &&
+                            _loadedRange == _range &&
+                            _reports.isNotEmpty),
+                  ]),
+              filters: FilterPanel(
+                  key: const ValueKey('sales-executive-report-filters'),
+                  title: 'sales_executive_report.find'.tr,
+                  hint: 'sales_executive_report.filter_hint'.tr,
+                  onReset: _reset,
+                  fields: [_dateField(true), _dateField(false)]),
+              showFilters: _showFilters,
+              toolbar: _error == null
+                  ? null
+                  : Row(children: [
+                      Expanded(
+                          child: Text(_error!,
+                              style: const TextStyle(color: AppColors.red))),
+                      TextButton(
+                          onPressed: _fetch,
+                          child: Text('sales_executive_report.retry'.tr))
+                    ]),
+              tableScrollController: _table,
+              tableMinWidth: 1400,
+              isLoading: _loading,
+              items: _reports.skip((_page - 1) * 20).take(20).toList(),
+              columns: [
+                TableColumnDef(
+                    label: 'sales_executive_report.executive_name'.tr,
+                    flex: 2,
+                    cellBuilder: (r, _) => TableCells.identity(
+                        r.name ?? 'sales_executive_report.na'.tr)),
+                TableColumnDef(
+                    label: 'sales_executive_report.phone'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) => TableCells.text(r.phone ?? '')),
+                TableColumnDef(
+                    label: 'sales_executive_report.total_orders'.tr,
+                    cellBuilder: (r, _) =>
+                        TableCells.text('${r.orderCount ?? 0}')),
+                TableColumnDef(
+                    label: 'sales_executive_report.total_sales'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) =>
+                        TableCells.text(_money(r.totalSales))),
+                TableColumnDef(
+                    label: 'sales_executive_report.online_sales'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) =>
+                        TableCells.text(_money(r.onlineSales))),
+                TableColumnDef(
+                    label: 'sales_executive_report.cash_sales'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) =>
+                        TableCells.text(_money(r.cashSales))),
+                TableColumnDef(
+                    label: 'sales_executive_report.credit_sales'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) =>
+                        TableCells.text(_money(r.creditSales))),
+                TableColumnDef(
+                    label: 'sales_executive_report.collected_sales'.tr,
+                    flex: 1.3,
+                    cellBuilder: (r, _) =>
+                        TableCells.text(_money(r.collectedSales))),
+                TableColumnDef(
+                    label: 'sales_executive_report.actions'.tr,
+                    cellBuilder: (r, _) =>
+                        TableCells.viewButton(() => _showExecutiveDetails(r))),
+              ],
+              cardBuilder: _card,
+              emptyState: Center(
+                  child: Text('sales_executive_report.no_report_data'.tr)),
+              onRefresh: _fetch,
+              currentPage: _page,
+              totalPages: _pages,
+              itemsPerPage: 20,
+              countLabel: 'sales_executive_report.page_count'.trParams({
+                'count': '${_reports.skip((_page - 1) * 20).take(20).length}'
+              }),
+              onPageChanged: (page) {
+                if (!_loading) {
+                  setState(() => _page = page.clamp(1, _pages));
+                }
+              },
+            ));
   }
 
   void _showExecutiveDetails(SalesExecutiveReportData report) {
+    final currency = _currency;
     // Get date range or default to today
     String dateRange;
-    if (fromDateController.text.isNotEmpty &&
-        toDateController.text.isNotEmpty) {
-      dateRange = '${fromDateController.text} - ${toDateController.text}';
-    } else if (fromDateController.text.isNotEmpty) {
-      dateRange = fromDateController.text;
-    } else if (toDateController.text.isNotEmpty) {
-      dateRange = toDateController.text;
+    if ((_loadedRange?.from ?? "").isNotEmpty &&
+        (_loadedRange?.to ?? "").isNotEmpty) {
+      dateRange = '${(_loadedRange?.from ?? "")} - ${(_loadedRange?.to ?? "")}';
+    } else if ((_loadedRange?.from ?? "").isNotEmpty) {
+      dateRange = (_loadedRange?.from ?? "");
+    } else if ((_loadedRange?.to ?? "").isNotEmpty) {
+      dateRange = (_loadedRange?.to ?? "");
     } else {
-      dateRange = DateFormat('MMMM dd, yyyy').format(DateTime.now());
+      dateRange = _loadedDay;
     }
 
     showDialog(
@@ -944,7 +456,8 @@ class _SalesExecutiveReportScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      Expanded(
+                          child: Text(
                         'sales_executive_report.executive_details'.tr,
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
@@ -952,7 +465,7 @@ class _SalesExecutiveReportScreenState
                           0.30,
                           Colors.black,
                         ),
-                      ),
+                      )),
                       Container(
                         decoration: BoxDecoration(
                           color: ColorManager.kPrimaryColor,
@@ -993,15 +506,24 @@ class _SalesExecutiveReportScreenState
                       children: [
                         // Executive Information Section
                         _buildSection(
-                          title: 'sales_executive_report.executive_information'.tr,
+                          title:
+                              'sales_executive_report.executive_information'.tr,
                           children: [
                             _buildInfoRow(
-                              _buildInfoItem('sales_executive_report.name'.tr, report.name ?? 'sales_executive_report.na'.tr),
-                              _buildInfoItem('sales_executive_report.phone'.tr, report.phone ?? 'sales_executive_report.na'.tr),
+                              _buildInfoItem(
+                                  'sales_executive_report.name'.tr,
+                                  report.name ??
+                                      'sales_executive_report.na'.tr),
+                              _buildInfoItem(
+                                  'sales_executive_report.phone'.tr,
+                                  report.phone ??
+                                      'sales_executive_report.na'.tr),
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(
-                              _buildInfoItem('sales_executive_report.date_range'.tr, dateRange),
+                              _buildInfoItem(
+                                  'sales_executive_report.date_range'.tr,
+                                  dateRange),
                               _buildInfoItem(
                                 'sales_executive_report.total_orders'.tr,
                                 (report.orderCount ?? 0).toString(),
@@ -1016,39 +538,42 @@ class _SalesExecutiveReportScreenState
                           children: [
                             _buildFinancialItem(
                               'sales_executive_report.total_sales'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}',
+                              '$currency ${report.formattedTotalSales}',
                             ),
                             _buildFinancialItem(
-                              'sales_executive_report.total_payment_received'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalPaymentReceived}',
+                              'sales_executive_report.total_payment_received'
+                                  .tr,
+                              '$currency ${report.formattedTotalPaymentReceived}',
                             ),
                             _buildFinancialItem(
-                              'sales_executive_report.total_amount_collected_on_sale'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalCollectedOnSale}',
+                              'sales_executive_report.total_amount_collected_on_sale'
+                                  .tr,
+                              '$currency ${report.formattedTotalCollectedOnSale}',
                             ),
                             _buildFinancialItem(
-                              'sales_executive_report.total_credit_collected_prev'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}',
+                              'sales_executive_report.total_credit_collected_prev'
+                                  .tr,
+                              '$currency ${report.formattedCollectedSales}',
                             ),
                             _buildFinancialItem(
                               'sales_executive_report.total_upi_sales'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}',
+                              '$currency ${report.formattedUpiSales}',
                             ),
                             _buildFinancialItem(
                               'sales_executive_report.total_card_sales'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}',
+                              '$currency ${report.formattedCardSales}',
                             ),
                             _buildFinancialItem(
                               'sales_executive_report.total_online_sales'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}',
+                              '$currency ${report.formattedOnlineSales}',
                             ),
                             _buildFinancialItem(
                               'sales_executive_report.total_cash_sales'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}',
+                              '$currency ${report.formattedCashSales}',
                             ),
                             _buildFinancialItem(
                               'sales_executive_report.total_credit_amount'.tr,
-                              '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}',
+                              '$currency ${report.formattedCreditSales}',
                             ),
                           ],
                         ),
