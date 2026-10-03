@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -321,7 +322,7 @@ class _ExternalDeliveryDialogState extends State<_ExternalDeliveryDialog> {
 
   Future<void> _pickDate(TextEditingController controller) async {
     final initial = DateTime.tryParse(controller.text) ?? DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showAutoDismissDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(2000),
