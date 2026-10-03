@@ -130,8 +130,9 @@ Already on the shared layout (use them as more examples):
 
 - Customers — `lib/features/customers/presentation/pages/customers_list_page.dart`
 - Suppliers — `lib/features/suppliers/presentation/pages/suppliers_list_page.dart`
+- Expenses — `lib/features/expenses/presentation/pages/expense_list_page.dart`
 - Invoices, proforma invoices, receipts, customer vouchers, supplier vouchers,
-  expenses, customer transactions, supplier transactions —
+  customer transactions, supplier transactions —
   `lib/screens/transactions/`
 - My Sales Report, Customer Transactions Report —
   `lib/features/reports/presentation/pages/` (date + time filters, error bar
@@ -149,7 +150,7 @@ Still to move — one page per PR:
 
 Export: use `ExportController` + a header `HeaderAction` (see the suppliers page). Never call the share sheet directly — `FileExportService` saves with Save As on Windows, where the native share UI can close the app. Disable the Export button while loading, after a failed load, or when the list is empty. Accept an optional `ExportController` in the page constructor so tests can capture the file, and dispose it only if the page created it.
 
-If a page needs something the shared layout can't do (an extra header button, a new filter type), **add it to `lib/core/ui/` with a parameter** and a test in `test/core/ui/`. Never special-case it inside the page.
+If a page needs something the shared layout can't do (an extra header button, a new filter type), **add it to `lib/core/ui/` with a parameter** and a test in `test/core/ui/`. Never special-case it inside the page. Changes to `lib/core/ui/` (widgets, tokens, toast colours) affect every screen, so they go in their **own small PR** with before/after screenshots — not hidden inside a page PR. Don't branch on one case inside a shared widget (`this == success ? … : …`); add or change a token instead.
 
 ---
 
@@ -180,7 +181,9 @@ If a page needs something the shared layout can't do (an extra header button, a 
 - [ ] No hard-coded English, colours or breakpoint numbers in the page file
 - [ ] Old page-specific widgets that are no longer used are deleted
 - [ ] A page test like `customers_list_page_test.dart` (phone + desktop sizes). Helpers in `test/test_support/`: `tapFilterToggle` / `hasFilterToggle` (works when the button is in the ⋮ menu), `CapturingExport` + `useTempExportDirectory` (check the exported workbook), `EnglishTranslations` (real strings from `en.json`)
-- [ ] `flutter analyze` is clean for the touched files and `flutter test` passes
+- [ ] `flutter analyze` is clean for the touched files and `flutter test` passes (a fresh checkout needs your local `.env` in the project root)
+- [ ] Every touched `.dart` file formatted after `flutter pub get` — callers like `side_menu.dart` included; new imports in order
+- [ ] `git status` shows only this page's files — no `tmp/`, PDFs, `.env` or generated plugin files
 - [ ] Before/after screenshots at 375 / 768 / 1280 attached to the PR
 
 ---
