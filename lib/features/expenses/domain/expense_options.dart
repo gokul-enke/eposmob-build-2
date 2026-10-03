@@ -1,4 +1,5 @@
-List<dynamic> extractExpenseOptionList(dynamic data, List<String> candidateKeys) {
+List<dynamic> extractExpenseOptionList(
+    dynamic data, List<String> candidateKeys) {
   if (data is! Map<String, dynamic>) return const [];
 
   for (final key in candidateKeys) {
@@ -100,7 +101,3 @@ Map<String, dynamic>? _normalizeOption(dynamic raw) {
     'name': name ?? id!,
   };
 }
-
-
-
-

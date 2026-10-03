@@ -1,3 +1,4 @@
+import '../../domain/expense_filter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/master_data.dart';
 import '../../domain/models/expense.dart';
@@ -28,7 +29,8 @@ class ExpenseProvider extends ChangeNotifier {
 
   final ExpenseRepository repository;
 
-  ExpenseProvider({ExpenseRepository? repository}) : repository = repository ?? ExpenseRepository() {
+  ExpenseProvider({ExpenseRepository? repository})
+      : repository = repository ?? ExpenseRepository() {
     _filteredExpenses = List.from(_allExpenses);
   }
 
@@ -47,8 +49,9 @@ class ExpenseProvider extends ChangeNotifier {
   int get currentPage => _currentPage;
   int get itemsPerPage => _itemsPerPage;
   int get totalItems => _filteredExpenses.length;
-  int get totalPages =>
-      (totalItems / _itemsPerPage).ceil() == 0 ? 1 : (totalItems / _itemsPerPage).ceil();
+  int get totalPages => (totalItems / _itemsPerPage).ceil() == 0
+      ? 1
+      : (totalItems / _itemsPerPage).ceil();
   bool get isLoading => _isLoading;
   List<String> get availableStatuses {
     final statuses = _allExpenses
@@ -59,6 +62,7 @@ class ExpenseProvider extends ChangeNotifier {
       ..sort();
     return ['All', ...statuses];
   }
+
   String get filterCategory => _filterCategory;
   String get filterStatus => _filterStatus;
   String get filterDebitAccount => _filterDebitAccount;
@@ -75,7 +79,9 @@ class ExpenseProvider extends ChangeNotifier {
     for (final option in options) {
       final optionId = option['id']?.toString().trim() ?? '';
       final optionName = option['name']?.toString().trim() ?? '';
-      if (trimmedId.isNotEmpty && optionId == trimmedId && optionName.isNotEmpty) {
+      if (trimmedId.isNotEmpty &&
+          optionId == trimmedId &&
+          optionName.isNotEmpty) {
         return optionName;
       }
       if (fallback.isNotEmpty) {
@@ -90,7 +96,6 @@ class ExpenseProvider extends ChangeNotifier {
 
     return fallback.isNotEmpty ? fallback : trimmedId;
   }
-
 
   void setCategoryOptionsFromMasterData(List<MasterDataValue> items) {
     final normalized = items
@@ -128,6 +133,7 @@ class ExpenseProvider extends ChangeNotifier {
     }
     _applyFilters();
   }
+
   void setPaymentMethodOptionsFromMasterData(List<MasterDataValue> methods) {
     final normalized = methods
         .map(
@@ -205,30 +211,11 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   void _applyFilters() {
-    _filteredExpenses = _allExpenses.where((exp) {
-      if (_filterReference.isNotEmpty) {
-        final q = _filterReference.toLowerCase();
-        if (!exp.referenceNumber.toLowerCase().contains(q)) {
-          return false;
-        }
-      }
-      if (_filterCategory != 'All') {
-        if (exp.category != _filterCategory) {
-          return false;
-        }
-      }
-      if (_filterDebitAccount != 'All') {
-        if (exp.debitAccount != _filterDebitAccount) {
-          return false;
-        }
-      }
-      if (_filterStatus != 'All') {
-        if (exp.status != _filterStatus) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
+    _filteredExpenses = applyExpenseFilters(_allExpenses,
+        reference: _filterReference,
+        category: _filterCategory,
+        debitAccount: _filterDebitAccount,
+        status: _filterStatus);
     _currentPage = _currentPage.clamp(1, totalPages);
     notifyListeners();
   }
@@ -256,7 +243,8 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   void deleteBulkExpenses() {
-    _allExpenses.removeWhere((exp) => _selectedReferences.contains(exp.referenceNumber));
+    _allExpenses.removeWhere(
+        (exp) => _selectedReferences.contains(exp.referenceNumber));
     _selectedReferences.clear();
     _applyFilters();
   }
@@ -283,7 +271,8 @@ class ExpenseProvider extends ChangeNotifier {
   bool isAllSelected() {
     final currentVisible = expenses;
     if (currentVisible.isEmpty) return false;
-    return currentVisible.every((exp) => _selectedReferences.contains(exp.referenceNumber));
+    return currentVisible
+        .every((exp) => _selectedReferences.contains(exp.referenceNumber));
   }
 
   void setPage(int page) {
@@ -302,7 +291,10 @@ class ExpenseProvider extends ChangeNotifier {
     _loadError = null;
     notifyListeners();
     try {
-      final staged = await repository.fetchGeneralPayments(accessToken: accessToken, type: type, isCurrent: () => generation == _loadGeneration);
+      final staged = await repository.fetchGeneralPayments(
+          accessToken: accessToken,
+          type: type,
+          isCurrent: () => generation == _loadGeneration);
       if (staged == null || generation != _loadGeneration) return;
       final resolved = staged
           .map((expense) => expense.copyWith(
@@ -324,58 +316,72 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, double>> getExpenseBreakdownForDate({required String accessToken, required int storeId, required String businessDate}) => repository.getExpenseBreakdownForDate(accessToken: accessToken, storeId: storeId, businessDate: businessDate);
+  Future<Map<String, double>> getExpenseBreakdownForDate(
+          {required String accessToken,
+          required int storeId,
+          required String businessDate}) =>
+      repository.getExpenseBreakdownForDate(
+          accessToken: accessToken,
+          storeId: storeId,
+          businessDate: businessDate);
 
   Future<void> fetchAccountOptions({required String accessToken}) async {
+    final data = await repository.fetchAccountOptions(accessToken: accessToken);
     try {
-      final data = await repository.fetchAccountOptions(accessToken: accessToken);
       if (data == null) return;
-        debitAccountOptions = normalizeExpenseOptionList(
-          extractExpenseOptionList(
-            data,
-            const [
-              'expense_accounts',
-              'expenseAccounts',
-              'debit_accounts',
-              'debitAccounts',
-              'expense_account_options',
-            ],
-          ),
-        );
+      debitAccountOptions = normalizeExpenseOptionList(
+        extractExpenseOptionList(
+          data,
+          const [
+            'expense_accounts',
+            'expenseAccounts',
+            'debit_accounts',
+            'debitAccounts',
+            'expense_account_options',
+          ],
+        ),
+      );
 
-        creditAccountOptions = normalizeExpenseOptionList(
-          extractExpenseOptionList(
-            data,
-            const [
-              'payment_accounts',
-              'paymentAccounts',
-              'credit_accounts',
-              'creditAccounts',
-              'payment_account_options',
-            ],
-          ),
-        );
+      creditAccountOptions = normalizeExpenseOptionList(
+        extractExpenseOptionList(
+          data,
+          const [
+            'payment_accounts',
+            'paymentAccounts',
+            'credit_accounts',
+            'creditAccounts',
+            'payment_account_options',
+          ],
+        ),
+      );
 
-        // Category options are managed purely from master data to avoid mixing accounts.
-        
-        // Payment methods for expense create should come only from master data.
-        // Do not populate this list from account-options, otherwise account names
-        // and payment methods can get mixed in the same dropdown.
-        paymentMethodOptions = paymentMethodOptions
-            .where(
-              (item) =>
-                  (item['id']?.toString().isNotEmpty ?? false) &&
-                  (item['name']?.toString().isNotEmpty ?? false),
-            )
-            .toList();
+      // Category options are managed purely from master data to avoid mixing accounts.
+
+      // Payment methods for expense create should come only from master data.
+      // Do not populate this list from account-options, otherwise account names
+      // and payment methods can get mixed in the same dropdown.
+      paymentMethodOptions = paymentMethodOptions
+          .where(
+            (item) =>
+                (item['id']?.toString().isNotEmpty ?? false) &&
+                (item['name']?.toString().isNotEmpty ?? false),
+          )
+          .toList();
 
       notifyListeners();
-    } catch (e) { debugPrint("Exception loading account options: $e"); }
+    } catch (e) {
+      debugPrint("Exception loading account options: $e");
+    }
   }
-  Future<Map<String, dynamic>> createGeneralPayment({required String accessToken, required Map<String, dynamic> payload}) async {
-    final result = await repository.createGeneralPayment(accessToken: accessToken, payload: payload);
+
+  Future<Map<String, dynamic>> createGeneralPayment(
+      {required String accessToken,
+      required Map<String, dynamic> payload}) async {
+    final result = await repository.createGeneralPayment(
+        accessToken: accessToken, payload: payload);
     if (result['status'] == 'success') {
-      await fetchGeneralPayments(accessToken: accessToken, type: payload['entry_type'] ?? 'EXPENSE');
+      await fetchGeneralPayments(
+          accessToken: accessToken, type: payload['entry_type'] ?? 'EXPENSE');
     }
     return result;
   }
