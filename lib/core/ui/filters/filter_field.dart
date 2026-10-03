@@ -135,6 +135,87 @@ class DropdownFilterField<T> extends FilterFieldDef {
   }
 }
 
+/// Single date-and-time picker field (a report's From or To). Picks a date
+/// and then a time; the close button clears it.
+class DateTimeFilterField extends FilterFieldDef {
+  const DateTimeFilterField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.format,
+    this.hint,
+    this.icon = Icons.calendar_today_outlined,
+    this.firstDate,
+    this.lastDate,
+    this.key,
+  });
+
+  final String label;
+  final String? hint;
+  final IconData icon;
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+
+  /// Turns the selected moment into display text.
+  final String Function(DateTime value) format;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+
+  /// Key of the tappable field (tests).
+  final Key? key;
+
+  @override
+  Widget build(
+    BuildContext context, {
+    required VoidCallback onTextChanged,
+    required VoidCallback onTextSubmitted,
+  }) {
+    final current = value;
+    return InkWell(
+      key: key,
+      borderRadius: BorderRadius.circular(AppRadius.control),
+      onTap: () async {
+        final initial = current ?? DateTime.now();
+        final date = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: firstDate ?? DateTime(2000),
+          lastDate: lastDate ?? DateTime(2100),
+        );
+        if (date == null || !context.mounted) return;
+        final time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(initial),
+        );
+        if (time == null) return;
+        onChanged(
+            DateTime(date.year, date.month, date.day, time.hour, time.minute));
+      },
+      child: InputDecorator(
+        isEmpty: current == null,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: AppInputDecoration.filter(
+          label: label,
+          hint: hint,
+          icon: icon,
+          suffix: current == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: () => onChanged(null),
+                ),
+        ),
+        child: Text(
+          current == null ? '' : format(current),
+          style: AppTextStyles.input,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
+
 /// Date-range picker field (reports, sales lists).
 class DateRangeFilterField extends FilterFieldDef {
   const DateRangeFilterField({

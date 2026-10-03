@@ -3240,7 +3240,15 @@
     "err_loading_data": "Error loading data: @error",
     "failed_fetch_report": "Failed to fetch report data",
     "err_fetching_report": "Error fetching report: @error",
-    "from_date_after_to_date": "From Date cannot be after To Date."
+    "from_date_after_to_date": "From Date cannot be after To Date.",
+    "subtitle": "Review your sales, payments and collections.",
+    "find": "Find sales reports",
+    "filter_hint": "Leave dates empty to show today’s sales.",
+    "load_error": "Unable to load the report. Previous results may be out of date.",
+    "export_tooltip": "Export the loaded sales report for the selected dates",
+    "export_error": "Unable to export the sales report. Please retry.",
+    "currency": "Currency",
+    "page_count": "@count report rows on this page"
   },
   "customer_transaction_report": {
     "hide": "Hide",
@@ -3295,7 +3303,18 @@
     "total_amount": "Total Amount:",
     "you_saved": "You Saved:",
     "discount": "Discount:",
-    "net_total": "Net Total:"
+    "net_total": "Net Total:",
+    "subtitle": "Review customer debits, credits and balances.",
+    "find": "Find customer transactions",
+    "filter_hint": "Filter by customer and date range.",
+    "load_error": "Could not load the report. Previous results remain visible.",
+    "retry": "Retry",
+    "customer_load_error": "Could not load customers. Refresh to try again.",
+    "export_tooltip": "Export all report pages matching these filters",
+    "export_error": "Could not export the complete report. Please try again.",
+    "export_fetching": "Fetching page @page of @total…",
+    "count": "@count customers on this page",
+    "customer_id": "Customer ID"
   },
   "supplier_transaction_report": {
     "hide": "Hide",
@@ -6205,6 +6224,10 @@
     "export_overwrite_title": "Replace existing file?",
     "export_overwrite_message": "@name already exists. Replace it?",
     "export_cancel": "Cancel",
-    "export_overwrite": "Replace"
+    "export_overwrite": "Replace",
+    "filters": "Filters",
+    "hide_filters": "Hide Filters",
+    "export": "Export",
+    "exporting": "Exporting..."
   }
 }

@@ -789,13 +789,15 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value = 58;
+                      sideBarController.index.value =
+                          SideBarController.mySalesReportScreenIndex;
                     },
                     onTapTitle2: () {
                       sideBarController.index.value = 85;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 65;
+                      sideBarController.index.value = SideBarController
+                          .customerTransactionsReportScreenIndex;
                     },
                     onTapTitle4: () {
                       sideBarController.index.value = 67;

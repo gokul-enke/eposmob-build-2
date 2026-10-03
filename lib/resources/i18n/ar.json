@@ -3233,7 +3233,15 @@
     "err_loading_data": "خطأ في تحميل البيانات: @error",
     "failed_fetch_report": "فشل جلب بيانات التقرير",
     "err_fetching_report": "خطأ في جلب التقرير: @error",
-    "from_date_after_to_date": "لا يمكن أن يكون تاريخ البداية بعد تاريخ النهاية."
+    "from_date_after_to_date": "لا يمكن أن يكون تاريخ البداية بعد تاريخ النهاية.",
+    "subtitle": "مراجعة المبيعات والمدفوعات والتحصيلات.",
+    "find": "البحث عن تقارير المبيعات",
+    "filter_hint": "اترك التواريخ فارغة لعرض مبيعات اليوم.",
+    "load_error": "تعذر تحميل التقرير. قد تكون النتائج السابقة غير محدثة.",
+    "export_tooltip": "تصدير تقرير المبيعات المحمل للتواريخ المحددة",
+    "export_error": "تعذر تصدير تقرير المبيعات. يرجى إعادة المحاولة.",
+    "currency": "العملة",
+    "page_count": "@count صف في هذه الصفحة"
   },
   "customer_transaction_report": {
     "hide": "إخفاء",
@@ -3288,7 +3296,18 @@
     "print_transaction_report": "طباعة تقرير المعاملات",
     "total_amount": "المبلغ الإجمالي:",
     "total_transactions": "إجمالي المعاملات:",
-    "you_saved": "لقد وفرت:"
+    "you_saved": "لقد وفرت:",
+    "subtitle": "مراجعة مديونيات العملاء وائتماناتهم وأرصدتهم.",
+    "find": "البحث عن معاملات العملاء",
+    "filter_hint": "التصفية حسب العميل والفترة الزمنية.",
+    "load_error": "تعذر تحميل التقرير. تظل النتائج السابقة ظاهرة.",
+    "retry": "إعادة المحاولة",
+    "customer_load_error": "تعذر تحميل العملاء. حدّث للمحاولة مجددًا.",
+    "export_tooltip": "تصدير جميع صفحات التقرير المطابقة للفلاتر",
+    "export_error": "تعذر تصدير التقرير الكامل. حاول مجددًا.",
+    "export_fetching": "جلب الصفحة @page من @total…",
+    "count": "@count عميل في هذه الصفحة",
+    "customer_id": "معرف العميل"
   },
   "supplier_transaction_report": {
     "hide": "إخفاء",
@@ -6205,6 +6224,10 @@
     "export_overwrite_title": "استبدال الملف الموجود؟",
     "export_overwrite_message": "الملف @name موجود بالفعل. هل تريد استبداله؟",
     "export_cancel": "إلغاء",
-    "export_overwrite": "استبدال"
+    "export_overwrite": "استبدال",
+    "filters": "الفلاتر",
+    "hide_filters": "إخفاء الفلاتر",
+    "export": "تصدير",
+    "exporting": "جارٍ التصدير..."
   }
 }

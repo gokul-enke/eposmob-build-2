@@ -40,7 +40,7 @@ import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
 import 'package:pos_machine/screens/purchase_return/create_purchase_return.dart';
 import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
-import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_tranctions_reports .dart';
+import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
 // Adding import for the new simple transaction details screen
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart';
 // Adding imports for supplier transaction report screens
@@ -49,7 +49,7 @@ import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier
 import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
-import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
@@ -120,6 +120,11 @@ class SideBarController extends GetxController {
   /// Legacy "supplier details" slot; shows the supplier profile.
   static const int supplierDetailsScreenIndex = 57;
   static const int supplierProfileScreenIndex = 69;
+
+  /// Report screens in [screens]. Navigate through [ReportNavigation].
+  static const int mySalesReportScreenIndex = 58;
+  static const int customerTransactionsReportScreenIndex = 65;
+  static const int customerTransactionDetailsScreenIndex = 66;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -201,14 +206,14 @@ class SideBarController extends GetxController {
     ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
     SupplierProfilePage(), // 57 Supplier Details (legacy slot, same page)
-    SalesExecutiveReportScreen(), // 58 Sales Executive Report
+    MySalesReportPage(), // 58 mySalesReportScreenIndex
     CompanyAccountsScreen(), // 59 Company Accounts
     AddCompanyAccountScreen(), // 60 Add Company Account
     AccountDetailsScreen(), // 61 Account Details Screen
     SettingsScreen(), // 62 Settings Home
     WhatsappSettingsScreen(), // 63 WhatsApp Settings
     CompanyInfoScreen(), // 64 Company Info
-    CustomerTransactionsReportScreen(), // 65 Customer Transactions Report
+    CustomerTransactionsReportPage(), // 65 customerTransactionsReportScreenIndex
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen

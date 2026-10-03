@@ -43,7 +43,7 @@ Import one file: `import 'package:pos_machine/core/ui/ui.dart';`
 |---|---|
 | `ListPageScaffold<T>` | The whole page. Takes `header`, `filters`, `mobileFilterTexts`, `isLoading`, `items`, `columns`, `cardBuilder`, `emptyState`, `pagination`, `onRowTap`, `onRefresh`. |
 | `PageHeader` | Icon, title, subtitle, Refresh, Add (+ `extraActions` such as Export/Print). Shortens itself on phones. |
-| `FilterPanel` | The filter block. `fields:` is a list of `TextFilterField`, `DropdownFilterField<T>`, `DateRangeFilterField`. `onSearch` runs on every keystroke (debounce it), `onSubmit` on Enter. `embeddedResetLabel` is the full-width Reset text on phones. |
+| `FilterPanel` | The filter block. `fields:` is a list of `TextFilterField`, `DropdownFilterField<T>`, `DateRangeFilterField`, `DateTimeFilterField` (one date + time, e.g. a report's From / To), `CustomFilterField` (any other picker). `onSearch` runs on every keystroke (debounce it), `onSubmit` on Enter. `embeddedResetLabel` is the full-width Reset text on phones. |
 | `CollapsedFilterTexts` | Title + subtitles of the phone filter tile. |
 | `TableColumnDef<T>` + `TableCells` | Table columns. `TableCells.number`, `.text`, `.amount` (green/red, 2 decimals), `.avatarName`, `.widget` (badges), `.action` (View button). |
 | `AppListCard`, `AppMetricStrip`, `AppMetric`, `AppAvatar`, `AppBadge` | Building blocks for the phone card. |
@@ -100,6 +100,8 @@ Already on the shared layout (use them as more examples):
 - Invoices, proforma invoices, receipts, customer vouchers, supplier vouchers,
   expenses, customer transactions, supplier transactions —
   `lib/screens/transactions/` (the PR #290 screens, moved onto this layout)
+- My Sales Report, Customer Transactions Report —
+  `lib/features/reports/presentation/pages/` (the PR #291 screens)
 
 Still to move — one page per PR:
 
@@ -109,7 +111,7 @@ Still to move — one page per PR:
 4. `lib/screens/sales/sales.dart`, `daily_sales_close_list.dart`, `admin_daily_sales_close_list.dart`
 5. `lib/screens/sales_return/sales_return_list.dart`
 6. `lib/screens/product/stock.dart`
-7. Reports in `lib/screens/reports/` (use `DateRangeFilterField`)
+7. The other reports in `lib/screens/reports/` (use `DateRangeFilterField` or `DateTimeFilterField`; see `lib/features/reports/`)
 
 Export: use `ExportController` + a header `HeaderAction` (see the suppliers page). Never call the share sheet directly — `FileExportService` saves with Save As on Windows, where the native share UI can close the app.
 
