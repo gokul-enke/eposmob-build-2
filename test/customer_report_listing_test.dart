@@ -1,3 +1,5 @@
+import 'package:dropdown_search/dropdown_search.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -71,6 +73,11 @@ class FakeInvoice extends InvoiceProvider {
 }
 
 class FakeCustomers extends CustomerProvider {
+  @override
+  List<CustomerListModelData>? get allCustomers => [
+        CustomerListModelData(id: 42, name: 'Customer'),
+        CustomerListModelData(id: 99, name: 'Profile customer')
+      ];
   @override
   Future<void> fetchCustomers(
       {required String accessToken,
@@ -243,11 +250,77 @@ void main() {
     expect(t.widget<ExportShareButton>(find.byType(ExportShareButton)).enabled,
         false);
   });
+  testWidgets('profile selection cannot filter opening, refresh or pagination',
+      (t) async {
+    final customers = FakeCustomers()
+      ..selectCustomer(CustomerListModelData(id: 99, name: 'Profile customer'));
+    final provider = FakeInvoice()
+      ..handler = (p) async => response(p, [group(p)], last: 2);
+    await mount(t, customers: customers, invoice: provider);
+    expect(provider.calls.single.customer, isNull);
+    expect(
+        t
+            .widget<DropdownSearch<CustomerListModelData>>(
+                find.byType(DropdownSearch<CustomerListModelData>))
+            .selectedItems,
+        isEmpty);
+    expect(customers.selectedCustomerId, '99');
+    customers
+        .selectCustomer(CustomerListModelData(id: 42, name: 'Other profile'));
+    await t.pumpAndSettle();
+    screen(t).onPageChanged(2);
+    await t.pumpAndSettle();
+    await screen(t).onRefresh();
+    await t.pumpAndSettle();
+    expect(provider.calls.every((c) => c.customer == null), true);
+  });
+
+  testWidgets(
+      'local customer selection survives shared-provider changes and clears locally',
+      (t) async {
+    final customers = FakeCustomers()
+      ..selectCustomer(CustomerListModelData(id: 99, name: 'Profile customer'));
+    final provider = await mount(t, customers: customers);
+    t
+        .widget<DropdownSearch<CustomerListModelData>>(
+            find.byType(DropdownSearch<CustomerListModelData>))
+        .onChanged!(CustomerListModelData(id: 42, name: 'Customer'));
+    await t.pumpAndSettle();
+    expect(provider.calls.last.customer, '42');
+    expect(customers.selectedCustomerId, '99');
+    customers.setSelectedCustomerId('7');
+    await t.pumpAndSettle();
+    await screen(t).onRefresh();
+    await t.pumpAndSettle();
+    expect(provider.calls.last.customer, '42');
+    t.widget<FilterPanel>(find.byType(FilterPanel)).onReset();
+    await t.pumpAndSettle();
+    expect(provider.calls.last.customer, isNull);
+    expect(customers.selectedCustomerId, '7');
+  });
+
+  testWidgets('returning from View opens an unfiltered report', (t) async {
+    final customers = FakeCustomers();
+    final provider = FakeInvoice()
+      ..handler = (_) async => response(1, [group(42)]);
+    await mount(t, customers: customers, invoice: provider);
+    await t.tap(find.text('View'));
+    await t.pumpAndSettle();
+    expect(customers.selectedCustomerId, '42');
+    await t.pumpWidget(const SizedBox());
+    await mount(t, customers: customers, invoice: provider);
+    expect(provider.calls.last.customer, isNull);
+  });
   testWidgets(
       'Reset clears dates and customer then requests unfiltered first page',
       (t) async {
     final customers = FakeCustomers()..setSelectedCustomerId('42');
     final provider = await mount(t, customers: customers);
+    t
+        .widget<DropdownSearch<CustomerListModelData>>(
+            find.byType(DropdownSearch<CustomerListModelData>))
+        .onChanged!(CustomerListModelData(id: 42, name: 'Customer'));
+    await t.pumpAndSettle();
     for (final key in ['customer-report-from', 'customer-report-to']) {
       t.widget<TextFormField>(find.byKey(ValueKey(key))).controller!.text =
           '2026-10-01 00:00:00';
@@ -312,6 +385,11 @@ void main() {
       ..handler = (p) async => response(p, [group(p)], last: 2, total: 2);
     await mount(t, invoice: provider, customers: customers);
     t
+        .widget<DropdownSearch<CustomerListModelData>>(
+            find.byType(DropdownSearch<CustomerListModelData>))
+        .onChanged!(CustomerListModelData(id: 42, name: 'Customer'));
+    await t.pumpAndSettle();
+    t
         .widget<TextFormField>(
             find.byKey(const ValueKey('customer-report-from')))
         .controller!
@@ -334,7 +412,7 @@ void main() {
     expect(sheet.maxRows, 3);
     expect(sheet.rows[1][0]!.value, isA<TextCellValue>());
     expect(sheet.rows[1][2]!.value, const DoubleCellValue(12.125));
-    expect(provider.calls.map((c) => c.page).toList(), [1, 1, 1, 2]);
+    expect(provider.calls.map((c) => c.page).toList(), [1, 1, 1, 1, 2]);
     expect(provider.calls.every((c) => !c.update), true);
     expect(provider.calls.last.customer, '42');
     expect(provider.calls.last.from, '2026-09-01 00:00:00');

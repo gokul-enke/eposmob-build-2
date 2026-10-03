@@ -1,3 +1,5 @@
+import 'package:dropdown_search/dropdown_search.dart';
+import 'package:pos_machine/models/customer_list.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -409,6 +411,11 @@ void main() {
       customerProvider: customerProvider,
     );
 
+    final dropdown = tester.widget<DropdownSearch<CustomerListModelData>>(
+        find.byType(DropdownSearch<CustomerListModelData>));
+    expect(dropdown.selectedItems, isEmpty);
+    dropdown.onChanged!(CustomerListModelData(id: 7, name: 'Chosen customer'));
+    await tester.pumpAndSettle();
     final toggle = find.byKey(
       const ValueKey('customer-transactions-report-filter-toggle'),
     );
@@ -428,7 +435,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(customerProvider.selectedCustomerId, isNull);
+    expect(customerProvider.selectedCustomerId, '42');
     expect(
       find.descendant(
         of: toggle,

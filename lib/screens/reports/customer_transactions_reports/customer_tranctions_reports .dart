@@ -36,10 +36,12 @@ class _ReportState extends State<CustomerTransactionsReportScreen> {
   bool _showFilters = true, _loading = false;
   int _request = 0, _page = 1, _pages = 1, _perPage = 20, _requestedPage = 1;
   String? _error;
+  // Report filters must not inherit customer-profile/detail selection.
+  String? _customerId;
   _Filters? _loaded;
   List<CustomerReportRow> _rows = [];
   _Filters get _filters => (
-        customer: context.read<CustomerProvider>().selectedCustomerId,
+        customer: _customerId,
         from: _from.text.isEmpty ? null : _from.text,
         to: _to.text.isEmpty ? null : _to.text
       );
@@ -134,9 +136,7 @@ class _ReportState extends State<CustomerTransactionsReportScreen> {
   void _reset() {
     _from.clear();
     _to.clear();
-    final customers = context.read<CustomerProvider>();
-    customers.setSelectedCustomerId(null);
-    customers.setSelectedCustomerName(null);
+    setState(() => _customerId = null);
     _fetch();
   }
 
@@ -241,7 +241,7 @@ class _ReportState extends State<CustomerTransactionsReportScreen> {
     final items = customers.allCustomers ?? <CustomerListModelData>[];
     CustomerListModelData? selected;
     for (final item in items) {
-      if (item.id?.toString() == customers.selectedCustomerId) selected = item;
+      if (item.id?.toString() == _customerId) selected = item;
     }
     return LayoutBuilder(
         builder: (context, size) => ListPageScaffold<CustomerReportRow>(
@@ -295,7 +295,8 @@ class _ReportState extends State<CustomerTransactionsReportScreen> {
                           : tr('unknown_customer'),
                       decoratorProps: DropDownDecoratorProps(
                           decoration: listFilterDecoration(
-                              tr('customer'), Icons.person_outline)),
+                                  tr('customer'), Icons.person_outline)
+                              .copyWith(hintText: tr('all_customers'))),
                       suffixProps: const DropdownSuffixProps(
                           clearButtonProps: ClearButtonProps(isVisible: true)),
                       popupProps: PopupProps.menu(
@@ -304,8 +305,7 @@ class _ReportState extends State<CustomerTransactionsReportScreen> {
                               decoration: listFilterDecoration(
                                   tr('search_customer_hint'), Icons.search))),
                       onChanged: (c) {
-                        customers.setSelectedCustomerId(c?.id?.toString());
-                        customers.setSelectedCustomerName(c?.name);
+                        setState(() => _customerId = c?.id?.toString());
                         _fetch();
                       }),
                   _dateField(true),
