@@ -296,13 +296,37 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                             style: _secondaryButtonStyle,
                           ),
                         ],
-                        if (isRetryable) ...[
+                        if (syncRecord == null) ...[
                           const SizedBox(width: 8),
                           Tooltip(
-                            message: 'Remove from this list',
+                            message: 'View details',
                             child: OutlinedButton(
                               onPressed: () =>
-                                  _confirmAndRemove(context, order),
+                                  _showOrderDetailsModal(context, order),
+                              style: _secondaryButtonStyle.copyWith(
+                                padding: const WidgetStatePropertyAll(
+                                  EdgeInsets.symmetric(horizontal: 10),
+                                ),
+                                minimumSize: const WidgetStatePropertyAll(
+                                  Size(40, 38),
+                                ),
+                              ),
+                              child: const Icon(Icons.visibility_outlined,
+                                  size: 19),
+                            ),
+                          ),
+                        ],
+                        if (isRetryable || syncRecord == null) ...[
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: syncRecord == null
+                                ? 'Delete this local order'
+                                : 'Remove from this list',
+                            child: OutlinedButton(
+                              onPressed: () => syncRecord == null
+                                  ? _showDeleteConfirmationDialog(
+                                      context, order)
+                                  : _confirmAndRemove(context, order),
                               style: _secondaryButtonStyle.copyWith(
                                 foregroundColor: const WidgetStatePropertyAll(
                                   Color(0xFFB42318),

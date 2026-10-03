@@ -186,6 +186,16 @@ removed. Each card has:
 | **Log (N)** | every sale with a sync record | Opens the attempt log |
 | **Remove** (bin icon) | `needs_review`, `rejected` | Hides the sale after the operator ticks a confirmation (for example "this order is already in the admin panel"). Nothing is deleted and the sale is never sent again |
 
+Old local-only sales (saved by builds before the outbox, badge **Local only**)
+have no stored request. Their **Review & retry** rebuilds the request from the
+saved order, adds it to the outbox as a `legacy` sale and sends it once; from
+then on it has a Log and Remove like any other sale. These orders carry no
+`client_sale_id`, so the backend cannot detect a duplicate: the operator must
+check Sales first.
+Until then such a sale also shows **View details** and **Delete** (bin icon).
+Delete asks for confirmation, then removes the order and any sync record from
+this device only; use it when the order already exists in Sales.
+
 A retry sends the stored request body unchanged. Its endpoint follows the
 sale's operation, not the page:
 
