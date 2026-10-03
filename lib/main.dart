@@ -52,7 +52,7 @@ import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
-import 'package:pos_machine/providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';

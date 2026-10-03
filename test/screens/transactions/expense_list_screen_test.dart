@@ -15,7 +15,7 @@ import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/features/expenses/domain/models/expense.dart';
-import 'package:pos_machine/providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';

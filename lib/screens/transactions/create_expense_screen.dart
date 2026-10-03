@@ -13,7 +13,7 @@ import '../../controllers/sidebar_controller.dart';
 import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../../models/master_data.dart';
 import '../../providers/auth_model.dart';
-import '../../providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import '../../providers/master_data_provider.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../providers/company_account_provider.dart';

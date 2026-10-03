@@ -9,7 +9,7 @@ import '../../newcomponents/custom_container_box.dart';
 import '../../controllers/sidebar_controller.dart';
 import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../../providers/auth_model.dart';
-import '../../providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
