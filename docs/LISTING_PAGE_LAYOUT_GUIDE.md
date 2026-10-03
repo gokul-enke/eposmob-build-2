@@ -8,6 +8,8 @@ The shared layout **already exists** in `lib/core/ui/` and the Customers page is
 
 > **Do not copy the customers page and edit it for each page.** Every page goes through `ListPageScaffold`.
 
+> This guide is only about how list pages **look**. Moving a module's code into `lib/features/<module>/` is a separate PR — see [`FEATURE_ARCHITECTURE_GUIDE.md`](FEATURE_ARCHITECTURE_GUIDE.md). For a module, do the architecture PR first, then this UI PR.
+
 ---
 
 ## 1. Reference: the Customers page
