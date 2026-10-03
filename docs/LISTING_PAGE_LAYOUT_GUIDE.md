@@ -31,7 +31,12 @@ The page is made of five slots:
 └ Pagination bar ─ "N on this page" ······· ‹  Page x of y  › ────────┘
 ```
 
-On phones (< 700 px) the filter panel collapses into an expandable "Search and filters" tile (when the page passes `mobileFilterTexts`) and the list is always cards. A wide screen whose list area is narrower than 720 px also shows cards. Below 640 px the header's secondary buttons fold into one "more" (⋮) menu; below 560 px the subtitle hides and Add uses its short label. These numbers live in `ListLayoutBreakpoints` and `PageHeader` — never repeat them in a page.
+On phones (< 700 px) the list is always cards, and the filters are either:
+
+- **a collapsible "Search and filters" tile** — pass `mobileFilterTexts` and keep `showFilters` true (Customers), or
+- **hidden behind the Filters button** — no `mobileFilterTexts`, `showFilters` starts false on phones (Suppliers, the transaction lists, the reports).
+
+A wide screen whose list area is narrower than 720 px also shows cards. When the header is narrower than 640 px, two or more secondary buttons fold into one "more" (⋮) menu; below 560 px the subtitle hides and Add uses its short label. These numbers live in `ListLayoutBreakpoints` and `PageHeader` — never repeat them in a page.
 
 ---
 
@@ -45,7 +50,7 @@ Import one file: `import 'package:pos_machine/core/ui/ui.dart';`
 | `PageHeader` + `HeaderAction` | Icon, title, subtitle, `actions:` (a list of `HeaderAction` — Filters, Export, Refresh, Print …) and the primary Add button (`onAdd`, `addLabel`, `addShortLabel`). `HeaderAction` has `active` (Filters shown), `badge` (filters applied while hidden), `busy` (export running) and a `key` for tests. |
 | `FilterPanel` | The filter block. `fields:` is a list of `TextFilterField`, `DropdownFilterField<T>`, `DateRangeFilterField`, `DateTimeFilterField` (one date + time, e.g. a report's From / To), `CustomFilterField` (any other picker). `onSearch` runs on every keystroke (debounce it), `onSubmit` on Enter. `embeddedResetLabel` is the full-width Reset text on phones. |
 | `CollapsedFilterTexts` | Title + subtitles of the phone filter tile. |
-| `TableColumnDef<T>` + `TableCells` | Table columns. `TableCells.number`, `.text`, `.amount` (green/red, 2 decimals), `.avatarName`, `.widget` (badges), `.action` (View button). |
+| `TableColumnDef<T>` + `TableCells` | Table columns. `TableCells.number` (the muted row number), `.text`, `.amount` (green/red, 2 decimals), `.avatarName`, `.widget` (badges), `.action` (View button). |
 | `AppListCard`, `AppMetricStrip`, `AppMetric`, `AppAvatar`, `AppBadge` | Building blocks for the phone card. |
 | `ListPagination` | Current/total pages, items per page, `onPageChanged`, count text. Also numbers the rows across pages. |
 | `AppEmptyState` | Icon + title + subtitle (+ optional action, e.g. Reset filters) when the list is empty. |
@@ -54,7 +59,7 @@ Import one file: `import 'package:pos_machine/core/ui/ui.dart';`
 | `AppAdaptiveList<T>` | Table/cards + pagination **without** header and filters — for lists inside tabs and dialogs. |
 | `AppColors`, `AppSpacing`, `AppRadius`, `AppTextStyles` | All colours, gaps, radii and text styles. |
 
-A new page is: columns + card + filter fields + one `ListPageScaffold` call.
+A new page is: columns + card + filter fields + one `ListPageScaffold` call. Simplified from `suppliers_list_page.dart` (which keeps the filter/export state in `SupplierListController`):
 
 ```dart
 ListPageScaffold<Supplier>(
@@ -75,7 +80,7 @@ ListPageScaffold<Supplier>(
         key: SuppliersListPage.exportKey,
         icon: Icons.ios_share_rounded,
         label: _export.busy ? 'list.exporting'.tr : 'list.export'.tr,
-        onPressed: items.isEmpty ? null : _runExport,
+        onPressed: suppliers.isEmpty ? null : _runExport,
         busy: _export.busy,
       ),
       HeaderAction(
@@ -85,28 +90,31 @@ ListPageScaffold<Supplier>(
       ),
     ],
     addLabel: 'suppliers.add'.tr,
-    addShortLabel: 'suppliers.add_short'.tr,
-    onAdd: _openAddSupplier,
+    addShortLabel: 'supplier_list_mobile.btn_add_new'.tr,
+    onAdd: _addSupplier,
   ),
-  showFilters: _showFilters,
+  showFilters: _showFilters, // starts false on phones
   filters: supplierFilterPanel(_controller),
-  mobileFilterTexts: supplierMobileFilterTexts(),
   isLoading: provider.isLoading,
-  items: provider.pageItems,
-  columns: supplierTableColumns(onView: _openSupplier),
-  cardBuilder: (supplier, rowNumber) => SupplierListCard(...),
-  onRowTap: _openSupplier,
+  items: suppliers, // provider.supplierList
+  columns: supplierTableColumns(onView: _openProfile),
+  cardBuilder: (supplier, rowNumber) => SupplierListCard(
+    supplier: supplier,
+    rowNumber: rowNumber,
+    onView: () => _openProfile(supplier),
+  ),
+  onRowTap: _openProfile,
   emptyState: AppEmptyState(
-    icon: Icons.search_off_rounded,
-    title: 'suppliers.empty_title'.tr,
-    subtitle: 'suppliers.empty_subtitle'.tr,
+    icon: Icons.local_shipping_outlined,
+    title: 'supplier_list.no_suppliers_desktop'.tr,
+    subtitle: 'supplier_list.try_adjusting_search'.tr,
   ),
   pagination: ListPagination(
     currentPage: provider.currentPage,
     totalPages: provider.totalPages,
     itemsPerPage: provider.itemsPerPage,
     onPageChanged: provider.goToPage,
-    countLabel: ...,
+    countLabel: SupplierLabels.countOnPage(suppliers.length),
   ),
   onRefresh: _refresh,
 )
@@ -149,7 +157,7 @@ If a page needs something the shared layout can't do (an extra header button, a 
 - **No page names inside `lib/core/ui/`.** If a shared widget needs something page-specific, add a parameter.
 - **No new colours, radii, font sizes or breakpoint numbers in page files.** Use the tokens; if one is missing, add it to `lib/core/ui/tokens/`.
 - **Debounce typing** (300 ms, `SearchDebouncer` in `lib/core/utils/`); search immediately on Enter and on dropdown changes.
-- **Header buttons in this order:** Filters → Export → Refresh → + Add. Filters start open on wide screens and hidden on phones.
+- **Header buttons in this order:** Filters → Export → Refresh → + Add. Filters start open on wide screens; on phones use the collapsible tile or start them hidden (see section 1).
 - **Messages through `AppToast`** only.
 - **All visible text through `.tr`**, with keys in `en.json`, `ar.json` and `ml.json`.
 - **Don't change the look of the Customers page.** It is the reference.
@@ -162,7 +170,7 @@ If a page needs something the shared layout can't do (an extra header button, a 
 - [ ] Page uses `ListPageScaffold` — no hand-built header / filter / table / pagination layout left in the page file
 - [ ] Header: correct icon, title, subtitle; Filters / Export / Refresh / Add in that order and wired up; on a phone they fold into the ⋮ menu without overflow
 - [ ] Filters: all old filters still work; typing is debounced; Reset clears every field and the list
-- [ ] Wide screen shows the table; narrow screen shows cards; phone shows the collapsible filter tile
+- [ ] Wide screen shows the table; narrow screen shows cards; on a phone the filters are the collapsible tile or hidden until Filters is tapped
 - [ ] Row numbers continue across pages (page 2 starts at 21 with 20 per page)
 - [ ] Tapping a row / card / View opens the same screen as before
 - [ ] Loading spinner, empty state and pull-to-refresh all work
