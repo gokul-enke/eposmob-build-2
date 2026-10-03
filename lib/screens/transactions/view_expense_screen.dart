@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../../newcomponents/custom_round_button.dart';
 import '../../newcomponents/custom_container_box.dart';
 import '../../controllers/sidebar_controller.dart';
-import '../../models/expense.dart';
+import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/expense_provider.dart';
 import '../../providers/app_settings_provider.dart';

@@ -10,7 +10,7 @@ import '../../newcomponents/custom_dropdown_with_search.dart';
 import '../../components/build_container_box.dart';
 import '../../components/build_calendar_selection.dart';
 import '../../controllers/sidebar_controller.dart';
-import '../../models/expense.dart';
+import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../../models/master_data.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/expense_provider.dart';

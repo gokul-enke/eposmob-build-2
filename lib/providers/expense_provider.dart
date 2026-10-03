@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../resources/app_url.dart';
-import '../models/expense.dart';
+import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../models/master_data.dart';
 
 class ExpenseProvider extends ChangeNotifier {

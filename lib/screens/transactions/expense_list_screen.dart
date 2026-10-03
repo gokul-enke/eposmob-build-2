@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
-import '../../models/expense.dart';
+import 'package:pos_machine/features/expenses/domain/models/expense.dart';
 import '../../models/master_data.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_model.dart';
