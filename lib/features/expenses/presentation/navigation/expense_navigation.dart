@@ -4,7 +4,9 @@ import '../../domain/models/expense.dart';
 import '../state/expense_view_controller.dart';
 
 abstract final class ExpenseNavigation {
-  static SideBarController get _sidebar => Get.find<SideBarController>();
+  static SideBarController get _sidebar => Get.isRegistered<SideBarController>()
+      ? Get.find<SideBarController>()
+      : Get.put(SideBarController());
   static const sectionIndices = {
     SideBarController.expenseListScreenIndex,
     SideBarController.createExpenseScreenIndex,

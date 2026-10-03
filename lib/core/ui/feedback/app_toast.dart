@@ -8,19 +8,15 @@ import '../tokens/app_spacing.dart';
 
 /// Kind of message, which sets its colour, icon and default duration.
 enum AppToastType {
-  // Preserve the previous snackbar's Colors.green at 90% opacity.
   success(AppColors.successToast, Icons.check_circle_outline_rounded,
       Duration(seconds: 2)),
   info(AppColors.primary, Icons.info_outline_rounded, Duration(seconds: 3)),
   warning(AppColors.amber, Icons.warning_amber_rounded, Duration(seconds: 4)),
   error(AppColors.red, Icons.error_outline_rounded, Duration(seconds: 4));
 
-  const AppToastType(this._background, this.icon, this.duration);
+  const AppToastType(this.background, this.icon, this.duration);
 
-  final Color _background;
-  Color get background => this == success
-      ? _background.withValues(alpha: 0.9)
-      : _background;
+  final Color background;
   final IconData icon;
   final Duration duration;
 }

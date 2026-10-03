@@ -99,9 +99,6 @@ import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
-  static const int expenseListScreenIndex = 93;
-  static const int createExpenseScreenIndex = 94;
-  static const int viewExpenseScreenIndex = 95;
   static const int weighMachineExportIndex = 101;
   static const int billingScreenIndex = 0;
 
@@ -128,6 +125,11 @@ class SideBarController extends GetxController {
   static const int mySalesReportScreenIndex = 58;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
+
+  /// Expense screens in [screens]. Navigate through [ExpenseNavigation].
+  static const int expenseListScreenIndex = 93;
+  static const int createExpenseScreenIndex = 94;
+  static const int viewExpenseScreenIndex = 95;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
