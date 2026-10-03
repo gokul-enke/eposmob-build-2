@@ -399,7 +399,9 @@ class SupplierVoucherProvider extends ChangeNotifier {
       final jsonData = json.decode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Refresh the voucher list
+        // A request started before the mutation cannot contain the new voucher.
+        // Let it finish before starting the post-mutation refresh.
+        await _voucherLoad;
         await listAllSupplierVouchers(accessToken: accessToken);
         return {
           'success': true,
