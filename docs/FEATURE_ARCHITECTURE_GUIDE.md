@@ -197,11 +197,29 @@ Copy the shape from `features/suppliers/data/supplier_api.dart`.
 ### Step 5 — Navigation
 
 1. Give each sidebar slot of the module a named constant on
-   `SideBarController` (`static const int purchasesScreenIndex = 12;`) and
-   use it in `side_menu.dart` and the screen list comment.
+   `SideBarController`, **grouped with the other named screens** (after
+   the customer / supplier / report ones), with one doc line — not at the
+   top of the class:
+
+   ```dart
+   /// Purchase screens in [screens]. Navigate through [PurchaseNavigation].
+   static const int purchasesScreenIndex = 12;
+   static const int purchaseDetailsScreenIndex = 13;
+   ```
+
+   Use them in `side_menu.dart` and in the screen list comment
+   (`PurchasesPage(), // 12 purchasesScreenIndex`).
 2. Add `presentation/navigation/<module>_navigation.dart` with
    `openList()`, `openDetails(item)` … — the only place that sets
-   `index.value` for this module. Copy `supplier_navigation.dart`.
+   `index.value` for this module. Copy `supplier_navigation.dart`
+   exactly, including how it gets the controller (it may not be registered
+   yet in tests or on the first frame):
+
+   ```dart
+   static SideBarController get _sidebar => Get.isRegistered<SideBarController>()
+       ? Get.find<SideBarController>()
+       : Get.put(SideBarController());
+   ```
 
 ### Step 6 — Tests
 
@@ -230,6 +248,22 @@ imports; don't delete a test unless the code it tested is gone.
 2. Delete the old folders and files that are now empty or unused.
 3. `grep -rn "screens/<old_folder>\|providers/<old_provider>" lib test`
    must return nothing.
+4. **Format every file you touched — including the callers** you only
+   changed an import in (`main.dart`, `side_menu.dart`,
+   `sidebar_controller.dart` …). Run `flutter pub get` first: without it
+   `dart format` uses the wrong style and rewrites hundreds of lines.
+
+   ```bash
+   flutter pub get
+   git diff --name-only origin/staging... -- '*.dart' | xargs dart format
+   ```
+
+   New imports go in the existing order (`dart:` first, then packages),
+   not at the top of the file.
+5. Read `git status` before every commit. Only files of this module and
+   its callers belong in the PR — no scratch projects, `tmp/` folders,
+   PDFs, `.env`, or generated plugin files (`linux/flutter/generated_*`,
+   `windows/flutter/generated_*`; restore those with `git checkout`).
 
 ---
 
@@ -253,6 +287,26 @@ imports; don't delete a test unless the code it tested is gone.
   comments.
 - **Raw SnackBars.** Use `AppToast`; `app_toast_usage_guard_test.dart`
   fails otherwise.
+- **Shared UI changes inside a module PR.** The Expenses PR also changed the
+  success toast colour in `lib/core/ui` — that changes every screen in the
+  app. Anything in `lib/core/` (tokens, toast, kit widgets) goes in its
+  **own small PR** with a before/after screenshot, even if it is one line.
+- **Special cases in shared code.** `Color get background => this ==
+  success ? … : …` inside `AppToastType` was replaced by a token that
+  already holds the final colour (`AppColors.successToast`). If a shared
+  widget needs a different value, add or change a **token**, don't branch
+  on one case.
+- **Unformatted callers / misplaced imports.** Only the feature folder was
+  formatted; `side_menu.dart` was not, and its new import was put above
+  `dart:io`. See step 7.4.
+- **Committed scratch files.** A test Flutter project in `tmp/` was
+  committed once and broke `flutter analyze` for everyone. See step 7.5.
+- **Tests need `.env`.** `flutter test` fails with "No file or variants
+  found for asset: .env" in a fresh checkout or worktree. Copy your local
+  `.env` to the project root — never commit it.
+- **`git stash` is shared.** All worktrees on this machine share one stash
+  list. Don't use a bare `git stash`; set work aside with a temporary
+  commit on your branch instead.
 
 ---
 
@@ -279,6 +333,13 @@ imports; don't delete a test unless the code it tested is gone.
 - [ ] `flutter analyze`: 0 errors and **no new warnings** compared with
       `analyze_before.txt`
 - [ ] `flutter test` passes (same failures as the baseline, no new ones)
+- [ ] Every touched `.dart` file formatted (after `flutter pub get`),
+      callers included; new imports in order
+- [ ] Sidebar constants grouped with a doc line; navigation class copies
+      the `isRegistered ? find : put` getter
+- [ ] Nothing in `lib/core/` changed (if it must, that is a separate PR)
+- [ ] `git status` clean of scratch files, `tmp/`, `.env`, PDFs and
+      generated plugin files
 
 ---
 
@@ -287,8 +348,8 @@ imports; don't delete a test unless the code it tested is gone.
 One module per PR pair (architecture, then UI). Suggested order, smallest
 first:
 
-1. Expenses — `expense_list_screen.dart`, `create_expense_screen.dart`,
-   `view_expense_screen.dart` in `lib/screens/transactions/` + `expense_provider.dart`
+1. ~~Expenses~~ — **done** (PR #296): `lib/features/expenses/`, a good
+   example of a module with a list, a create form and a details page
 2. Vouchers (customer + supplier) — `lib/screens/transactions/*voucher*`
 3. Purchase returns, then purchases
 4. Sales returns, then sales
