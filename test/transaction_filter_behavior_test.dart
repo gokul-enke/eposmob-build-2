@@ -1,5 +1,5 @@
+import 'package:pos_machine/features/expenses/domain/expense_filter.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/screens/transactions/expense_list_screen.dart';
 import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
 
 void main() {

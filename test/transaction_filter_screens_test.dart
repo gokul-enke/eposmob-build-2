@@ -13,7 +13,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
-import 'package:pos_machine/screens/transactions/expense_list_screen.dart';
+import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
@@ -240,7 +240,7 @@ void main() {
       (tester) async {
     await verifyDesktopFiltersCollapse(
       tester,
-      screen: const ExpenseListScreen(),
+      screen: const ExpenseListPage(),
       filterKey: const ValueKey('expense-desktop-filters'),
     );
   });
