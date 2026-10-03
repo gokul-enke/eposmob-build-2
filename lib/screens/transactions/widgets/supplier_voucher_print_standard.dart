@@ -7,7 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
 import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
@@ -42,7 +42,8 @@ class SupplierVoucherStandardPrinter {
     required String customerCareNumber,
     required String customerCareEmail,
   }) async {
-    debugPrint("===== STANDARD PRINTER - SUPPLIER VOUCHER PDF DEBUG INFO =====");
+    debugPrint(
+        "===== STANDARD PRINTER - SUPPLIER VOUCHER PDF DEBUG INFO =====");
     debugPrint("Voucher Number: ${voucher.voucherNumber}");
     debugPrint("Supplier: ${voucher.supplier.name}");
     debugPrint("Paper Size: $selectedPaperSize");
@@ -51,12 +52,14 @@ class SupplierVoucherStandardPrinter {
     try {
       debugPrint("PDF generation for supplier voucher started");
       debugPrint("Document Config Header: ${voucherDocumentConfig?.header}");
-      debugPrint("Document Config Subheader: ${voucherDocumentConfig?.subheader}");
+      debugPrint(
+          "Document Config Subheader: ${voucherDocumentConfig?.subheader}");
       debugPrint("Document Config Terms: ${voucherDocumentConfig?.terms}");
       debugPrint("Document Config Footer: ${voucherDocumentConfig?.footer}");
 
       // Generate PDF
-      final pdf = await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
+      final pdf =
+          await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
 
       // Save and print
       await _printPDF(
@@ -77,7 +80,8 @@ class SupplierVoucherStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
+          message:
+              'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
         );
       }
     }
@@ -91,7 +95,8 @@ class SupplierVoucherStandardPrinter {
     final pdf = pw.Document();
 
     // Determine page format
-    final pageFormat = selectedPaperSize == 'A5' ? PdfPageFormat.a5 : PdfPageFormat.a4;
+    final pageFormat =
+        selectedPaperSize == 'A5' ? PdfPageFormat.a5 : PdfPageFormat.a4;
 
     pdf.addPage(
       pw.Page(
@@ -189,11 +194,9 @@ class SupplierVoucherStandardPrinter {
                 'voucher_print.supplier_details'.tr,
                 style: summaryStyle,
               ),
-              pw.Text(
-                  '${'voucher_print.name'.tr}: ${voucher.supplier.name}',
+              pw.Text('${'voucher_print.name'.tr}: ${voucher.supplier.name}',
                   style: bodyStyle),
-              pw.Text(
-                  '${'voucher_print.phone'.tr}: ${voucher.supplier.phone}',
+              pw.Text('${'voucher_print.phone'.tr}: ${voucher.supplier.phone}',
                   style: bodyStyle),
               pw.SizedBox(height: 10),
 
@@ -333,7 +336,7 @@ class SupplierVoucherStandardPrinter {
           voucherNumber.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
       final file =
           File('${output.path}/SupplierVoucher_$sanitizedVoucherNumber.pdf');
-      
+
       final bytes = await pdf.save();
       await file.writeAsBytes(bytes);
 
@@ -403,7 +406,8 @@ class SupplierVoucherStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
+          message:
+              'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
         );
       }
     }

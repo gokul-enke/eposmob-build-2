@@ -5,7 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../../../models/document_configurations.dart';
-import '../../../../models/supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
 import '../../../../helpers/date_helper.dart';
 import '../../../../helpers/number_to_words_helper.dart';
 
@@ -42,10 +42,12 @@ class SupplierVoucherTemplatePdfBuilder {
         try {
           final response = await HttpClient().getUrl(Uri.parse(config.logo!));
           final fileResponse = await response.close();
-          final bytes = await fileResponse.fold<List<int>>([], (a, b) => a..addAll(b));
+          final bytes =
+              await fileResponse.fold<List<int>>([], (a, b) => a..addAll(b));
           if (bytes.isNotEmpty) {
             final image = pw.MemoryImage(Uint8List.fromList(bytes));
-            logoWidget = pw.Image(image, width: 80, height: 40, fit: pw.BoxFit.contain);
+            logoWidget =
+                pw.Image(image, width: 80, height: 40, fit: pw.BoxFit.contain);
           }
         } catch (e) {
           // Silent catch
@@ -116,7 +118,8 @@ class SupplierVoucherTemplatePdfBuilder {
               pw.SizedBox(height: 35),
 
               // ── Signatures ──────────────────────────────────────
-              if (_showOption(config, 'showSignatureBoxes', defaultValue: true)) ...[
+              if (_showOption(config, 'showSignatureBoxes',
+                  defaultValue: true)) ...[
                 _buildSignatures(details),
                 pw.SizedBox(height: 35),
               ],
@@ -151,11 +154,13 @@ class SupplierVoucherTemplatePdfBuilder {
               child: footer.isNotEmpty
                   ? pw.Text(
                       footer,
-                      style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                      style: const pw.TextStyle(
+                          fontSize: 10, color: PdfColors.grey600),
                     )
                   : pw.Text(
                       'Thank you for your business!',
-                      style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                      style: const pw.TextStyle(
+                          fontSize: 10, color: PdfColors.grey600),
                     ),
             );
           },
@@ -164,9 +169,10 @@ class SupplierVoucherTemplatePdfBuilder {
 
       // Save PDF to temp directory
       final output = await getTemporaryDirectory();
-      final File file = File('${output.path}/SupplierVoucher_${details.voucherNumber}.pdf');
+      final File file =
+          File('${output.path}/SupplierVoucher_${details.voucherNumber}.pdf');
       await file.writeAsBytes(await pdf.save());
-      
+
       return file;
     } catch (e) {
       return null;
@@ -187,10 +193,15 @@ class SupplierVoucherTemplatePdfBuilder {
     required String voucherDate,
     required DocumentConfig config,
   }) {
-    final bool showHeader = _showOption(config, 'showHeader', defaultValue: true);
-    final bool showSubheader = _showOption(config, 'showSubheader', defaultValue: true);
-    final bool showDate = _showOption(config, 'showDate', defaultValue: true) && _showOption(config, 'showDates', defaultValue: true);
-    final bool showVoucherNum = _showOption(config, 'showReceiptNumber', defaultValue: true) || _showOption(config, 'showInvoiceNumber', defaultValue: true);
+    final bool showHeader =
+        _showOption(config, 'showHeader', defaultValue: true);
+    final bool showSubheader =
+        _showOption(config, 'showSubheader', defaultValue: true);
+    final bool showDate = _showOption(config, 'showDate', defaultValue: true) &&
+        _showOption(config, 'showDates', defaultValue: true);
+    final bool showVoucherNum =
+        _showOption(config, 'showReceiptNumber', defaultValue: true) ||
+            _showOption(config, 'showInvoiceNumber', defaultValue: true);
 
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -268,8 +279,12 @@ class SupplierVoucherTemplatePdfBuilder {
     required PdfColor accentColor,
     required DocumentConfig config,
   }) {
-    final bool showCompany = _showOption(config, 'showCompanyDetails', defaultValue: true) && _showOption(config, 'showStoreName', defaultValue: true);
-    final bool showCustomer = _showOption(config, 'showCustomerDetails', defaultValue: true) && _showOption(config, 'showCustomerName', defaultValue: true);
+    final bool showCompany =
+        _showOption(config, 'showCompanyDetails', defaultValue: true) &&
+            _showOption(config, 'showStoreName', defaultValue: true);
+    final bool showCustomer =
+        _showOption(config, 'showCustomerDetails', defaultValue: true) &&
+            _showOption(config, 'showCustomerName', defaultValue: true);
 
     final companyColumn = pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -393,7 +408,8 @@ class SupplierVoucherTemplatePdfBuilder {
                 child: _buildMetaItem('Payment Method', details.paymentMethod),
               ),
               pw.Expanded(
-                child: _buildMetaItem('Reference', 'N/A'), // Reference not available in model
+                child: _buildMetaItem(
+                    'Reference', 'N/A'), // Reference not available in model
               ),
             ],
           ),
@@ -447,29 +463,37 @@ class SupplierVoucherTemplatePdfBuilder {
         pw.Table(
           border: const pw.TableBorder(
             bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
-            horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+            horizontalInside:
+                pw.BorderSide(color: PdfColors.grey200, width: 0.5),
           ),
           columnWidths: {
-            0: const pw.FlexColumnWidth(1),   // Si#
-            1: const pw.FlexColumnWidth(3),   // Items
+            0: const pw.FlexColumnWidth(1), // Si#
+            1: const pw.FlexColumnWidth(3), // Items
             2: const pw.FlexColumnWidth(1.5), // Quantity
-            3: const pw.FlexColumnWidth(2),   // Price
-            4: const pw.FlexColumnWidth(2),   // Tax
-            5: const pw.FlexColumnWidth(2),   // Amount
+            3: const pw.FlexColumnWidth(2), // Price
+            4: const pw.FlexColumnWidth(2), // Tax
+            5: const pw.FlexColumnWidth(2), // Amount
           },
           children: [
             // Header Row
             pw.TableRow(
               decoration: const pw.BoxDecoration(
-                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 1)),
+                border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey300, width: 1)),
               ),
               children: [
-                _buildTableCell('Si#', isHeader: true, align: pw.TextAlign.left),
-                _buildTableCell('Items', isHeader: true, align: pw.TextAlign.left),
-                _buildTableCell('Quantity', isHeader: true, align: pw.TextAlign.right),
-                _buildTableCell('Price', isHeader: true, align: pw.TextAlign.right),
-                _buildTableCell('Tax', isHeader: true, align: pw.TextAlign.right),
-                _buildTableCell('Amount', isHeader: true, align: pw.TextAlign.right),
+                _buildTableCell('Si#',
+                    isHeader: true, align: pw.TextAlign.left),
+                _buildTableCell('Items',
+                    isHeader: true, align: pw.TextAlign.left),
+                _buildTableCell('Quantity',
+                    isHeader: true, align: pw.TextAlign.right),
+                _buildTableCell('Price',
+                    isHeader: true, align: pw.TextAlign.right),
+                _buildTableCell('Tax',
+                    isHeader: true, align: pw.TextAlign.right),
+                _buildTableCell('Amount',
+                    isHeader: true, align: pw.TextAlign.right),
               ],
             ),
             // Data Rows
@@ -478,12 +502,16 @@ class SupplierVoucherTemplatePdfBuilder {
               final VoucherItemData item = entry.value;
               return pw.TableRow(
                 children: [
-                  _buildTableCell('${(index + 1).toString().padLeft(3, '0')}', align: pw.TextAlign.left),
+                  _buildTableCell('${(index + 1).toString().padLeft(3, '0')}',
+                      align: pw.TextAlign.left),
                   _buildTableCell(item.itemName, align: pw.TextAlign.left),
                   _buildTableCell(item.quantity, align: pw.TextAlign.right),
-                  _buildTableCell('$currency ${item.unitAmount}', align: pw.TextAlign.right),
-                  _buildTableCell('$currency ${item.tax}', align: pw.TextAlign.right),
-                  _buildTableCell('$currency ${item.totalAmount}', align: pw.TextAlign.right),
+                  _buildTableCell('$currency ${item.unitAmount}',
+                      align: pw.TextAlign.right),
+                  _buildTableCell('$currency ${item.tax}',
+                      align: pw.TextAlign.right),
+                  _buildTableCell('$currency ${item.totalAmount}',
+                      align: pw.TextAlign.right),
                 ],
               );
             }).toList(),
@@ -492,8 +520,9 @@ class SupplierVoucherTemplatePdfBuilder {
       ],
     );
   }
-  
-  static pw.Widget _buildTableCell(String text, {bool isHeader = false, pw.TextAlign align = pw.TextAlign.left}) {
+
+  static pw.Widget _buildTableCell(String text,
+      {bool isHeader = false, pw.TextAlign align = pw.TextAlign.left}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 4),
       child: pw.Text(
@@ -557,7 +586,7 @@ class SupplierVoucherTemplatePdfBuilder {
           ),
           pw.SizedBox(height: 25), // Space for physical signature
           pw.Text(
-            details.supplier.name, 
+            details.supplier.name,
             style: pw.TextStyle(
               fontSize: 10,
               fontWeight: pw.FontWeight.bold,
@@ -644,7 +673,8 @@ class SupplierVoucherTemplatePdfBuilder {
   }
 
   /// Evaluates config options settings and returns the visibility status.
-  static bool _showOption(DocumentConfig config, String key, {bool defaultValue = true}) {
+  static bool _showOption(DocumentConfig config, String key,
+      {bool defaultValue = true}) {
     if (config.displayConfiguration?.options != null) {
       final opt = config.displayConfiguration!.options![key];
       if (opt != null) {

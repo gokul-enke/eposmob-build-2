@@ -6,18 +6,18 @@ import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/customer_voucher_provider.dart';
 import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
-import 'package:pos_machine/providers/supplier_voucher_provider.dart';
-import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/supplier_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/customer_voucher_list_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
-import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/supplier_voucher_list_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -212,7 +212,7 @@ void main() {
       (tester) async {
     await verifyDesktopFiltersCollapse(
       tester,
-      screen: const CustomerVoucherListScreen(),
+      screen: const CustomerVoucherListPage(),
       filterKey: const ValueKey('customer-voucher-desktop-filters'),
     );
   });
@@ -221,7 +221,7 @@ void main() {
       (tester) async {
     await verifyDesktopFiltersCollapse(
       tester,
-      screen: const SupplierVoucherListScreen(),
+      screen: const SupplierVoucherListPage(),
       filterKey: const ValueKey('supplier-voucher-desktop-filters'),
     );
   });
@@ -255,8 +255,8 @@ void main() {
     final screens = <Widget>[
       const InvoiceListScreen(),
       const ReceiptListScreen(),
-      const CustomerVoucherListScreen(),
-      const SupplierVoucherListScreen(),
+      const CustomerVoucherListPage(),
+      const SupplierVoucherListPage(),
     ];
     final failures = <String>[];
 

@@ -12,11 +12,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/ui/ui.dart';
-import 'package:pos_machine/models/customer_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/customer_voucher.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_voucher_provider.dart';
-import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/customer_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/customer_voucher_list_page.dart';
 
 class _Translations extends Translations {
   @override
@@ -207,7 +207,7 @@ void main() {
         child: GetMaterialApp(
             translations: _Translations(),
             locale: const Locale('en'),
-            home: Scaffold(body: CustomerVoucherListScreen(export: export)))));
+            home: Scaffold(body: CustomerVoucherListPage(export: export)))));
     await tester.pumpAndSettle();
     return p;
   }
@@ -215,7 +215,7 @@ void main() {
   /// The header export button (wide headers only).
   AppSquareIconButton exportButton(WidgetTester tester) =>
       tester.widget<AppSquareIconButton>(
-          find.byKey(CustomerVoucherListScreen.exportKey));
+          find.byKey(CustomerVoucherListPage.exportKey));
 
   bool headerCollapsed() =>
       find.byKey(PageHeader.moreActionsKey).evaluate().isNotEmpty;
@@ -223,7 +223,7 @@ void main() {
   for (final size in [
     const Size(1340, 900),
     const Size(800, 900),
-    const Size(390, 800),
+    const Size(375, 812),
     const Size(375, 300)
   ]) {
     testWidgets(
@@ -233,10 +233,9 @@ void main() {
       // Export stays reachable: a header button on wide screens, an entry of
       // the header "more" menu on phones.
       if (headerCollapsed()) {
-        expect(find.byKey(CustomerVoucherListScreen.exportKey), findsNothing);
+        expect(find.byKey(CustomerVoucherListPage.exportKey), findsNothing);
       } else {
-        expect(
-            find.byKey(CustomerVoucherListScreen.exportKey), findsOneWidget);
+        expect(find.byKey(CustomerVoucherListPage.exportKey), findsOneWidget);
       }
       expect(find.byIcon(Icons.visibility_outlined), findsWidgets);
       expect(find.byIcon(Icons.print_outlined), findsWidgets);
@@ -249,11 +248,11 @@ void main() {
         if (headerCollapsed()) {
           await tester.tap(find.byKey(PageHeader.moreActionsKey));
           await tester.pumpAndSettle();
-          expect(find.text('Export filtered customer vouchers'), findsOneWidget);
+          expect(
+              find.text('Export filtered customer vouchers'), findsOneWidget);
           await tester.tap(find.text('Show Filters'));
         } else {
-          await tester
-              .tap(find.byKey(CustomerVoucherListScreen.filterToggleKey));
+          await tester.tap(find.byKey(CustomerVoucherListPage.filterToggleKey));
         }
         await tester.pumpAndSettle();
       }
@@ -278,7 +277,7 @@ void main() {
         .setMockMethodCallHandler(channel, (_) async => dir.path);
     addTearDown(() => tester.binding.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null));
-    await tester.tap(find.byKey(CustomerVoucherListScreen.exportKey));
+    await tester.tap(find.byKey(CustomerVoucherListPage.exportKey));
     final file = await tester.runAsync(export.createFile!);
     final rows =
         Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single.rows;
@@ -347,7 +346,7 @@ void main() {
         .setMockMethodCallHandler(channel, null));
     await mount(tester, const Size(1440, 900), export: export);
     await tester.runAsync(() async {
-      await tester.tap(find.byKey(CustomerVoucherListScreen.exportKey));
+      await tester.tap(find.byKey(CustomerVoucherListPage.exportKey));
       // The file is written with real I/O; wait for the export to finish.
       for (var i = 0; i < 100 && export.busy; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 20));

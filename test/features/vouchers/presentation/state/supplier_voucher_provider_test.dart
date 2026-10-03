@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pos_machine/providers/supplier_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/supplier_voucher_provider.dart';
 
 Map<String, Object?> _voucher(int id) => {
       'id': id,

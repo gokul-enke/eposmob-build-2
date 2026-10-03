@@ -12,11 +12,11 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/ui/ui.dart';
-import 'package:pos_machine/models/supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/supplier_voucher_provider.dart';
-import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/supplier_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/supplier_voucher_list_page.dart';
 import 'package:pos_machine/screens/transactions/widgets/common_details_dialog.dart';
 
 class _Translations extends Translations {
@@ -99,7 +99,6 @@ class _Provider extends SupplierVoucherProvider {
               }));
 }
 
-
 /// Delivery stand-in: records the exported file instead of opening Save As
 /// or the share sheet.
 class _Delivery {
@@ -141,7 +140,7 @@ void main() {
         child: GetMaterialApp(
             translations: _Translations(),
             locale: const Locale('en'),
-            home: Scaffold(body: SupplierVoucherListScreen(export: export)))));
+            home: Scaffold(body: SupplierVoucherListPage(export: export)))));
     await tester.pumpAndSettle();
     return provider;
   }
@@ -162,7 +161,7 @@ void main() {
   for (final size in [
     const Size(1440, 900),
     const Size(800, 900),
-    const Size(390, 800),
+    const Size(375, 812),
     const Size(375, 300)
   ]) {
     testWidgets('shared voucher layout, export and actions fit $size',
@@ -175,11 +174,11 @@ void main() {
         // Filters, Export and Refresh fold into the "more" menu.
         expect(find.byKey(PageHeader.moreActionsKey), findsOneWidget);
       } else {
-        expect(find.byKey(SupplierVoucherListScreen.exportKey), findsOneWidget);
+        expect(find.byKey(SupplierVoucherListPage.exportKey), findsOneWidget);
         expect(
             tester
                 .widget<AppSquareIconButton>(
-                    find.byKey(SupplierVoucherListScreen.exportKey))
+                    find.byKey(SupplierVoucherListPage.exportKey))
                 .onPressed,
             isNotNull);
       }
@@ -187,11 +186,11 @@ void main() {
       expect(find.byIcon(Icons.print_outlined), findsWidgets);
       expect(find.byIcon(Icons.share_outlined), findsWidgets);
       if (size.width < 700) {
-        expect(find.byKey(SupplierVoucherListScreen.filtersKey), findsNothing);
+        expect(find.byKey(SupplierVoucherListPage.filtersKey), findsNothing);
         await tapHeaderAction(
-            tester, SupplierVoucherListScreen.filterToggleKey, 'Show Filters');
+            tester, SupplierVoucherListPage.filterToggleKey, 'Show Filters');
       }
-      expect(find.byKey(SupplierVoucherListScreen.filtersKey), findsOneWidget);
+      expect(find.byKey(SupplierVoucherListPage.filtersKey), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -201,8 +200,7 @@ void main() {
       (tester) async {
     final delivery = _Delivery();
     final export = ExportController(deliver: delivery.call);
-    final provider =
-        await mount(tester, const Size(1440, 900), export: export);
+    final provider = await mount(tester, const Size(1440, 900), export: export);
     await tester.tap(find.byType(DropdownButtonFormField<String?>).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Order').last);
@@ -222,7 +220,7 @@ void main() {
     await tester.runAsync(() async {
       tester
           .widget<AppSquareIconButton>(
-              find.byKey(SupplierVoucherListScreen.exportKey))
+              find.byKey(SupplierVoucherListPage.exportKey))
           .onPressed!();
       // The file is written on a real isolate; wait for the export to end.
       for (var i = 0; i < 200 && export.busy; i++) {
@@ -287,10 +285,10 @@ void main() {
   testWidgets('voucher details and filter toggle remain available',
       (tester) async {
     await mount(tester, const Size(1440, 900));
-    await tester.tap(find.byKey(SupplierVoucherListScreen.filterToggleKey));
+    await tester.tap(find.byKey(SupplierVoucherListPage.filterToggleKey));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
-    expect(find.byKey(SupplierVoucherListScreen.filtersKey), findsNothing);
+    expect(find.byKey(SupplierVoucherListPage.filtersKey), findsNothing);
     await tester.tap(find.byIcon(Icons.visibility_outlined).first);
     await tester.pumpAndSettle();
     expect(find.byType(CommonDetailsDialog), findsOneWidget);

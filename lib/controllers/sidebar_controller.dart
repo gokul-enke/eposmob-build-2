@@ -80,10 +80,10 @@ import 'package:pos_machine/screens/transactions/widgets/view_receipt_details.da
 import 'package:pos_machine/screens/transactions/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
-import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
-import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
-import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
-import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/customer_voucher_list_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/create_customer_voucher_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/supplier_voucher_list_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/create_supplier_voucher_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/create_expense_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
@@ -130,6 +130,14 @@ class SideBarController extends GetxController {
   static const int expenseListScreenIndex = 93;
   static const int createExpenseScreenIndex = 94;
   static const int viewExpenseScreenIndex = 95;
+
+  /// Customer and supplier voucher routes, including Transactions aliases.
+  static const int customerVoucherListIndex = 70;
+  static const int createCustomerVoucherIndex = 71;
+  static const int supplierVoucherListIndex = 72;
+  static const int createSupplierVoucherIndex = 73;
+  static const int transactionSupplierVoucherListIndex = 75;
+  static const int transactionCreateSupplierVoucherIndex = 76;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -223,13 +231,13 @@ class SideBarController extends GetxController {
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
     SupplierProfilePage(), // 69 Supplier Profile
-    CustomerVoucherListScreen(), // 70 Customer Voucher List
-    CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
-    SupplierVoucherListScreen(), // 72 Supplier Voucher List
-    CreateSupplierVoucherScreen(), // 73 Create Supplier Voucher
+    CustomerVoucherListPage(), // 70 Customer Voucher List
+    CreateCustomerVoucherPage(), // 71 Create Customer Voucher
+    SupplierVoucherListPage(), // 72 Supplier Voucher List
+    CreateSupplierVoucherPage(), // 73 Create Supplier Voucher
     TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
-    SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
-    CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
+    SupplierVoucherListPage(), // 75 Supplier Voucher List (alias for Transactions)
+    CreateSupplierVoucherPage(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportScreen(), // 77 Non-Stock Report
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
     DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
