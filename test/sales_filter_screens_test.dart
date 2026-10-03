@@ -5,7 +5,7 @@ import 'package:pos_machine/components/filter_toggle_button.dart';
 import 'package:pos_machine/models/day_close_pending_status.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';

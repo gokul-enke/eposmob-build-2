@@ -84,9 +84,9 @@ import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
 import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
 import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
 import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
-import 'package:pos_machine/screens/transactions/expense_list_screen.dart';
-import 'package:pos_machine/screens/transactions/create_expense_screen.dart';
-import 'package:pos_machine/screens/transactions/view_expense_screen.dart';
+import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
+import 'package:pos_machine/features/expenses/presentation/pages/create_expense_page.dart';
+import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
 
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
@@ -125,6 +125,11 @@ class SideBarController extends GetxController {
   static const int mySalesReportScreenIndex = 58;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
+
+  /// Expense screens in [screens]. Navigate through [ExpenseNavigation].
+  static const int expenseListScreenIndex = 93;
+  static const int createExpenseScreenIndex = 94;
+  static const int viewExpenseScreenIndex = 95;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -245,9 +250,9 @@ class SideBarController extends GetxController {
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
     SalesScreen(isOnlineSales: true), // 92 Online Sales
-    ExpenseListScreen(), // 93
-    CreateExpenseScreen(), // 94
-    ViewExpenseScreen(), // 95
+    ExpenseListPage(), // expenseListScreenIndex (93)
+    CreateExpensePage(), // createExpenseScreenIndex (94)
+    ViewExpensePage(), // viewExpenseScreenIndex (95)
     OfflineDataPage(), // 96 Offline Data
     RestaurantPage(
       allowCounterBillingFromAttender: true,

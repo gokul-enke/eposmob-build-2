@@ -26,7 +26,7 @@ import 'package:provider/provider.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_dialog_box.dart';
 import '../../models/daily_sales_close.dart';
-import 'package:pos_machine/providers/expense_provider.dart';
+import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/screens/print/print_daily_close.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/models/day_close_pending_status.dart';

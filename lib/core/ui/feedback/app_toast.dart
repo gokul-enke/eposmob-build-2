@@ -8,7 +8,7 @@ import '../tokens/app_spacing.dart';
 
 /// Kind of message, which sets its colour, icon and default duration.
 enum AppToastType {
-  success(AppColors.green, Icons.check_circle_outline_rounded,
+  success(AppColors.successToast, Icons.check_circle_outline_rounded,
       Duration(seconds: 2)),
   info(AppColors.primary, Icons.info_outline_rounded, Duration(seconds: 3)),
   warning(AppColors.amber, Icons.warning_amber_rounded, Duration(seconds: 4)),

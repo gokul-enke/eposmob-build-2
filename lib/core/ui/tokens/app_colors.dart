@@ -23,6 +23,9 @@ abstract final class AppColors {
   static const softBlue = Color(0xFFEBF3FF);
   static const softGreen = Color(0xFFE3F1DF);
   static const green = Color(0xFF2C6E49);
+
+  /// Success toast: the previous success snackbar's `Colors.green` at 90%.
+  static const successToast = Color(0xE64CAF50);
   static const softRed = Color(0xFFFFEDEB);
   static const red = Color(0xFFB42318);
   static const softAmber = Color(0xFFFFF4E0);
