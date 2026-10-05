@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image/image.dart' as img;
-import 'dart:ui' as ui;
-import 'package:intl/intl.dart';
-import 'dart:math' as math;
 
 /// Daily Close Thermal Printer
 /// Prints: Daily Sales Close Report

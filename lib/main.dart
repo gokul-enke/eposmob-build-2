@@ -45,7 +45,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/providers/report_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/features/vouchers/presentation/state/supplier_voucher_provider.dart';

@@ -1,4 +1,5 @@
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
+
 import '../../data/sales_return_api.dart';
 import '../../domain/models/list_sales_return_items.dart';
 import '../../domain/models/sales_return_refund_breakdown.dart';

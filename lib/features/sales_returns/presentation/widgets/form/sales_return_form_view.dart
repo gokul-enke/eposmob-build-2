@@ -14,7 +14,7 @@ import 'package:pos_machine/features/sales_returns/domain/sales_return_calculati
 import 'package:pos_machine/features/sales_returns/domain/models/sales_return_refund_breakdown.dart';
 
 import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 import 'package:pos_machine/resources/font_manager.dart';

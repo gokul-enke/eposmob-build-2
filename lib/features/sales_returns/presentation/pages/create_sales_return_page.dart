@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/core/network/tenant_session.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:provider/provider.dart';
+
 import '../navigation/sales_return_navigation.dart';
 import '../state/sales_return_form_controller.dart';
 import '../state/sales_return_form_ports.dart';

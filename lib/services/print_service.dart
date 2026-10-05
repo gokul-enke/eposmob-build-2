@@ -1,22 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/screens/print/print.dart';
-import 'package:pos_machine/screens/print/return_bill_print.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
-import 'package:pos_machine/services/sales_only_print_helper.dart';
 import 'package:pos_machine/helpers/return_print_identity.dart';
+import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/services/sales_only_print_helper.dart';
+import 'package:provider/provider.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -378,7 +378,8 @@ class PrintService {
         ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
-            completedReturnCartItems: orderDetails.data?.completedReturnCartItems,
+            completedReturnCartItems:
+                orderDetails.data?.completedReturnCartItems,
           )
         : cart.cartItems!;
 

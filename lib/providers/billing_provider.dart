@@ -1,19 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
-import '../models/list_cart.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
-import '../providers/cart_provider.dart';
-import '../providers/delivery_methods_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
+
 import '../models/delivery_method.dart';
 import '../models/delivery_method_registry.dart';
-import '../providers/sales_provider.dart';
+import '../models/list_cart.dart';
+import '../providers/cart_provider.dart';
+import '../providers/delivery_methods_provider.dart';
 
 class BillingProvider extends ChangeNotifier {
   // 1. Internet Connectivity - Real-time connection monitoring with status indicator

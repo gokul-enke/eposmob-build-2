@@ -1,30 +1,31 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
+import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/helpers/debug_login_autofill.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/screens/login/forgot_password.dart';
 import 'package:pos_machine/screens/login/store_selection_screen.dart';
+import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
+import '../../helpers/date_helper.dart';
 import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import '../../helpers/date_helper.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({

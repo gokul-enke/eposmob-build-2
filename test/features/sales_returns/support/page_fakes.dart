@@ -1,20 +1,22 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/features/sales_returns/data/sales_return_api.dart';
 import 'package:pos_machine/features/sales_returns/data/sales_return_repository.dart';
-import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
 import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
-import '../../../test_support/network_fakes.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:provider/provider.dart';
+
 import '../../../test_support/app_translations.dart';
+import '../../../test_support/network_fakes.dart';
 import 'return_fixtures.dart';
 
 final returnItemBody = {

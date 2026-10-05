@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 
 import '../../../state/customer_orders_controller.dart';
 import 'order_card.dart';

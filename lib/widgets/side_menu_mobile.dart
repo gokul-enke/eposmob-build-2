@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
+import 'package:pos_machine/features/sales/presentation/navigation/sales_navigation.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/role_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
@@ -66,6 +66,28 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
 
     void navigate(int index) {
       switch (index) {
+        case SideBarController.salesScreenIndex:
+          SalesNavigation.openOrders();
+          break;
+        case SideBarController.salesOrderDetailsScreenIndex:
+          SalesNavigation.openDetails();
+          break;
+        case SideBarController.confirmedOrdersScreenIndex:
+          SalesNavigation.openConfirmed();
+          break;
+        case SideBarController.dailySalesCloseListScreenIndex:
+          SalesNavigation.openDailyCloseList();
+          break;
+        case SideBarController.dailySalesCloseDetailScreenIndex:
+          SalesNavigation.openDailyCloseDetails();
+          break;
+        case SideBarController.adminDailySalesCloseListScreenIndex:
+          SalesNavigation.openDailyCloseList(admin: true);
+          break;
+        case SideBarController.onlineSalesScreenIndex:
+          SalesNavigation.openOrders(online: true);
+          break;
+
         case SideBarController.customerVoucherListScreenIndex:
           VoucherNavigation.openCustomerList();
           break;
@@ -82,10 +104,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     void fetchSalesOrders() {
-      // SalesScreen loads its own data when it mounts, so only refresh when we
+      // SalesPage loads its own data when it mounts, so only refresh when we
       // are already on it. Fetching alongside the screen's own request raced
       // it into the same shared order list and could blank the list.
-      if (sideBarController.index.value != 2) return;
+      if (sideBarController.index.value != SideBarController.salesScreenIndex)
+        return;
 
       final salesProvider = Provider.of<SalesProvider>(context, listen: false);
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -328,16 +351,16 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   icon: Icons.shopping_cart_rounded,
                   title: 'nav.sales'.tr,
                   selected: [
-                    2,
-                    11,
+                    SideBarController.salesScreenIndex,
+                    SideBarController.salesOrderDetailsScreenIndex,
                     49,
                     50,
                     51,
-                    54,
-                    78,
-                    79,
-                    84,
-                    92,
+                    SideBarController.confirmedOrdersScreenIndex,
+                    SideBarController.dailySalesCloseListScreenIndex,
+                    SideBarController.dailySalesCloseDetailScreenIndex,
+                    SideBarController.adminDailySalesCloseListScreenIndex,
+                    SideBarController.onlineSalesScreenIndex,
                   ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasSalesPermission)
@@ -345,13 +368,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                         title: 'nav.sales'.tr,
                         onTap: () {
                           fetchSalesOrders();
-                          navigate(2);
+                          navigate(SideBarController.salesScreenIndex);
                         },
                       ),
                     if (hasConfirmedOrdersPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.confirmed_orders'.tr,
-                        onTap: () => navigate(54),
+                        onTap: () => navigate(
+                            SideBarController.confirmedOrdersScreenIndex),
                       ),
                     if (hasSalesReturnPermission)
                       _MobileDrawerSubItem(
@@ -362,17 +386,20 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     if (hasDayClosingPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.day_sale_closing'.tr,
-                        onTap: () => navigate(78),
+                        onTap: () => navigate(
+                            SideBarController.dailySalesCloseListScreenIndex),
                       ),
                     if (isCompanyAdmin && hasDayClosingPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.admin_day_sale_records'.tr,
-                        onTap: () => navigate(84),
+                        onTap: () => navigate(SideBarController
+                            .adminDailySalesCloseListScreenIndex),
                       ),
                     if (hasOnlineSalesPermission || isCompanyAdmin)
                       _MobileDrawerSubItem(
                         title: 'nav.online_orders'.tr,
-                        onTap: () => navigate(92),
+                        onTap: () =>
+                            navigate(SideBarController.onlineSalesScreenIndex),
                       ),
                   ],
                 ),

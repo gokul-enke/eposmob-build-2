@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:pos_machine/helpers/return_print_identity.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/features/sales_returns/presentation/printing/sales_return_print_items.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:provider/provider.dart';
+
 import '../../domain/models/list_sales_return.dart';
 import '../state/sales_return_details_controller.dart';
 import '../widgets/details/sales_return_detail_view.dart';

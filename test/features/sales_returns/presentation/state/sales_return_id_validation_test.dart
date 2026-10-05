@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 
 void main() {
   group('Sales return ID validation', () {

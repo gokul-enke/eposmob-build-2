@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_orders_controller.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 
 class _Call {
   _Call(this.token, this.customerId, this.page);

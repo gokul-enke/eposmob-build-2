@@ -1,46 +1,45 @@
 import 'package:get/get.dart';
-import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
-import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
+import 'package:pos_machine/features/customers/presentation/pages/add_customer_page.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customer_profile_page.dart';
+import 'package:pos_machine/features/customers/presentation/pages/customers_list_page.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/create_purchase_return_page.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_list_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/add_purchase_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/create_purchase_order_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_details_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_order_list_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_details_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
+import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
+import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
 import 'package:pos_machine/screens/category/edit_category_screen.dart';
 import 'package:pos_machine/screens/category/widgets/view_category.dart';
-import 'package:pos_machine/features/customers/presentation/pages/customer_profile_page.dart';
-import 'package:pos_machine/features/customers/presentation/pages/add_customer_page.dart';
-import 'package:pos_machine/screens/cart/cart_list.dart';
-import 'package:pos_machine/features/customers/presentation/pages/customers_list_page.dart';
-import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
-
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
-
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
 import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/screens/product/stock.dart';
+import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/purchase_page.dart';
-import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
-import 'package:pos_machine/screens/product/stock.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/purchase_order_list_page.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/create_purchase_order_page.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_page.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/add_purchase_page.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/purchase_details_page.dart';
-import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_list_page.dart';
-import 'package:pos_machine/features/purchase_returns/presentation/pages/create_purchase_return_page.dart';
-import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_details_page.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
-import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
+import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
+
 // Adding import for the new simple transaction details screen
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart';
 // Adding imports for supplier transaction report screens
@@ -59,7 +58,7 @@ import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profi
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
-import 'package:pos_machine/screens/sales/sales.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_page.dart';
 import 'package:pos_machine/features/sales_returns/presentation/pages/create_sales_return_page.dart';
 import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_list_page.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
@@ -89,13 +88,13 @@ import 'package:pos_machine/features/expenses/presentation/pages/create_expense_
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
 
 import '../screens/product/widgets/stock_details.dart';
-import '../screens/sales/widgets/sales_order_details.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_order_details_page.dart';
 import '../widgets/category_list.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/suppliers_list_page.dart';
-import 'package:pos_machine/screens/sales/confirmed_orders.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
-import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
+import 'package:pos_machine/features/sales/presentation/pages/confirmed_orders_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_detail_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_list_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/admin_daily_sales_close_list_page.dart';
 import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
@@ -153,6 +152,15 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Sales screens in [screens]. Navigate through SalesNavigation.
+  static const int salesScreenIndex = 2;
+  static const int salesOrderDetailsScreenIndex = 11;
+  static const int confirmedOrdersScreenIndex = 54;
+  static const int dailySalesCloseListScreenIndex = 78;
+  static const int dailySalesCloseDetailScreenIndex = 79;
+  static const int adminDailySalesCloseListScreenIndex = 84;
+  static const int onlineSalesScreenIndex = 92;
+
   /// Sales Returns screens; navigate through SalesReturnNavigation.
   static const int createSalesReturnIndex = 49;
   static const int salesReturnListIndex = 50;
@@ -178,7 +186,7 @@ class SideBarController extends GetxController {
   var screens = const [
     BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
-    SalesScreen(), //2
+    SalesPage(), // salesScreenIndex
     CartScreen(), //3
     TransactionScreen(), //4
     CustomersListPage(), //5
@@ -187,7 +195,7 @@ class SideBarController extends GetxController {
     SupportScreen(), //8
     AddCustomerPage(), //9
     OpenProfileScreen(), //10
-    SalesOrderDetailsScreen(), //11
+    SalesOrderDetailsPage(), // salesOrderDetailsScreenIndex
     AddCategoryScreen(), //12
     AddCategoryPropertiesScreen(), //13
     AddProductScreen(), //14
@@ -230,7 +238,7 @@ class SideBarController extends GetxController {
     EditOrder(), // 51 Edit Order
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
-    ConfirmedOrdersScreen(), // 54 Confirmed Orders
+    ConfirmedOrdersPage(), // confirmedOrdersScreenIndex
     RestaurantPage(
       allowCounterBillingFromAttender: false,
       defaultCounterBillingMode: false,
@@ -257,13 +265,13 @@ class SideBarController extends GetxController {
     SupplierVoucherListPage(), // 75 Supplier Voucher List (alias for Transactions)
     CreateSupplierVoucherPage(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportScreen(), // 77 Non-Stock Report
-    DailySalesCloseListScreen(), // 78 Daily Sales Close List
-    DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
+    DailySalesCloseListPage(), // dailySalesCloseListScreenIndex
+    DailySalesCloseDetailPage(), // dailySalesCloseDetailScreenIndex
     ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
     PurchaseOrderListPage(), // purchaseOrderListScreenIndex
     CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
     ProductBarcodeScreen(), // 83 Product Barcode Screen
-    AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
+    AdminDailySalesCloseListPage(), // adminDailySalesCloseListScreenIndex
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
     BillingQuotationPageResponsive(), // 86 Quotations
     QuotationsListScreen(), // 87 Quotation List
@@ -275,7 +283,7 @@ class SideBarController extends GetxController {
     ), // 89 Restaurant Billing Page
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
-    SalesScreen(isOnlineSales: true), // 92 Online Sales
+    SalesPage(isOnlineSales: true), // onlineSalesScreenIndex
     ExpenseListPage(), // expenseListScreenIndex (93)
     CreateExpensePage(), // createExpenseScreenIndex (94)
     ViewExpensePage(), // viewExpenseScreenIndex (95)

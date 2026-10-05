@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../domain/models/customer_list.dart';
 import '../../state/customer_orders_controller.dart';

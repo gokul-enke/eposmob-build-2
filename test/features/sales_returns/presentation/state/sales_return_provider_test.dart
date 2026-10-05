@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/features/sales_returns/data/sales_return_api.dart';
 import 'package:pos_machine/features/sales_returns/data/sales_return_repository.dart';
+
 import '../../../../test_support/network_fakes.dart';
 import '../../support/return_fixtures.dart';
 
