@@ -6,10 +6,13 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/api_response_helper.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/day_close_pending_status.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
-import 'package:pos_machine/models/list_sales_return_items.dart';
-import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/sales_return_refund_breakdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:pos_machine/features/sales_returns/data/sales_return_repository.dart';
+import 'package:pos_machine/features/sales_returns/presentation/state/sales_return_provider.dart';
 
 import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
@@ -31,8 +34,23 @@ class SalesApiException implements Exception {
 }
 
 class SalesProvider with ChangeNotifier {
-  SalesProvider({SalesPostRequest? postRequest})
-      : _postRequest = postRequest ?? http.post;
+  SalesProvider(
+      {SalesPostRequest? postRequest,
+      SalesReturnRepository? salesReturnRepository})
+      : _postRequest = postRequest ?? http.post,
+        salesReturns = SalesReturnProvider(repository: salesReturnRepository) {
+    salesReturns.addListener(_notifyReturnListeners);
+  }
+
+  final SalesReturnProvider salesReturns;
+  void _notifyReturnListeners() => notifyListeners();
+
+  @override
+  void dispose() {
+    salesReturns.removeListener(_notifyReturnListeners);
+    salesReturns.dispose();
+    super.dispose();
+  }
 
   final SalesPostRequest _postRequest;
 
@@ -92,28 +110,22 @@ class SalesProvider with ChangeNotifier {
 
   bool isOnlineSalesNavigation = false;
   List<ListOrderModelData> _orders = [];
-  List<SalesReturnOrder> _salesReturnOrders = [];
-  List<SalesReturnCart> _salesReturnItems = [];
-  SalesReturnOrderInfo? _currentReturnOrder;
-  SalesReturnRefundBreakdown? _serverRefundBreakdown;
   List<DailySalesCloseData> dailySalesCloseList = [];
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
   int totalPages = 1;
   int paginationFrom = 1;
-  int salesReturnCurrentPage = 1;
-  int salesReturnTotalPages = 1;
+  int get salesReturnCurrentPage => salesReturns.currentPage;
+  set salesReturnCurrentPage(int value) => salesReturns.currentPage = value;
+  int get salesReturnTotalPages => salesReturns.totalPages;
+  set salesReturnTotalPages(int value) => salesReturns.totalPages = value;
   List<ListOrderModelData> get orders => _orders;
-  List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
-  List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
-  SalesReturnOrderInfo? get currentReturnOrder => _currentReturnOrder;
+  List<SalesReturnOrder> get salesReturnOrders => salesReturns.orders;
+  List<SalesReturnCart> get salesReturnItems => salesReturns.items;
+  SalesReturnOrderInfo? get currentReturnOrder => salesReturns.currentOrder;
   SalesReturnRefundBreakdown? get serverRefundBreakdown =>
-      _serverRefundBreakdown;
-
-  void clearServerRefundBreakdown() {
-    _serverRefundBreakdown = null;
-    notifyListeners();
-  }
+      salesReturns.breakdown;
+  void clearServerRefundBreakdown() => salesReturns.clearBreakdown();
 
   void applyRealtimeOrders(List<ListOrderModelData> orders) {
     // Supersede any in-flight fetch so its response cannot overwrite this list.
@@ -123,13 +135,6 @@ class SalesProvider with ChangeNotifier {
     totalPages = 1;
     paginationFrom = _orders.isEmpty ? 0 : 1;
     notifyListeners();
-  }
-
-  void _storeRefundBreakdownFromBody(String body) {
-    final breakdown = SalesReturnRefundBreakdown.fromResponseBody(body);
-    if (breakdown != null) {
-      _serverRefundBreakdown = breakdown;
-    }
   }
 
   String _orderNumber = "";
@@ -639,7 +644,8 @@ class SalesProvider with ChangeNotifier {
         filterStore: (lastQuery['filterStore'] as String?) ??
             (lastQuery['storeId'] == null ? storeId.toString() : null),
         filterCreatedBy: lastQuery['filterCreatedBy'] as String?,
-        page: (lastQuery['page'] as int?) ?? (currentPage > 0 ? currentPage : 1),
+        page:
+            (lastQuery['page'] as int?) ?? (currentPage > 0 ? currentPage : 1),
         filterOnlineSales: lastQuery['filterOnlineSales'] as bool?,
       );
     }
@@ -695,269 +701,45 @@ class SalesProvider with ChangeNotifier {
     } finally {}
   }
 
-  Future<void> fetchSalesReturn({
-    required String accessToken,
-    int? page,
-  }) async {
-    final queryParameters = <String, String>{};
-    if (page != null) queryParameters['page'] = page.toString();
+  Future<void> fetchSalesReturn({required String accessToken, int? page}) =>
+      salesReturns.fetchSalesReturn(accessToken: accessToken, page: page);
 
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
+  Future<void> fetchSalesReturnItems(
+          {required String accessToken, required String orderId, int? page}) =>
+      salesReturns.fetchSalesReturnItems(
+          accessToken: accessToken, orderId: orderId, page: page);
 
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
+  Future<int> submitSalesReturn(
+          {required String accessToken,
+          required int orderId,
+          required double price,
+          required num quantity,
+          required int cartItemId,
+          required String reason,
+          bool isDeliveryRefundable = false}) =>
+      salesReturns.submitSalesReturn(
+          accessToken: accessToken,
+          orderId: orderId,
+          price: price,
+          quantity: quantity,
+          cartItemId: cartItemId,
+          reason: reason,
+          isDeliveryRefundable: isDeliveryRefundable);
 
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listSalesReturn)
-        .replace(queryParameters: queryParameters);
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      debugPrint(
-          'fetch Sales Return list response status code: ${response.statusCode}');
-      debugPrint('response.body ${response.body}');
-
-      ApiResponseHelper.ensureSuccess(
-        response.statusCode,
-        response.body,
-        fallback: 'Failed to load sales returns',
-      );
-
-      final jsonData = json.decode(response.body);
-      final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
-      _salesReturnOrders = salesReturnResponse.data.data;
-
-      salesReturnCurrentPage = salesReturnResponse.data.currentPage;
-      salesReturnTotalPages = salesReturnResponse.data.lastPage;
-
-      notifyListeners();
-    } catch (error) {
-      _salesReturnOrders = [];
-      rethrow;
-    }
-  }
-
-  Future<void> fetchSalesReturnItems({
-    required String accessToken,
-    required String orderId,
-    int? page,
-  }) async {
-    debugPrint("orderId $orderId");
-    final queryParameters = <String, String>{
-      'order_number': orderId.toString(),
-      if (page != null) 'page': page.toString(),
-    };
-
-    debugPrint(queryParameters.toString());
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listSalesReturnItems)
-        .replace(queryParameters: queryParameters);
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      debugPrint(
-          'fetch Sales Return list response status code: ${response.statusCode}');
-      debugPrint('response.body ${response.body}');
-
-      ApiResponseHelper.ensureSuccess(
-        response.statusCode,
-        response.body,
-        fallback: 'Failed to load return items',
-      );
-
-      final jsonData = json.decode(response.body);
-      final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
-      _salesReturnItems = salesReturnResponse.data;
-      _currentReturnOrder = salesReturnResponse.order;
-      notifyListeners();
-    } catch (error) {
-      debugPrint('Error in fetchSalesReturnItems: $error');
-      rethrow;
-    }
-  }
-
-  Future<int> submitSalesReturn({
-    required String accessToken,
-    required int orderId,
-    required double price,
-    required num quantity,
-    required int cartItemId,
-    required String reason,
-    bool isDeliveryRefundable = false,
-  }) async {
-    if (orderId <= 0) {
-      throw Exception(
-        'Cannot submit this return because the sales order ID is missing.',
-      );
-    }
-    if (cartItemId <= 0) {
-      throw Exception(
-        'Cannot submit this return because the cart item ID is missing. '
-        'Please refresh the order and try again.',
-      );
-    }
-
-    final url =
-        Uri.parse(APPUrl.salesReturn); // Update with your server base URL
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-        'X-Tenant': apiKey,
-      },
-      body: jsonEncode({
-        'order_id': orderId,
-        'price': price,
-        'quantity': quantity,
-        'cart_item_id': cartItemId,
-        'reason': reason,
-        'is_delivery_refundable': isDeliveryRefundable,
-      }),
-    );
-
-    debugPrint("Sales request access token present: ${accessToken.isNotEmpty}");
-    debugPrint("orderId $orderId");
-    debugPrint("price $price");
-    debugPrint("quantity $quantity");
-    debugPrint("cartItemId $cartItemId");
-    debugPrint("reason $reason");
-    debugPrint("response.statusCode ${response.statusCode}");
-    debugPrint("response.body ${response.body}");
-
-    ApiResponseHelper.ensureSuccess(
-      response.statusCode,
-      response.body,
-      fallback: 'Failed to submit sales return',
-    );
-    final responseData = json.decode(response.body);
-    final rawReturnOrder = responseData is Map ? responseData['data'] : null;
-    final returnOrderId = rawReturnOrder is Map
-        ? int.tryParse(rawReturnOrder['id']?.toString() ?? '')
-        : null;
-    if (returnOrderId == null || returnOrderId <= 0) {
-      throw Exception(
-        'The return item was submitted, but its return order ID was missing. '
-        'Please refresh the order before completing the return.',
-      );
-    }
-    _storeRefundBreakdownFromBody(response.body);
-    notifyListeners();
-    return returnOrderId;
-  }
-
-  Future<void> completeSalesReturn({
-    required String accessToken,
-    required int returnOrderId,
-    String? paymentMethod,
-    double? paidAmount,
-    bool? hasPayment,
-    bool isDeliveryRefundable = false,
-  }) async {
-    if (returnOrderId <= 0) {
-      throw Exception(
-        'Cannot complete this return because the return order ID is missing. '
-        'Please submit a return item first.',
-      );
-    }
-
-    final url = Uri.parse(
-        APPUrl.completeSalesReturn); // Update with your server base URL
-
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    // Debug print the request body
-    final requestBody = jsonEncode({
-      'return_order_id': returnOrderId,
-      'is_delivery_refundable': isDeliveryRefundable,
-      if (hasPayment == true) ...{
-        'payment_method': paymentMethod,
-        'paid_amount': paidAmount,
-        'has_payment': hasPayment,
-      } else ...{
-        'has_payment': false,
-      }
-    });
-    debugPrint('=== COMPLETE SALES RETURN REQUEST BODY ===');
-    debugPrint(requestBody);
-    debugPrint('=== END REQUEST BODY ===');
-
-    debugPrint("Sales request access token present: ${accessToken.isNotEmpty}");
-    debugPrint("returnOrderId $returnOrderId");
-    debugPrint("hasPayment $hasPayment");
-    debugPrint("paymentMethod $paymentMethod");
-    debugPrint("paidAmount $paidAmount");
-    debugPrint("isDeliveryRefundable $isDeliveryRefundable");
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-        'X-Tenant': apiKey,
-      },
-      body: requestBody,
-    );
-
-    ApiResponseHelper.ensureSuccess(
-      response.statusCode,
-      response.body,
-      fallback: 'Failed to complete sales return',
-    );
-    _storeRefundBreakdownFromBody(response.body);
-    debugPrint('Sales return completed successfully: ${response.body}');
-    notifyListeners();
-  }
+  Future<void> completeSalesReturn(
+          {required String accessToken,
+          required int returnOrderId,
+          String? paymentMethod,
+          double? paidAmount,
+          bool? hasPayment,
+          bool isDeliveryRefundable = false}) =>
+      salesReturns.completeSalesReturn(
+          accessToken: accessToken,
+          returnOrderId: returnOrderId,
+          paymentMethod: paymentMethod,
+          paidAmount: paidAmount,
+          hasPayment: hasPayment,
+          isDeliveryRefundable: isDeliveryRefundable);
 
   Future<void> cancelOrder({
     required String accessToken,

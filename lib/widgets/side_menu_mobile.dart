@@ -356,7 +356,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     if (hasSalesReturnPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.sales_return'.tr,
-                        onTap: () => navigate(50),
+                        onTap: () =>
+                            navigate(SideBarController.salesReturnListIndex),
                       ),
                     if (hasDayClosingPermission)
                       _MobileDrawerSubItem(

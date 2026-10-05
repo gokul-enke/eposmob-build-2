@@ -59,6 +59,7 @@ import 'widgets/mobile_filters.dart';
 import 'widgets/cancel_order_modal.dart';
 import 'widgets/change_order_status_modal.dart';
 import 'widgets/change_payment_status_modal.dart';
+import 'package:pos_machine/features/sales_returns/presentation/navigation/sales_return_navigation.dart';
 
 class SalesScreen extends StatefulWidget {
   final bool isOnlineSales;
@@ -2367,7 +2368,7 @@ Powered by CloudPOS''',
                                       .token;
 
                               // Navigate to sales return page
-                              Get.find<SideBarController>().index.value = 49;
+                              SalesReturnNavigation.openCreate();
 
                               // Show success message
                               if (context.mounted) {

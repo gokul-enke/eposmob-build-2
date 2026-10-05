@@ -19,6 +19,7 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/sales/widgets/cancel_order_modal.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/sales_returns/presentation/navigation/sales_return_navigation.dart';
 
 class MobileOrderCard extends StatelessWidget {
   final ListOrderModelData order;
@@ -329,7 +330,7 @@ class MobileOrderCard extends StatelessWidget {
             .setCartIDForOrder(int.parse(order.cartId.toString()));
       }
 
-      Get.find<SideBarController>().index.value = 49;
+      SalesReturnNavigation.openCreate();
 
       if (context.mounted) {
         showScaffold(

@@ -60,8 +60,8 @@ import 'package:pos_machine/screens/transactions/company_accounts/company_accoun
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
-import 'package:pos_machine/screens/sales_return/sales_return.dart';
-import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/create_sales_return_page.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_list_page.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
 import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
@@ -153,6 +153,10 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderIndex = 82;
   static const int purchaseDetailsIndex = 36;
 
+  /// Sales Returns screens; navigate through SalesReturnNavigation.
+  static const int createSalesReturnIndex = 49;
+  static const int salesReturnListIndex = 50;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -221,8 +225,8 @@ class SideBarController extends GetxController {
     HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
-    SalesReturnScreen(), //49 Sales Return
-    SalesReturnPage(), //50 Sales Return List
+    CreateSalesReturnPage(), // createSalesReturnIndex
+    SalesReturnListPage(), // salesReturnListIndex
     EditOrder(), // 51 Edit Order
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings

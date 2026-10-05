@@ -32,6 +32,7 @@ import '../services/session_reset_service.dart';
 import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
 import 'drawer_list_tile_expandable.dart';
+import 'package:pos_machine/features/sales_returns/presentation/navigation/sales_return_navigation.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -494,7 +495,7 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value = 54;
                   },
                   onTapTitle3: () {
-                    sideBarController.index.value = 50;
+                    SalesReturnNavigation.openList();
                   },
                   onTapTitle4: () {
                     sideBarController.index.value = 78;

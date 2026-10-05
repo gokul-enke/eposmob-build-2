@@ -35,6 +35,7 @@ import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
 import '../../../responsive.dart';
+import 'package:pos_machine/features/sales_returns/presentation/navigation/sales_return_navigation.dart';
 
 class SalesOrderDetailsScreen extends StatefulWidget {
   const SalesOrderDetailsScreen({Key? key}) : super(key: key);
@@ -426,7 +427,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 if (orderDetailsModelData?.cart == null ||
                     cartItems == null ||
                     cartItems!.isEmpty) {
-                  AppToast.error(context, 'sales_order_details.msg_no_print_data'.tr);
+                  AppToast.error(
+                      context, 'sales_order_details.msg_no_print_data'.tr);
                   return;
                 }
 
@@ -629,7 +631,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         .setCartIDForOrder(cartId);
                   }
 
-                  Get.find<SideBarController>().index.value = 49;
+                  SalesReturnNavigation.openCreate();
 
                   if (context.mounted) {
                     showScaffold(
