@@ -52,7 +52,7 @@ extension PurchaseOrderFormViewOperations8 on PurchaseOrderFormView {
   Widget _buildFooter() {
     final totals = _purchaseTotals;
     final discountValidationMessage =
-        _discountValidationTotals.discountValidationMessage;
+        _discountValidationTotals.discountErrorKey?.tr;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
