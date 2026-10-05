@@ -65,6 +65,6 @@ class _LegacyPurchaseVoucherListPageState
                 supplierName: purchases.supplierName,
                 callVoucherDetails: purchases.callVoucherDetails),
             onAddVoucher: () => PurchaseNavigation.openIndex(
-                SideBarController.legacyPurchaseVoucherEntryIndex)));
+                SideBarController.legacyPurchaseVoucherEntryScreenIndex)));
   }
 }

@@ -7,17 +7,18 @@ class PurchaseNavigation {
       ? Get.find<SideBarController>()
       : Get.put(SideBarController());
   static void openLegacyList() =>
-      openIndex(SideBarController.legacyPurchaseListIndex);
+      openIndex(SideBarController.legacyPurchaseListScreenIndex);
   static void openLegacyCreate() =>
-      openIndex(SideBarController.legacyCreatePurchaseIndex);
+      openIndex(SideBarController.legacyCreatePurchaseScreenIndex);
   static void openLegacyVouchers() =>
-      openIndex(SideBarController.legacyPurchaseVoucherListIndex);
+      openIndex(SideBarController.legacyPurchaseVoucherListScreenIndex);
   static void openLegacyVoucherDetails() =>
-      openIndex(SideBarController.legacyPurchaseVoucherDetailsIndex);
-  static void openList() => openIndex(SideBarController.purchaseOrderListIndex);
+      openIndex(SideBarController.legacyPurchaseVoucherDetailsScreenIndex);
+  static void openList() =>
+      openIndex(SideBarController.purchaseOrderListScreenIndex);
   static void openCreate() =>
-      openIndex(SideBarController.createPurchaseOrderIndex);
+      openIndex(SideBarController.createPurchaseOrderScreenIndex);
   static void openDetails() =>
-      openIndex(SideBarController.purchaseDetailsIndex);
+      openIndex(SideBarController.purchaseDetailsScreenIndex);
   static void openIndex(int index) => _sidebar.index.value = index;
 }

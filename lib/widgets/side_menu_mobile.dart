@@ -66,13 +66,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
 
     void navigate(int index) {
       switch (index) {
-        case SideBarController.customerVoucherListIndex:
+        case SideBarController.customerVoucherListScreenIndex:
           VoucherNavigation.openCustomerList();
           break;
-        case SideBarController.supplierVoucherListIndex:
+        case SideBarController.supplierVoucherListScreenIndex:
           VoucherNavigation.openSupplierList();
           break;
-        case SideBarController.transactionSupplierVoucherListIndex:
+        case SideBarController.transactionSupplierVoucherListScreenIndex:
           VoucherNavigation.openSupplierList(transactions: true);
           break;
         default:
@@ -488,17 +488,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
                   selected: [
-                    SideBarController.purchaseOrderListIndex,
-                    SideBarController.createPurchaseOrderIndex,
-                    SideBarController.purchaseDetailsIndex,
-                    SideBarController.purchaseReturnListIndex,
-                    SideBarController.createPurchaseReturnIndex
+                    SideBarController.purchaseOrderListScreenIndex,
+                    SideBarController.createPurchaseOrderScreenIndex,
+                    SideBarController.purchaseDetailsScreenIndex,
+                    SideBarController.purchaseReturnListScreenIndex,
+                    SideBarController.createPurchaseReturnScreenIndex
                   ].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,
-                      onTap: () =>
-                          navigate(SideBarController.purchaseOrderListIndex),
+                      onTap: () => navigate(
+                          SideBarController.purchaseOrderListScreenIndex),
                     ),
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_returns'.tr,
@@ -684,10 +684,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     31,
                     47,
                     48,
-                    SideBarController.customerVoucherListIndex,
-                    SideBarController.createCustomerVoucherIndex,
-                    SideBarController.transactionSupplierVoucherListIndex,
-                    SideBarController.transactionCreateSupplierVoucherIndex,
+                    SideBarController.customerVoucherListScreenIndex,
+                    SideBarController.createCustomerVoucherScreenIndex,
+                    SideBarController.transactionSupplierVoucherListScreenIndex,
+                    SideBarController
+                        .transactionCreateSupplierVoucherScreenIndex,
                     91,
                     93,
                     94,
@@ -708,13 +709,13 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       _MobileDrawerSubItem(
                         title: 'nav.customer_voucher'.tr,
                         onTap: () => navigate(
-                            SideBarController.customerVoucherListIndex),
+                            SideBarController.customerVoucherListScreenIndex),
                       ),
                     if (hasSupplierVouchersPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.supplier_voucher_purchase'.tr,
                         onTap: () => navigate(SideBarController
-                            .transactionSupplierVoucherListIndex),
+                            .transactionSupplierVoucherListScreenIndex),
                       ),
                     if (hasProformaPermission)
                       _MobileDrawerSubItem(
@@ -803,8 +804,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     57,
                     69,
                     4,
-                    SideBarController.supplierVoucherListIndex,
-                    SideBarController.createSupplierVoucherIndex
+                    SideBarController.supplierVoucherListScreenIndex,
+                    SideBarController.createSupplierVoucherScreenIndex
                   ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasSuppliersPermission)
@@ -824,7 +825,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       _MobileDrawerSubItem(
                         title: 'nav.supplier_voucher'.tr,
                         onTap: () => navigate(
-                            SideBarController.supplierVoucherListIndex),
+                            SideBarController.supplierVoucherListScreenIndex),
                       ),
                   ],
                 ),

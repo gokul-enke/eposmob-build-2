@@ -1,5 +1,3 @@
-import 'package:get/get.dart';
-
 class PurchaseOrderTotals {
   final double grossAmount;
   final double discountAmount;
@@ -14,22 +12,24 @@ class PurchaseOrderTotals {
     return netAmount > 0 ? netAmount : 0;
   }
 
-  String? get discountValidationMessage {
+  /// Translation key of the discount error, or null when it is valid.
+  String? get discountErrorKey {
     if (!discountAmount.isFinite || discountAmount < 0) {
-      return 'purchase_order.discount_negative'.tr;
+      return 'purchase_order.discount_negative';
     }
     if (discountAmount > grossAmount) {
-      return 'purchase_order.discount_exceeds_gross'.tr;
+      return 'purchase_order.discount_exceeds_gross';
     }
     return null;
   }
 
-  String? validatePaymentAmount(double paidAmount) {
+  /// Translation key of the payment error, or null when it is valid.
+  String? paymentErrorKey(double paidAmount) {
     if (!paidAmount.isFinite || paidAmount < 0) {
-      return 'purchase_order.payment_negative'.tr;
+      return 'purchase_order.payment_negative';
     }
     if (paidAmount - netPayable > 0.005) {
-      return 'purchase_order.payment_exceeds_net'.tr;
+      return 'purchase_order.payment_exceeds_net';
     }
     return null;
   }

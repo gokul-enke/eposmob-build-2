@@ -10,7 +10,7 @@ void main() {
       );
 
       expect(totals.netPayable, 450);
-      expect(totals.discountValidationMessage, isNull);
+      expect(totals.discountErrorKey, isNull);
     });
 
     test('allows discount equal to gross total', () {
@@ -20,7 +20,7 @@ void main() {
       );
 
       expect(totals.netPayable, 0);
-      expect(totals.discountValidationMessage, isNull);
+      expect(totals.discountErrorKey, isNull);
     });
 
     test('rejects discount greater than gross total', () {
@@ -31,8 +31,8 @@ void main() {
 
       expect(totals.netPayable, 0);
       expect(
-        totals.discountValidationMessage,
-        'Overall discount cannot exceed the gross total.',
+        totals.discountErrorKey,
+        'purchase_order.discount_exceeds_gross',
       );
     });
 
@@ -43,8 +43,8 @@ void main() {
       );
 
       expect(
-        totals.discountValidationMessage,
-        'Overall discount cannot be negative.',
+        totals.discountErrorKey,
+        'purchase_order.discount_negative',
       );
     });
 
@@ -54,8 +54,8 @@ void main() {
         discountAmount: 50,
       );
 
-      expect(totals.validatePaymentAmount(200), isNull);
-      expect(totals.validatePaymentAmount(450), isNull);
+      expect(totals.paymentErrorKey(200), isNull);
+      expect(totals.paymentErrorKey(450), isNull);
     });
 
     test('rejects payment greater than net payable', () {
@@ -65,8 +65,8 @@ void main() {
       );
 
       expect(
-        totals.validatePaymentAmount(450.01),
-        'Payment amount cannot exceed the net payable.',
+        totals.paymentErrorKey(450.01),
+        'purchase_order.payment_exceeds_net',
       );
     });
   });

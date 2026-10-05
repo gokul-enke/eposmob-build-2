@@ -7,6 +7,9 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -250,14 +253,38 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                                     ),
                                   ),
                                 )
-                              : OutlinedButton.icon(
-                                  onPressed: () =>
-                                      _showOrderDetailsModal(context, order),
-                                  icon: const Icon(Icons.visibility_outlined,
-                                      size: 17),
-                                  label: const Text('View details'),
-                                  style: _secondaryButtonStyle,
-                                ),
+                              : syncRecord == null
+                                  ? FilledButton.icon(
+                                      onPressed: () => _confirmAndRetryLegacy(
+                                          context, order),
+                                      icon: const Icon(Icons.replay, size: 17),
+                                      label: const FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          'Review & retry',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                        ),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFB45309),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(9),
+                                        ),
+                                      ),
+                                    )
+                                  : OutlinedButton.icon(
+                                      onPressed: () => _showOrderDetailsModal(
+                                          context, order),
+                                      icon: const Icon(
+                                          Icons.visibility_outlined,
+                                          size: 17),
+                                      label: const Text('View details'),
+                                      style: _secondaryButtonStyle,
+                                    ),
                         ),
                         if (syncRecord != null) ...[
                           const SizedBox(width: 8),
@@ -269,13 +296,37 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
                             style: _secondaryButtonStyle,
                           ),
                         ],
-                        if (isRetryable) ...[
+                        if (syncRecord == null) ...[
                           const SizedBox(width: 8),
                           Tooltip(
-                            message: 'Remove from this list',
+                            message: 'View details',
                             child: OutlinedButton(
                               onPressed: () =>
-                                  _confirmAndRemove(context, order),
+                                  _showOrderDetailsModal(context, order),
+                              style: _secondaryButtonStyle.copyWith(
+                                padding: const WidgetStatePropertyAll(
+                                  EdgeInsets.symmetric(horizontal: 10),
+                                ),
+                                minimumSize: const WidgetStatePropertyAll(
+                                  Size(40, 38),
+                                ),
+                              ),
+                              child: const Icon(Icons.visibility_outlined,
+                                  size: 19),
+                            ),
+                          ),
+                        ],
+                        if (isRetryable || syncRecord == null) ...[
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: syncRecord == null
+                                ? 'Delete this local order'
+                                : 'Remove from this list',
+                            child: OutlinedButton(
+                              onPressed: () => syncRecord == null
+                                  ? _showDeleteConfirmationDialog(
+                                      context, order)
+                                  : _confirmAndRemove(context, order),
                               style: _secondaryButtonStyle.copyWith(
                                 foregroundColor: const WidgetStatePropertyAll(
                                   Color(0xFFB42318),
@@ -428,6 +479,137 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
     } on StateError catch (error) {
       if (!context.mounted) return;
       showScaffoldError(context: context, message: error.message.toString());
+    }
+  }
+
+  double _legacyDiscountAmount(SavedOrder order) {
+    final subtotal = order.items.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum +
+          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+    );
+    final total = (order.flatDiscount ?? 0.0) +
+        subtotal * (order.percentageDiscount ?? 0.0) / 100;
+    return total > subtotal ? subtotal : total;
+  }
+
+  /// Old local-only orders (saved by builds before the outbox) have no stored
+  /// request. Rebuild one from the saved order, put it in the outbox so it has
+  /// a log and Remove like every other sale, and send it once.
+  Future<void> _confirmAndRetryLegacy(
+    BuildContext context,
+    SavedOrder order,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        constraints: const BoxConstraints(maxWidth: 560),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFB45309)),
+            SizedBox(width: 10),
+            Text('Send this old local sale?'),
+          ],
+        ),
+        content: Text(
+          'Order #${order.orderNumber} was saved on this device by an older '
+          'version and has never been sent. It has no duplicate protection, so '
+          'first check the backend Sales list. Send it only when this order is '
+          'not there.',
+          style: const TextStyle(color: Color(0xFF7C4A03), height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB45309),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(150, 44),
+            ),
+            child: const Text('I verified — Send'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please log in again before retrying this sale.',
+      );
+      return;
+    }
+
+    final saleSync = Provider.of<LocalSaleSyncService>(context, listen: false);
+    final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
+        .activeStore
+        ?.storeId;
+    try {
+      final pay = PaymentHelper.buildApiPaymentPayloadFromLocal(
+        context: context,
+        storedPaymentMethod: order.paymentMethod,
+        storedPaidAmount: order.paidAmount,
+        storedBalanceAmount: order.balanceAmount,
+      );
+      final payload = OrderSubmissionPayload(
+        items: LocalProductProvider.buildOrderItemsPayloadFrom(order.items),
+        transactionNumber: order.transactionId ?? '',
+        customerId: order.customerId,
+        customerPhone: order.customerPhone ?? '',
+        paymentMethod: pay.paymentMethod,
+        paidAmount: pay.paidAmount,
+        paymentMethods: pay.paymentMethods,
+        paidMethods: pay.paidMethods,
+        balanceAmount: order.balanceAmount ?? '0.0',
+        couponId: order.couponId,
+        comment: order.comment,
+        deliveryMethodId: order.deliveryMethodId,
+        carNumber: order.carNumber,
+        status: 'confirmed',
+        deliveryDate: order.deliveryDate,
+        deliveryTime: order.deliveryTime,
+        tableId: order.tableId,
+        flatDiscount: order.flatDiscount,
+        percentageDiscount: order.percentageDiscount,
+        discountAmount: _legacyDiscountAmount(order),
+        toCustomerCredit: order.toCustomerCredit,
+        address: order.address,
+        addressId: order.addressId,
+        pincode: order.pincode,
+        quotationId: order.quotationId,
+        deliveryCharge: order.deliveryCharge ?? 0,
+        storeId: storeId,
+      );
+      await saleSync.enqueue(
+        localOrderId: order.id,
+        localOrderNumber: order.orderNumber,
+        sourceCartSessionId: order.id,
+        surface: LocalSaleSurface.legacy,
+        payload: payload.toApiJson(),
+      );
+      unawaited(
+        saleSync.submitOnce(localOrderId: order.id, accessToken: accessToken),
+      );
+      if (!context.mounted) return;
+      showScaffold(
+        context: context,
+        message:
+            'Sending started. This sale will update when the server responds.',
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Could not start the send. The sale remains saved locally.',
+      );
     }
   }
 

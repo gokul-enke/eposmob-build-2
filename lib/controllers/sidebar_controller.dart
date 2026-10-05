@@ -132,26 +132,26 @@ class SideBarController extends GetxController {
   static const int viewExpenseScreenIndex = 95;
 
   /// Customer and supplier voucher routes, including Transactions aliases.
-  static const int customerVoucherListIndex = 70;
-  static const int createCustomerVoucherIndex = 71;
-  static const int supplierVoucherListIndex = 72;
-  static const int createSupplierVoucherIndex = 73;
-  static const int transactionSupplierVoucherListIndex = 75;
-  static const int transactionCreateSupplierVoucherIndex = 76;
+  static const int customerVoucherListScreenIndex = 70;
+  static const int createCustomerVoucherScreenIndex = 71;
+  static const int supplierVoucherListScreenIndex = 72;
+  static const int createSupplierVoucherScreenIndex = 73;
+  static const int transactionSupplierVoucherListScreenIndex = 75;
+  static const int transactionCreateSupplierVoucherScreenIndex = 76;
 
   /// Purchase return screens in [screens]. Navigate through [PurchaseReturnNavigation].
-  static const int purchaseReturnListIndex = 99;
-  static const int createPurchaseReturnIndex = 100;
+  static const int purchaseReturnListScreenIndex = 99;
+  static const int createPurchaseReturnScreenIndex = 100;
 
   /// Purchase order screens in [screens]. Navigate through [PurchaseNavigation].
-  static const int legacyPurchaseListIndex = 19;
-  static const int legacyCreatePurchaseIndex = 20;
-  static const int legacyPurchaseVoucherListIndex = 26;
-  static const int legacyPurchaseVoucherDetailsIndex = 29;
-  static const int legacyPurchaseVoucherEntryIndex = 37;
-  static const int purchaseOrderListIndex = 81;
-  static const int createPurchaseOrderIndex = 82;
-  static const int purchaseDetailsIndex = 36;
+  static const int legacyPurchaseListScreenIndex = 19;
+  static const int legacyCreatePurchaseScreenIndex = 20;
+  static const int legacyPurchaseVoucherListScreenIndex = 26;
+  static const int legacyPurchaseVoucherDetailsScreenIndex = 29;
+  static const int legacyPurchaseVoucherEntryScreenIndex = 37;
+  static const int purchaseOrderListScreenIndex = 81;
+  static const int createPurchaseOrderScreenIndex = 82;
+  static const int purchaseDetailsScreenIndex = 36;
 
   /// Sales Returns screens; navigate through SalesReturnNavigation.
   static const int createSalesReturnIndex = 49;
@@ -195,24 +195,24 @@ class SideBarController extends GetxController {
     AddCategoryPageScreen(), //16
     TabBarForAddNewProduct(), //17
     AddProductStockScreen(), //18
-    LegacyPurchaseListPage(), // legacyPurchaseListIndex
-    LegacyAddPurchasePage(), // legacyCreatePurchaseIndex
+    LegacyPurchaseListPage(), // legacyPurchaseListScreenIndex
+    LegacyAddPurchasePage(), // legacyCreatePurchaseScreenIndex
     InvoiceListScreen(), // invoiceListScreenIndex
     VoucherListScreen(), //22
     CustomerTransactionListScreen(), //23
     CreateNewInvoiceScreen(), //24
     CreateNewVoucherScreen(), //25
-    LegacyPurchaseVoucherListPage(), // legacyPurchaseVoucherListIndex
+    LegacyPurchaseVoucherListPage(), // legacyPurchaseVoucherListScreenIndex
     ViewCategoryWidget(), //27
     ViewProductWidget(), //28
-    LegacyPurchaseVoucherDetailsPage(), // legacyPurchaseVoucherDetailsIndex
+    LegacyPurchaseVoucherDetailsPage(), // legacyPurchaseVoucherDetailsScreenIndex
     ViewTransactionDetailsWidget(), //30
     ViewInvoiceDetailsWidget(), //31
     ViewVoucherDetailsWidget(), //32
     StockDetailsWidget(), //33
     EditCategoryPageScreen(), //34
     TabBarForEditProduct(), //35
-    PurchaseDetailsPage(), // purchaseDetailsIndex
+    PurchaseDetailsPage(), // purchaseDetailsScreenIndex
     AddVoucherDetailsWidget(), //37
     CustomerProfilePage(), //38
     AccountBookScreen(), //39
@@ -260,8 +260,8 @@ class SideBarController extends GetxController {
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
     DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
     ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
-    PurchaseOrderListPage(), // purchaseOrderListIndex
-    CreatePurchaseOrderPage(), // createPurchaseOrderIndex
+    PurchaseOrderListPage(), // purchaseOrderListScreenIndex
+    CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
@@ -286,8 +286,8 @@ class SideBarController extends GetxController {
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
     StockReportScreen(), // 98 Stock Report Screen
-    PurchaseReturnListPage(), // 99 purchaseReturnListIndex
-    CreatePurchaseReturnPage(), // 100 createPurchaseReturnIndex
+    PurchaseReturnListPage(), // 99 purchaseReturnListScreenIndex
+    CreatePurchaseReturnPage(), // 100 createPurchaseReturnScreenIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex
   ];
 }

@@ -167,15 +167,14 @@ extension PurchaseOrderFormControllerOperations5
     }
 
     final discountValidationMessage =
-        discountValidationTotals.discountValidationMessage;
+        discountValidationTotals.discountErrorKey?.tr;
     if (discountValidationMessage != null) {
       showErrorMessage(discountValidationMessage);
       return;
     }
 
-    final paymentValidationMessage = purchaseTotals.validatePaymentAmount(
-      paidAmount,
-    );
+    final paymentValidationMessage =
+        purchaseTotals.paymentErrorKey(paidAmount)?.tr;
     if (hasPayment && paymentValidationMessage != null) {
       showErrorMessage(paymentValidationMessage);
       return;

@@ -5,7 +5,6 @@ import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platfor
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
@@ -15,6 +14,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'supplier_voucher_print_thermal.dart';
 import 'supplier_voucher_print_standard.dart';
 
@@ -432,9 +432,7 @@ class _SupplierVoucherPrintPageState extends State<SupplierVoucherPrintPage> {
           onPressed: () {
             Navigator.pop(context);
             if (!widget.returnToPreviousRoute) {
-              SideBarController sideBarController =
-                  Get.put(SideBarController());
-              sideBarController.index.value = 72;
+              VoucherNavigation.openSupplierList();
             }
           },
         ),

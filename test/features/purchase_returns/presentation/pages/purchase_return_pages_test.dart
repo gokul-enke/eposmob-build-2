@@ -203,7 +203,7 @@ void main() {
       {'purchase_item_id': 12, 'quantity': 2.0, 'reason': 'Damaged'}
     ]);
     expect(Get.find<SideBarController>().index.value,
-        SideBarController.purchaseReturnListIndex);
+        SideBarController.purchaseReturnListScreenIndex);
     expect(tester.takeException(), isNull);
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpWidget(const SizedBox());
