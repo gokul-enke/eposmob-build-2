@@ -30,11 +30,17 @@ class _LegacyPurchaseListPageState extends State<LegacyPurchaseListPage> {
         fetchPurchases: ({filterName, filterStore, page}) {
       final token = auth.token;
       if (token == null || token.isEmpty) throw StateError('Session expired');
-      return purchases.repository.fetchLegacyPurchasesPage(
-          accessToken: token,
-          filterName: filterName,
-          filterStore: filterStore,
-          page: page);
+      return purchases.repository
+          .fetchLegacyPurchasesPage(
+              accessToken: token,
+              filterName: filterName,
+              filterStore: filterStore,
+              page: page)
+          .then((loaded) {
+        // View (purchase details) reads the loaded items from the provider.
+        purchases.rememberLegacyPurchases(loaded);
+        return loaded;
+      });
     });
     controller.load(1, true);
   }

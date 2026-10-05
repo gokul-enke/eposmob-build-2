@@ -197,6 +197,7 @@ class PurchaseProvider extends _PurchaseState {
           purchaseVoucherId: purchaseVoucherId,
           returnDate: returnDate,
           items: items,
+          hasPayment: hasPayment,
           paidAmount: paidAmount,
           paymentMethod: paymentMethod);
 
@@ -216,6 +217,20 @@ class PurchaseProvider extends _PurchaseState {
     String code,
   ) =>
       _listMasterDataValuesOperation(accessToken, code);
+
+  /// Keeps a legacy purchase page that the list loaded itself, as
+  /// [listPurchase] does: the purchase-details screen (View) reads its items
+  /// from [purchaseItemListAllPurchase] through [callVoucherDetails].
+  void rememberLegacyPurchases(ListPurchaseModel page) {
+    final data = page.data ?? const <ListPurchaseModelData>[];
+    currentPage = page.pagination?.currentPage ?? 1;
+    totalPages = page.pagination?.lastPage ?? 1;
+    purchaseItemListAllPurchase = [
+      for (final purchase in data) ...?purchase.purchaseItems,
+    ];
+    ListPurchaseModelDataDetails = data.isEmpty ? null : data.first;
+    _notifyPurchaseListeners();
+  }
 
   Future<void> listPurchase({
     required String accessToken,
