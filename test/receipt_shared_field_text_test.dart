@@ -186,8 +186,9 @@ void main() {
       expect(_hasArabic(row.$1), isTrue, reason: row.$1);
     }
     expect(params.bankDetailsHeading, 'تفاصيل البنك');
+    // Payment methods print their untranslated code (user decision).
     for (final row in params.paymentBreakdownRows) {
-      expect(_hasArabic(row.$1), isTrue, reason: row.$1);
+      expect(row.$1, 'CASH');
     }
     for (final row in params.customerBalanceRows) {
       expect(_hasArabic(row.$1), isTrue, reason: row.$1);
@@ -231,27 +232,29 @@ void main() {
     expect(arabic.fieldLabel('showCustomerName'), 'العميل');
   });
 
-  testWidgets('payment rows use the cash label and renderer method names',
+  testWidgets('payment rows print each method by its untranslated code',
       (tester) async {
     await pump(tester);
-    final single = _params(context, language: 'en_ar');
-    expect(single.paymentBreakdownRows, [('نقدي', 100.0)]);
-    expect(single.paymentMethodSummary, 'نقدي');
+    for (final language in ['en', 'ar', 'en_ar']) {
+      final single = _params(context, language: language);
+      expect(single.paymentBreakdownRows, [('CASH', 100.0)]);
+      expect(single.paymentMethodSummary, 'CASH');
 
-    final multi = _params(
-      context,
-      language: 'en_ar',
-      paymentBreakdown: {'CASH': 60.0, 'Card': 40.0, 'BANK': 0},
-    );
-    expect(multi.paymentBreakdownRows, [('نقدي', 60.0), ('بطاقة', 40.0)]);
-    expect(multi.paymentMethodSummary, 'نقدي, بطاقة');
+      final multi = _params(
+        context,
+        language: language,
+        paymentBreakdown: {'CASH': 60.0, 'Card': 40.0, 'BANK': 0},
+      );
+      expect(multi.paymentBreakdownRows, [('CASH', 60.0), ('CARD', 40.0)]);
+      expect(multi.paymentMethodSummary, 'CASH, CARD');
+    }
 
     final english = _params(
       context,
       language: 'en',
       paymentBreakdown: {'isMultiPayment': true, 'amounts': {'CASH': 60.0}},
     );
-    expect(english.paymentBreakdownRows, [('Cash', 60.0)]);
+    expect(english.paymentBreakdownRows, [('CASH', 60.0)]);
 
     final noPaid = _params(context, language: 'en', paidAmount: null);
     expect(noPaid.paymentBreakdownRows, isEmpty);

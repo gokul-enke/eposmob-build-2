@@ -1518,9 +1518,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Only show if paidAmount is provided (not null) and showPaymentBreaked is true or missing (default true)
     final bool showPaymentBreaked = params.isVisible('showPaymentBreaked');
 
-    // Shared rows (same as the standard layout): per-method amounts named in
-    // the document language (`showCash` label for cash), else the single
-    // method with the paid amount.
+    // Shared rows (same as the standard layout): per-method amounts named by
+    // their code, else the single method with the paid amount.
     final paymentRows = params.paymentBreakdownRows;
     if (params.paidAmount != null &&
         showPaymentBreaked &&

@@ -761,27 +761,20 @@ class ReceiptLayoutParams {
     return rows;
   }
 
-  /// Printable name of a payment method: the configured `showCash` label for
-  /// cash, renderer names for card / UPI / credit, otherwise the method's own
-  /// name.
+  /// Printable name of a payment method: its code (CASH, CARD, UPI, ...),
+  /// untranslated in every document language.
   String paymentMethodName(String method) {
-    final clean = method.trim();
-    switch (clean.toUpperCase()) {
-      case 'CASH':
-        return fieldLabel('showCash', inlineBilingual: true);
-      case 'CARD':
-        return rendererText(english: 'Card', arabic: 'بطاقة');
-      case 'UPI':
-        return 'UPI';
+    final code = method.trim().toUpperCase();
+    switch (code) {
       // The amount left on the customer's account. Billing stores it as
       // DEBIT, while the server and older orders may say CREDIT or BALANCE;
-      // all three print the one untranslated code the checkout shows.
+      // all three print the one code the checkout shows.
       case 'DEBIT':
       case 'CREDIT':
       case 'BALANCE':
         return 'CREDIT';
       default:
-        return clean;
+        return code;
     }
   }
 
@@ -821,12 +814,12 @@ class ReceiptLayoutParams {
     }
     final method = paymentMethod?.trim() ?? '';
     final label = method.isEmpty || method.startsWith('{')
-        ? fieldLabel('showCash', inlineBilingual: true)
+        ? paymentMethodName('CASH')
         : paymentMethodName(method);
     return [(label, paidAmount!)];
   }
 
-  /// Payment method(s) for the customer section, e.g. `نقدي, بطاقة`.
+  /// Payment method(s) for the customer section, e.g. `CASH, CARD`.
   String get paymentMethodSummary {
     final amounts = _paymentAmounts;
     if (amounts != null) {

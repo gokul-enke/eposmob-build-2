@@ -66,6 +66,10 @@ abstract final class AppToast {
 
   static OverlayEntry? _entry;
 
+  /// Entries already taken out of the overlay; [OverlayEntry.remove] may run
+  /// only once per entry.
+  static final _removed = Expando<bool>('AppToast.removed');
+
   /// Whether a toast is on screen.
   static bool get isShowing => _entry != null;
 
@@ -153,10 +157,14 @@ abstract final class AppToast {
     if (identical(_entry, entry)) _entry = null;
   }
 
+  /// Takes [entry] out of the overlay. Not gated on [OverlayEntry.mounted]:
+  /// an entry replaced in the frame it was inserted is not built yet, and
+  /// skipping it left that toast on screen with nothing able to close it.
   static void _remove(OverlayEntry entry) {
-    if (!identical(_entry, entry)) return;
-    _entry = null;
-    if (entry.mounted) entry.remove();
+    if (identical(_entry, entry)) _entry = null;
+    if (_removed[entry] == true) return;
+    _removed[entry] = true;
+    entry.remove();
   }
 }
 
