@@ -71,7 +71,7 @@ import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'controllers/sidebar_controller.dart';
 import 'providers/cart.dart';
 import 'providers/carousel_provider.dart';
-import 'providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'resources/app_url.dart';
 import 'screens/login/login.dart';
 import 'screens/login/base_url_wrapper.dart';

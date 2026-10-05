@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import '../../domain/models/purchase_return.dart';
 import '../state/purchase_return_detail_controller.dart';

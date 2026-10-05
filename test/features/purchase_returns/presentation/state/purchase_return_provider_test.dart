@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/purchase_returns/data/purchase_return_api.dart';
 import 'package:pos_machine/features/purchase_returns/data/purchase_return_repository.dart';
 import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import '../../../../test_support/network_fakes.dart';
 
 void main() {

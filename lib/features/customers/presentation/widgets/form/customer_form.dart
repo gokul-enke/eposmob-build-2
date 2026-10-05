@@ -5,7 +5,7 @@ import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/location_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:provider/provider.dart';

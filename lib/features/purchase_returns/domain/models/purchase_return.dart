@@ -1,4 +1,4 @@
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 
 class ListPurchaseReturnModel {
   String? status;

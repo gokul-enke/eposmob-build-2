@@ -19,7 +19,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
@@ -139,7 +139,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
     } catch (error) {
       debugPrint("Error loading stocks: $error");
       if (mounted) {
-        AppToast.error(context, 'stock.error_loading_stocks'.trParams({'error': '$error'}));
+        AppToast.error(context,
+            'stock.error_loading_stocks'.trParams({'error': '$error'}));
         setState(() {
           initLoading = false;
         });
@@ -275,7 +276,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('stock.product_name'.tr, stock.productName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.product_name'.tr,
+                        stock.productName ?? 'stock.na'.tr),
                     if (_variantFeatureEnabled() &&
                         stock.productVariantId != null)
                       _buildDetailRow(
@@ -284,19 +286,27 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             ? stock.variantName!
                             : 'Variant #${stock.productVariantId}',
                       ),
-                    _buildDetailRow('stock.category'.tr, stock.categoryName ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.store_name'.tr, stock.storeName ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.supplier'.tr, stock.supplierName ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.unit'.tr, stock.unit ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.category'.tr,
+                        stock.categoryName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.store_name'.tr,
+                        stock.storeName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.supplier'.tr,
+                        stock.supplierName ?? 'stock.na'.tr),
                     _buildDetailRow(
-                        'stock.retail_price'.tr, stock.retailPrice?.toString() ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.mrp'.tr, stock.mrp?.toString() ?? 'stock.na'.tr),
+                        'stock.unit'.tr, stock.unit ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.retail_price'.tr,
+                        stock.retailPrice?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.mrp'.tr, stock.mrp?.toString() ?? 'stock.na'.tr),
                     if (_canViewPurchasePrice())
                       _buildDetailRow('stock.purchase_price'.tr,
                           stock.purchaseRate?.toString() ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.quantity'.tr, stock.qty?.toString() ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.rack'.tr, stock.rack ?? 'stock.na'.tr),
-                    _buildDetailRow('stock.barcode'.tr, stock.barCode ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.quantity'.tr,
+                        stock.qty?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.rack'.tr, stock.rack ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.barcode'.tr, stock.barCode ?? 'stock.na'.tr),
                     _buildDetailRow('stock.wholesale_price'.tr,
                         stock.wholesalePrice?.toString() ?? 'stock.na'.tr),
                   ],
@@ -337,7 +347,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
     showEditStockDialog(
       context: context,
       stockId: stock.stockId!,
-      title: 'stock.edit_stock_title'.trParams({'productName': stock.productName ?? ''}),
+      title: 'stock.edit_stock_title'
+          .trParams({'productName': stock.productName ?? ''}),
       initialRetailPrice: stock.retailPrice ?? '',
       initialMrp: stock.mrp ?? '',
       initialPurchasePrice: stock.purchaseRate ?? '',
@@ -1217,7 +1228,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         ),
                       ),
                     ),
-                    if (copyable && value.isNotEmpty && value != 'stock.na'.tr) ...[
+                    if (copyable &&
+                        value.isNotEmpty &&
+                        value != 'stock.na'.tr) ...[
                       const SizedBox(width: 6),
                       Builder(
                         builder: (context) => GestureDetector(
@@ -1225,7 +1238,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             Clipboard.setData(ClipboardData(text: value));
                             showScaffold(
                               context: context,
-                              message: 'stock.copied_to_clipboard'.tr.replaceAll('@label', label),
+                              message: 'stock.copied_to_clipboard'
+                                  .tr
+                                  .replaceAll('@label', label),
                             );
                           },
                           child: const Icon(
@@ -1424,7 +1439,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
               value: 'adjust',
               child: Row(
                 children: [
-                  const Icon(Icons.sync, size: 18, color: ColorManager.kPrimaryColor),
+                  const Icon(Icons.sync,
+                      size: 18, color: ColorManager.kPrimaryColor),
                   const SizedBox(width: 8),
                   Text('stock.adjust_stock'.tr),
                 ],
@@ -1637,9 +1653,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                                 ClipboardData(text: barcode));
                                             showScaffold(
                                               context: context,
-                                              message: 'stock.copied_to_clipboard'
-                                                  .tr
-                                                  .replaceAll('@label', 'stock.barcode'.tr),
+                                              message:
+                                                  'stock.copied_to_clipboard'
+                                                      .tr
+                                                      .replaceAll('@label',
+                                                          'stock.barcode'.tr),
                                             );
                                           },
                                           child: const Icon(
@@ -1657,7 +1675,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             _buildTableCell('${stock.retailPrice}'),
                             _buildTableCell(stock.mrp ?? 'stock.na'.tr),
                             if (canViewPurchasePrice)
-                              _buildTableCell(stock.purchaseRate ?? 'stock.na'.tr),
+                              _buildTableCell(
+                                  stock.purchaseRate ?? 'stock.na'.tr),
                             _buildTableCell(
                               '${stock.qty}',
                               textColor: qtyColors.$1 ?? Colors.black,

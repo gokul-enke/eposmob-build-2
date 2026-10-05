@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/core/network/tenant_session.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import '../domain/models/purchase_return.dart';
 

@@ -17,7 +17,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -386,7 +386,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       _languageNameControllers[language.id]!.text = translated;
       showScaffold(
         context: context,
-        message: 'product_detail.translated_to'.tr.replaceAll('@language', language.name),
+        message: 'product_detail.translated_to'
+            .tr
+            .replaceAll('@language', language.name),
       );
     } else {
       showScaffoldError(
@@ -451,7 +453,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       if (product == null && mounted) {
         showScaffoldError(
           context: context,
-          message: 'product_detail.barcode_not_found'.tr.replaceAll('@barcode', barcode),
+          message: 'product_detail.barcode_not_found'
+              .tr
+              .replaceAll('@barcode', barcode),
         );
       }
     } catch (e) {
@@ -461,7 +465,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'product_detail.error_fetching_product'.tr.replaceAll('@error', '$e'),
+          message: 'product_detail.error_fetching_product'
+              .tr
+              .replaceAll('@error', '$e'),
         );
       }
     }
@@ -1426,7 +1432,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         Clipboard.setData(ClipboardData(text: value));
                         showScaffold(
                           context: context,
-                          message: 'product_detail.copied_to_clipboard'.tr.replaceAll('@label', label),
+                          message: 'product_detail.copied_to_clipboard'
+                              .tr
+                              .replaceAll('@label', label),
                         );
                       },
                       child: Icon(
@@ -1456,7 +1464,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'product_detail.product_name_in_language'.tr.replaceAll('@language', language.name),
+          'product_detail.product_name_in_language'
+              .tr
+              .replaceAll('@language', language.name),
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -1561,12 +1571,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         appSettingsProvider.appSettings?.showMrpPos == true;
 
     final identityRows = <Widget>[
-      _buildDetailRow('product.product_name'.tr, product.productName ?? 'product.na'.tr),
-      _buildDetailRow('product_detail.slug'.tr, product.productSlug ?? 'product.na'.tr),
-      _buildDetailRow('product.category'.tr, product.category?.name ?? 'product.na'.tr),
+      _buildDetailRow(
+          'product.product_name'.tr, product.productName ?? 'product.na'.tr),
+      _buildDetailRow(
+          'product_detail.slug'.tr, product.productSlug ?? 'product.na'.tr),
+      _buildDetailRow(
+          'product.category'.tr, product.category?.name ?? 'product.na'.tr),
       if (itemCodeEnabled)
-        _buildDetailRowWithCopy('product.item_code'.tr, product.itemCode ?? 'product.na'.tr),
-      _buildDetailRowWithCopy('product.barcode'.tr, product.barcode ?? 'product.na'.tr),
+        _buildDetailRowWithCopy(
+            'product.item_code'.tr, product.itemCode ?? 'product.na'.tr),
+      _buildDetailRowWithCopy(
+          'product.barcode'.tr, product.barcode ?? 'product.na'.tr),
       _buildDetailRow('product.unit'.tr, product.unit ?? 'product.na'.tr),
       if (product.taxes != null && product.taxes!.isNotEmpty)
         ...product.taxes!.map((tax) => _buildDetailRow(
@@ -1582,8 +1597,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               ? '$currency ${product.price!.price}'
               : 'product.na'.tr),
       if (showMrp)
-        _buildDetailRow(
-            'product.mrp'.tr, product.mrp != null ? '$currency ${product.mrp}' : 'product.na'.tr),
+        _buildDetailRow('product.mrp'.tr,
+            product.mrp != null ? '$currency ${product.mrp}' : 'product.na'.tr),
       if (canViewPurchasePrice)
         _buildDetailRow(
           'product.purchase_price'.tr,
@@ -1611,24 +1626,30 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           _formatNumericString(product.minMarginPrice).isNotEmpty
               ? '$currency ${_formatNumericString(product.minMarginPrice)}'
               : 'product.na'.tr),
-      _buildDetailRow('product_detail.sku'.tr, product.sku ?? 'product_detail.not_available'.tr),
+      _buildDetailRow('product_detail.sku'.tr,
+          product.sku ?? 'product_detail.not_available'.tr),
     ];
 
     final metaRows = <Widget>[
-      _buildDetailRow('product_detail.rating'.tr, product.rating ?? 'product.na'.tr),
+      _buildDetailRow(
+          'product_detail.rating'.tr, product.rating ?? 'product.na'.tr),
       _buildStockStatusRow(
         product,
         stockEnabled: stockEnabled,
         stockRows: stockRows,
       ),
-      _buildDetailRow(
-          'product_detail.reorder_level'.tr, product.reorderLevel?.toString() ?? 'product.na'.tr),
-      _buildDetailRow('product_detail.location'.tr, product.productLocation?.toString() ?? 'product.na'.tr),
+      _buildDetailRow('product_detail.reorder_level'.tr,
+          product.reorderLevel?.toString() ?? 'product.na'.tr),
+      _buildDetailRow('product_detail.location'.tr,
+          product.productLocation?.toString() ?? 'product.na'.tr),
       if (product.weightInfo != null) ...[
+        _buildDetailRow('product_detail.weight'.tr,
+            product.weightInfo!.weight?.toString() ?? 'product.na'.tr),
         _buildDetailRow(
-            'product_detail.weight'.tr, product.weightInfo!.weight?.toString() ?? 'product.na'.tr),
-        _buildDetailRow('product_detail.is_weighted'.tr,
-            product.weightInfo!.isWeighted == true ? 'product_detail.yes'.tr : 'product_detail.no'.tr),
+            'product_detail.is_weighted'.tr,
+            product.weightInfo!.isWeighted == true
+                ? 'product_detail.yes'.tr
+                : 'product_detail.no'.tr),
       ] else ...[
         _buildDetailRow('product_detail.weight'.tr, 'product.na'.tr),
         _buildDetailRow('product_detail.is_weighted'.tr, 'product.na'.tr),
@@ -1734,7 +1755,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             children: [
                               Expanded(
                                 flex: 2,
-                                child: Text(saleUnit.unitName ?? 'product.na'.tr,
+                                child: Text(
+                                    saleUnit.unitName ?? 'product.na'.tr,
                                     style: buildCustomStyle(
                                         FontWeightManager.regular,
                                         FontSize.s14,
@@ -1746,7 +1768,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 child: Row(
                                   children: [
                                     Flexible(
-                                      child: Text(saleUnit.barcode ?? 'product.na'.tr,
+                                      child: Text(
+                                          saleUnit.barcode ?? 'product.na'.tr,
                                           style: buildCustomStyle(
                                               FontWeightManager.regular,
                                               FontSize.s14,
@@ -1764,7 +1787,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                                 text: saleUnit.barcode!));
                                             showScaffold(
                                               context: context,
-                                              message: 'product_detail.barcode_copied_static'.tr,
+                                              message:
+                                                  'product_detail.barcode_copied_static'
+                                                      .tr,
                                             );
                                           },
                                           child: Icon(
@@ -1942,18 +1967,27 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                           children: [
                             _buildStockTableHeader('product_detail.sl_no'.tr),
-                            _buildStockTableHeader('product_detail.quantity'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.quantity'.tr),
                             _buildStockTableHeader('product.price'.tr),
-                            if (showMrp) _buildStockTableHeader('product.mrp'.tr),
+                            if (showMrp)
+                              _buildStockTableHeader('product.mrp'.tr),
                             if (canViewPurchasePrice)
-                              _buildStockTableHeader('product.purchase_price'.tr),
-                            _buildStockTableHeader('product_detail.supplier'.tr),
-                            _buildStockTableHeader('product_detail.store_name'.tr),
-                            _buildStockTableHeader('product_detail.wholesale_price'.tr),
-                            _buildStockTableHeader('product_detail.min_count'.tr),
+                              _buildStockTableHeader(
+                                  'product.purchase_price'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.supplier'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.store_name'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.wholesale_price'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.min_count'.tr),
                             _buildStockTableHeader('product_detail.sku'.tr),
-                            _buildStockTableHeader('product_detail.date_col'.tr),
-                            _buildStockTableHeader('product_detail.expiry_date'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.date_col'.tr),
+                            _buildStockTableHeader(
+                                'product_detail.expiry_date'.tr),
                             _buildStockTableHeader('product_detail.rack'.tr),
                             _buildStockTableHeader('product.action'.tr),
                           ],
@@ -2003,19 +2037,26 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                             stock.purchasePrice!.isNotEmpty
                                         ? '$currency ${stock.purchasePrice}'
                                         : 'product.na'.tr),
-                              _buildStockTableCell(stock.supplier ?? 'product.na'.tr),
-                              _buildStockTableCell(stock.storeName ?? 'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.supplier ?? 'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.storeName ?? 'product.na'.tr),
                               _buildStockTableCell(
                                   stock.wholesalePrice != null &&
                                           stock.wholesalePrice!.isNotEmpty
                                       ? '$currency ${stock.wholesalePrice}'
                                       : 'product.na'.tr),
                               _buildStockTableCell(
-                                  stock.wholesaleMinUnit?.toString() ?? 'product.na'.tr),
-                              _buildStockTableCell(stock.sku ?? 'product.na'.tr),
-                              _buildStockTableCell(stock.date ?? 'product.na'.tr),
-                              _buildStockTableCell(stock.expiryDate ?? 'product.na'.tr),
-                              _buildStockTableCell(stock.rack ?? 'product.na'.tr),
+                                  stock.wholesaleMinUnit?.toString() ??
+                                      'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.sku ?? 'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.date ?? 'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.expiryDate ?? 'product.na'.tr),
+                              _buildStockTableCell(
+                                  stock.rack ?? 'product.na'.tr),
                               _buildRackTableCell(
                                 stock,
                                 canEditProduct: canEditProduct,
@@ -2147,19 +2188,22 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           result['status'] == 'success' &&
           result['data'] != null) {
         target.text = result['data']['barcode'].toString();
-        showScaffold(context: context, message: 'product_detail.barcode_generated'.tr);
+        showScaffold(
+            context: context, message: 'product_detail.barcode_generated'.tr);
       } else {
         showScaffoldError(
           context: context,
-          message:
-              result?['message']?.toString() ?? 'product_detail.failed_generate_barcode'.tr,
+          message: result?['message']?.toString() ??
+              'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (e) {
       if (mounted) {
         showScaffoldError(
           context: context,
-          message: 'product_detail.failed_generate_barcode_error'.tr.replaceAll('@error', '$e'),
+          message: 'product_detail.failed_generate_barcode_error'
+              .tr
+              .replaceAll('@error', '$e'),
         );
       }
     } finally {
@@ -2249,8 +2293,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.orange.withOpacity(0.35)),
               ),
-              child: Text(
-                  'product_detail.select_base_unit_enable'.tr),
+              child: Text('product_detail.select_base_unit_enable'.tr),
             ),
         ],
       ),
@@ -2274,15 +2317,22 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('product_sale_unit.base_unit_label'.tr.replaceAll('@unit', unitLabel),
+          Text(
+              'product_sale_unit.base_unit_label'
+                  .tr
+                  .replaceAll('@unit', unitLabel),
               style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
                   0.27, ColorManager.textColor)),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildEditInfoField('product_sale_unit.sale_unit_label'.tr, unitLabel)),
+              Expanded(
+                  child: _buildEditInfoField(
+                      'product_sale_unit.sale_unit_label'.tr, unitLabel)),
               const SizedBox(width: 8),
-              Expanded(child: _buildEditInfoField('product_sale_unit.conversion_rate'.tr, '1')),
+              Expanded(
+                  child: _buildEditInfoField(
+                      'product_sale_unit.conversion_rate'.tr, '1')),
               const SizedBox(width: 8),
               Expanded(
                   child: _buildEditInfoField(
@@ -2408,7 +2458,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                        child: inputField('product_detail.barcode_required'.tr, row.barcodeController)),
+                        child: inputField('product_detail.barcode_required'.tr,
+                            row.barcodeController)),
                     const SizedBox(width: 8),
                     Padding(
                       padding: EdgeInsets.only(top: size.height * 0.021),
@@ -2482,14 +2533,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       } else {
         showScaffoldError(
           context: context,
-          message:
-              result?['message']?.toString() ?? 'product_detail.failed_generate_barcode'.tr,
+          message: result?['message']?.toString() ??
+              'product_detail.failed_generate_barcode'.tr,
         );
       }
     } catch (error) {
       if (mounted) {
         showScaffoldError(
-            context: context, message: 'product_detail.failed_generate_barcode_error'.tr.replaceAll('@error', '$error'));
+            context: context,
+            message: 'product_detail.failed_generate_barcode_error'
+                .tr
+                .replaceAll('@error', '$error'));
       }
     }
   }
@@ -2900,7 +2954,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                               controller: _purchasePriceController,
                               size: size,
                               title: 'product.purchase_price'.tr,
-                              hintText: 'product_detail.enter_purchase_price'.tr,
+                              hintText:
+                                  'product_detail.enter_purchase_price'.tr,
                               width: fieldWidth,
                               height: fieldHeight,
                               margin: EdgeInsets.zero,
@@ -2945,7 +3000,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             controller: _minMarginController,
                             size: size,
                             title: 'product_detail.max_discount_percentage'.tr,
-                            hintText: 'product_detail.enter_max_discount_percentage'.tr,
+                            hintText:
+                                'product_detail.enter_max_discount_percentage'
+                                    .tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -2961,7 +3018,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             controller: _minMarginPriceController,
                             size: size,
                             title: 'product_detail.max_discount_amount'.tr,
-                            hintText: 'product_detail.enter_max_discount_amount'.tr,
+                            hintText:
+                                'product_detail.enter_max_discount_amount'.tr,
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -3290,7 +3348,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   Padding(
                     padding: const EdgeInsets.only(right: 12.0),
                     child: CustomRoundButton(
-                      title: _isSaving ? 'product_detail.saving'.tr : 'general.save'.tr,
+                      title: _isSaving
+                          ? 'product_detail.saving'.tr
+                          : 'general.save'.tr,
                       fct: _isSaving ? () {} : _handleSave,
                       height: 45,
                       width: 140,

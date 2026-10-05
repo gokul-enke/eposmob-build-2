@@ -5,7 +5,7 @@ import 'package:pos_machine/features/purchase_returns/domain/models/purchase_ret
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/purchase/widgets/purchase_orders_responsive.dart';
+import 'package:pos_machine/features/purchases/presentation/widgets/purchase_orders_responsive.dart';
 import '../../state/purchase_return_detail_controller.dart';
 part 'purchase_return_detail_view_section_0.dart';
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -486,16 +487,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
                   selected: [
-                    81,
-                    82,
-                    36,
+                    SideBarController.purchaseOrderListIndex,
+                    SideBarController.createPurchaseOrderIndex,
+                    SideBarController.purchaseDetailsIndex,
                     SideBarController.purchaseReturnListIndex,
                     SideBarController.createPurchaseReturnIndex
                   ].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,
-                      onTap: () => navigate(81),
+                      onTap: () =>
+                          navigate(SideBarController.purchaseOrderListIndex),
                     ),
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_returns'.tr,

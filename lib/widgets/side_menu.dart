@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
+import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -708,7 +709,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value = 81;
+                      PurchaseNavigation.openList();
                     },
                     listTitle1: 'nav.purchase_orders'.tr,
                     showTitle1: hasPurchasePermission,
@@ -720,12 +721,12 @@ class _SideMenuState extends State<SideMenu> {
                     icon: fa.FontAwesomeIcons.clipboardList,
                     title: 'nav.purchase'.tr,
                     onTap: () async {
-                      sideBarController.index.value = 81;
+                      PurchaseNavigation.openList();
                     },
                     selected: [
-                      81,
-                      82,
-                      36,
+                      SideBarController.purchaseOrderListIndex,
+                      SideBarController.createPurchaseOrderIndex,
+                      SideBarController.purchaseDetailsIndex,
                       SideBarController.purchaseReturnListIndex,
                       SideBarController.createPurchaseReturnIndex
                     ].contains(sideBarController.index.value)),

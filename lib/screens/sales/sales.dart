@@ -30,7 +30,7 @@ import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';

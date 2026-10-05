@@ -5,7 +5,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart'; // Add sales executive provider
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -121,8 +121,9 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         );
 
         String userRole = await sharedPrefsProvider.getUserRole();
-        _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
+        _loggedInUserEmail = userRole.contains('@')
+            ? userRole
+            : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       }
     } catch (e) {
@@ -136,8 +137,9 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         );
 
         String userRole = await sharedPrefsProvider.getUserRole();
-        _loggedInUserEmail =
-            userRole.contains('@') ? userRole : 'company_info.fallback_email'.tr;
+        _loggedInUserEmail = userRole.contains('@')
+            ? userRole
+            : 'company_info.fallback_email'.tr;
         _loggedInUserName = _userName; // Use admin user name as fallback
       } catch (settingsError) {
         debugPrint('Error fetching from shared preferences: $settingsError');
@@ -230,12 +232,10 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           SettingsSubPageHeader(
             backLabel: 'company_info.back'.tr,
             onBack: () {
-              sideBarController.index.value =
-                  62; // Navigate back to Settings
+              sideBarController.index.value = 62; // Navigate back to Settings
             },
             onClose: () {
-              sideBarController.index.value =
-                  62; // Navigate back to Settings
+              sideBarController.index.value = 62; // Navigate back to Settings
             },
             title: 'company_info.title'.tr,
             subtitle: 'company_info.subtitle'.tr,
@@ -247,8 +247,10 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 : SingleChildScrollView(
                     child: SettingsInfoList(
                       entries: [
-                        MapEntry('company_info.label_admin_user'.tr, _userName ?? 'company_info.loading'.tr),
-                        MapEntry('company_info.label_company_name'.tr, _companyName ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_admin_user'.tr,
+                            _userName ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_company_name'.tr,
+                            _companyName ?? 'company_info.loading'.tr),
                         MapEntry(
                           'company_info.label_username'.tr,
                           _loggedInUserName ?? 'company_info.loading'.tr,
@@ -257,7 +259,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                           'company_info.label_email'.tr,
                           _loggedInUserEmail ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('company_info.label_user_role'.tr, UiCodeLabels.userRole(_userRole)),
+                        MapEntry('company_info.label_user_role'.tr,
+                            UiCodeLabels.userRole(_userRole)),
                         MapEntry(
                           'company_info.label_customer_id'.tr,
                           _customerId?.toString() ?? 'company_info.loading'.tr,
@@ -266,11 +269,16 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                           'company_info.label_company_id'.tr,
                           _companyId?.toString() ?? 'company_info.loading'.tr,
                         ),
-                        MapEntry('company_info.label_token_type'.tr, _tokenType ?? 'company_info.loading'.tr),
-                        MapEntry('company_info.label_timezone'.tr, _timeZone ?? 'company_info.not_available'.tr),
-                        MapEntry('company_info.label_base_url'.tr, APPUrl.baseURL),
-                        MapEntry('company_info.label_app_version'.tr, _appVersion ?? 'company_info.loading'.tr),
-                        MapEntry('company_info.label_api_key'.tr, _apiKey ?? 'company_info.not_available'.tr),
+                        MapEntry('company_info.label_token_type'.tr,
+                            _tokenType ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_timezone'.tr,
+                            _timeZone ?? 'company_info.not_available'.tr),
+                        MapEntry(
+                            'company_info.label_base_url'.tr, APPUrl.baseURL),
+                        MapEntry('company_info.label_app_version'.tr,
+                            _appVersion ?? 'company_info.loading'.tr),
+                        MapEntry('company_info.label_api_key'.tr,
+                            _apiKey ?? 'company_info.not_available'.tr),
                       ],
                     ),
                   ),

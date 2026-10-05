@@ -6,12 +6,12 @@ import 'package:pos_machine/components/build_dialog_box.dart'
     hide showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/features/purchase_returns/domain/purchase_return_pricing.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/purchase/widgets/purchase_orders_responsive.dart';
+import 'package:pos_machine/features/purchases/presentation/widgets/purchase_orders_responsive.dart';
 import '../../state/create_purchase_return_controller.dart';
 part 'purchase_return_form_view_section_0.dart';
 part 'purchase_return_form_view_section_1.dart';

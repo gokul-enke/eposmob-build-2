@@ -6,7 +6,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:provider/provider.dart';
@@ -107,7 +107,9 @@ class OfflineCacheClearService {
         await context.read<InvoiceProvider>().clearPaymentMethodsCache();
         break;
       case OfflineCacheTarget.deliveryMethods:
-        await context.read<DeliveryMethodsProvider>().clearCachedDeliveryMethods();
+        await context
+            .read<DeliveryMethodsProvider>()
+            .clearCachedDeliveryMethods();
         break;
       case OfflineCacheTarget.documentConfigs:
         await context.read<DocumentConfigProvider>().clearAllCaches();

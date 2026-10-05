@@ -5,7 +5,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 import '../../domain/models/purchase_return.dart';
 import '../../domain/models/return_line_item.dart';
 import '../../domain/purchase_return_pricing.dart';

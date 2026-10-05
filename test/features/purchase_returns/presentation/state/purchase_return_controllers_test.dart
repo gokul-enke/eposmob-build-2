@@ -7,7 +7,7 @@ import 'package:pos_machine/features/purchase_returns/presentation/state/create_
 import 'package:pos_machine/features/purchase_returns/presentation/state/purchase_return_detail_controller.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

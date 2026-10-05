@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/purchase_returns/domain/purchase_return_pricing.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 import 'package:pos_machine/features/purchase_returns/domain/models/purchase_return.dart';
 
 void main() {

@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/models/master_data.dart';

@@ -10,10 +10,10 @@ import 'package:pos_machine/features/purchase_returns/presentation/pages/create_
 import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_details_page.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/models/purchase_order_model.dart';
+import 'package:pos_machine/features/purchases/domain/models/purchase_order_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import '../../../../test_support/app_translations.dart';

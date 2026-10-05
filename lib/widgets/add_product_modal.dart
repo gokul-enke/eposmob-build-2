@@ -14,7 +14,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
@@ -33,10 +33,10 @@ class _SaleUnitFormRow {
     String conversionRate = '',
     String barcode = '',
     String price = '',
-  }) : conversionRateController = TextEditingController(text: conversionRate),
-       barcodeController = TextEditingController(text: barcode),
-       priceController = TextEditingController(text: price),
-       searchController = TextEditingController();
+  })  : conversionRateController = TextEditingController(text: conversionRate),
+        barcodeController = TextEditingController(text: barcode),
+        priceController = TextEditingController(text: price),
+        searchController = TextEditingController();
 
   String? selectedUnitId;
   final TextEditingController conversionRateController;
@@ -351,9 +351,9 @@ class _AddProductWithBarcodeModalState
                     const SizedBox(height: 6),
                     Text(
                       'product_form.barcode_value_label'.tr.replaceAll(
-                        '@barcode',
-                        barcode,
-                      ),
+                            '@barcode',
+                            barcode,
+                          ),
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -737,8 +737,7 @@ class _AddProductWithBarcodeModalState
 
       for (final value in names.values) {
         if (value is Map) {
-          final code =
-              value['code']?.toString().toLowerCase() ??
+          final code = value['code']?.toString().toLowerCase() ??
               value['language_code']?.toString().toLowerCase();
           final languageId = value['language_id']?.toString();
           if (code == targetCode || languageId == language.id.toString()) {
@@ -752,8 +751,7 @@ class _AddProductWithBarcodeModalState
     if (names is List) {
       for (final value in names) {
         if (value is Map) {
-          final code =
-              value['code']?.toString().toLowerCase() ??
+          final code = value['code']?.toString().toLowerCase() ??
               value['language_code']?.toString().toLowerCase();
           final languageId = value['language_id']?.toString();
           if (code == targetCode || languageId == language.id.toString()) {
@@ -922,9 +920,9 @@ class _AddProductWithBarcodeModalState
       showScaffoldError(
         context: context,
         message: 'product_form.error_generating_barcode'.tr.replaceAll(
-          '@error',
-          e.toString(),
-        ),
+              '@error',
+              e.toString(),
+            ),
       );
     } finally {
       onLoadingChanged?.call(false);
@@ -1292,9 +1290,9 @@ class _AddProductWithBarcodeModalState
       showScaffold(
         context: context,
         message: 'product_form.translated_to'.tr.replaceAll(
-          '@language',
-          language.name,
-        ),
+              '@language',
+              language.name,
+            ),
       );
     } else {
       showScaffoldError(
@@ -1331,8 +1329,7 @@ class _AddProductWithBarcodeModalState
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final multiSaleUnitEnabled =
-        context
+    final multiSaleUnitEnabled = context
             .watch<AppSettingsProvider>()
             .appSettings
             ?.multiSaleUnitEnabled ??
@@ -1452,9 +1449,9 @@ class _AddProductWithBarcodeModalState
                   Text(
                     widget.barcode != null
                         ? 'product_form.no_product_found_barcode'.tr.replaceAll(
-                            '@barcode',
-                            '${widget.barcode}',
-                          )
+                              '@barcode',
+                              '${widget.barcode}',
+                            )
                         : 'product_form.subtitle'.tr,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
@@ -1565,10 +1562,8 @@ class _AddProductWithBarcodeModalState
                       Expanded(
                         child: Consumer<AppSettingsProvider>(
                           builder: (context, appSettingsProvider, child) {
-                            final itemCodeEnabled =
-                                appSettingsProvider
-                                    .appSettings
-                                    ?.itemCodeEnabled ??
+                            final itemCodeEnabled = appSettingsProvider
+                                    .appSettings?.itemCodeEnabled ??
                                 false;
                             if (!itemCodeEnabled) {
                               return const SizedBox.shrink();
@@ -2117,9 +2112,9 @@ class _AddProductWithBarcodeModalState
       children: [
         Text(
           'product_form.product_name_in_language'.tr.replaceAll(
-            '@language',
-            language.name,
-          ),
+                '@language',
+                language.name,
+              ),
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s12,
@@ -2140,9 +2135,8 @@ class _AddProductWithBarcodeModalState
                 width: double.infinity,
                 child: TextFormField(
                   controller: controller,
-                  textDirection: language.isRtl
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                  textDirection:
+                      language.isRtl ? TextDirection.rtl : TextDirection.ltr,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
@@ -2167,9 +2161,8 @@ class _AddProductWithBarcodeModalState
                 message: 'product_form.translate_tooltip'.tr,
                 child: ElevatedButton(
                   focusNode: translateFocusNode,
-                  onPressed: isTranslating
-                      ? null
-                      : () => _translateLanguage(language),
+                  onPressed:
+                      isTranslating ? null : () => _translateLanguage(language),
                   style: _buildSquareActionButtonStyle(),
                   child: isTranslating
                       ? const SizedBox(
@@ -2286,9 +2279,9 @@ class _AddProductWithBarcodeModalState
             onRetryLoadProperties: _retryFetchVariantProperties,
             onGenerateBarcode: (target, setLoading) =>
                 _generateBarcodeIntoController(
-                  target,
-                  onLoadingChanged: setLoading,
-                ),
+              target,
+              onLoadingChanged: setLoading,
+            ),
           ),
         );
       },
@@ -2406,9 +2399,9 @@ class _AddProductWithBarcodeModalState
             children: [
               Text(
                 'product_sale_unit.base_unit_label'.tr.replaceAll(
-                  '@unit',
-                  _resolveUnitLabel(selectedUnit, unitList),
-                ),
+                      '@unit',
+                      _resolveUnitLabel(selectedUnit, unitList),
+                    ),
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,
@@ -2468,7 +2461,8 @@ class _AddProductWithBarcodeModalState
     _SaleUnitFormRow row,
     int index,
   ) {
-    final availableUnits = (unitList ?? const <String, String>{}).entries
+    final availableUnits = (unitList ?? const <String, String>{})
+        .entries
         .where((entry) => entry.key != selectedUnit)
         .map((entry) => entry.key)
         .toList();
@@ -2480,8 +2474,7 @@ class _AddProductWithBarcodeModalState
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              _showSaleUnitValidation &&
+          color: _showSaleUnitValidation &&
                   ((row.selectedUnitId?.isEmpty ?? true) ||
                       row.conversionRateController.text.trim().isEmpty ||
                       row.barcodeController.text.trim().isEmpty ||
@@ -2497,9 +2490,9 @@ class _AddProductWithBarcodeModalState
             children: [
               Text(
                 'product_form.sale_unit_index'.tr.replaceAll(
-                  '@n',
-                  '${index + 1}',
-                ),
+                      '@n',
+                      '${index + 1}',
+                    ),
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,
@@ -2805,8 +2798,7 @@ class _AddProductWithBarcodeModalState
                     context,
                     listen: false,
                   );
-                  final existingIds =
-                      categoryProvider.category
+                  final existingIds = categoryProvider.category
                           ?.map((c) => c.categoryId)
                           .toSet() ??
                       {};
@@ -2859,9 +2851,8 @@ class _AddProductWithBarcodeModalState
 
   // Submit form
   Future<void> _submitForm({bool keepOpen = false}) async {
-    final multiSaleUnitEnabled = context
-        .read<AppSettingsProvider>()
-        .multiSaleUnitEnabled;
+    final multiSaleUnitEnabled =
+        context.read<AppSettingsProvider>().multiSaleUnitEnabled;
     setState(() {
       isValidatedOnce = true;
       _showSaleUnitValidation = multiSaleUnitEnabled && _showAdvancedOptions;
@@ -2895,8 +2886,7 @@ class _AddProductWithBarcodeModalState
         }
       }
 
-      final variantEnabled =
-          Provider.of<AppSettingsProvider>(
+      final variantEnabled = Provider.of<AppSettingsProvider>(
             context,
             listen: false,
           ).appSettings?.productVariantEnabled ??
@@ -2946,8 +2936,7 @@ class _AddProductWithBarcodeModalState
             ? buildCreateVariantsPayload(_variantController.toCreateInputs())
             : const <Map<String, dynamic>>[];
 
-        final itemCodeEnabled =
-            Provider.of<AppSettingsProvider>(
+        final itemCodeEnabled = Provider.of<AppSettingsProvider>(
               context,
               listen: false,
             ).appSettings?.itemCodeEnabled ??
@@ -2970,19 +2959,18 @@ class _AddProductWithBarcodeModalState
           variants: variants.isNotEmpty ? variants : null,
           conversionRateBase:
               _baseConversionRateController.text.trim().isNotEmpty
-              ? _baseConversionRateController.text.trim()
-              : '1',
-          itemCode: itemCodeEnabled
-              ? _productItemCodeController.text.trim()
-              : null,
+                  ? _baseConversionRateController.text.trim()
+                  : '1',
+          itemCode:
+              itemCodeEnabled ? _productItemCodeController.text.trim() : null,
           minMarginPercentage:
               _productMinMarginController.text.trim().isNotEmpty
-              ? _productMinMarginController.text.trim()
-              : null,
+                  ? _productMinMarginController.text.trim()
+                  : null,
           minMarginPrice:
               _productMinMarginPriceController.text.trim().isNotEmpty
-              ? _productMinMarginPriceController.text.trim()
-              : null,
+                  ? _productMinMarginPriceController.text.trim()
+                  : null,
         );
 
         if (!mounted) {
@@ -3052,9 +3040,9 @@ class _AddProductWithBarcodeModalState
         showScaffoldError(
           context: context,
           message: 'product_form.error_adding_product'.tr.replaceAll(
-            '@error',
-            e.toString(),
-          ),
+                '@error',
+                e.toString(),
+              ),
         );
         debugPrint("Error in product creation: $e");
       } finally {
