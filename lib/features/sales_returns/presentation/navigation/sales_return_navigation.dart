@@ -6,7 +6,7 @@ class SalesReturnNavigation {
       ? Get.find<SideBarController>()
       : Get.put(SideBarController());
   static void openList() =>
-      _sidebar.index.value = SideBarController.salesReturnListIndex;
+      _sidebar.index.value = SideBarController.salesReturnListScreenIndex;
   static void openCreate() =>
-      _sidebar.index.value = SideBarController.createSalesReturnIndex;
+      _sidebar.index.value = SideBarController.createSalesReturnScreenIndex;
 }

@@ -552,8 +552,10 @@ class _SideMenuState extends State<SideMenu> {
                           SideBarController.salesScreenIndex ||
                       sideBarController.index.value ==
                           SideBarController.salesOrderDetailsScreenIndex ||
-                      sideBarController.index.value == 49 ||
-                      sideBarController.index.value == 50 ||
+                      sideBarController.index.value ==
+                          SideBarController.createSalesReturnScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.salesReturnListScreenIndex ||
                       sideBarController.index.value == 51 ||
                       sideBarController.index.value ==
                           SideBarController.confirmedOrdersScreenIndex ||

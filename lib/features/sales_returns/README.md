@@ -46,8 +46,8 @@ partial item returns and return-order completion payloads remain covered.
 
 ## Navigation
 
-- `SideBarController.createSalesReturnIndex`: 49, CreateSalesReturnPage.
-- `SideBarController.salesReturnListIndex`: 50, SalesReturnListPage.
+- `SideBarController.createSalesReturnScreenIndex`: 49, CreateSalesReturnPage.
+- `SideBarController.salesReturnListScreenIndex`: 50, SalesReturnListPage.
 
 The positional screen array is unchanged. Menus and Sales entry points use the
 named constants/navigation adapter. The modal remains a public dialog entry.

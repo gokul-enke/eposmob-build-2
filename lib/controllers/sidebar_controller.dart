@@ -162,8 +162,8 @@ class SideBarController extends GetxController {
   static const int onlineSalesScreenIndex = 92;
 
   /// Sales Returns screens; navigate through SalesReturnNavigation.
-  static const int createSalesReturnIndex = 49;
-  static const int salesReturnListIndex = 50;
+  static const int createSalesReturnScreenIndex = 49;
+  static const int salesReturnListScreenIndex = 50;
 
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
@@ -233,8 +233,8 @@ class SideBarController extends GetxController {
     HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
-    CreateSalesReturnPage(), // createSalesReturnIndex
-    SalesReturnListPage(), // salesReturnListIndex
+    CreateSalesReturnPage(), // createSalesReturnScreenIndex
+    SalesReturnListPage(), // salesReturnListScreenIndex
     EditOrder(), // 51 Edit Order
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
