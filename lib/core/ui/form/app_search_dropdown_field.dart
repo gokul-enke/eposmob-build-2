@@ -39,6 +39,7 @@ class AppSearchDropdownField<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selection = value != null && items.contains(value) ? value : null;
+    final decoration = AppInputDecoration.of(hint: hint);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -75,8 +76,18 @@ class AppSearchDropdownField<T> extends StatelessWidget {
             expandedInsets: EdgeInsets.zero,
             menuHeight: menuHeight,
             textStyle: AppTextStyles.input,
-            decorationBuilder: (context, controller) =>
-                AppInputDecoration.of(hint: hint),
+            hintText: hint,
+            inputDecorationTheme:
+                Theme.of(context).inputDecorationTheme.copyWith(
+                      hintStyle: decoration.hintStyle,
+                      filled: decoration.filled,
+                      fillColor: decoration.fillColor,
+                      isDense: decoration.isDense,
+                      contentPadding: decoration.contentPadding,
+                      border: decoration.border,
+                      enabledBorder: decoration.enabledBorder,
+                      focusedBorder: decoration.focusedBorder,
+                    ),
             onSelected: onChanged,
             dropdownMenuEntries: [
               for (final item in items)
