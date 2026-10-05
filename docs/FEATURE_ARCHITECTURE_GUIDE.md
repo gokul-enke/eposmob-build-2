@@ -180,7 +180,22 @@ Copy the shape from `features/suppliers/data/supplier_api.dart`.
    `customer_list_controller.dart` / `supplier_list_controller.dart`.
 3. Cut big screens into widgets under `presentation/widgets/<page>/` — table
    columns, card, filter fields, form sections, dialogs. **Keep files under
-   ~400 lines.**
+   ~400 lines.** The limit is there to get **smaller pieces with their own
+   job**, not smaller files:
+   - Every piece of UI is a real widget: `class X extends StatelessWidget`
+     (or `StatefulWidget`) with `Widget build(BuildContext context)`. Never a
+     plain class that stores a `BuildContext` in a field and is called as
+     `X(context: context, …).build()`.
+   - Never split one class across files with `part` / `part of` plus
+     private extensions (`extension _Section0 on MyView`), or numbered files
+     (`my_view_1.dart`, `my_view_section_2.dart`). That only hides a
+     2,000-line class in pieces.
+   - A big controller is split by **job** — e.g. a form controller, a
+     totals calculator in `domain/`, a payload builder in `data/` — not
+     into `_operations_1`, `_operations_2`.
+   - A helper that only opens a dialog/sheet may be a function
+     (`showXDetailsDialog(context, item)`); it must check
+     `context.mounted` after every `await`.
 4. A controller that loads data takes a `fetch` function, not a provider,
    so it can be tested without widgets:
 
@@ -203,6 +218,7 @@ Copy the shape from `features/suppliers/data/supplier_api.dart`.
 
    ```dart
    /// Purchase screens in [screens]. Navigate through [PurchaseNavigation].
+   /// Names always end in `ScreenIndex`.
    static const int purchasesScreenIndex = 12;
    static const int purchaseDetailsScreenIndex = 13;
    ```
@@ -304,6 +320,25 @@ imports; don't delete a test unless the code it tested is gone.
 - **Tests need `.env`.** `flutter test` fails with "No file or variants
   found for asset: .env" in a fresh checkout or worktree. Copy your local
   `.env` to the project root — never commit it.
+- **Files split to beat the line limit.** PR #299 kept every file under 400
+  lines by cutting classes into `part` files with private extensions
+  (`purchase_order_form_view_1.dart` … `_8.dart`) and "views" that store a
+  `BuildContext` and are called with `.build()`. They are not widgets
+  (Flutter cannot rebuild or test them on their own) and the classes are as
+  big as before. See step 4.3 for how to split.
+- **Translations in `domain/`.** `purchase_order_totals.dart` returned
+  `'…'.tr`, which pulls GetX into the domain. Domain code returns a key or
+  an enum; the controller or widget translates it.
+- **Raw indices outside the module.** The voucher print screen (in
+  `lib/screens/`) still set `index.value = 72`. Search **all of `lib/`**
+  for the module's raw indices, not only the files you moved.
+- **Index names.** New constants were named `purchaseOrderListIndex`; the
+  convention is `…ScreenIndex` (`purchaseOrderListScreenIndex`).
+- **More modules added to an open PR.** Purchases was pushed onto the
+  vouchers/purchase-returns PR while it was being reviewed, on a branch
+  still named `expenses-architecture`. One module per PR, on a new branch
+  named after it (`mubashir/<module>-architecture`); don't push to a PR
+  that is under review except to answer review comments.
 - **`git stash` is shared.** All worktrees on this machine share one stash
   list. Don't use a bare `git stash`; set work aside with a temporary
   commit on your branch instead.
@@ -324,7 +359,13 @@ imports; don't delete a test unless the code it tested is gone.
       HTTP in them
 - [ ] Sidebar indices named on `SideBarController`; one
       `<module>_navigation.dart`
-- [ ] No file over ~400 lines
+- [ ] No file over ~400 lines — **without** `part` files, numbered files
+      or private extensions; every UI piece extends `StatelessWidget` /
+      `StatefulWidget`; no class stores a `BuildContext`
+- [ ] `domain/` has no `.tr` / GetX (returns keys or enums)
+- [ ] `grep -rn "index.value = <n>" lib` finds none of the module's indices
+      outside `sidebar_controller.dart`; constants end in `ScreenIndex`
+- [ ] The PR has exactly one module, on its own branch
 - [ ] Tests mirror `lib/` under `test/features/<module>/`; API, controller
       and page tests (phone + desktop)
 - [ ] `README.md` written, including the public surface
@@ -350,10 +391,12 @@ first:
 
 1. ~~Expenses~~ — **done** (PR #296): `lib/features/expenses/`, a good
    example of a module with a list, a create form and a details page
-2. Vouchers (customer + supplier) — `lib/screens/transactions/*voucher*`
-3. Purchase returns, then purchases
-4. Sales returns, then sales
-5. Stock / products
-6. The remaining reports → `lib/features/reports/`
+2. ~~Vouchers~~, ~~purchase returns~~, ~~purchases~~ — **done** (PR #299):
+   `lib/features/vouchers/`, `purchase_returns/`, `purchases/`. Their form,
+   list and detail views still use the `part`-file / `.build()` pattern —
+   convert them to real widgets in each module's UI PR.
+3. Sales returns, then sales
+4. Stock / products
+5. The remaining reports → `lib/features/reports/`
 
 Ask for review after the first module before starting the next.
