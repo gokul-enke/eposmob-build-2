@@ -762,7 +762,8 @@ class ReceiptLayoutParams {
   }
 
   /// Printable name of a payment method: the configured `showCash` label for
-  /// cash, renderer names for card / UPI, otherwise the method's own name.
+  /// cash, renderer names for card / UPI / credit, otherwise the method's own
+  /// name.
   String paymentMethodName(String method) {
     final clean = method.trim();
     switch (clean.toUpperCase()) {
@@ -772,6 +773,13 @@ class ReceiptLayoutParams {
         return rendererText(english: 'Card', arabic: 'بطاقة');
       case 'UPI':
         return 'UPI';
+      // The amount left on the customer's account. Billing stores it as
+      // DEBIT, while the server and older orders may say CREDIT or BALANCE;
+      // all three print the one untranslated code the checkout shows.
+      case 'DEBIT':
+      case 'CREDIT':
+      case 'BALANCE':
+        return 'CREDIT';
       default:
         return clean;
     }
