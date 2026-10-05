@@ -20,7 +20,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/category_list_scope.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -7370,8 +7370,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     ),
                 Colors.green,
                 item.taxIncludePurchase,
-                footerTrailingText:
-                    'add_stock.total_colon'.trParams({'amount': _getPurchaseTotal(item).toStringAsFixed(2)}),
+                footerTrailingText: 'add_stock.total_colon'.trParams(
+                    {'amount': _getPurchaseTotal(item).toStringAsFixed(2)}),
                 toggleLabel: 'add_stock.including_tax'.tr,
                 toggleValue: item.taxIncludePurchase,
                 onToggleChanged: (value) {

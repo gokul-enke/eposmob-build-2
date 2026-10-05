@@ -7,7 +7,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -221,7 +221,8 @@ Future<bool> showEditStockDialog({
                                         child: DropdownButton<String>(
                                           value: selectedRackId,
                                           isExpanded: true,
-                                          hint: Text('product_detail.select_rack'.tr),
+                                          hint: Text(
+                                              'product_detail.select_rack'.tr),
                                           items: rackMap.entries
                                               .map(
                                                 (entry) =>
@@ -323,10 +324,9 @@ Future<bool> showEditStockDialog({
                                 mrp: showMrp
                                     ? mrpController.text.trim()
                                     : initialMrp,
-                                purchasePrice:
-                                    showPurchasePrice
-                                        ? purchasePriceController.text.trim()
-                                        : initialPurchasePrice,
+                                purchasePrice: showPurchasePrice
+                                    ? purchasePriceController.text.trim()
+                                    : initialPurchasePrice,
                                 quantity: payloadQuantity,
                                 rack: payloadRack,
                                 accessToken: accessToken,
@@ -351,10 +351,9 @@ Future<bool> showEditStockDialog({
                                   mrp: showMrp
                                       ? mrpController.text.trim()
                                       : initialMrp,
-                                  purchasePrice:
-                                      showPurchasePrice
-                                          ? purchasePriceController.text.trim()
-                                          : initialPurchasePrice,
+                                  purchasePrice: showPurchasePrice
+                                      ? purchasePriceController.text.trim()
+                                      : initialPurchasePrice,
                                   quantity: quantityController.text.trim(),
                                   rack: payloadRack,
                                 );
@@ -405,11 +404,9 @@ Future<bool> showEditStockDialog({
                                       mrp: showMrp
                                           ? mrpController.text.trim()
                                           : initialMrp,
-                                      purchasePrice:
-                                          showPurchasePrice
-                                              ? purchasePriceController.text
-                                                  .trim()
-                                              : initialPurchasePrice,
+                                      purchasePrice: showPurchasePrice
+                                          ? purchasePriceController.text.trim()
+                                          : initialPurchasePrice,
                                       quantity: quantityController.text.trim(),
                                       rack: rackController.text.trim(),
                                     ),

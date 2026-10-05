@@ -25,7 +25,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/customer_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/customer_voucher_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -48,7 +48,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/company_account_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
-import 'package:pos_machine/providers/supplier_voucher_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/state/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -71,7 +71,7 @@ import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'controllers/sidebar_controller.dart';
 import 'providers/cart.dart';
 import 'providers/carousel_provider.dart';
-import 'providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'resources/app_url.dart';
 import 'screens/login/login.dart';
 import 'screens/login/base_url_wrapper.dart';
@@ -295,8 +295,8 @@ void _initializeBinding() {
 Future<void> _initializeApp() async {
   // Must run before anything reads SharedPreferences: a damaged file makes
   // every read throw and strands the till on the API key screen.
-  await _startupStep('check saved settings file',
-      () => PreferencesFileGuard.ensureReadable());
+  await _startupStep(
+      'check saved settings file', () => PreferencesFileGuard.ensureReadable());
   await _startupStep(
       'read saved server URL', _initializeBaseUrlFromPreferences);
   await _startupStep(

@@ -7,7 +7,7 @@ import '../providers/category_providers.dart';
 import '../providers/category_list_scope.dart';
 import '../providers/document_config_provider.dart';
 import '../providers/invoice_provider.dart';
-import '../providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/auth_model.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';

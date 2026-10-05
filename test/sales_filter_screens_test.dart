@@ -7,7 +7,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/features/expenses/presentation/state/expense_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_translations.dart';
@@ -155,10 +155,12 @@ void main() {
     expect(find.descendant(of: toggle, matching: find.byType(Container)),
         findsNothing);
 
-    final firstFilter = find.descendant(
-      of: find.byKey(const ValueKey('orders-list-filters')),
-      matching: find.byType(TextFormField),
-    ).first;
+    final firstFilter = find
+        .descendant(
+          of: find.byKey(const ValueKey('orders-list-filters')),
+          matching: find.byType(TextFormField),
+        )
+        .first;
     await tester.enterText(firstFilter, 'ORD-1');
     await tester.pump();
 

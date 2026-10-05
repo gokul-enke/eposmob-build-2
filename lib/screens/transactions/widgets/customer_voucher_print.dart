@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/customer_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/customer_voucher.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
@@ -73,10 +73,12 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
   Future<void> _checkPermissions() async {
     debugPrint('[CustomerVoucherPrintPage] _checkPermissions() called');
     if (await _requestPermissions()) {
-      debugPrint('[CustomerVoucherPrintPage] Permissions granted. Proceeding to scan.');
+      debugPrint(
+          '[CustomerVoucherPrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
-      debugPrint('[CustomerVoucherPrintPage] Permissions NOT granted. Showing dialog.');
+      debugPrint(
+          '[CustomerVoucherPrintPage] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
@@ -98,7 +100,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
       });
 
       final granted = statuses.values.every((status) => status.isGranted);
-      debugPrint('[CustomerVoucherPrintPage] All permissions granted: $granted');
+      debugPrint(
+          '[CustomerVoucherPrintPage] All permissions granted: $granted');
       return granted;
     }
     debugPrint(
@@ -142,7 +145,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
     try {
       // Bluetooth discovery only on mobile platforms
       if (Platform.isAndroid || Platform.isIOS) {
-        debugPrint('[CustomerVoucherPrintPage] Beginning Bluetooth discovery (isBle=false)');
+        debugPrint(
+            '[CustomerVoucherPrintPage] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
@@ -159,7 +163,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
             });
           }
         }, onError: (err) {
-          debugPrint('[CustomerVoucherPrintPage] Bluetooth discovery error: $err');
+          debugPrint(
+              '[CustomerVoucherPrintPage] Bluetooth discovery error: $err');
         }, onDone: () {
           final btCount = devices
               .where((p) => p.typePrinter == PrinterType.bluetooth)
@@ -199,7 +204,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
           _isScanning = false;
         });
       }
-      debugPrint('[CustomerVoucherPrintPage] Scan finished. devices.length=${devices.length}');
+      debugPrint(
+          '[CustomerVoucherPrintPage] Scan finished. devices.length=${devices.length}');
     }
   }
 
@@ -231,7 +237,8 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
         _handlePrint();
       }
     } else {
-      debugPrint('[CustomerVoucherPrintPage] No default printer found in SharedPreferences');
+      debugPrint(
+          '[CustomerVoucherPrintPage] No default printer found in SharedPreferences');
       setState(() {
         _isLoading = false;
       });
@@ -242,37 +249,41 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
     try {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
-      debugPrint('[CustomerVoucherPrintPage] Loading document configuration...');
-      
+      debugPrint(
+          '[CustomerVoucherPrintPage] Loading document configuration...');
+
       _voucherDocumentConfig = docConfigProvider.getDocumentConfig('Voucher');
-      
+
       if (_voucherDocumentConfig != null) {
         debugPrint('[CustomerVoucherPrintPage] Document configuration loaded');
-        
+
         // Auto-print if printer is already loaded
         if (selectedPrinter != null) {
           _handlePrint();
         }
       } else {
-        debugPrint('[CustomerVoucherPrintPage] Document configuration not found, fetching from API...');
+        debugPrint(
+            '[CustomerVoucherPrintPage] Document configuration not found, fetching from API...');
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
           await Provider.of<DocumentConfigProvider>(context, listen: false)
               .fetchDocumentConfigurations(accessToken: accessToken);
-          _voucherDocumentConfig = docConfigProvider.getDocumentConfig('Voucher');
-          
+          _voucherDocumentConfig =
+              docConfigProvider.getDocumentConfig('Voucher');
+
           if (_voucherDocumentConfig != null && selectedPrinter != null) {
             _handlePrint();
           }
         }
       }
-      
+
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('[CustomerVoucherPrintPage] Error loading document config: $e');
+      debugPrint(
+          '[CustomerVoucherPrintPage] Error loading document config: $e');
       setState(() {
         _isLoading = false;
       });
@@ -452,7 +463,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
-                        children: ['112mm', '80mm', '58mm', 'A5', 'A4']
+                      children: ['112mm', '80mm', '58mm', 'A5', 'A4']
                           .map((size) => ChoiceChip(
                                 label: Text(size),
                                 selected: selectedPaperSize == size,

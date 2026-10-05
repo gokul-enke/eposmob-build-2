@@ -7,7 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/customer_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/customer_voucher.dart';
 import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
@@ -62,13 +62,14 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         showScaffold(
           context: context,
-          message: 'voucher_print.preparing_document'.trParams(
-              {'paperSize': selectedPaperSize}),
+          message: 'voucher_print.preparing_document'
+              .trParams({'paperSize': selectedPaperSize}),
         );
       }
 
       // Generate PDF
-      final pdf = await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
+      final pdf =
+          await _generatePDF(voucher, voucherDocumentConfig, selectedPaperSize);
 
       // Save and print
       await _printPDF(
@@ -97,7 +98,8 @@ class CustomerVoucherStandardPrinter {
     final pdf = pw.Document();
 
     // Determine page format
-    final pageFormat = selectedPaperSize == 'A5' ? PdfPageFormat.a5 : PdfPageFormat.a4;
+    final pageFormat =
+        selectedPaperSize == 'A5' ? PdfPageFormat.a5 : PdfPageFormat.a4;
 
     pdf.addPage(
       pw.Page(
@@ -414,7 +416,8 @@ class CustomerVoucherStandardPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
+          message:
+              'voucher_print.error_generating_pdf'.trParams({'error': '$e'}),
         );
       }
     }

@@ -1,11 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -321,8 +321,8 @@ class SupplierVoucherThermalPrinter {
       if (context.mounted) {
         showScaffoldError(
           context: context,
-          message: 'voucher_print.error_printing'
-              .trParams({'error': e.toString()}),
+          message:
+              'voucher_print.error_printing'.trParams({'error': e.toString()}),
         );
       }
     }

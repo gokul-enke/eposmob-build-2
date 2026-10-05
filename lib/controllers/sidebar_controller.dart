@@ -27,18 +27,18 @@ import 'package:pos_machine/screens/product/product_barcode.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
-import 'package:pos_machine/screens/purchase/purchase.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_page.dart';
 import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
 import 'package:pos_machine/screens/product/stock.dart';
-import 'package:pos_machine/screens/purchase/purchase_orders.dart';
-import 'package:pos_machine/screens/purchase/widgets/create_purchase_order.dart';
-import 'package:pos_machine/screens/purchase/purchase_voucher.dart';
-import 'package:pos_machine/screens/purchase/widgets/add_purchase.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_order_list_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/create_purchase_order_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/add_purchase_page.dart';
 import 'package:pos_machine/screens/profile/open_profile.dart';
-import 'package:pos_machine/screens/purchase/widgets/view_purchase.dart';
-import 'package:pos_machine/screens/purchase_return/purchase_return_list.dart';
-import 'package:pos_machine/screens/purchase_return/create_purchase_return.dart';
-import 'package:pos_machine/screens/purchase/widgets/view_voucher.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_details_page.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/purchase_return_list_page.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/pages/create_purchase_return_page.dart';
+import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_details_page.dart';
 import 'package:pos_machine/screens/reports/account_book/account_book.dart';
 import 'package:pos_machine/features/reports/presentation/pages/customer_transactions_report_page.dart';
 // Adding import for the new simple transaction details screen
@@ -80,10 +80,10 @@ import 'package:pos_machine/screens/transactions/widgets/view_receipt_details.da
 import 'package:pos_machine/screens/transactions/widgets/view_transaction_details.dart';
 import 'package:pos_machine/screens/transactions/widgets/view_voucher_details.dart';
 import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_transactions.dart';
-import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
-import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
-import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
-import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/customer_voucher_list_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/create_customer_voucher_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/supplier_voucher_list_page.dart';
+import 'package:pos_machine/features/vouchers/presentation/pages/create_supplier_voucher_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/create_expense_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
@@ -131,6 +131,28 @@ class SideBarController extends GetxController {
   static const int createExpenseScreenIndex = 94;
   static const int viewExpenseScreenIndex = 95;
 
+  /// Customer and supplier voucher routes, including Transactions aliases.
+  static const int customerVoucherListScreenIndex = 70;
+  static const int createCustomerVoucherScreenIndex = 71;
+  static const int supplierVoucherListScreenIndex = 72;
+  static const int createSupplierVoucherScreenIndex = 73;
+  static const int transactionSupplierVoucherListScreenIndex = 75;
+  static const int transactionCreateSupplierVoucherScreenIndex = 76;
+
+  /// Purchase return screens in [screens]. Navigate through [PurchaseReturnNavigation].
+  static const int purchaseReturnListScreenIndex = 99;
+  static const int createPurchaseReturnScreenIndex = 100;
+
+  /// Purchase order screens in [screens]. Navigate through [PurchaseNavigation].
+  static const int legacyPurchaseListScreenIndex = 19;
+  static const int legacyCreatePurchaseScreenIndex = 20;
+  static const int legacyPurchaseVoucherListScreenIndex = 26;
+  static const int legacyPurchaseVoucherDetailsScreenIndex = 29;
+  static const int legacyPurchaseVoucherEntryScreenIndex = 37;
+  static const int purchaseOrderListScreenIndex = 81;
+  static const int createPurchaseOrderScreenIndex = 82;
+  static const int purchaseDetailsScreenIndex = 36;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -169,24 +191,24 @@ class SideBarController extends GetxController {
     AddCategoryPageScreen(), //16
     TabBarForAddNewProduct(), //17
     AddProductStockScreen(), //18
-    PurchaseScreen(), //19
-    AddPurchaseScreen(), //20
+    LegacyPurchaseListPage(), // legacyPurchaseListScreenIndex
+    LegacyAddPurchasePage(), // legacyCreatePurchaseScreenIndex
     InvoiceListScreen(), // invoiceListScreenIndex
     VoucherListScreen(), //22
     CustomerTransactionListScreen(), //23
     CreateNewInvoiceScreen(), //24
     CreateNewVoucherScreen(), //25
-    PurchaseVoucherScreen(), //26
+    LegacyPurchaseVoucherListPage(), // legacyPurchaseVoucherListScreenIndex
     ViewCategoryWidget(), //27
     ViewProductWidget(), //28
-    ViewVoucherWidget(), //29
+    LegacyPurchaseVoucherDetailsPage(), // legacyPurchaseVoucherDetailsScreenIndex
     ViewTransactionDetailsWidget(), //30
     ViewInvoiceDetailsWidget(), //31
     ViewVoucherDetailsWidget(), //32
     StockDetailsWidget(), //33
     EditCategoryPageScreen(), //34
     TabBarForEditProduct(), //35
-    ViewPurchaseWidget(), //36
+    PurchaseDetailsPage(), // purchaseDetailsScreenIndex
     AddVoucherDetailsWidget(), //37
     CustomerProfilePage(), //38
     AccountBookScreen(), //39
@@ -223,19 +245,19 @@ class SideBarController extends GetxController {
     SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
     SupplierProfilePage(), // 69 Supplier Profile
-    CustomerVoucherListScreen(), // 70 Customer Voucher List
-    CreateCustomerVoucherScreen(), // 71 Create Customer Voucher
-    SupplierVoucherListScreen(), // 72 Supplier Voucher List
-    CreateSupplierVoucherScreen(), // 73 Create Supplier Voucher
+    CustomerVoucherListPage(), // 70 Customer Voucher List
+    CreateCustomerVoucherPage(), // 71 Create Customer Voucher
+    SupplierVoucherListPage(), // 72 Supplier Voucher List
+    CreateSupplierVoucherPage(), // 73 Create Supplier Voucher
     TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
-    SupplierVoucherListScreen(), // 75 Supplier Voucher List (alias for Transactions)
-    CreateSupplierVoucherScreen(), // 76 Create Supplier Voucher (alias for Transactions)
+    SupplierVoucherListPage(), // 75 Supplier Voucher List (alias for Transactions)
+    CreateSupplierVoucherPage(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportScreen(), // 77 Non-Stock Report
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
     DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
     ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
-    AddPurchaseOrderScreen(), // 81 Purchase Order Screen
-    CreatePurchaseOrderScreen(), // 82 Create Purchase Order Screen
+    PurchaseOrderListPage(), // purchaseOrderListScreenIndex
+    CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
@@ -260,8 +282,8 @@ class SideBarController extends GetxController {
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
     StockReportScreen(), // 98 Stock Report Screen
-    PurchaseReturnListScreen(), // 99 Purchase Return List
-    CreatePurchaseReturnScreen(), // 100 Create Purchase Return
+    PurchaseReturnListPage(), // 99 purchaseReturnListScreenIndex
+    CreatePurchaseReturnPage(), // 100 createPurchaseReturnScreenIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex
   ];
 }

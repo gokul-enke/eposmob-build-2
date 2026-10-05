@@ -16,7 +16,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/customers/presentation/widgets/purchase_history/customer_purchase_history_dialog.dart';

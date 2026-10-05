@@ -12,10 +12,10 @@ import 'package:provider/provider.dart';
 import '../../../components/build_container_box.dart';
 import '../../../components/build_round_button.dart';
 import '../../../controllers/sidebar_controller.dart';
-import '../../../models/list_purchase.dart';
+import '../../../features/purchases/domain/models/list_purchase.dart';
 
 import '../../../providers/grid_provider.dart';
-import '../../../providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
@@ -154,7 +154,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: 'add_voucher_details.label_purchase_date'.tr,
+                                  text:
+                                      'add_voucher_details.label_purchase_date'
+                                          .tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -216,7 +218,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: 'add_voucher_details.label_voucher_number'.tr,
+                                  text:
+                                      'add_voucher_details.label_voucher_number'
+                                          .tr,
                                   style: buildCustomStyle(
                                       FontWeightManager.bold,
                                       FontSize.s15,
@@ -409,7 +413,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          'add_voucher_details.col_product_name'.tr,
+                                          'add_voucher_details.col_product_name'
+                                              .tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -457,7 +462,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          'add_voucher_details.col_purchase_rate'.tr,
+                                          'add_voucher_details.col_purchase_rate'
+                                              .tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -473,7 +479,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          'add_voucher_details.col_retail_price'.tr,
+                                          'add_voucher_details.col_retail_price'
+                                              .tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -489,7 +496,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          'add_voucher_details.col_wholesale_price'.tr,
+                                          'add_voucher_details.col_wholesale_price'
+                                              .tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -505,7 +513,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                         padding: const EdgeInsets.all(15.0),
                                         child: Center(
                                             child: Text(
-                                          'add_voucher_details.col_expiry_date'.tr,
+                                          'add_voucher_details.col_expiry_date'
+                                              .tr,
                                           style: buildCustomStyle(
                                             FontWeightManager.medium,
                                             FontSize.s12,
@@ -611,7 +620,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             ),
                                             hintStyle:
                                                 const TextStyle(fontSize: 10.0),
-                                            hintText: 'add_voucher_details.hint_quantity'.tr,
+                                            hintText:
+                                                'add_voucher_details.hint_quantity'
+                                                    .tr,
                                           ),
                                         ),
                                       ),
@@ -636,7 +647,8 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             value: products.unit ??
                                                 unitList?.keys.first,
                                             hint: Text(
-                                              'add_voucher_details.hint_choose_unit'.tr,
+                                              'add_voucher_details.hint_choose_unit'
+                                                  .tr,
                                               style: buildCustomStyle(
                                                 FontWeightManager.medium,
                                                 FontSize.s12,
@@ -691,7 +703,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             ),
                                             hintStyle:
                                                 const TextStyle(fontSize: 10.0),
-                                            hintText: 'add_voucher_details.hint_purchase_rate'.tr,
+                                            hintText:
+                                                'add_voucher_details.hint_purchase_rate'
+                                                    .tr,
                                           ),
                                         ),
                                       ),
@@ -712,7 +726,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             ),
                                             hintStyle:
                                                 const TextStyle(fontSize: 10.0),
-                                            hintText: 'add_voucher_details.hint_retail_price'.tr,
+                                            hintText:
+                                                'add_voucher_details.hint_retail_price'
+                                                    .tr,
                                           ),
                                         ),
                                       ),
@@ -735,9 +751,11 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                                 borderRadius: BorderRadius.all(
                                                     Radius.circular(10.0)),
                                               ),
-                                              hintStyle:
-                                                  const TextStyle(fontSize: 10.0),
-                                              hintText: 'add_voucher_details.hint_wholesale_price'.tr,
+                                              hintStyle: const TextStyle(
+                                                  fontSize: 10.0),
+                                              hintText:
+                                                  'add_voucher_details.hint_wholesale_price'
+                                                      .tr,
                                             ),
                                           ),
                                           const SizedBox(height: 5),
@@ -749,9 +767,11 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                                 borderRadius: BorderRadius.all(
                                                     Radius.circular(10.0)),
                                               ),
-                                              hintStyle:
-                                                  const TextStyle(fontSize: 10.0),
-                                              hintText: 'add_voucher_details.hint_min_unit'.tr,
+                                              hintStyle: const TextStyle(
+                                                  fontSize: 10.0),
+                                              hintText:
+                                                  'add_voucher_details.hint_min_unit'
+                                                      .tr,
                                             ),
                                           ),
                                         ],
@@ -787,7 +807,9 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                             ),
                                             hintStyle:
                                                 const TextStyle(fontSize: 10.0),
-                                            hintText: 'add_voucher_details.hint_batch_number'.tr,
+                                            hintText:
+                                                'add_voucher_details.hint_batch_number'
+                                                    .tr,
                                           ),
                                         ),
                                       ),
@@ -852,14 +874,18 @@ class AddVoucherDetailsWidget extends StatelessWidget {
                                                 showScaffoldError(
                                                   context: context,
                                                   message:
-                                                      'add_voucher_details.success_stock_updated'.tr,
+                                                      'add_voucher_details.success_stock_updated'
+                                                          .tr,
                                                 );
                                               } else {
                                                 // Show error message
                                                 showScaffoldError(
                                                   context: context,
                                                   message:
-                                                      'add_voucher_details.error_stock_update_failed'.trParams({'message': result['message']}),
+                                                      'add_voucher_details.error_stock_update_failed'
+                                                          .trParams({
+                                                    'message': result['message']
+                                                  }),
                                                 );
                                               }
                                             },

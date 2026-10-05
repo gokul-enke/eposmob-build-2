@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
+import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';
@@ -62,7 +65,19 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     debugPrint("🟡 [SideMenuMobile] build: userRole='$userRole'");
 
     void navigate(int index) {
-      sideBarController.index.value = index;
+      switch (index) {
+        case SideBarController.customerVoucherListScreenIndex:
+          VoucherNavigation.openCustomerList();
+          break;
+        case SideBarController.supplierVoucherListScreenIndex:
+          VoucherNavigation.openSupplierList();
+          break;
+        case SideBarController.transactionSupplierVoucherListScreenIndex:
+          VoucherNavigation.openSupplierList(transactions: true);
+          break;
+        default:
+          sideBarController.index.value = index;
+      }
       Navigator.of(context).pop();
     }
 
@@ -471,16 +486,25 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'nav.purchase'.tr,
-                  selected: [81, 82, 36, 99, 100]
-                      .contains(sideBarController.index.value),
+                  selected: [
+                    SideBarController.purchaseOrderListScreenIndex,
+                    SideBarController.createPurchaseOrderScreenIndex,
+                    SideBarController.purchaseDetailsScreenIndex,
+                    SideBarController.purchaseReturnListScreenIndex,
+                    SideBarController.createPurchaseReturnScreenIndex
+                  ].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_orders'.tr,
-                      onTap: () => navigate(81),
+                      onTap: () => navigate(
+                          SideBarController.purchaseOrderListScreenIndex),
                     ),
                     _MobileDrawerSubItem(
                       title: 'nav.purchase_returns'.tr,
-                      onTap: () => navigate(99),
+                      onTap: () {
+                        PurchaseReturnNavigation.openList();
+                        Navigator.of(context).pop();
+                      },
                     ),
                   ],
                 ),
@@ -659,10 +683,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     31,
                     47,
                     48,
-                    70,
-                    71,
-                    75,
-                    76,
+                    SideBarController.customerVoucherListScreenIndex,
+                    SideBarController.createCustomerVoucherScreenIndex,
+                    SideBarController.transactionSupplierVoucherListScreenIndex,
+                    SideBarController
+                        .transactionCreateSupplierVoucherScreenIndex,
                     91,
                     93,
                     94,
@@ -682,12 +707,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     if (hasCustomerVouchersPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.customer_voucher'.tr,
-                        onTap: () => navigate(70),
+                        onTap: () => navigate(
+                            SideBarController.customerVoucherListScreenIndex),
                       ),
                     if (hasSupplierVouchersPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.supplier_voucher_purchase'.tr,
-                        onTap: () => navigate(75),
+                        onTap: () => navigate(SideBarController
+                            .transactionSupplierVoucherListScreenIndex),
                       ),
                     if (hasProformaPermission)
                       _MobileDrawerSubItem(
@@ -771,8 +798,14 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.local_shipping_rounded,
                   title: 'nav.suppliers'.tr,
-                  selected: [52, 57, 69, 4, 72, 73]
-                      .contains(sideBarController.index.value),
+                  selected: [
+                    52,
+                    57,
+                    69,
+                    4,
+                    SideBarController.supplierVoucherListScreenIndex,
+                    SideBarController.createSupplierVoucherScreenIndex
+                  ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasSuppliersPermission)
                       _MobileDrawerSubItem(
@@ -790,7 +823,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     if (hasSupplierVouchersPermission)
                       _MobileDrawerSubItem(
                         title: 'nav.supplier_voucher'.tr,
-                        onTap: () => navigate(72),
+                        onTap: () => navigate(
+                            SideBarController.supplierVoucherListScreenIndex),
                       ),
                   ],
                 ),

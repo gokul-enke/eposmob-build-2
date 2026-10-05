@@ -1,34 +1,37 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
+import 'package:get/get.dart';
+import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
+
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
-
+import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
+
 import 'package:websafe_svg/websafe_svg.dart';
-
 import '../controllers/sidebar_controller.dart';
-import '../providers/auth_model.dart';
 import '../providers/admin_settings_provider.dart';
-import '../providers/authentication_providers.dart';
+import '../providers/auth_model.dart';
 
+import '../providers/authentication_providers.dart';
+import '../providers/role_provider.dart';
 import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
 import '../providers/store_session_provider.dart';
-import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import '../screens/login/login.dart';
 import '../services/session_reset_service.dart';
-import 'drawer_list_tile_expandable.dart';
-import '../widgets/user_switcher.dart';
 import '../widgets/store_switcher.dart';
-import '../providers/role_provider.dart';
+import '../widgets/user_switcher.dart';
+import 'drawer_list_tile_expandable.dart';
 
 class CollapsibleSidebar extends StatefulWidget {
   final Widget child;
@@ -706,22 +709,27 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value = 81;
+                      PurchaseNavigation.openList();
                     },
                     listTitle1: 'nav.purchase_orders'.tr,
                     showTitle1: hasPurchasePermission,
                     onTapTitle2: () {
-                      sideBarController.index.value = 99;
+                      PurchaseReturnNavigation.openList();
                     },
                     listTitle2: 'nav.purchase_returns'.tr,
                     showTitle2: hasPurchasePermission,
                     icon: fa.FontAwesomeIcons.clipboardList,
                     title: 'nav.purchase'.tr,
                     onTap: () async {
-                      sideBarController.index.value = 81;
+                      PurchaseNavigation.openList();
                     },
-                    selected: [81, 82, 36, 99, 100]
-                        .contains(sideBarController.index.value)),
+                    selected: [
+                      SideBarController.purchaseOrderListScreenIndex,
+                      SideBarController.createPurchaseOrderScreenIndex,
+                      SideBarController.purchaseDetailsScreenIndex,
+                      SideBarController.purchaseReturnListScreenIndex,
+                      SideBarController.createPurchaseReturnScreenIndex
+                    ].contains(sideBarController.index.value)),
               );
             },
           ),
@@ -905,10 +913,10 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 47;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 70;
+                      VoucherNavigation.openCustomerList();
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 75;
+                      VoucherNavigation.openSupplierList(transactions: true);
                     },
                     onTapTitle5: () {
                       sideBarController.index.value = 91;
@@ -939,10 +947,17 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 31 ||
                         sideBarController.index.value == 47 ||
                         sideBarController.index.value == 48 ||
-                        sideBarController.index.value == 70 ||
-                        sideBarController.index.value == 71 ||
-                        sideBarController.index.value == 75 ||
-                        sideBarController.index.value == 76 ||
+                        sideBarController.index.value ==
+                            SideBarController.customerVoucherListScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController
+                                .createCustomerVoucherScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController
+                                .transactionSupplierVoucherListScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController
+                                .transactionCreateSupplierVoucherScreenIndex ||
                         sideBarController.index.value == 91 ||
                         sideBarController.index.value ==
                             SideBarController.expenseListScreenIndex ||
@@ -1094,7 +1109,7 @@ class _SideMenuState extends State<SideMenu> {
                     sideBarController.index.value = 4;
                   },
                   onTapTitle3: () {
-                    sideBarController.index.value = 72;
+                    VoucherNavigation.openSupplierList();
                   },
                   listTitle1: 'nav.suppliers'.tr,
                   listTitle2: 'nav.supplier_transactions'.tr,
@@ -1118,8 +1133,10 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 57 ||
                       sideBarController.index.value == 69 ||
                       sideBarController.index.value == 4 ||
-                      sideBarController.index.value == 72 ||
-                      sideBarController.index.value == 73,
+                      sideBarController.index.value ==
+                          SideBarController.supplierVoucherListScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.createSupplierVoucherScreenIndex,
                 ),
               );
             },

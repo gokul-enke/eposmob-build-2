@@ -22,7 +22,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -297,9 +297,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       } else {
         showScaffoldError(
           context: context,
-          message:
-              result?['message']?.toString() ??
-                  'product_detail.barcode_generation_failed'.tr,
+          message: result?['message']?.toString() ??
+              'product_detail.barcode_generation_failed'.tr,
         );
       }
     } catch (e) {
@@ -772,7 +771,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         setState(() => _isSaving = false);
         showScaffoldError(
           context: context,
-        message: 'product_detail.auth_token_missing'.tr,
+          message: 'product_detail.auth_token_missing'.tr,
         );
       }
       return;
@@ -1382,7 +1381,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             if (showMrp)
               MobileDetailRow(
                 label: 'product_detail.mrp'.tr,
-                value: product.mrp != null ? '$currency ${product.mrp}' : 'general.na'.tr,
+                value: product.mrp != null
+                    ? '$currency ${product.mrp}'
+                    : 'general.na'.tr,
                 highlight: true,
               ),
             MobileDetailRow(
@@ -1517,7 +1518,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             children: [
               MobileDetailRow(
                 label: 'product_detail.weight'.tr,
-                value: product.weightInfo!.weight?.toString() ?? 'general.na'.tr,
+                value:
+                    product.weightInfo!.weight?.toString() ?? 'general.na'.tr,
               ),
               MobileDetailRow(
                 label: 'product_detail.is_weighted'.tr,
@@ -1822,7 +1824,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                         Expanded(
                           child: _mobileTextField(
                             controller: _languageNameControllers[language.id]!,
-                            label: 'product_detail.product_name_in_language'.trParams({'language': language.name}),
+                            label: 'product_detail.product_name_in_language'
+                                .trParams({'language': language.name}),
                             hint: 'product_detail.translated_name'.tr,
                           ),
                         ),

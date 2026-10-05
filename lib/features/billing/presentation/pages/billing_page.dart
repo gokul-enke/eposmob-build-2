@@ -40,7 +40,7 @@ import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -5209,13 +5209,13 @@ class BillingPageState extends State<BillingPage>
                             final response;
                             if (RegExp(r'^[0-9]+$')
                                 .hasMatch(mobileNumberTextController.text)) {
-                              response = await CustomerRepository()
-                                  .findByPhone(accessToken ?? "",
-                                      mobileNumberTextController.text);
+                              response = await CustomerRepository().findByPhone(
+                                  accessToken ?? "",
+                                  mobileNumberTextController.text);
                             } else {
-                              response = await CustomerRepository()
-                                  .findByName(accessToken ?? "",
-                                      mobileNumberTextController.text);
+                              response = await CustomerRepository().findByName(
+                                  accessToken ?? "",
+                                  mobileNumberTextController.text);
                             }
 
                             if (response["status"] == "success") {
@@ -5627,7 +5627,8 @@ class BillingPageState extends State<BillingPage>
                     child: InkWell(
                       onTap: () async {
                         debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
-                        final result = await showAddCustomerDialog(context, mobileNumber: mobileNumberTextController.text);
+                        final result = await showAddCustomerDialog(context,
+                            mobileNumber: mobileNumberTextController.text);
                         if (result != null &&
                             result is Map &&
                             result['status'] == 'success') {
@@ -5640,8 +5641,7 @@ class BillingPageState extends State<BillingPage>
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
                             final response = await CustomerRepository()
-                                .findByPhone(
-                                    accessToken ?? '', createdPhone);
+                                .findByPhone(accessToken ?? '', createdPhone);
                             if (response != null &&
                                 response['status'] == 'success') {
                               final listModel =
@@ -5987,8 +5987,8 @@ class BillingPageState extends State<BillingPage>
                 ),
               if (_showConfirmOrderButton)
                 FocusTraversalOrder(
-                  order: const NumericFocusOrder(
-                      BillingFocusOrders.confirmOrder),
+                  order:
+                      const NumericFocusOrder(BillingFocusOrders.confirmOrder),
                   child: _buildActionButton(
                     text: 'billing.confirm_order'.tr,
                     color: ColorManager.kButtonGreen,
@@ -7388,7 +7388,8 @@ class BillingPageState extends State<BillingPage>
             debugPrint(
                 "🧾 [CheckoutCustomer] Opening add customer modal prefillName=$initialName, prefillPhone=$phoneToPreFill, search=$searchQuery");
 
-            final result = await showAddCustomerDialog(context, mobileNumber: phoneToPreFill, customerName: initialName);
+            final result = await showAddCustomerDialog(context,
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];

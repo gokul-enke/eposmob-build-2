@@ -13,7 +13,7 @@ import '../../../../models/category_list.dart';
 import '../../../../providers/auth_model.dart';
 import '../../../../providers/category_providers.dart';
 import '../../../../providers/grid_provider.dart';
-import '../../../../providers/purchase_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
 import '../../../../resources/style_manager.dart';
@@ -94,7 +94,9 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: 'add_primary_details.label_select_category'.tr,
+                                title:
+                                    'add_primary_details.label_select_category'
+                                        .tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -126,7 +128,8 @@ class AddProductPageScreen extends StatelessWidget {
                                               .selectedCategoryIndex]
                                           : null,
                                       hint: Text(
-                                        'add_primary_details.hint_select_category'.tr,
+                                        'add_primary_details.hint_select_category'
+                                            .tr,
                                         style: buildCustomStyle(
                                           FontWeightManager.medium,
                                           FontSize.s12,
@@ -142,7 +145,8 @@ class AddProductPageScreen extends StatelessWidget {
                                                 child: category.categoryName ==
                                                         "ALL"
                                                     ? Text(
-                                                        'add_primary_details.option_please_select'.tr,
+                                                        'add_primary_details.option_please_select'
+                                                            .tr,
                                                         style: buildCustomStyle(
                                                           FontWeightManager
                                                               .medium,
@@ -192,7 +196,8 @@ class AddProductPageScreen extends StatelessWidget {
                                     circleRadius: 7,
                                     child: InkWell(
                                       onTap: () async {
-                                        final existingIds = categoryProvider.category
+                                        final existingIds = categoryProvider
+                                                .category
                                                 ?.map((c) => c.categoryId)
                                                 .toSet() ??
                                             {};
@@ -200,21 +205,25 @@ class AddProductPageScreen extends StatelessWidget {
                                         final result = await showDialog<bool>(
                                           context: context,
                                           barrierDismissible: false,
-                                          builder: (_) => const AddCategoryModal(),
+                                          builder: (_) =>
+                                              const AddCategoryModal(),
                                         );
 
                                         if (result == true) {
-                                          final updatedCategories = categoryProvider.category ?? [];
+                                          final updatedCategories =
+                                              categoryProvider.category ?? [];
                                           Category? newCategory;
                                           for (var c in updatedCategories) {
                                             if (c.categoryId != null &&
-                                                !existingIds.contains(c.categoryId)) {
+                                                !existingIds
+                                                    .contains(c.categoryId)) {
                                               newCategory = c;
                                               break;
                                             }
                                           }
                                           if (newCategory != null) {
-                                            final index = updatedCategories.indexOf(newCategory);
+                                            final index = updatedCategories
+                                                .indexOf(newCategory);
                                             if (index != -1) {
                                               categoryProvider.selectCategory(
                                                 index,
@@ -272,18 +281,20 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'add_primary_details.hint_product_name'.tr,
+                                    hintText:
+                                        'add_primary_details.hint_product_name'
+                                            .tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'add_primary_details.error_required'.tr;
+                                      return 'add_primary_details.error_required'
+                                          .tr;
                                     }
                                     return null;
                                   },
@@ -306,7 +317,8 @@ class AddProductPageScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               BuildTextTile(
-                                title: 'add_primary_details.label_product_slug'.tr,
+                                title:
+                                    'add_primary_details.label_product_slug'.tr,
                                 isStarRed: true,
                                 isTextField: true,
                                 textStyle: buildCustomStyle(
@@ -330,19 +342,21 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'add_primary_details.hint_product_slug'.tr,
+                                    hintText:
+                                        'add_primary_details.hint_product_slug'
+                                            .tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   controller: productSlugController,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'add_primary_details.error_required'.tr;
+                                      return 'add_primary_details.error_required'
+                                          .tr;
                                     }
                                     return null;
                                   },
@@ -383,13 +397,13 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'add_primary_details.hint_price'.tr,
+                                    hintText:
+                                        'add_primary_details.hint_price'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   controller: productPriceController,
@@ -433,13 +447,13 @@ class AddProductPageScreen extends StatelessWidget {
                                   cursorColor: ColorManager.kPrimaryColor,
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
-                                    hintText: 'add_primary_details.hint_barcode'.tr,
+                                    hintText:
+                                        'add_primary_details.hint_barcode'.tr,
                                     hintStyle: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   controller: productBarcodeController,
@@ -486,8 +500,7 @@ class AddProductPageScreen extends StatelessWidget {
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   icon: const Icon(Icons.arrow_drop_down),
@@ -549,13 +562,13 @@ class AddProductPageScreen extends StatelessWidget {
                                   ),
                                   value: selectedCurrency,
                                   hint: Text(
-                                    'add_primary_details.hint_choose_currency'.tr,
+                                    'add_primary_details.hint_choose_currency'
+                                        .tr,
                                     style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s12,
                                       0.27,
-                                      ColorManager.textColor
-                                          .withOpacity(.5),
+                                      ColorManager.textColor.withOpacity(.5),
                                     ),
                                   ),
                                   icon: const Icon(Icons.arrow_drop_down),
@@ -611,7 +624,7 @@ class AddProductPageScreen extends StatelessWidget {
                             //         // debugPrint("submit");
                             //         debugPrint(
                             //             "categoryIdController.text ${idController.text}");
-                      
+
                             //         if (productPriceController.text.isEmpty ||
                             //             productSlugController.text.isEmpty ||
                             //             productNameController.text.isEmpty ||
@@ -633,7 +646,7 @@ class AddProductPageScreen extends StatelessWidget {
                             //                       .adaptive(),
                             //                 );
                             //               });
-                      
+
                             //           String? accessToken =
                             //               Provider.of<AuthModel>(context,
                             //                       listen: false)
@@ -663,7 +676,7 @@ class AddProductPageScreen extends StatelessWidget {
                             //                 context: context,
                             //                 message: '${value["message"]}',
                             //               );
-                      
+
                             //               gridSelectionProvider
                             //                   .setProductIDForAdding(
                             //                       value["product_id"]);
@@ -711,16 +724,16 @@ class AddProductPageScreen extends StatelessWidget {
                                     // debugPrint("submit");
                                     debugPrint(
                                         "categoryIdController.text ${idController.text}");
-                      
+
                                     if (productSlugController.text.isEmpty ||
-                                        productNameController
-                                            .text.isEmpty ||
+                                        productNameController.text.isEmpty ||
                                         selectedCurrency == null ||
                                         selectedUnit == null) {
                                       showScaffold(
                                         context: context,
                                         message:
-                                            'add_primary_details.error_fill_required'.tr,
+                                            'add_primary_details.error_fill_required'
+                                                .tr,
                                       );
                                       // sideBarController.index.value = 14;
                                     } else {
@@ -729,40 +742,35 @@ class AddProductPageScreen extends StatelessWidget {
                                           barrierDismissible: false,
                                           builder: (context) {
                                             return const Center(
-                                              child:
-                                                  CircularProgressIndicator
-                                                      .adaptive(),
+                                              child: CircularProgressIndicator
+                                                  .adaptive(),
                                             );
                                           });
-                      
+
                                       String? accessToken =
                                           Provider.of<AuthModel>(context,
                                                   listen: false)
                                               .token;
                                       debugPrint(
                                           "accessToken From AuthModel $accessToken");
-                      
+
                                       await categoryProvider
                                           .setCategoryIdforProp(
-                                              categoryId: int.parse(
-                                                  idController.text));
-                      
+                                              categoryId:
+                                                  int.parse(idController.text));
+
                                       gridSelectionProvider
                                           .addProductAPI(
                                               productName:
-                                                  productNameController
-                                                      .text,
-                                              price: productPriceController
-                                                  .text,
+                                                  productNameController.text,
+                                              price:
+                                                  productPriceController.text,
                                               barcode:
-                                                  productBarcodeController
-                                                      .text,
-                                              accessToken:
-                                                  accessToken ?? "",
+                                                  productBarcodeController.text,
+                                              accessToken: accessToken ?? "",
                                               categoryId: idController.text,
                                               unit: selectedUnit ?? "Piece",
-                                              slug: productSlugController
-                                                  .text,
+                                              slug: productSlugController.text,
                                               currency:
                                                   selectedCurrency ?? "INR")
                                           .then((value) {
@@ -774,21 +782,20 @@ class AddProductPageScreen extends StatelessWidget {
                                             context: context,
                                             message: '${value["message"]}',
                                           );
-                      
+
                                           gridSelectionProvider
                                               .setProductIDForAdding(
                                                   value["product_id"]);
-                                                  
+
                                           Navigator.pop(context);
                                           // productBarcodeController.clear();
                                           // productNameController.clear();
                                           // productSlugController.clear();
                                           // productPriceController.clear();
-                      
+
                                           navigateToScreen(1);
                                         } else {
-                                          debugPrint(
-                                              "errors.password !=null");
+                                          debugPrint("errors.password !=null");
                                           Navigator.pop(context);
                                           showScaffold(
                                             context: context,
