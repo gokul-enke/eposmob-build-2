@@ -6,7 +6,7 @@ abstract final class PurchaseReturnNavigation {
       ? Get.find<SideBarController>()
       : Get.put(SideBarController());
   static void openList() =>
-      _sidebar.index.value = SideBarController.purchaseReturnListIndex;
+      _sidebar.index.value = SideBarController.purchaseReturnListScreenIndex;
   static void openCreate() =>
-      _sidebar.index.value = SideBarController.createPurchaseReturnIndex;
+      _sidebar.index.value = SideBarController.createPurchaseReturnScreenIndex;
 }

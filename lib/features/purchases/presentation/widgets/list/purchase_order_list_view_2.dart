@@ -135,8 +135,8 @@ extension _PurchaseOrderListView2 on PurchaseOrderListView {
                               size: 14, color: Colors.white),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          onPressed: () => onOpen(
-                              item, SideBarController.purchaseDetailsIndex),
+                          onPressed: () => onOpen(item,
+                              SideBarController.purchaseDetailsScreenIndex),
                         ),
                       ),
                     ),
@@ -156,8 +156,10 @@ extension _PurchaseOrderListView2 on PurchaseOrderListView {
                                 size: 14, color: Colors.green),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            onPressed: () => onOpen(item,
-                                SideBarController.createPurchaseOrderIndex),
+                            onPressed: () => onOpen(
+                                item,
+                                SideBarController
+                                    .createPurchaseOrderScreenIndex),
                           ),
                         ),
                       ),

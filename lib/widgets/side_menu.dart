@@ -724,11 +724,11 @@ class _SideMenuState extends State<SideMenu> {
                       PurchaseNavigation.openList();
                     },
                     selected: [
-                      SideBarController.purchaseOrderListIndex,
-                      SideBarController.createPurchaseOrderIndex,
-                      SideBarController.purchaseDetailsIndex,
-                      SideBarController.purchaseReturnListIndex,
-                      SideBarController.createPurchaseReturnIndex
+                      SideBarController.purchaseOrderListScreenIndex,
+                      SideBarController.createPurchaseOrderScreenIndex,
+                      SideBarController.purchaseDetailsScreenIndex,
+                      SideBarController.purchaseReturnListScreenIndex,
+                      SideBarController.createPurchaseReturnScreenIndex
                     ].contains(sideBarController.index.value)),
               );
             },
@@ -948,15 +948,16 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 47 ||
                         sideBarController.index.value == 48 ||
                         sideBarController.index.value ==
-                            SideBarController.customerVoucherListIndex ||
-                        sideBarController.index.value ==
-                            SideBarController.createCustomerVoucherIndex ||
+                            SideBarController.customerVoucherListScreenIndex ||
                         sideBarController.index.value ==
                             SideBarController
-                                .transactionSupplierVoucherListIndex ||
+                                .createCustomerVoucherScreenIndex ||
                         sideBarController.index.value ==
                             SideBarController
-                                .transactionCreateSupplierVoucherIndex ||
+                                .transactionSupplierVoucherListScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController
+                                .transactionCreateSupplierVoucherScreenIndex ||
                         sideBarController.index.value == 91 ||
                         sideBarController.index.value ==
                             SideBarController.expenseListScreenIndex ||
@@ -1133,9 +1134,9 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 69 ||
                       sideBarController.index.value == 4 ||
                       sideBarController.index.value ==
-                          SideBarController.supplierVoucherListIndex ||
+                          SideBarController.supplierVoucherListScreenIndex ||
                       sideBarController.index.value ==
-                          SideBarController.createSupplierVoucherIndex,
+                          SideBarController.createSupplierVoucherScreenIndex,
                 ),
               );
             },
