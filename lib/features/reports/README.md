@@ -4,6 +4,24 @@ Report screens built on the shared listing kit (`core/ui`). So far:
 **My Sales Report** and **Customer Transactions Report**. The other reports
 still live in `lib/screens/reports/` and move here one at a time.
 
+**Supplier Transactions Report listing** now also lives here, with its existing
+visual design retained. Its details and print pages stay at their legacy paths.
+
+The supplier listing uses `domain/supplier_report.dart`,
+`data/supplier_report_source.dart`, `SupplierTransactionsReportController`,
+`SupplierTransactionsReportPage` and widgets under `widgets/supplier_report/`.
+The source reuses the public SupplierRepository and its injectable, tenant-aware
+API. Directory reads are local snapshots and do not replace the shared supplier
+list or selection. Only View sets the supplier name/ID for the existing details
+page. ReportNavigation knows slots 67 (listing) and 68 (details).
+
+Requests retain supplier ID, date-only bounds, `list_all=false`, server paging,
+tenant/store scope and grouped/legacy-list parsing. Filter changes and Reset
+start at page one; Reset clears visible calendar state as well as request bounds.
+Request generations ignore stale responses and disposal continuations. A failed
+refresh keeps the previous rows and shows the existing error toast. No export
+button or shared listing-kit redesign is added in this architecture change.
+
 Built the same way as `features/customers` (the reference implementation);
 see its README for the full set of layer and UI rules.
 
