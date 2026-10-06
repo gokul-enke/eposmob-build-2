@@ -15,7 +15,7 @@ import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
 import 'package:pos_machine/screens/product/product_barcode.dart';
-import 'package:pos_machine/screens/product/stock.dart';
+import 'package:pos_machine/features/stock/presentation/pages/stock_list_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -289,7 +289,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const AddStockScreen(),
+      screen: const StockListPage(),
       toggleKey: const ValueKey('stock-filter-toggle'),
       panelKey: const ValueKey('stock-desktop-filters'),
     );
@@ -299,7 +299,7 @@ void main() {
       (tester) async {
     await verifyMobileStartsCollapsed(
       tester,
-      screen: const AddStockScreen(),
+      screen: const StockListPage(),
       toggleKey: const ValueKey('stock-filter-toggle'),
       panelKey: const ValueKey('stock-mobile-filters'),
     );
@@ -329,7 +329,7 @@ void main() {
       (tester) async {
     await verifyMobileExpansion(
       tester,
-      screen: const AddStockScreen(),
+      screen: const StockListPage(),
       toggleKey: const ValueKey('stock-filter-toggle'),
       panelKey: const ValueKey('stock-mobile-filters'),
     );
