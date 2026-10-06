@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
@@ -813,7 +814,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 67;
                     },
                     onTapTitle5: () {
-                      sideBarController.index.value = 40;
+                      ReportNavigation.openProductSalesReport();
                     },
                     onTapTitle6: () {
                       sideBarController.index.value = 98;
@@ -847,7 +848,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = isCompanyAdmin ? 85 : 58;
                     },
                     selected: sideBarController.index.value == 39 ||
-                        sideBarController.index.value == 40 ||
+                        sideBarController.index.value ==
+                            SideBarController.productSalesReportScreenIndex ||
                         sideBarController.index.value == 41 ||
                         sideBarController.index.value == 42 ||
                         sideBarController.index.value == 58 ||

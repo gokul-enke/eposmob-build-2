@@ -13,7 +13,9 @@ class ReportErrorBar extends StatelessWidget {
 
   final String message;
   final String retryLabel;
-  final VoidCallback onRetry;
+
+  /// Null disables Retry while its existing request is still running.
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {

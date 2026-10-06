@@ -46,7 +46,7 @@ import 'package:pos_machine/screens/reports/customer_transactions_reports/custom
 // Adding imports for supplier transaction report screens
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_details_screen.dart';
-import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/product_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
@@ -155,6 +155,9 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Product Sales Report listing. Navigate through ReportNavigation.
+  static const int productSalesReportScreenIndex = 40;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -214,7 +217,7 @@ class SideBarController extends GetxController {
     AddVoucherDetailsWidget(), //37
     CustomerProfilePage(), //38
     AccountBookScreen(), //39
-    ProductSalesReportScreen(), //40
+    ProductSalesReportPage(), //40 productSalesReportScreenIndex
     SalesReportScreen(), //41
     SupplierSalesReportScreen(), //42
     LocationManagementScreen(), //43

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/models/get_product_sales_report_model.dart';
+import 'package:pos_machine/features/reports/domain/models/product_sales_report.dart';
 
 void main() {
   test('parses the documented product sales report response', () {

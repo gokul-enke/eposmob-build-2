@@ -436,6 +436,12 @@
     "btn_pay": "دفع @amount"
   },
   "product_sales_report": {
+    "subtitle": "مراجعة مبيعات المنتجات والإيرادات والكميات.",
+    "find": "البحث عن مبيعات المنتجات",
+    "filter_hint": "التصفية حسب الفئة والمنتج والعميل والتاريخ.",
+    "select_date": "اختر التاريخ",
+    "count": "@count منتجات في هذه الصفحة",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total...",
     "error_unavailable": "تقرير مبيعات المنتجات غير متاح حالياً.",
     "page_title": "تقرير مبيعات المنتجات",
     "col_product_name": "اسم المنتج",
