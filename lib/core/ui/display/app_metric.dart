@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/app_colors.dart';
+import '../tokens/app_sizes.dart';
 import '../tokens/app_text_styles.dart';
 import 'app_icon_tile.dart';
 
@@ -12,12 +13,18 @@ class AppMetric extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueColor,
+    this.iconSize = AppSizes.metricIcon,
+    this.iconColor = AppColors.primary,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final Color? valueColor;
+
+  /// Shared blue metric icons; callers can override styling when needed.
+  final double iconSize;
+  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +34,8 @@ class AppMetric extends StatelessWidget {
         AppIconTile(
           icon: icon,
           size: 32,
-          iconSize: 16,
-          foreground: AppColors.muted,
+          iconSize: iconSize,
+          foreground: iconColor,
         ),
         const SizedBox(width: 9),
         Expanded(
