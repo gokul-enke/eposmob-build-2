@@ -650,7 +650,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 14;
                     },
                     onTapTitle2: () {
-                      sideBarController.index.value = 15;
+                      sideBarController.index.value =
+                          SideBarController.stockListScreenIndex;
                     },
                     onTapTitle3: () {
                       sideBarController.index.value = 83;

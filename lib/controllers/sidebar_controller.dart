@@ -29,7 +29,7 @@ import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
 import 'package:pos_machine/features/purchases/presentation/pages/purchase_page.dart';
 import 'package:pos_machine/screens/product/tabbar_for_add_new_product.dart';
-import 'package:pos_machine/screens/product/stock.dart';
+import 'package:pos_machine/features/stock/presentation/pages/stock_list_page.dart';
 import 'package:pos_machine/features/purchases/presentation/pages/purchase_order_list_page.dart';
 import 'package:pos_machine/features/purchases/presentation/pages/create_purchase_order_page.dart';
 import 'package:pos_machine/features/purchases/presentation/pages/purchase_voucher_page.dart';
@@ -99,6 +99,8 @@ import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
+  static const int stockListScreenIndex = 15;
+  static const int addStockScreenIndex = 18;
   static const int weighMachineExportIndex = 101;
   static const int billingScreenIndex = 0;
 
@@ -187,7 +189,7 @@ class SideBarController extends GetxController {
     AddCategoryScreen(), //12
     AddCategoryPropertiesScreen(), //13
     AddProductScreen(), //14
-    AddStockScreen(), //15
+    StockListPage(), // stockListScreenIndex (15)
     AddCategoryPageScreen(), //16
     TabBarForAddNewProduct(), //17
     AddProductStockScreen(), //18
