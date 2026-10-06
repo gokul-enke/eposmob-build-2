@@ -12,6 +12,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/core/utils/store_policy.dart';
 import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/services/preferences_file_guard.dart';
 import 'package:pos_machine/services/tenant_domain_service.dart';
@@ -276,6 +277,18 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                         ),
                       ),
                       const SizedBox(height: 30),
+                      if (hideExternalCommerceLinks)
+                        Text(
+                          'login.api_key_contact_admin'.tr,
+                          textAlign: TextAlign.center,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s14,
+                            0.27,
+                            Colors.black.withValues(alpha: 0.6),
+                          ),
+                        )
+                      else
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

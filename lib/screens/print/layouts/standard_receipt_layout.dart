@@ -1379,8 +1379,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     final bool showPaymentBreaked = params.isVisible('showPaymentBreaked');
 
     // Shared rows: per-method amounts (breakdown map or multi-payment JSON),
-    // else the single method with the paid amount, named in the document
-    // language (`showCash` label for cash).
+    // else the single method with the paid amount, named by its code.
     final paymentRows = params.paymentBreakdownRows;
     if (params.paidAmount != null &&
         showPaymentBreaked &&

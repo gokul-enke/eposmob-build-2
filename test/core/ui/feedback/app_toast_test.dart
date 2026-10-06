@@ -94,6 +94,21 @@ void main() {
     expect(AppToast.isShowing, isFalse);
   });
 
+  // Regression: a toast replaced before its first frame was not built yet, so
+  // it was forgotten but never removed, and stayed on screen for good.
+  testWidgets('two messages in the same frame leave only the second',
+      (tester) async {
+    await pumpApp(tester);
+    AppToast.success(pageContext, 'Receipt theme saved');
+    AppToast.success(pageContext, 'Paper size saved');
+    await tester.pump();
+
+    expect(find.text('Receipt theme saved'), findsNothing);
+    expect(find.text('Paper size saved'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byKey(AppToast.toastKey), findsNothing);
+  });
+
   testWidgets('an action runs, dismisses, and stays 5 seconds by default',
       (tester) async {
     await pumpApp(tester);

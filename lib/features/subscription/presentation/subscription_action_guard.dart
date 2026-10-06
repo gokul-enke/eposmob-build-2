@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:pos_machine/core/utils/store_policy.dart';
 import 'package:pos_machine/features/subscription/domain/company_subscription.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_status_dialog.dart';
@@ -134,6 +135,8 @@ class SubscriptionActionGuard {
   ) async {
     final branding = await _loadBranding(context);
     if (!context.mounted) return;
+    final manageUrl =
+        hideExternalCommerceLinks ? null : subscription.manageSubscriptionUrl;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -145,13 +148,12 @@ class SubscriptionActionGuard {
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,
-        primaryLabel: subscription.manageSubscriptionUrl != null
+        primaryLabel: manageUrl != null
             ? 'subscription.manage_subscription'.tr
             : 'subscription.contact_administrator'.tr,
         onPrimaryPressed: () {
           Navigator.of(dialogContext).pop();
-          final rawUrl = subscription.manageSubscriptionUrl;
-          final uri = rawUrl == null ? null : Uri.tryParse(rawUrl);
+          final uri = manageUrl == null ? null : Uri.tryParse(manageUrl);
           if (uri != null) {
             launchUrl(uri, mode: LaunchMode.externalApplication);
           }
@@ -173,8 +175,7 @@ class SubscriptionActionGuard {
       builder: (dialogContext) => SubscriptionStatusDialog(
         variant: SubscriptionDialogVariant.unavailable,
         title: 'subscription.unable_verify'.tr,
-        message: provider.errorMessage ??
-            'subscription.status_unverified'.tr,
+        message: provider.errorMessage ?? 'subscription.status_unverified'.tr,
         companyName: branding.companyName,
         logoFilePath: branding.logoFilePath,
         logoUrl: branding.logoUrl,

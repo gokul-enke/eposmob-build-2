@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/core/utils/store_policy.dart';
 import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
@@ -392,6 +393,11 @@ class _OpenProfileScreenState extends State<OpenProfileScreen> {
                                             ),
                                           ),
                                         )),
+                                    // Accounts are created and deleted by the
+                                    // business admin outside the app; the App
+                                    // Store build has no account creation, so
+                                    // this tile is hidden there.
+                                    if (!hideExternalCommerceLinks)
                                     BuildBoxShadowContainer(
                                         circleRadius: 10,
                                         margin: const EdgeInsets.only(
