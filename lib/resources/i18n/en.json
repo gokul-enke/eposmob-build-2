@@ -3369,6 +3369,17 @@
     "preparing_supplier_report": "Preparing supplier transaction report..."
   },
   "stock_report": {
+    "subtitle": "Review stock quantities, prices and values.",
+    "find": "Find stock",
+    "filter_hint": "Filter by store, category, product and dates.",
+    "select_date": "Select Date",
+    "retry": "Retry",
+    "invalid_date_range": "From Date must be on or before Until Date.",
+    "count": "@count products on this page",
+    "unit": "Unit",
+    "export_error": "Unable to export stock. Check the filters and try again.",
+    "export_fetching": "Fetching page @page of @total…",
+
     "title": "Stock Report",
     "unavailable": "Stock report is currently unavailable.",
     "hide": "Hide",

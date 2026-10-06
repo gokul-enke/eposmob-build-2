@@ -52,7 +52,7 @@ import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales
 import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
-import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profile_page.dart';
@@ -108,6 +108,9 @@ class SideBarController extends GetxController {
   /// caller navigates to it, and the list is positional — inserting a screen
   /// above it would otherwise silently point those callers elsewhere.
   static const int invoiceListScreenIndex = 21;
+
+  /// Stock Report listing in the Reports section.
+  static const int stockReportScreenIndex = 98;
 
   /// Customer screens in [screens]. Navigate through [CustomerNavigation]
   /// rather than setting these indices directly.
@@ -283,7 +286,7 @@ class SideBarController extends GetxController {
       defaultCounterBillingMode: true,
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
-    StockReportScreen(), // 98 Stock Report Screen
+    StockReportPage(), // 98 Stock Report Screen
     PurchaseReturnListPage(), // 99 purchaseReturnListScreenIndex
     CreatePurchaseReturnPage(), // 100 createPurchaseReturnScreenIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex

@@ -10,12 +10,16 @@ import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
 import 'package:pos_machine/models/get_non_stock_report_model.dart';
 import 'package:pos_machine/models/get_consumed_stocks_report_model.dart';
-import 'package:pos_machine/models/get_stock_report_model.dart';
+import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 
+import '../features/reports/data/stock_report_api.dart';
 import '../models/get_customer_account_book_model.dart';
 import '../resources/app_url.dart';
 
 class ReportsProvider with ChangeNotifier {
+  ReportsProvider({StockReportApi? stockReportApi})
+      : stockReportApi = stockReportApi ?? StockReportApi();
+  final StockReportApi stockReportApi;
   GetCustomerAccountBookResponse? _customerAccountBook;
   GetProductSalesReportResponse? _productSalesReport;
   GetSalesReportResponse? _salesReport;
@@ -469,87 +473,51 @@ class ReportsProvider with ChangeNotifier {
     int? page,
     int? perPage,
   }) async {
-    final queryParameters = <String, String>{};
-
-    if (product != null && product.isNotEmpty) {
-      queryParameters['product'] = product;
-    }
-    if (sortBy != null && sortBy.isNotEmpty) {
-      queryParameters['sort_by'] = sortBy;
-    }
-    if (sortDirection != null && sortDirection.isNotEmpty) {
-      queryParameters['sort_direction'] = sortDirection;
-    }
-    if (storeId != null) {
-      queryParameters['store_id'] = storeId.toString();
-    }
-    if (categoryId != null) {
-      queryParameters['category_id'] = categoryId.toString();
-    }
-    if (stockLevel != null && stockLevel.isNotEmpty && stockLevel != 'All') {
-      queryParameters['stock_level'] = stockLevel;
-    }
-    if (expiringWithin != null &&
-        expiringWithin.isNotEmpty &&
-        expiringWithin != 'All') {
-      queryParameters['expiring_within'] = expiringWithin;
-    }
-    if (snapshotDate != null && snapshotDate.isNotEmpty) {
-      queryParameters['snapshot_date'] = snapshotDate;
-    }
-    if (from != null && from.isNotEmpty) {
-      queryParameters['from'] = from;
-    }
-    if (until != null && until.isNotEmpty) {
-      queryParameters['until'] = until;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-    if (perPage != null) {
-      queryParameters['per_page'] = perPage.toString();
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    // Set fallback store_id from activeStoreId if not explicitly filtered
-    if (storeId == null && activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.stockReportUrl)
-        .replace(queryParameters: queryParameters);
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          _stockReport = GetStockReportResponse.fromJson(jsonData);
-          notifyListeners();
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load stock report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load stock report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+    _stockReport = await fetchStockReportSnapshot(
+        accessToken: accessToken,
+        product: product,
+        sortBy: sortBy,
+        sortDirection: sortDirection,
+        storeId: storeId,
+        categoryId: categoryId,
+        stockLevel: stockLevel,
+        expiringWithin: expiringWithin,
+        snapshotDate: snapshotDate,
+        from: from,
+        until: until,
+        page: page,
+        perPage: perPage);
+    notifyListeners();
   }
+
+  /// A request-local page for listing/export; leaves shared rows untouched.
+  Future<GetStockReportResponse> fetchStockReportSnapshot({
+    required String accessToken,
+    String? product,
+    String? sortBy,
+    String? sortDirection,
+    int? storeId,
+    int? categoryId,
+    String? stockLevel,
+    String? expiringWithin,
+    String? snapshotDate,
+    String? from,
+    String? until,
+    int? page,
+    int? perPage,
+  }) =>
+      stockReportApi.fetch(
+          accessToken: accessToken,
+          product: product,
+          sortBy: sortBy,
+          sortDirection: sortDirection,
+          storeId: storeId,
+          categoryId: categoryId,
+          stockLevel: stockLevel,
+          expiringWithin: expiringWithin,
+          snapshotDate: snapshotDate,
+          from: from,
+          until: until,
+          page: page,
+          perPage: perPage);
 }
