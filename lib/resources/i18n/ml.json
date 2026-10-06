@@ -1,4 +1,7 @@
 {
+  "offers": {
+    "badge": "ഓഫർ"
+  },
   "mobile_order_card": {
     "opt_share": "ഷെയർ",
     "opt_return": "റിട്ടേൺ ഓർഡർ",

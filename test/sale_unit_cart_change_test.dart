@@ -37,6 +37,7 @@ void main() {
   });
 
   setUp(() async {
+    await awaitPendingHiveBoxWrites();
     SharedPreferences.setMockInitialValues({
       'general_stock_enabled': false,
     });
@@ -47,6 +48,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
+  tearDown(awaitPendingHiveBoxWrites);
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   GetProduct buildProduct() => GetProduct(

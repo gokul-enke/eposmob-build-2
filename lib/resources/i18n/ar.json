@@ -1,4 +1,7 @@
 {
+  "offers": {
+    "badge": "عرض"
+  },
   "mobile_order_card": {
     "opt_share": "مشاركة",
     "opt_return": "إرجاع الطلب",

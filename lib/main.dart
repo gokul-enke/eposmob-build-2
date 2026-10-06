@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
@@ -211,6 +212,7 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
     await _startupWork.run(_initializeApp).timeout(_startupBudget);
     await _startupWork.run(OrderSubmissionCoordinator.instance.hydrate);
     await _startupWork.run(LocalSaleSyncService.instance.hydrate);
+    await _startupWork.run(ProductOfferRepository.instance.loadCached);
     reportStage('Loading products and saved orders…');
     _startupWork.checkRunning();
     final localProducts = _startupProducts = LocalProductProvider();

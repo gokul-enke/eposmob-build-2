@@ -5,6 +5,7 @@ import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/mobile_cart_price_fields.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/pos_security_key_dialog.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
@@ -163,6 +164,10 @@ class CartItemCard extends StatelessWidget {
                         color: ColorManager.kTitleTextColor,
                       ),
                     ),
+                    if (item.hasOffer) ...[
+                      const SizedBox(height: 4),
+                      CartOfferBadge(item: item, fontSize: 11),
+                    ],
                     if (showItemCode) ...[
                       const SizedBox(height: 2),
                       Text(

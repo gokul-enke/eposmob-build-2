@@ -12,6 +12,7 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 
 class CartItemsTable extends StatelessWidget {
   const CartItemsTable({super.key});
@@ -305,6 +306,39 @@ class CartItemsTable extends StatelessWidget {
 
   Widget _buildItemNameCell(LocalCartItem item) {
     final variantLabel = item.variantLabel;
+    if (item.hasOffer) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.product.localizedName ?? 'general.unknown'.tr,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              12,
+              0.21,
+              ColorManager.textColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (variantLabel.isNotEmpty)
+            Text(
+              variantLabel,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                10,
+                0.21,
+                ColorManager.kPrimaryColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          const SizedBox(height: 2),
+          CartOfferBadge(item: item),
+        ],
+      );
+    }
     if (variantLabel.isEmpty) {
       return Text(
         item.product.localizedName ?? 'general.unknown'.tr,

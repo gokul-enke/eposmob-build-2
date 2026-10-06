@@ -1,4 +1,7 @@
 {
+  "offers": {
+    "badge": "Offer"
+  },
   "mobile_order_card": {
     "opt_share": "Share",
     "opt_return": "Return Order",

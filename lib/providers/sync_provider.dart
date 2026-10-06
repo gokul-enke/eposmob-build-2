@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/helpers/sync_log.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -426,6 +427,8 @@ class SyncProvider extends ChangeNotifier {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       await localProductProvider.fetchProductsFromAPI();
+      // A manual product sync also re-downloads every offer for the store.
+      await ProductOfferRepository.instance.refresh(full: true);
       debugPrint("✅ Products synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync products: $e");

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -191,6 +192,7 @@ class SessionResetService {
     } catch (_) {}
 
     await context.read<LocalProductProvider>().clearAllLocalData();
+    await ProductOfferRepository.instance.clear();
     await context.read<CategoryProvider>().clearAllCategories();
     await context.read<DocumentConfigProvider>().clearAllCaches();
     context.read<AdminSettingsProvider>().clear();

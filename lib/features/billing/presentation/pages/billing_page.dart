@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
@@ -3721,6 +3722,17 @@ class BillingPageState extends State<BillingPage>
                                                               overflow:
                                                                   TextOverflow
                                                                       .ellipsis,
+                                                            ),
+                                                          if (item.hasOffer)
+                                                            CartOfferBadge(
+                                                              item: item,
+                                                              fontSize:
+                                                                  (fontProvider
+                                                                              .billingTableItemSize -
+                                                                          2)
+                                                                      .clamp(
+                                                                          9.0,
+                                                                          12.0),
                                                             ),
                                                         ],
                                                       ),

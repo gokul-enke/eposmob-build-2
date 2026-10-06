@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart';
 import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
@@ -14,7 +17,9 @@ class RealtimeSyncRepository {
     required CustomerSelectionProvider customerSelection,
     required StockProvider stocks,
     required SalesProvider sales,
+    ProductOfferRepository? offers,
   })  : _entityApi = entityApi,
+        _offers = offers ?? ProductOfferRepository.instance,
         _localProducts = localProducts,
         _customers = customers,
         _customerSelection = customerSelection,
@@ -27,6 +32,7 @@ class RealtimeSyncRepository {
   final CustomerSelectionProvider _customerSelection;
   final StockProvider _stocks;
   final SalesProvider _sales;
+  final ProductOfferRepository _offers;
 
   Future<void> apply({
     required RealtimeSyncSession session,
@@ -36,6 +42,11 @@ class RealtimeSyncRepository {
     required bool Function() isCurrent,
   }) async {
     if (!changes.hasChanges) return;
+
+    // Offers only change future cart lines, so an open cart never defers them.
+    if (changes.offers.hasChanges) {
+      unawaited(_offers.refresh());
+    }
 
     if (changes.hasCatalogChanges && _localProducts.cartItems.isNotEmpty) {
       throw const RealtimeSyncDeferredException(
