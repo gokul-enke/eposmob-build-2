@@ -23,6 +23,12 @@ tenant/store scope and grouped/legacy-list parsing. Filter changes and Reset
 start at page one; Reset clears visible calendar state as well as request bounds.
 Request generations ignore stale responses and disposal continuations. A failed
 refresh keeps the previous rows and shows an error banner with Retry and a toast.
+Directory options load independently of the table. Their failure shows a separate
+translated banner with an options-only Retry; successful report results, Export
+and pagination remain usable while directory options are unavailable or pending.
+After a report failure, pagination is disabled until Retry succeeds. A failed
+filter change retains the displayed rows/page but keeps page one as its retry
+target; Reset also clears that target even on an unfiltered later page.
 Filters keep date-only bounds and use the existing auto-dismiss calendar.
 Export rereads every matching summary page without changing visible/shared state,
 reports progress, and rejects duplicate IDs, invalid amounts, changing pagination,

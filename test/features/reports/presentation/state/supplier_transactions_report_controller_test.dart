@@ -25,6 +25,94 @@ Future<SupplierReportScope> fixedScope() async =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const option = SupplierReportOption(id: '7', name: 'Supplier');
+  test('Reset on an unfiltered later page resets the retry target to page 1',
+      () async {
+    final pages = <int>[];
+    final controller = SupplierTransactionsReportController(
+        fetchDirectory: () async => [option],
+        readScope: fixedScope,
+        fetch: (_, page) async {
+          pages.add(page);
+          return report(page);
+        });
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    await controller.goToPage(2);
+    await controller.reset();
+    await controller.retry();
+    expect(pages, [1, 2, 1, 1]);
+    expect(controller.page, 1);
+  });
+
+  test('late directory failure cannot replace newer options or report results',
+      () async {
+    final oldDirectory = Completer<List<SupplierReportOption>>();
+    var directories = 0;
+    final controller = SupplierTransactionsReportController(
+        readScope: fixedScope,
+        fetchDirectory: () =>
+            ++directories == 1 ? oldDirectory.future : Future.value([option]),
+        fetch: (_, page) async => report(page));
+    addTearDown(controller.dispose);
+    final original = controller.initialize();
+    await Future<void>.delayed(Duration.zero);
+    await controller.reloadDirectory();
+    final visible = controller.rows;
+    oldDirectory.completeError(StateError('old directory request failed'));
+    await original;
+    expect(controller.suppliers, [option]);
+    expect(controller.directoryError, isNull);
+    expect(controller.initializing, isFalse);
+    expect(controller.rows, same(visible));
+    expect(controller.canExport, isTrue);
+  });
+  for (final filter in ['supplier', 'date']) {
+    for (final failure in ['network', 'malformed']) {
+      test(
+          'page 2 -> $filter change -> $failure -> blocked Next -> Retry page 1',
+          () async {
+        var failed = false;
+        final calls = <({SupplierReportQuery query, int page})>[];
+        final controller = SupplierTransactionsReportController(
+            readScope: fixedScope,
+            fetchDirectory: () async => [option],
+            fetch: (query, page) async {
+              calls.add((query: query, page: page));
+              if (failed) {
+                if (failure == 'network') throw StateError('network');
+                return {'data': 'malformed'};
+              }
+              return report(page);
+            });
+        addTearDown(controller.dispose);
+        await controller.initialize();
+        await controller.goToPage(2);
+        final previousRows = controller.rows;
+        failed = true;
+        if (filter == 'supplier') {
+          await controller.selectSupplier(option);
+        } else {
+          await controller.selectDate(DateTime(2026, 9, 1), true);
+        }
+        expect(calls.last.page, 1);
+        expect(controller.rows, same(previousRows));
+        expect(controller.page, 2);
+        final count = calls.length;
+        await controller.goToPage(3);
+        expect(calls.length, count);
+        failed = false;
+        await controller.retry();
+        expect(calls.last.page, 1);
+        expect(calls.last.query.supplierId, filter == 'supplier' ? '7' : null);
+        expect(
+            calls.last.query.fromDate, filter == 'date' ? '2026-09-01' : null);
+        expect(controller.page, 1);
+        expect(controller.errorKey, isNull);
+        await controller.goToPage(2);
+        expect(calls.last.page, 2);
+      });
+    }
+  }
   for (final change in ['store', 'tenant', 'token', 'endpoint']) {
     for (final moment in ['before export', 'during fetch', 'during workbook']) {
       test('$change change $moment cancels export; refreshed scope can export',
@@ -295,7 +383,7 @@ void main() {
     expect(controller.page, 1);
     expect(controller.selectedSupplierId, isNull);
   });
-  test('disposal during directory load prevents report fetch and notifications',
+  test('disposal during directory load prevents late results and notifications',
       () async {
     final pending = Completer<List<SupplierReportOption>>();
     var calls = 0, notifications = 0;
@@ -312,26 +400,98 @@ void main() {
     pending.complete([option]);
     await operation;
     expect(calls, 0);
-    expect(notifications, 1);
+    expect(notifications, 2);
     await controller.selectSupplier(option);
     await controller.reset();
   });
-  test('directory failure releases initialization and can retry', () async {
+  test(
+      'directory failure keeps report usable and retries options independently',
+      () async {
     var failed = true;
+    var fetches = 0;
     final controller = SupplierTransactionsReportController(
         readScope: fixedScope,
         fetchDirectory: () async {
           if (failed) throw StateError('directory');
           return [option];
         },
-        fetch: (_, page) async => report(page));
+        fetch: (_, page) async {
+          fetches++;
+          return report(page);
+        });
     addTearDown(controller.dispose);
     await controller.initialize();
     expect(controller.initializing, isFalse);
-    expect(controller.errorKey, isNotNull);
-    failed = false;
-    await controller.initialize();
     expect(controller.errorKey, isNull);
+    expect(controller.directoryError, isNotNull);
     expect(controller.rows, isNotEmpty);
+    expect(controller.canExport, isTrue);
+    await controller.goToPage(2);
+    final previous = controller.rows;
+    failed = false;
+    await controller.reloadDirectory();
+    expect(controller.errorKey, isNull);
+    expect(controller.directoryError, isNull);
+    expect(controller.suppliers, [option]);
+    expect(controller.page, 2);
+    expect(controller.rows, same(previous));
+    expect(fetches, 2);
+  });
+
+  test(
+      'slow directory never holds report rows, export or paging behind its request',
+      () async {
+    final directory = Completer<List<SupplierReportOption>>();
+    final controller = SupplierTransactionsReportController(
+        fetchDirectory: () => directory.future,
+        readScope: fixedScope,
+        fetch: (_, page) async => report(page));
+    addTearDown(controller.dispose);
+    final initial = controller.initialize();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.initializing, isTrue);
+    expect(controller.loading, isFalse);
+    expect(controller.rows, isNotEmpty);
+    expect(controller.canExport, isTrue);
+    await controller.goToPage(2);
+    expect(controller.page, 2);
+    directory.complete([option]);
+    await initial;
+    expect(controller.initializing, isFalse);
+    expect(controller.page, 2);
+    expect(controller.suppliers, [option]);
+  });
+
+  test(
+      'directory and table errors retry independently without hiding either failure',
+      () async {
+    var directoryFailed = true, reportFailed = true;
+    var directoryCalls = 0;
+    final controller = SupplierTransactionsReportController(
+        readScope: fixedScope,
+        fetchDirectory: () async {
+          directoryCalls++;
+          if (directoryFailed) throw StateError('directory');
+          return [option];
+        },
+        fetch: (_, page) async {
+          if (reportFailed) throw StateError('report');
+          return report(page);
+        });
+    addTearDown(controller.dispose);
+    await controller.initialize();
+    expect(controller.errorKey, isNotNull);
+    expect(controller.directoryError, isNotNull);
+    expect(controller.canExport, isFalse);
+    directoryFailed = false;
+    await controller.reloadDirectory();
+    expect(controller.directoryError, isNull);
+    expect(controller.errorKey, isNotNull);
+    expect(controller.canExport, isFalse);
+    reportFailed = false;
+    await controller.retry();
+    expect(directoryCalls, 2);
+    expect(controller.errorKey, isNull);
+    expect(controller.canExport, isTrue);
   });
 }

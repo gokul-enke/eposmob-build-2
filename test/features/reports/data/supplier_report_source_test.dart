@@ -10,6 +10,44 @@ import '../../../test_support/network_fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final status in [403, 503]) {
+    test('directory HTTP $status does not block available transaction results',
+        () async {
+      var transactions = 0;
+      final source = SupplierReportSource(SupplierRepository(
+          api: SupplierApi(
+        session: const FakeTenantSession(),
+        httpGet: (url, {headers}) async {
+          if (url.path == Uri.parse(APPUrl.getSuppliers).path) {
+            return jsonResponse({'message': 'directory unavailable'}, status);
+          }
+          transactions++;
+          return jsonResponse({
+            'data': [
+              {
+                'supplier_id': 7,
+                'supplier_name': 'Available report',
+                'total_debit': 10,
+                'total_credit': 5,
+                'balance': -5,
+                'transactions': []
+              }
+            ]
+          });
+        },
+      )));
+      final controller = SupplierTransactionsReportController(
+          fetchDirectory: () => source.directory('token'),
+          readScope: () => source.scope('token'),
+          fetch: (query, page) => source.fetch('token', query, page));
+      addTearDown(controller.dispose);
+      await controller.initialize();
+      expect(transactions, 1);
+      expect(controller.rows['7']!.displayName, 'Available report');
+      expect(controller.errorKey, isNull);
+      expect(controller.canExport, isTrue);
+    });
+  }
   test('real API export stops before page two if active store changes',
       () async {
     SharedPreferences.setMockInitialValues(

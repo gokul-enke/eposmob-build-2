@@ -162,6 +162,42 @@ class ReportRouteObserver extends NavigatorObserver {
   }
 }
 
+class DirectoryFailureRepository extends TestSupplierRepository {
+  bool failDirectory = true;
+  int directoryCalls = 0;
+  @override
+  Future<List<Supplier>?> fetchAll(String token, {String? name}) async {
+    directoryCalls++;
+    if (failDirectory) throw StateError('directory');
+    return directory();
+  }
+}
+
+class FilterFailureRepository extends TestSupplierRepository {
+  bool fail = false;
+  @override
+  Future<Map<String, dynamic>> fetchTransactions(String token,
+      {String? supplierName,
+      String? supplierId,
+      String? transactionType,
+      String? fromDate,
+      String? toDate,
+      bool listAll = true,
+      int? page}) async {
+    final result = await super.fetchTransactions(token,
+        supplierName: supplierName,
+        supplierId: supplierId,
+        transactionType: transactionType,
+        fromDate: fromDate,
+        toDate: toDate,
+        listAll: listAll,
+        page: page);
+    if (fail) throw StateError('network');
+    result['data']['last_page'] = 3;
+    return result;
+  }
+}
+
 Future<TestSupplierProvider> pumpReport(
     WidgetTester tester, TestSupplierRepository repo,
     {ExportController? export, NavigatorObserver? observer}) async {
@@ -220,6 +256,109 @@ void main() {
     SharedPreferences.setMockInitialValues({'api_key': 'test'});
   });
   tearDown(Get.reset);
+  for (final width in [375.0, 1280.0]) {
+    testWidgets(
+        'directory outage at $width leaves report usable and retries only filter options',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repo = DirectoryFailureRepository();
+      await pumpReport(tester, repo);
+      expect(find.text('First supplier'), findsOneWidget);
+      expect(
+          find.text(
+              'Could not load supplier filter options. Use Retry to load them.'),
+          findsOneWidget);
+      expect(
+          tester
+              .widget<PageHeader>(find.byType(PageHeader))
+              .actions[1]
+              .onPressed,
+          isNotNull);
+      final list = tester.widget<ListPageScaffold<SupplierTransactionSummary>>(
+          find.byType(ListPageScaffold<SupplierTransactionSummary>));
+      expect(list.isLoading, isFalse);
+      expect(list.pagination!.enabled, isTrue);
+      final reportRequests = repo.calls.length;
+      repo.failDirectory = false;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(repo.directoryCalls, 2);
+      expect(repo.calls.length, reportRequests);
+      expect(
+          find.text(
+              'Could not load supplier filter options. Use Retry to load them.'),
+          findsNothing);
+      expect(find.text('First supplier'), findsOneWidget);
+      if (width < 700) {
+        await tapFilterToggle(tester);
+      }
+      await tester.tap(find.byType(DropdownSearch<SupplierReportOption>));
+      await tester.pumpAndSettle();
+      expect(find.text('Second supplier'), findsWidgets);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'failed filter on page 2 at $width disables arrows until Retry loads page 1',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repo = FilterFailureRepository();
+      await pumpReport(tester, repo);
+      await tester.tap(find.byIcon(Icons.chevron_right_rounded).last);
+      await tester.pumpAndSettle();
+      expect(repo.calls.last.page, 2);
+      if (width < 700) await tapFilterToggle(tester);
+      repo.fail = true;
+      await tester.tap(find.byType(DropdownSearch<SupplierReportOption>));
+      await tester.pumpAndSettle();
+      await tester.tap(find
+          .ancestor(
+              of: find.text('Second supplier').last,
+              matching: find.byType(InkResponse))
+          .first);
+      await tester.pumpAndSettle();
+      expect(repo.calls.last.page, 1);
+      expect(repo.calls.last.id, '8');
+      expect(find.text('First supplier'), findsOneWidget);
+      expect(find.text('Page 2 of 3'), findsOneWidget);
+      final arrows = tester.widgetList<AppSquareIconButton>(find.descendant(
+          of: find.byType(AppPaginationBar),
+          matching: find.byType(AppSquareIconButton)));
+      expect(arrows, hasLength(2));
+      expect(arrows.every((button) => button.onPressed == null), isTrue);
+      final list = tester.widget<ListPageScaffold<SupplierTransactionSummary>>(
+          find.byType(ListPageScaffold<SupplierTransactionSummary>));
+      final requests = repo.calls.length;
+      list.pagination!.onPageChanged(3);
+      await tester.pumpAndSettle();
+      expect(repo.calls.length, requests);
+      repo.fail = false;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(repo.calls.last.page, 1);
+      expect(repo.calls.last.id, '8');
+      expect(find.text('Page 1 of 3'), findsOneWidget);
+      // The earlier error toast briefly overlays the phone's bottom controls.
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.chevron_right_rounded).last);
+      await tester.pumpAndSettle();
+      expect(repo.calls.last.page, 2);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  }
   for (final width in [375.0, 768.0, 1280.0]) {
     testWidgets(
         'real supplier popup selection/search/clear/Reset at $width keeps report route',

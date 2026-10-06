@@ -28,7 +28,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
       _directoryRequest = 0;
   SupplierReportQuery? _loaded;
   SupplierReportScope? _loadedScope;
-  bool _directoryFailed = false;
+  Object? directoryError;
   bool initializing = false,
       loading = false,
       showFilters = true,
@@ -39,10 +39,14 @@ class SupplierTransactionsReportController extends ChangeNotifier {
   int get loadRevision => _request;
   bool get canExport =>
       !_disposed &&
-      !initializing &&
       !loading &&
       errorKey == null &&
       rows.isNotEmpty &&
+      _loaded?.matches(query) == true;
+  bool get canPaginate =>
+      !_disposed &&
+      !loading &&
+      errorKey == null &&
       _loaded?.matches(query) == true;
   bool get hasActiveFilters =>
       supplierInput.text.isNotEmpty ||
@@ -65,24 +69,24 @@ class SupplierTransactionsReportController extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_disposed) return;
+    // Directory options are optional: their failure or latency must not block
+    // the independent transactions endpoint or the report's usable rows.
+    await Future.wait([reloadDirectory(), load()]);
+  }
+
+  Future<void> reloadDirectory() async {
+    if (_disposed) return;
     final directoryRequest = ++_directoryRequest;
     initializing = true;
-    _directoryFailed = false;
-    errorKey = null;
-    error = null;
+    directoryError = null;
     _notify();
     try {
       final result = await fetchDirectory();
       if (_disposed || directoryRequest != _directoryRequest) return;
       suppliers = List.unmodifiable(result);
-      _notify();
-      await load();
     } catch (e) {
       if (!_disposed && directoryRequest == _directoryRequest) {
-        error = e;
-        _directoryFailed = true;
-        errorKey = 'supplier_transaction_report.err_loading_supplier_data';
-        ++errorRevision;
+        directoryError = e;
       }
     } finally {
       if (!_disposed && directoryRequest == _directoryRequest) {
@@ -96,6 +100,9 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     if (_disposed) return;
     final request = ++_request;
     final snapshot = query;
+    final target = requestedPage ??
+        (_loaded?.matches(snapshot) == true ? _requestedPage : 1);
+    _requestedPage = target;
     if (!snapshot.isDateRangeValid) {
       loading = false;
       error = null;
@@ -104,8 +111,6 @@ class SupplierTransactionsReportController extends ChangeNotifier {
       _notify();
       return;
     }
-    final target = requestedPage ?? page;
-    _requestedPage = target;
     loading = true;
     error = null;
     errorKey = null;
@@ -156,8 +161,13 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     return load(requestedPage: 1);
   }
 
-  Future<void> retry() =>
-      _directoryFailed ? initialize() : load(requestedPage: _requestedPage);
+  Future<void> retry() async {
+    if (_disposed) return;
+    await Future.wait([
+      if (directoryError != null) reloadDirectory(),
+      load(requestedPage: _requestedPage),
+    ]);
+  }
 
   Future<List<SupplierTransactionSummary>> exportRows({
     void Function(int page, int total)? progress,
@@ -207,6 +217,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     fromInput.clear();
     toInput.clear();
     page = 1;
+    _requestedPage = 1;
     pages = 1;
     rows = const {};
     loading = false;
@@ -214,7 +225,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
   }
 
   Future<void> goToPage(int value) async {
-    if (!loading && !initializing && value >= 1 && value <= pages) {
+    if (canPaginate && value >= 1 && value <= pages) {
       await load(requestedPage: value);
     }
   }

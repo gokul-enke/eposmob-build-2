@@ -102,7 +102,7 @@ Before/after UI captures at 375, 768 and 1280 pixels are stored outside the repo
 under the system temporary directory supplier-report-previews, using ui-before
 and ui-after filename prefixes. The UI follow-up tests include the shared layout
 and export-service tests as well as report workflows and localization integrity:
-217 tests passed, including scope-change and real-popup regression follow-ups. The captured
+232 tests passed, including scope-change and real-popup regression follow-ups. The captured
 before/after layouts were visually inspected at
 375, 768 and 1280 pixels. The Customers reference page is unchanged; core/ui gains
 the shared popup configuration consumed by the two reports. Real popup tests
@@ -113,3 +113,22 @@ translated Select Date placeholder; selected values, Reset and API time bounds
 retain their existing behavior.
 Live tenant APIs, native Android/iOS share sheets and physical printing remain
 manual verification boundaries.
+
+## Automated review failure-path follow-up
+
+The directory fetch and transactions fetch now start independently. A directory
+null/error still produces a visible translated filter-options warning, but does
+not discard or block available report results, pagination or Export. Directory
+Retry reloads only options; report Refresh retries the intended report page and
+also retries unavailable options. Errors from either request cannot overwrite
+the other's state. Tests exercise real SupplierApi directory 403/503 responses
+with a successful transactions endpoint, slow options, disposal and stale errors.
+
+Pagination retains the last displayed page alongside retained rows, but both
+arrows and the controller's navigation entry point are disabled after a report
+failure or mismatched filters. Retry preserves page one after a failed supplier
+or date change, including malformed envelopes. Reset explicitly resets the retry
+target to page one even if the prior unfiltered report was on a later page.
+Phone and desktop tests click the popup, fail page one, verify disabled arrows,
+retry, and then advance normally. The shared ListPagination.enabled defaults to
+true, preserving existing callers; loading remains an independent disable gate.

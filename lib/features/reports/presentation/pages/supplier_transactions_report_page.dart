@@ -103,6 +103,22 @@ class _SupplierTransactionsReportPageState
     if (!exported && mounted) AppToast.error(context, _tr('export_error'));
   }
 
+  Widget? _errors() {
+    if (_report.errorKey == null && _report.directoryError == null) return null;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (_report.errorKey != null)
+        ReportErrorBar(
+            message: _errorMessage,
+            retryLabel: _tr('retry'),
+            onRetry: () => _run(_report.retry())),
+      if (_report.directoryError != null)
+        ReportErrorBar(
+            message: _tr('directory_load_error'),
+            retryLabel: _tr('retry'),
+            onRetry: () => _run(_report.reloadDirectory())),
+    ]);
+  }
+
   @override
   void dispose() {
     _report.dispose();
@@ -159,13 +175,8 @@ class _SupplierTransactionsReportPageState
               onReset: () => _run(_report.reset()),
               onSupplier: (value) => _run(_report.selectSupplier(value)),
               onDate: (date, from) => _run(_report.selectDate(date, from))),
-          toolbar: _report.errorKey == null
-              ? null
-              : ReportErrorBar(
-                  message: _errorMessage,
-                  retryLabel: _tr('retry'),
-                  onRetry: () => _run(_report.retry())),
-          isLoading: _report.loading || _report.initializing,
+          toolbar: _errors(),
+          isLoading: _report.loading,
           items: _report.rows.values.toList(),
           columns: supplierReportColumns(onView: _view),
           cardBuilder: (row, _) =>
@@ -183,6 +194,7 @@ class _SupplierTransactionsReportPageState
                       onPressed: () => _run(_report.reset()))
                   : null),
           pagination: ListPagination(
+              enabled: _report.canPaginate,
               currentPage: _report.page,
               totalPages: _report.pages,
               itemsPerPage: _report.perPage,

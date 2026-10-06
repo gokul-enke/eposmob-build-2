@@ -3,6 +3,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 
 void main() {
+  testWidgets(
+      'retained-results pagination disables navigation without changing its page',
+      (tester) async {
+    var calls = 0;
+    final state = ListPagination(
+        currentPage: 2,
+        totalPages: 3,
+        itemsPerPage: 20,
+        countLabel: 'Previous results',
+        enabled: false,
+        onPageChanged: (_) => calls++);
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: AppPaginationBar.fromState(state))));
+    expect(find.text('Page 2 of 3'), findsOneWidget);
+    expect(find.text('Previous results'), findsOneWidget);
+    final buttons = tester
+        .widgetList<AppSquareIconButton>(find.byType(AppSquareIconButton));
+    expect(buttons.every((button) => button.onPressed == null), isTrue);
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.tap(find.byTooltip('Previous page'));
+    expect(calls, 0);
+  });
   Future<void> pumpBar(
     WidgetTester tester, {
     required int current,

@@ -3317,6 +3317,7 @@
     "customer_id": "Customer ID"
   },
   "supplier_transaction_report": {
+    "directory_load_error": "Could not load supplier filter options. Use Retry to load them.",
     "retry": "Retry",
     "subtitle": "Manage supplier transaction totals and balances.",
     "find": "Find supplier transactions",
