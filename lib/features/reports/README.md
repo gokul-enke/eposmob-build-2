@@ -1,14 +1,17 @@
 # features/reports
 
 Report screens built on the shared listing kit (`core/ui`). So far:
-**My Sales Report** and **Customer Transactions Report**. The other reports
+**My Sales Report**, **Customer Transactions Report** and
+**Supplier Transactions Report**. The other reports
 still live in `lib/screens/reports/` and move here one at a time.
 
-**Supplier Transactions Report listing** now also lives here, with its existing
-visual design retained. Its details and print pages stay at their legacy paths.
+**Supplier Transactions Report listing** uses the same header, filter panel,
+table/cards, loading/empty states and pagination. Its details and print pages
+stay at their legacy paths.
 
 The supplier listing uses `domain/supplier_report.dart`,
-`data/supplier_report_source.dart`, `SupplierTransactionsReportController`,
+`data/supplier_report_source.dart`, `data/supplier_report_snapshot.dart`,
+`SupplierTransactionsReportController`,
 `SupplierTransactionsReportPage` and widgets under `widgets/supplier_report/`.
 The source reuses the public SupplierRepository and its injectable, tenant-aware
 API. Directory reads are local snapshots and do not replace the shared supplier
@@ -19,8 +22,25 @@ Requests retain supplier ID, date-only bounds, `list_all=false`, server paging,
 tenant/store scope and grouped/legacy-list parsing. Filter changes and Reset
 start at page one; Reset clears visible calendar state as well as request bounds.
 Request generations ignore stale responses and disposal continuations. A failed
-refresh keeps the previous rows and shows the existing error toast. No export
-button or shared listing-kit redesign is added in this architecture change.
+refresh keeps the previous rows and shows an error banner with Retry and a toast.
+Filters keep date-only bounds and use the existing auto-dismiss calendar.
+Export rereads every matching summary page without changing visible/shared state,
+reports progress, and rejects duplicate IDs, invalid amounts, changing pagination,
+incomplete results, or filter changes/disposal during export. The loaded report's
+token, tenant, store and endpoint must still match before and after every export
+page and after workbook creation; otherwise file delivery is cancelled. A refresh
+is required before exporting a changed scope. Amounts remain numeric
+in the workbook. The pagination safety guard accepts up to 1,000 declared pages;
+it fails rather than truncating an export. There is no new date-period limit.
+The caller may inject ExportController; only a page-owned controller is disposed.
+Windows uses the shared Save As service; other platforms use its share sheet.
+
+Customer and supplier report search menus reuse `AppSearchDropdownPopup` from
+the shared UI kit for white surfaces, blue selected/hover states and input text
+styles. Their picker keys stay stable across selection and Reset, preventing
+the dropdown package from popping the report route during popup disposal.
+Customer From/To fields reuse the translated Select Date placeholder; date/time
+filter and View selection contracts are unchanged.
 
 Built the same way as `features/customers` (the reference implementation);
 see its README for the full set of layer and UI rules.

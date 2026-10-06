@@ -156,7 +156,9 @@ class _CustomerTransactionsReportPageState
       if (customer.id?.toString() == _report.customerId) selected = customer;
     }
     return DropdownSearch<CustomerListModelData>(
-      key: ValueKey(_report.customerId),
+      // Keep the picker alive while its popup closes. Re-keying on selection
+      // makes dropdown_search.dispose pop the report route a second time.
+      key: const ValueKey('customer-report-customer-picker'),
       items: (_, __) => customers,
       selectedItem: selected,
       compareFn: (a, b) => a.id == b.id,
@@ -173,12 +175,9 @@ class _CustomerTransactionsReportPageState
       ),
       suffixProps: const DropdownSuffixProps(
           clearButtonProps: ClearButtonProps(isVisible: true)),
-      popupProps: PopupProps.menu(
-        showSearchBox: true,
-        searchFieldProps: TextFieldProps(
-          decoration: AppInputDecoration.of(
-              label: _tr('search_customer_hint'), icon: Icons.search),
-        ),
+      popupProps: AppSearchDropdownPopup.menu<CustomerListModelData>(
+        searchHint: _tr('search_customer_hint'),
+        itemLabel: _customerLabel,
       ),
       onChanged: _selectCustomer,
     );
@@ -196,6 +195,7 @@ class _CustomerTransactionsReportPageState
           DateTimeFilterField(
             key: CustomerTransactionsReportPage.fromKey,
             label: _tr('from_date'),
+            hint: _tr('select_date_hint'),
             value: _report.range.from,
             format: _dateFormat.format,
             onChanged: _report.setFrom,
@@ -203,6 +203,7 @@ class _CustomerTransactionsReportPageState
           DateTimeFilterField(
             key: CustomerTransactionsReportPage.toKey,
             label: _tr('to_date'),
+            hint: _tr('select_date_hint'),
             value: _report.range.to,
             format: _dateFormat.format,
             onChanged: _report.setTo,

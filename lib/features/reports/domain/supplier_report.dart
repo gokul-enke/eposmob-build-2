@@ -7,6 +7,10 @@ class SupplierReportOption {
 class SupplierReportQuery {
   const SupplierReportQuery({this.supplierId, this.fromDate, this.toDate});
   final String? supplierId, fromDate, toDate;
+  bool matches(SupplierReportQuery other) =>
+      supplierId == other.supplierId &&
+      fromDate == other.fromDate &&
+      toDate == other.toDate;
   bool get isDateRangeValid {
     final from = DateTime.tryParse(fromDate ?? '');
     final to = DateTime.tryParse(toDate ?? '');
@@ -31,13 +35,16 @@ class SupplierTransactionSummary {
 /// Keeps the grouped and legacy-list response contracts and ID-keyed ordering.
 class SupplierReportPage {
   const SupplierReportPage(
-      {required this.rows, required this.page, required this.pages});
+      {required this.rows,
+      required this.page,
+      required this.pages,
+      this.perPage = 20});
   final Map<String, SupplierTransactionSummary> rows;
-  final int page, pages;
+  final int page, pages, perPage;
   factory SupplierReportPage.parse(Map<String, dynamic> response) {
     final data = response['data'];
     final List<dynamic> groups;
-    int page = 1, pages = 1;
+    int page = 1, pages = 1, perPage = 20;
     if (data is Map && data['data'] is List) {
       groups = List<dynamic>.from(data['data']);
       page = data['current_page'] is num
@@ -46,6 +53,9 @@ class SupplierReportPage {
       pages = data['last_page'] is num
           ? (data['last_page'] as num).toInt()
           : int.tryParse('${data['last_page'] ?? 1}') ?? 1;
+      perPage = data['per_page'] is num
+          ? (data['per_page'] as num).toInt()
+          : int.tryParse('${data['per_page'] ?? 20}') ?? 20;
     } else if (data is List) {
       groups = List<dynamic>.from(data);
     } else {
@@ -71,6 +81,15 @@ class SupplierReportPage {
     return SupplierReportPage(
         rows: Map.unmodifiable(rows),
         page: page < 1 ? 1 : page,
-        pages: pages < 1 ? 1 : pages);
+        pages: pages < 1 ? 1 : pages,
+        perPage: perPage < 1 ? 20 : perPage);
   }
 }
+
+/// Value equality lets the report reject exports across store/session changes.
+typedef SupplierReportScope = ({
+  String token,
+  String? tenant,
+  int? storeId,
+  String endpoint,
+});

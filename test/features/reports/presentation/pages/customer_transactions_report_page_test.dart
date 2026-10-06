@@ -1,6 +1,7 @@
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -62,6 +63,16 @@ class _FakeCustomers extends CustomerProvider {
       bool listAll = true}) async {}
 }
 
+class _ReportRouteObserver extends NavigatorObserver {
+  final popped = <Route<dynamic>>[];
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    popped.add(route);
+    super.didPop(route, previousRoute);
+  }
+}
+
 void main() {
   late CapturingExport capture;
 
@@ -75,7 +86,8 @@ void main() {
   Future<_FakeInvoices> mount(WidgetTester tester,
       {Size size = const Size(1440, 900),
       _FakeInvoices? invoices,
-      _FakeCustomers? customers}) async {
+      _FakeCustomers? customers,
+      NavigatorObserver? observer}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -90,6 +102,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => TransactionProvider())
         ],
         child: GetMaterialApp(
+            navigatorObservers: [if (observer != null) observer],
             translations: EnglishTranslations(),
             locale: const Locale('en'),
             home: Scaffold(
@@ -108,6 +121,101 @@ void main() {
   Future<void> choose(WidgetTester tester, int id) async {
     picker(tester).onChanged!(CustomerListModelData(id: id, name: 'Customer'));
     await tester.pumpAndSettle();
+  }
+
+  for (final width in [375.0, 768.0, 1280.0]) {
+    testWidgets(
+        'real customer popup search/select/clear/Reset at $width keeps report route',
+        (tester) async {
+      final routes = _ReportRouteObserver();
+      final customers = _FakeCustomers()..setSelectedCustomerId('42');
+      final invoices = await mount(tester,
+          size: Size(width, 900), customers: customers, observer: routes);
+      if (width < 700) {
+        tester
+            .widget<PageHeader>(find.byType(PageHeader))
+            .actions
+            .first
+            .onPressed!();
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Select Date'), findsNWidgets(2));
+      final field = find.byType(DropdownSearch<CustomerListModelData>);
+      final originalState =
+          tester.state<DropdownSearchState<CustomerListModelData>>(field);
+      Future<void> selectProfile({bool search = false}) async {
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        final option = find.text('Profile customer').last;
+        final material = tester
+            .widgetList<Material>(
+                find.ancestor(of: option, matching: find.byType(Material)))
+            .firstWhere((widget) => widget.type == MaterialType.card);
+        expect(material.color, AppColors.surface);
+        expect(material.surfaceTintColor, AppColors.surface);
+        expect(tester.widget<Text>(option).style!.fontSize,
+            AppTextStyles.input.fontSize);
+        if (search) {
+          await tester.enterText(find.byType(TextField).last, 'Profile');
+          await tester.pump(const Duration(seconds: 1));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find
+            .ancestor(
+                of: find.text('Profile customer').last,
+                matching: find.byType(InkResponse))
+            .first);
+        await tester.pumpAndSettle();
+        expect(find.byType(CustomerTransactionsReportPage), findsOneWidget);
+        expect(routes.popped.every((route) => route is PopupRoute), isTrue);
+        expect(tester.state<DropdownSearchState<CustomerListModelData>>(field),
+            same(originalState));
+        expect(originalState.getSelectedItem!.id, 99);
+        expect(invoices.calls.last.customer, '99');
+        expect(customers.selectedCustomerId, '42');
+      }
+
+      await selectProfile(search: true);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      expect(
+          tester.widget<Text>(find.text('Profile customer').last).style!.color,
+          AppColors.primary);
+      expect(
+          tester
+              .widget<Ink>(find
+                  .ancestor(
+                      of: find.text('Profile customer').last,
+                      matching: find.byType(Ink))
+                  .first)
+              .decoration,
+          isA<BoxDecoration>().having(
+              (value) => value.color, 'selected colour', AppColors.softBlue));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.descendant(of: field, matching: find.byIcon(Icons.clear)));
+      await tester.pumpAndSettle();
+      expect(originalState.getSelectedItem, isNull);
+      expect(invoices.calls.last.customer, isNull);
+      await selectProfile();
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(originalState.getSelectedItem, isNull);
+      expect(invoices.calls.last.customer, isNull);
+      expect(find.text('All Customers'), findsOneWidget);
+      expect(find.text('Select Date'), findsNWidgets(2));
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(routes.popped, hasLength(4));
+      expect(routes.popped.every((route) => route is PopupRoute), isTrue);
+      expect(find.byType(CustomerTransactionsReportPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
   }
 
   for (final size in const [
@@ -214,6 +322,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(invoices.calls.last.customer, '42');
 
+    final from = tester
+        .widget<FilterPanel>(
+            find.byKey(CustomerTransactionsReportPage.filtersKey))
+        .fields
+        .whereType<DateTimeFilterField>()
+        .first;
+    from.onChanged(DateTime(2026, 9, 1, 10, 30));
+    await tester.pumpAndSettle();
+    expect(find.text('2026-09-01 10:30'), findsOneWidget);
+    expect(
+        tester
+            .widget<InputDecorator>(find.descendant(
+                of: find.byKey(CustomerTransactionsReportPage.fromKey),
+                matching: find.byType(InputDecorator)))
+            .isEmpty,
+        isFalse);
+    expect(invoices.calls.last.from, '2026-09-01 10:30:00');
+
     await tester.tap(find.descendant(
         of: find.byKey(CustomerTransactionsReportPage.filtersKey),
         matching: find.text('Reset')));
@@ -221,6 +347,15 @@ void main() {
     expect(invoices.calls.last.customer, isNull);
     expect(invoices.calls.last.page, 1);
     expect(customers.selectedCustomerId, '7');
+    expect(find.text('2026-09-01 10:30'), findsNothing);
+    expect(find.text('Select Date'), findsNWidgets(2));
+    expect(
+        tester
+            .widget<InputDecorator>(find.descendant(
+                of: find.byKey(CustomerTransactionsReportPage.fromKey),
+                matching: find.byType(InputDecorator)))
+            .isEmpty,
+        isTrue);
   });
 
   testWidgets('coming back from View opens an unfiltered report',

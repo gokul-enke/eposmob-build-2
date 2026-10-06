@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/supplier_report_snapshot.dart';
 import '../../domain/supplier_report.dart';
 
 typedef SupplierReportFetch = Future<Map<String, dynamic>> Function(
@@ -7,16 +8,27 @@ typedef SupplierReportFetch = Future<Map<String, dynamic>> Function(
 /// Owns report inputs, directory snapshot, pagination and request generations.
 class SupplierTransactionsReportController extends ChangeNotifier {
   SupplierTransactionsReportController(
-      {required this.fetchDirectory, required this.fetch});
+      {required this.fetchDirectory,
+      required this.fetch,
+      required this.readScope});
   final Future<List<SupplierReportOption>> Function() fetchDirectory;
   final SupplierReportFetch fetch;
+  final Future<SupplierReportScope> Function() readScope;
   final supplierInput = TextEditingController();
   final fromInput = TextEditingController();
   final toInput = TextEditingController();
   List<SupplierReportOption> suppliers = const [];
   Map<String, SupplierTransactionSummary> rows = const {};
   String? selectedSupplierId;
-  int page = 1, pages = 1, _request = 0, _directoryRequest = 0;
+  int page = 1,
+      pages = 1,
+      perPage = 20,
+      _requestedPage = 1,
+      _request = 0,
+      _directoryRequest = 0;
+  SupplierReportQuery? _loaded;
+  SupplierReportScope? _loadedScope;
+  bool _directoryFailed = false;
   bool initializing = false,
       loading = false,
       showFilters = true,
@@ -24,6 +36,14 @@ class SupplierTransactionsReportController extends ChangeNotifier {
   String? errorKey;
   Object? error;
   int errorRevision = 0;
+  int get loadRevision => _request;
+  bool get canExport =>
+      !_disposed &&
+      !initializing &&
+      !loading &&
+      errorKey == null &&
+      rows.isNotEmpty &&
+      _loaded?.matches(query) == true;
   bool get hasActiveFilters =>
       supplierInput.text.isNotEmpty ||
       fromInput.text.isNotEmpty ||
@@ -47,6 +67,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     if (_disposed) return;
     final directoryRequest = ++_directoryRequest;
     initializing = true;
+    _directoryFailed = false;
     errorKey = null;
     error = null;
     _notify();
@@ -59,6 +80,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     } catch (e) {
       if (!_disposed && directoryRequest == _directoryRequest) {
         error = e;
+        _directoryFailed = true;
         errorKey = 'supplier_transaction_report.err_loading_supplier_data';
         ++errorRevision;
       }
@@ -83,17 +105,28 @@ class SupplierTransactionsReportController extends ChangeNotifier {
       return;
     }
     final target = requestedPage ?? page;
+    _requestedPage = target;
     loading = true;
     error = null;
     errorKey = null;
     _notify();
     try {
+      final scope = await readScope();
+      if (_disposed || request != _request) return;
       final response = await fetch(snapshot, target);
       if (_disposed || request != _request) return;
+      final currentScope = await readScope();
+      if (_disposed || request != _request) return;
+      if (scope != currentScope) {
+        throw StateError('Supplier report session changed during loading.');
+      }
       final result = SupplierReportPage.parse(response);
       rows = result.rows;
       page = result.page;
       pages = result.pages;
+      perPage = result.perPage;
+      _loaded = snapshot;
+      _loadedScope = scope;
     } catch (e) {
       if (!_disposed && request == _request) {
         error = e;
@@ -121,6 +154,49 @@ class SupplierTransactionsReportController extends ChangeNotifier {
         '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
     (isFrom ? fromInput : toInput).text = text;
     return load(requestedPage: 1);
+  }
+
+  Future<void> retry() =>
+      _directoryFailed ? initialize() : load(requestedPage: _requestedPage);
+
+  Future<List<SupplierTransactionSummary>> exportRows({
+    void Function(int page, int total)? progress,
+  }) =>
+      export(build: (rows) async => rows, progress: progress);
+
+  /// Keep the same scope through fetching AND workbook creation, so callers
+  /// never receive a file for delivery after the active store/session changes.
+  Future<T> export<T>({
+    required Future<T> Function(List<SupplierTransactionSummary> rows) build,
+    void Function(int page, int total)? progress,
+  }) async {
+    if (!canExport) throw StateError('Supplier report is unavailable.');
+    final snapshot = _loaded!, scope = _loadedScope, request = _request;
+    void checkLocal() {
+      if (_disposed || request != _request || !snapshot.matches(query)) {
+        throw StateError('Supplier report filters changed during export.');
+      }
+    }
+
+    Future<void> check() async {
+      checkLocal();
+      final currentScope = await readScope();
+      checkLocal();
+      if (scope == null || scope != currentScope) {
+        throw StateError('Supplier report session changed during export.');
+      }
+    }
+
+    final result = await fetchSupplierReportSnapshot((page) async {
+      await check();
+      final result = await fetch(snapshot, page);
+      await check();
+      return result;
+    }, progress: progress);
+    await check();
+    final output = await build(result);
+    await check();
+    return output;
   }
 
   Future<void> reset() {
