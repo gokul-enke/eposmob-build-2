@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/stock/domain/stock_list_query.dart';
 import 'package:pos_machine/features/stock/presentation/state/stock_list_controller.dart';
+import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -98,6 +100,51 @@ void main() {
     expect(controller.initialized, isTrue);
   });
   test(
+      'refresh restores filters before a store failure and retains them on retry',
+      () async {
+    controller.dispose();
+    final stocks = StockProvider();
+    addTearDown(stocks.dispose);
+    var failStores = false;
+    controller = StockListController(
+        ensureCategories: () async {},
+        fetchStocks: (_) async {
+          stocks.applyRealtimeStocks([
+            ListStockModelData(stockId: 1, productName: 'Apple'),
+            ListStockModelData(stockId: 2, productName: 'Pear'),
+          ]);
+          // Match loadAllStocks resetting the provider's applied filters.
+          stocks.applyStockFiltersLocally(page: 1);
+        },
+        fetchStores: (_) async {
+          expect(stocks.stockFilterName, controller.stockNameController.text);
+          if (failStores) throw StateError('store request failed');
+        },
+        readCategoryNames: () => [],
+        readStoreNames: () => [],
+        applyFilters: (query) => stocks.applyStockFiltersLocally(
+            filterName: query.name, includeVariants: query.includeVariants),
+        resetFilters: stocks.resetStockFilters,
+        readVariantEnabled: () => false);
+    await controller.load('token');
+    controller.stockNameController.text = 'Pear';
+    controller.search();
+    failStores = true;
+    await expectLater(controller.load('token'), throwsStateError);
+    expect(controller.stockNameController.text, 'Pear');
+    expect(stocks.stockFilterName, 'Pear');
+    expect(stocks.listStockModelDataList!.map((s) => s.productName), ['Pear']);
+    expect(controller.loading, isFalse);
+    expect(controller.loadError, isNotNull);
+    failStores = false;
+    await controller.load('token');
+    expect(controller.loadError, isNull);
+    expect(stocks.listStockModelDataList!.map((s) => s.productName), ['Pear']);
+    controller.reset();
+    expect(stocks.listStockModelDataList!.map((s) => s.productName),
+        ['Apple', 'Pear']);
+  });
+  test(
       'disposing during category fetch prevents subsequent requests and notifications',
       () async {
     controller.dispose();
@@ -140,5 +187,35 @@ void main() {
     await expectLater(controller.load(''), throwsStateError);
     expect(calls, isEmpty);
     expect(controller.loading, isFalse);
+  });
+  testWidgets('debounce flush, reset and disposal cancel pending searches',
+      (tester) async {
+    controller.stockNameController.text = 'apple';
+    controller.scheduleSearch();
+    await tester.pump(const Duration(milliseconds: 299));
+    expect(submitted, isNull);
+    expect(controller.flushSearch(), isTrue);
+    expect(submitted!.name, 'apple');
+    expect(controller.flushSearch(), isFalse);
+    controller.stockNameController.text = 'pear';
+    controller.scheduleSearch();
+    controller.reset();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(submitted!.name, 'apple');
+    expect(controller.query.name, isEmpty);
+    controller.scheduleSearch();
+    controller.dispose();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(submitted!.name, 'apple');
+    // Replace disposed ownership for the shared tearDown.
+    controller = StockListController(
+        ensureCategories: () async {},
+        fetchStocks: (_) async {},
+        fetchStores: (_) async {},
+        readCategoryNames: () => [],
+        readStoreNames: () => [],
+        applyFilters: (_) {},
+        resetFilters: () {},
+        readVariantEnabled: () => false);
   });
 }

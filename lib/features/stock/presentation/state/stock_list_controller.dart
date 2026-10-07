@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/stock_list_query.dart';
 
@@ -21,15 +22,15 @@ class StockListController extends ChangeNotifier {
   final bool Function() readVariantEnabled;
   final stockNameController = TextEditingController();
   final categoryController = TextEditingController(text: 'All Categories');
-  final categorySearchController = TextEditingController();
   final barcodeController = TextEditingController();
   final rackController = TextEditingController();
   final storeController = TextEditingController(text: 'All Stores');
-  final storeSearchController = TextEditingController();
   final stockStatusController = TextEditingController(text: 'All Statuses');
-  final statusSearchController = TextEditingController();
   bool loading = false, initialized = false, showFilters = false;
   bool _disposed = false;
+  Timer? _searchTimer;
+  Object? loadError;
+  StockListQuery? appliedQuery;
   List<String> categories = ['All Categories'];
   List<String> stores = ['All Stores'];
 
@@ -57,12 +58,16 @@ class StockListController extends ChangeNotifier {
     if (_disposed || loading) return;
     if (token.isEmpty) throw StateError('stock.auth_token_missing');
     loading = true;
+    loadError = null;
     notifyListeners();
     try {
       await ensureCategories();
       if (_disposed) return;
       await fetchStocks(token);
       if (_disposed) return;
+      // The stock loader replaces the visible page with unfiltered rows.
+      // Restore the inputs before another request can fail or keep us waiting.
+      search();
       await fetchStores(token);
       if (_disposed) return;
       final categoryNames =
@@ -75,6 +80,10 @@ class StockListController extends ChangeNotifier {
       categories = ['All Categories', ...categoryNames];
       stores = ['All Stores', ...storeNames];
       initialized = true;
+      search();
+    } catch (error) {
+      if (!_disposed) loadError = error;
+      rethrow;
     } finally {
       if (!_disposed) {
         loading = false;
@@ -84,17 +93,38 @@ class StockListController extends ChangeNotifier {
   }
 
   void search() {
-    if (!_disposed) applyFilters(query);
+    _searchTimer?.cancel();
+    _searchTimer = null;
+    if (_disposed) return;
+    appliedQuery = query;
+    applyFilters(appliedQuery!);
+    notifyListeners();
+  }
+
+  void scheduleSearch() {
+    if (_disposed) return;
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 300), search);
+    notifyListeners();
+  }
+
+  bool flushSearch() {
+    if (_searchTimer == null) return false;
+    search();
+    return true;
   }
 
   void reset() {
     if (_disposed) return;
+    _searchTimer?.cancel();
+    _searchTimer = null;
     stockNameController.clear();
     categoryController.text = 'All Categories';
     barcodeController.clear();
     rackController.clear();
     storeController.text = 'All Stores';
     stockStatusController.text = 'All Statuses';
+    appliedQuery = query;
     resetFilters();
     notifyListeners();
   }
@@ -109,16 +139,14 @@ class StockListController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _searchTimer?.cancel();
     for (final input in [
       stockNameController,
       categoryController,
-      categorySearchController,
       barcodeController,
       rackController,
       storeController,
-      storeSearchController,
       stockStatusController,
-      statusSearchController
     ]) {
       input.dispose();
     }
