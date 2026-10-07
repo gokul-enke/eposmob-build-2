@@ -255,6 +255,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     final session = _session;
     if (session == null || event.companyId != session.companyId) return;
     if (event.storeId != null && event.storeId != session.storeId) return;
+    _repository.noteRemoteChange();
     _eventDebounce?.cancel();
     _eventDebounce = Timer(
       _config.eventDebounce,
@@ -264,6 +265,8 @@ class RealtimeSyncProvider extends ChangeNotifier {
 
   void _handleSubscribed() {
     _reconnectAttempt = 0;
+    // Events sent while the socket was down are not replayed.
+    _repository.noteRemoteChange();
     _setStatus(RealtimeSyncStatus.subscribed);
     unawaited(catchUp());
   }

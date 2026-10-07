@@ -28,11 +28,11 @@ class KioskCartPanel extends StatelessWidget {
 
   double get subtotal => items.fold(
         0,
-        (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+        (sum, item) => sum + item.amounts.total,
       );
   double get tax => items.fold(
         0,
-        (sum, item) => sum + ((item.taxAmount ?? 0) * item.quantity),
+        (sum, item) => sum + item.amounts.tax,
       );
   double get total => subtotal;
 
@@ -193,7 +193,7 @@ class _CartItem extends StatelessWidget {
               Text(
                 _formatMoney(
                   currency,
-                  (item.price ?? 0) * item.quantity,
+                  item.amounts.total,
                 ),
                 style: const TextStyle(color: ColorManager.kTextColor),
               ),

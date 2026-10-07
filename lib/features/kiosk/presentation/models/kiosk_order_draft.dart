@@ -24,14 +24,12 @@ class KioskOrderDraft {
 
   double get subtotal => items.fold<double>(
         0,
-        (sum, item) =>
-            sum +
-            ((item.displayPrice ?? item.price ?? 0) * item.displayQuantity),
+        (sum, item) => sum + item.amounts.total,
       );
 
   double get includedTax => items.fold<double>(
         0,
-        (sum, item) => sum + ((item.taxAmount ?? 0) * item.quantity),
+        (sum, item) => sum + item.amounts.tax,
       );
 
   double get total => subtotal;

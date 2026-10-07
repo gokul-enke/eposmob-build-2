@@ -63,3 +63,16 @@ When a product-wide offer applies to a cart line that uses two batches, the app 
 ### 10. `409` and `review: true`
 
 The app treats `200`/`201` with `order_id` as success, including `review: true`. A `409` is kept on the device as "needs review" and is not retried. Confirm that matches your intent for a conflicting `client_sale_id`.
+
+## Optional improvement: batch allocations on one order line
+
+Could an order line accept `stock_allocations`, for example
+`[{"stock_id":87,"quantity":1},{"stock_id":88,"quantity":1}]`, while keeping
+one `quantity: 2`, `price: 9.315` and `total_price: 18.63`? Today it becomes two
+separately rounded lines (9.32 + 9.32 = 18.64). The app now charges and prints
+18.64 consistently with those uploaded lines. One line with allocations would
+allow one rounding operation while preserving inventory per batch.
+
+This is a proposed future contract change; the app continues sending separate
+batch lines and three-decimal offer prices. Reducing offer prices to two decimals
+would also require explicit agreement and would not solve weighed-item rounding.

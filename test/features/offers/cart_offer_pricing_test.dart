@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/features/kiosk/presentation/models/kiosk_order_draft.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,6 +131,129 @@ void main() {
     expect(line.displayStandardPrice, 100);
   });
 
+  test('three rounded lines agree across cart, receipt and upload', () {
+    final provider = providerWith([]);
+    provider.cartItems.addAll([
+      for (var id = 1; id <= 3; id++)
+        LocalCartItem(product: GetProduct(productId: id, unit: 'PCS'),
+          price: 16.992, quantity: 1)
+    ]);
+    expect(provider.subTotalBeforeDiscount, provider.cartTotal);
+    expect(KioskOrderDraft.fromCartItems(provider.cartItems).subtotal, provider.cartTotal);
+    expect(provider.cartItems.fold<double>(0, (sum, item) => sum + double.parse(PrintService.savedOrderReceiptItem(item)['totalPrice'] as String)), closeTo(provider.cartTotal, 0.000001));
+    final upload = provider.buildOrderItemsPayload().fold<double>(0, (sum, item) => sum + (item['total_price'] as num).toDouble());
+    expect(provider.cartTotal.toStringAsFixed(2), '50.97');
+    expect(upload.toStringAsFixed(2), '50.97');
+  });
+
+  test('batch split total agrees across cart, receipt and upload', () {
+    final provider = providerWith([]);
+    provider.cartItems.add(LocalCartItem(product: GetProduct(productId: 1, unit: 'PCS'),
+      price: 9.315, quantity: 2, stockReservations: [
+        StockReservation(stockId: 87, quantity: 1),
+        StockReservation(stockId: 88, quantity: 1)]));
+    expect(provider.subTotalBeforeDiscount, provider.cartTotal);
+    expect(KioskOrderDraft.fromCartItems(provider.cartItems).subtotal, provider.cartTotal);
+    expect(provider.cartItems.fold<double>(0, (sum, item) => sum + double.parse(PrintService.savedOrderReceiptItem(item)['totalPrice'] as String)), closeTo(provider.cartTotal, 0.000001));
+    final upload = provider.buildOrderItemsPayload().fold<double>(0, (sum, item) => sum + (item['total_price'] as num).toDouble());
+    expect(provider.cartTotal.toStringAsFixed(2), '18.64');
+    expect(upload.toStringAsFixed(2), '18.64');
+  });
+
+  test('weighed batch split agrees across cart, receipt and upload', () {
+    final provider = providerWith([]);
+    provider.cartItems.add(LocalCartItem(product: GetProduct(productId: 1, unit: 'KG'),
+      price: 12.35, quantity: 1, stockReservations: [
+        StockReservation(stockId: 87, quantity: 0.5),
+        StockReservation(stockId: 88, quantity: 0.5)]));
+    expect(provider.subTotalBeforeDiscount, provider.cartTotal);
+    expect(KioskOrderDraft.fromCartItems(provider.cartItems).subtotal, provider.cartTotal);
+    expect(provider.cartItems.fold<double>(0, (sum, item) => sum + double.parse(PrintService.savedOrderReceiptItem(item)['totalPrice'] as String)), closeTo(provider.cartTotal, 0.000001));
+    final upload = provider.buildOrderItemsPayload().fold<double>(0, (sum, item) => sum + (item['total_price'] as num).toDouble());
+    expect(provider.cartTotal.toStringAsFixed(2), '12.36');
+    expect(upload.toStringAsFixed(2), '12.36');
+  });
+
+  test('explicit subset preview expands the same batches as real add', () {
+    final first = stock(id: 87).copyWith(quantity: 1);
+    final second = stock(id: 88).copyWith(quantity: 10);
+    final item = product(stocks: [first, second]);
+    final provider = providerWith([
+      tenPercent,
+      productOffer(id: 10, lines: [offerLine(productId: 1, stockId: 87, value: 20)]),
+    ]);
+    provider.initializeProducts([item]);
+    final preview = provider.previewProductPrice(product: item, quantity: 2,
+      selectedStock: first, stockGroupIds: [87]);
+    provider.addToCart(product: item, quantity: 2,
+      selectedStock: first, stockGroupIds: [87]);
+    expect(preview.unitPrice, 90);
+    expect(provider.cartItems.single.price, 90);
+  });
+
+  test('rounded explicit offer price retains its discount reference', () {
+    final batch = stock(price: '10.35');
+    final item = product(stocks: [batch]);
+    final provider = providerWith([tenPercent]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: batch, price: 9.32);
+    final line = provider.cartItems.single;
+    final payload = provider.buildOrderItemsPayload().single;
+    // The rounded echo of the 9.315 offer price goes back to the exact offer
+    // price: 2 units total 18.63, not 18.64.
+    expect(line.price, 9.315);
+    expect(line.amounts.total, 18.63);
+    expect(payload['price'], 9.315);
+    expect(payload['offer_id'], 9);
+    expect(line.hasOffer, true);
+    expect(line.isManualPriceOverride, false);
+    expect(payload['standard_unit_price'], 10.35);
+  });
+  test('tiny batch amounts and taxes stay nonnegative and match the receipt', () {
+    final provider = providerWith([]);
+    for (final price in [0.005, 0.04]) {
+      provider.cartItems.clear();
+      provider.cartItems.add(LocalCartItem(
+        product: GetProduct(productId: 1, unit: 'PCS'),
+        price: price,
+        quantity: 4,
+        taxRate: 18,
+        stockReservations: [
+          for (var id = 1; id <= 4; id++)
+            StockReservation(stockId: id, quantity: 1),
+        ],
+      ));
+      final payload = provider.buildOrderItemsPayload();
+      expect(payload, hasLength(4));
+      for (final line in payload) {
+        expect(line['total_price'], greaterThanOrEqualTo(0));
+        expect(line['tax_amount'], greaterThanOrEqualTo(0));
+      }
+      final total = payload.fold<double>(0, (sum, line) => sum + (line['total_price'] as num));
+      final tax = payload.fold<double>(0, (sum, line) => sum + (line['tax_amount'] as num));
+      expect(provider.cartTotal, closeTo(total, 0.000001));
+      expect(provider.priceSummary!.totalTax, closeTo(tax, 0.000001));
+      expect(double.parse(PrintService.savedOrderReceiptItem(provider.cartItems.single)['tax_amount'] as String), closeTo(tax, 0.000001));
+    }
+  });
+
+  test('normal whole-unit totals and order discounts agree with rounded lines', () {
+    final provider = providerWith([]);
+    provider.cartItems.add(LocalCartItem(
+      product: GetProduct(productId: 1, unit: 'PCS'),
+      price: 12.35, quantity: 4, taxRate: 18,
+      stockReservations: [
+        StockReservation(stockId: 87, quantity: 2),
+        StockReservation(stockId: 88, quantity: 2),
+      ],
+    ));
+    expect(provider.cartTotal, 49.4);
+    provider.applyDiscount(flatDiscount: 2, percentageDiscount: 10);
+    expect(provider.priceSummary!.discount, 6.94);
+    expect(provider.cartTotal, 42.46);
+    expect(provider.buildOrderItemsPayload().fold<double>(0, (sum, line) => sum + (line['total_price'] as num)), 49.4);
+  });
+
   test('price preview shares batch allocation and never reserves stock', () {
     final first = stock(id: 87).copyWith(quantity: 2);
     final second = stock(id: 88).copyWith(quantity: 10);
@@ -208,7 +333,7 @@ void main() {
     final preview = provider.previewProductPrice(product: item, quantity: 3);
     expect(preview.unitPrice, 16.992);
     expect(preview.standardUnitPrice, 19.99);
-    expect(preview.total, closeTo(50.976, 0.00001));
+    expect(preview.total, 50.98);
     provider.addToCart(product: item, quantity: 3, selectedStock: batch);
     expect(provider.cartItems.single.price, preview.baseUnitPrice);
   });
@@ -786,6 +911,32 @@ void main() {
     expect(provider.cartItems.single.price, 100);
     expect(provider.cartItems.single.hasOffer, isFalse);
     expect(provider.debugNextOfferBoundary, isNull);
+  });
+
+  test('nested checkout holds keep prices stable and catch up after cancellation', () async {
+    var now = offerTestNow;
+    final end = now.add(const Duration(minutes: 1));
+    final provider = providerWith([
+      productOffer(validUntil: end, lines: [offerLine(productId: 1)]),
+    ], clock: () => now);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, selectedStock: batch);
+    final checkoutDone = provider.holdOfferPricesForCheckout();
+    final paymentDone = provider.holdOfferPricesForCheckout();
+    now = end;
+    provider.debugRunOfferBoundaryTimer();
+    provider.offerRepository.debugSetCatalog(offerCatalog([]));
+    expect(provider.cartItems.single.price, 90);
+    paymentDone();
+    paymentDone(); // Releasing a closed dialog twice is harmless.
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.cartItems.single.price, 90);
+    checkoutDone();
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, false);
   });
 
   test('the boundary timer starts an offer at valid_from', () {

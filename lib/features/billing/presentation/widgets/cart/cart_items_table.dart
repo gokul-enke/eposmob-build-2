@@ -237,7 +237,7 @@ class CartItemsTable extends StatelessWidget {
                             // Total
                             _buildFixedContentCell(
                               Text(
-                                (item.price! * item.quantity)
+                                item.amounts.total
                                     .toStringAsFixed(2),
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,

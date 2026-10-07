@@ -69,10 +69,7 @@ class CartItemCard extends StatelessWidget {
   }
 
   String get _lineTotal {
-    final total = BillingCrashGuards.lineTotal(
-      unitPrice: item.price,
-      quantity: item.quantity,
-    );
+    final total = item.amounts.total;
     return AmountHelper.formatAmount(total);
   }
 

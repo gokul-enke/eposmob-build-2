@@ -22,9 +22,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final standardText = standardPrice.toStringAsFixed(2);
     return Semantics(
       container: true,
+      excludeSemantics: true,
       label: 'offers.badge_semantics'.trParams({'price': standardText}),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
         children: [
           Icon(
             Icons.local_offer_outlined,
@@ -52,7 +52,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final productName = cartItem.displayName;
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
-    final totalPrice = quantity * unitPrice;
+    final totalPrice = cartItem.amounts.total;
     final isKeyboardFocused = _currentCartItemsFocusNode.hasFocus &&
         _focusedCurrentCartItemIndex == index;
 
@@ -532,8 +532,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
     double netAmount = 0.0;
     for (final item in cartItems) {
-      final unitPrice = item.price ?? 0.0;
-      netAmount += unitPrice * item.quantity;
+      netAmount += item.amounts.total;
     }
     final totalPayable = netAmount;
 

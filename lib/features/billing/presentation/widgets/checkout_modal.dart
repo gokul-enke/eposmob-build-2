@@ -219,6 +219,7 @@ class CheckoutModal extends StatefulWidget {
 }
 
 class _CheckoutModalState extends State<CheckoutModal> {
+  VoidCallback? _releaseOfferPrices;
   late int _currentStep; // 0: Customer, 1: Delivery, 2: Discount, 3: Payment
   bool _hasEvaluatedSkipCustomerSelection = false;
   bool _isConfirming = false;
@@ -365,6 +366,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   @override
   void initState() {
     super.initState();
+    _releaseOfferPrices = context.read<LocalProductProvider>().holdOfferPricesForCheckout();
     _currentStep = _resolveInitialStep(widget.initialStep);
     debugPrint(
         "⌨️ [CheckoutModal] initState | customer=${widget.selectedCustomer?.id} | enableDelivery=${widget.enableDelivery} | paymentVisited=${widget.hasOpenedPaymentModalOnce} | initialStep=${widget.initialStep} | resolvedStep=$_currentStep");
@@ -538,6 +540,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   @override
   void dispose() {
+    _releaseOfferPrices?.call();
     debugPrint(
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);

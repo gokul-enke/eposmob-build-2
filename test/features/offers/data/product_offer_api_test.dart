@@ -118,8 +118,8 @@ void main() {
       },
     ).fetch(accessToken: 'token', apiKey: 'tenant', storeId: 1);
 
-    // Read once, right after page 1, not after the last page.
-    expect(clockReadsAfter, [1]);
+    // Measure around page 1; later pages do not skew its timestamp.
+    expect(clockReadsAfter, [0, 1]);
     expect(response.receivedAt, firstPageAt);
     expect(response.serverTime, DateTime.utc(2026, 10, 6, 11));
   });
@@ -134,6 +134,21 @@ void main() {
       ),
       throwsA(isA<ProductOfferEndpointMissing>()),
     );
+  });
+
+  test('clock correction uses request midpoint and ignores later-page delay', () async {
+    final fake = _FakeGet([
+      http.Response(jsonEncode(_page(offerIds: [9], nextPage: 2)), 200),
+      http.Response(jsonEncode(_page(offerIds: [10])), 200),
+    ]);
+    final start = DateTime.utc(2026, 10, 6, 10, 59, 58);
+    var reads = 0;
+    final response = await ProductOfferApi(
+      httpGet: fake.call,
+      clock: () => start.add(Duration(seconds: 2 * reads++)),
+    ).fetch(accessToken: 'token', apiKey: 'tenant', storeId: 1);
+    expect(reads, 2);
+    expect(response.receivedAt, start.add(const Duration(seconds: 1)));
   });
 
   test('rejects an incomplete download when the page limit is reached', () {

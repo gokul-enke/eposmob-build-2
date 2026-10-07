@@ -197,8 +197,8 @@ class ProductOfferSyncResponse {
   final Set<int> removedOfferIds;
   final DateTime? serverTime;
 
-  /// Device time when the response carrying [serverTime] arrived. Null when
-  /// the response was not received over the network.
+  /// Device-clock midpoint of the request carrying [serverTime]. Null when
+  /// the response was not received over the network. Used for clock correction.
   final DateTime? receivedAt;
 
   /// The backend sent every offer of the store (`full_snapshot: true`), so

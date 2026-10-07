@@ -127,8 +127,6 @@ class BillingMobileErrorMessages {
       'billing_mobile_errors.discount_percent_max'.tr;
   static String get discountFlatExceedsTotal =>
       'billing_mobile_errors.discount_flat_exceeds_total'.tr;
-  static String get applyCouponFailed =>
-      'billing_mobile_errors.apply_coupon_failed'.tr;
   static String get loadDiscountsFailed =>
       'billing_mobile_errors.load_discounts_failed'.tr;
 
@@ -421,7 +419,7 @@ class BillingMobileMarketController {
   }
 
   String formatAddFieldPrice(double value) =>
-      _cartController.formatPrice(value);
+      value.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
 
   List<MobileCartUnitOption> saleUnitOptionsForProduct(
     GetProduct product, {
@@ -1018,21 +1016,12 @@ class MobileDiscountValidationResult {
 class MobileApplyDiscountResult {
   const MobileApplyDiscountResult.success()
       : success = true,
-        errorMessage = null,
-        couponApiFailed = false;
+        errorMessage = null;
 
-  const MobileApplyDiscountResult.failure(this.errorMessage)
-      : success = false,
-        couponApiFailed = false;
-
-  MobileApplyDiscountResult.couponApiFailed()
-      : success = false,
-        errorMessage = BillingMobileErrorMessages.applyCouponFailed,
-        couponApiFailed = true;
+  const MobileApplyDiscountResult.failure(this.errorMessage) : success = false;
 
   final bool success;
   final String? errorMessage;
-  final bool couponApiFailed;
 }
 
 /// Coupon selection, validation, and discount application for mobile billing.
@@ -1040,7 +1029,14 @@ class BillingMobileCouponController {
   const BillingMobileCouponController();
 
   String initialDiscountFieldText(double value) {
-    return value == 0.0 ? '' : value.toString();
+    return value == 0.0 ? '' : formatDiscountFieldValue(value);
+  }
+
+  /// `20.0` -> `20`, `12.5` -> `12.5` so integer-only fields stay editable.
+  String formatDiscountFieldValue(double value) {
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toString();
   }
 
   DiscountData? findDiscountByCode(List<DiscountData> discounts, String code) {
@@ -1053,24 +1049,37 @@ class BillingMobileCouponController {
     return null;
   }
 
+  /// True only when the user edited the fields away from the selected
+  /// coupon's own values. Controller listeners also fire on cursor/selection
+  /// changes and when the coupon itself fills the fields, so a plain
+  /// "fields are non-empty" check would drop the coupon immediately.
   bool shouldClearSelectedCouponOnManualInput({
     required String flatDiscountText,
     required String percentageDiscountText,
     required DiscountData? selectedDiscount,
   }) {
     if (selectedDiscount == null) return false;
-    return flatDiscountText.isNotEmpty || percentageDiscountText.isNotEmpty;
+    final couponValues = fieldValuesForSelectedDiscount(selectedDiscount);
+    final current = parseDiscountAmounts(
+      flatDiscountText: flatDiscountText,
+      percentageDiscountText: percentageDiscountText,
+    );
+    final expected = parseDiscountAmounts(
+      flatDiscountText: couponValues.flat,
+      percentageDiscountText: couponValues.percent,
+    );
+    return current.flat != expected.flat || current.percent != expected.percent;
   }
 
   ({String flat, String percent}) fieldValuesForSelectedDiscount(
     DiscountData discount,
   ) {
     final isPercentage = discount.discountType.toLowerCase() == 'percent';
-    final value = discount.discountValue.toDouble();
+    final value = formatDiscountFieldValue(discount.discountValue.toDouble());
     if (isPercentage) {
-      return (flat: '', percent: value.toString());
+      return (flat: '', percent: value);
     }
-    return (flat: value.toString(), percent: '');
+    return (flat: value, percent: '');
   }
 
   double originalSubTotal(LocalProductProvider localProductProvider) {
@@ -1145,19 +1154,28 @@ class BillingMobileCouponController {
     return effectiveTotal - netTotal;
   }
 
+  /// True when an applied cart discount was cleared elsewhere (e.g. order
+  /// reset) and the sheet's fields should follow. Must only react to the
+  /// applied -> cleared transition: un-applied input (typed or filled from a
+  /// selected coupon) is legitimately non-empty while the cart discount is 0.
   bool shouldSyncClearedDiscountFields({
+    required double previousFlatDiscount,
+    required double previousPercentageDiscount,
     required double flatDiscount,
     required double percentageDiscount,
     required String flatFieldText,
     required String percentageFieldText,
   }) {
-    return flatDiscount == 0.0 &&
+    final wasApplied =
+        previousFlatDiscount != 0.0 || previousPercentageDiscount != 0.0;
+    return wasApplied &&
+        flatDiscount == 0.0 &&
         percentageDiscount == 0.0 &&
         (flatFieldText.isNotEmpty || percentageFieldText.isNotEmpty);
   }
 
-  /// Applies manual/coupon discount locally, optionally calls coupon API, then
-  /// remaps payment amounts for the new payable total.
+  /// Validates downloaded coupon details and applies the discount locally,
+  /// matching Finalize Order, then remaps payments for the new payable total.
   Future<MobileApplyDiscountResult> applyDiscount({
     required LocalProductProvider localProductProvider,
     required BillingProvider billingProvider,
@@ -1166,7 +1184,6 @@ class BillingMobileCouponController {
     required String flatDiscountText,
     required String percentageDiscountText,
     required DiscountData? selectedDiscount,
-    required Future<bool> Function() applyCouponApi,
   }) async {
     final subTotal = originalSubTotal(localProductProvider);
 
@@ -1220,19 +1237,6 @@ class BillingMobileCouponController {
     );
 
     if (selectedDiscount != null) {
-      billingProvider.coupenCodeTextController.text =
-          selectedDiscount.couponCode;
-      try {
-        final couponApplied = await applyCouponApi();
-        if (!couponApplied) {
-          return MobileApplyDiscountResult.couponApiFailed();
-        }
-      } catch (_) {
-        return MobileApplyDiscountResult.couponApiFailed();
-      }
-      if (!billingProvider.isCouponApplied) {
-        return MobileApplyDiscountResult.couponApiFailed();
-      }
       billingProvider.setCouponApplied(
         true,
         code: selectedDiscount.couponCode,
@@ -1849,7 +1853,7 @@ class BillingMobilePaymentController {
     }
 
     if (value.isNotEmpty && double.tryParse(value) != 0.0) {
-      if (!item.selected) {
+      if (!bp.isCodeSelected(item.type, methodId: item.methodId)) {
         bp.setPaymentMethod(item.type, true);
       }
     }
@@ -1857,6 +1861,8 @@ class BillingMobilePaymentController {
   }
 
   void selectMethodOnTap(MobilePaymentItem item, BillingProvider bp) {
+    // Focusing an amount field selects its method; only the row toggles it off.
+    if (bp.isCodeSelected(item.type, methodId: item.methodId)) return;
     toggleMethod(
       item.type,
       bp,
@@ -2043,6 +2049,14 @@ class BillingMobilePaymentController {
       default:
         return null;
     }
+  }
+
+  /// Accepts the sheet's reviewed payment, like Apply in the desktop modal.
+  MobilePaymentReadyResult completePaymentStep(BillingProvider bp) {
+    bp.calculateBalance();
+    final result = validatePaymentReadyForConfirm(bp, paymentStepVisited: true);
+    if (result.isValid) bp.markPaymentStepVisited();
+    return result;
   }
 
   /// Gates confirm / confirm-print when ONLINE is selected without a successful

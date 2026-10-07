@@ -55,14 +55,13 @@ class ProductOfferApi {
         if (since != null) 'since': since.toUtc().toIso8601String(),
         if (page != null) 'page': page.toString(),
       });
+      final requestStartedAt = serverTime == null ? _clock() : null;
       final response = await _get(url, headers: {
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
         'Accept': 'application/json',
       }).timeout(requestTimeout);
-      // Paired with the first page's server_time to measure the clock offset;
-      // reading the device clock after the last page would skew it.
-      receivedAt ??= _clock();
+      final requestEndedAt = serverTime == null ? _clock() : null;
 
       if (response.statusCode == 404 || response.statusCode == 405) {
         throw ProductOfferEndpointMissing(response.statusCode);
@@ -83,7 +82,14 @@ class ProductOfferApi {
       offers.addAll(body.offers);
       removed.addAll(body.removedOfferIds);
       // The first page's server time is the safe `since` for the next sync.
-      serverTime ??= body.serverTime;
+      if (serverTime == null && body.serverTime != null) {
+        serverTime = body.serverTime;
+        // Approximate the server timestamp at the request midpoint, rather
+        // than including the response download time in the clock offset.
+        receivedAt = requestStartedAt!.add(Duration(
+          microseconds: requestEndedAt!.difference(requestStartedAt).inMicroseconds ~/ 2,
+        ));
+      }
       fullSnapshot = fullSnapshot || body.fullSnapshot;
 
       final nextPage = json['next_page'];

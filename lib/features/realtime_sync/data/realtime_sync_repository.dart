@@ -35,8 +35,13 @@ class RealtimeSyncRepository {
   final SalesProvider _sales;
   final ProductOfferRepository _offers;
 
-  /// The session, complete cursor window and offer changes handed to [_offers].
+  /// The session, starting cursor and offer changes last handed to [_offers].
   String? _offerWindow;
+
+  /// The server reported a new change (socket event or reconnect), so the
+  /// next pull refreshes offers even when its starting cursor and offer ids
+  /// match the last one: it may be a second edit to the same offer.
+  void noteRemoteChange() => _offerWindow = null;
 
   Future<void> apply({
     required RealtimeSyncSession session,
@@ -47,10 +52,12 @@ class RealtimeSyncRepository {
   }) async {
     if (!changes.hasChanges) return;
 
-    // Offers are applied even when product changes wait for the cart. Only
-    // skip an identical result: the starting cursor stays fixed while the
-    // cart is open, but later windows may contain another edit to the same
-    // offer. A failed offer fetch is retried by the offer repository.
+    // Offers are applied even when product changes wait for the cart. While
+    // the cart is open the starting cursor stays fixed and the same change
+    // set is pulled again every few seconds; `updatedTo` is a fresh server
+    // cutoff on every pull, so it is not part of the key. A real new edit
+    // arrives as a socket event ([noteRemoteChange]). A failed offer fetch is
+    // retried by the offer repository.
     if (changes.offers.hasChanges) {
       final upserted = changes.offers.upserted.toSet().toList()..sort();
       final deleted = changes.offers.deleted.toSet().toList()..sort();
@@ -60,7 +67,6 @@ class RealtimeSyncRepository {
         session.companyId,
         session.storeId,
         updatedFrom,
-        updatedTo,
         upserted,
         deleted,
       ]);

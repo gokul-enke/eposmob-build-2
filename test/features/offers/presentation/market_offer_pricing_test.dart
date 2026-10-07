@@ -12,11 +12,17 @@ import 'package:pos_machine/models/get_general_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/widgets/product_card_widget.dart';
+import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -46,6 +52,11 @@ class _General extends GeneralSettingsProvider {
 class _Roles extends RoleProvider {
   @override
   bool currentUserHasPermissionSync(String permission) => false;
+}
+
+class _Categories extends CategoryProvider {
+  @override
+  Future<void> ensureCategoriesLoaded() async {}
 }
 
 void main() {
@@ -111,12 +122,16 @@ void main() {
     ProductViewMode mode = ProductViewMode.grid,
     DateTime Function()? clock,
     DateTime? validFrom,
+    Widget? surface,
+    double offerValue = 10,
   }) async {
     late LocalProductProvider provider;
     await tester.runAsync(() async {
       final offers = ProductOfferRepository(clock: clock ?? () => offerTestNow)
         ..debugSetCatalog(offerCatalog([
-          productOffer(validFrom: validFrom, lines: [offerLine(productId: 1)]),
+          productOffer(
+              validFrom: validFrom,
+              lines: [offerLine(productId: 1, value: offerValue)]),
         ]));
       provider = LocalProductProvider()
         ..offerRepository = offers
@@ -135,6 +150,13 @@ void main() {
         ChangeNotifierProvider<CustomerSelectionProvider>(
             create: (_) => CustomerSelectionProvider()),
         ChangeNotifierProvider<RoleProvider>(create: (_) => _Roles()),
+        if (surface != null) ...[
+          ChangeNotifierProvider<AuthModel>(create: (_) => AuthModel()),
+          ChangeNotifierProvider<CategoryProvider>(
+              create: (_) => _Categories()),
+          ChangeNotifierProvider<KeyboardProvider>(
+              create: (_) => KeyboardProvider()),
+        ],
       ],
       child: MaterialApp(
         theme: ThemeData(splashFactory: InkRipple.splashFactory),
@@ -142,11 +164,12 @@ void main() {
             body: SizedBox(
                 width: 375,
                 height: 700,
-                child: MarketProductGrid(
-                    products: [item],
-                    viewMode: mode,
-                    currency: 'SAR',
-                    onProductAdded: () {}))),
+                child: surface ??
+                    MarketProductGrid(
+                        products: [item],
+                        viewMode: mode,
+                        currency: 'SAR',
+                        onProductAdded: () {}))),
       ),
     ));
     await tester.pumpAndSettle();
@@ -176,6 +199,140 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
   }
+
+  Widget sidebar() => const Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 280,
+          child: SideBarProductList(
+              showSectionTitles: false,
+              categorySectionInitiallyExpanded: false),
+        ),
+      );
+
+  Widget quickCard(GetProduct item) => Center(
+        child: SizedBox(
+          width: 78,
+          height: 100,
+          child: ProductCardWidget(product: item, onTap: () {}),
+        ),
+      );
+
+  Widget suggestions(GetProduct item) => Align(
+        alignment: Alignment.topLeft,
+        child: ProductAutocomplete(
+          size: const Size(1000, 700),
+          productList: [item],
+          onSelected: (_, __) {},
+        ),
+      );
+
+  for (final surfaceName in ['sidebar', 'quick access', 'suggestions']) {
+    Widget surfaceFor(GetProduct item) => switch (surfaceName) {
+          'sidebar' => sidebar(),
+          'quick access' => quickCard(item),
+          _ => suggestions(item),
+        };
+
+    Future<void> searchIfNeeded(WidgetTester tester) async {
+      if (surfaceName == 'suggestions') {
+        await tester.enterText(find.byType(TextField), 'Offer');
+        await tester.pumpAndSettle();
+      }
+    }
+
+    testWidgets(
+        '$surfaceName shows the offer and refreshes without cart writes',
+        (tester) async {
+      final item = product();
+      final provider = await setup(tester, item, surface: surfaceFor(item));
+      try {
+        await searchIfNeeded(tester);
+        expect(find.text('SAR 90.00'), findsOneWidget);
+        expect(find.byType(OfferPriceBadge), findsOneWidget);
+        expect(provider.cartItems, isEmpty);
+        expect(provider.products.single.stock!.single.quantity, 50);
+        provider.offerRepository.debugSetCatalog(offerCatalog([
+          productOffer(lines: [offerLine(productId: 1, value: 15)]),
+        ]));
+        await tester.pumpAndSettle();
+        expect(find.text('SAR 85.00'), findsOneWidget);
+        provider.offerRepository
+            .debugSetCatalog(offerCatalog([], enabled: false));
+        await tester.pumpAndSettle();
+        expect(find.text('SAR 100.00'), findsOneWidget);
+        expect(find.byType(OfferPriceBadge), findsNothing);
+        expect(provider.cartItems, isEmpty);
+        expect(provider.products.single.stock!.single.quantity, 50);
+      } finally {
+        await finish(tester, provider);
+      }
+    });
+
+    testWidgets('$surfaceName waits for an ambiguous batch selection',
+        (tester) async {
+      final item = product(stocks: [batch(), batch(id: 89, price: '110')]);
+      final provider = await setup(tester, item, surface: surfaceFor(item));
+      try {
+        await searchIfNeeded(tester);
+        expect(find.text('offers.available'.tr), findsOneWidget);
+        expect(find.byType(OfferPriceBadge), findsNothing);
+        expect(provider.cartItems, isEmpty);
+      } finally {
+        await finish(tester, provider);
+      }
+    });
+
+    testWidgets('$surfaceName preserves a significant third price decimal',
+        (tester) async {
+      final item = product(stocks: [batch(price: '19.99')]);
+      final provider =
+          await setup(tester, item, surface: surfaceFor(item), offerValue: 15);
+      try {
+        await searchIfNeeded(tester);
+        expect(find.text('SAR 16.992'), findsOneWidget);
+        expect(find.byType(OfferPriceBadge), findsOneWidget);
+      } finally {
+        await finish(tester, provider);
+      }
+    });
+  }
+
+  testWidgets(
+      'a desktop suggestion adds the displayed offer as automatic pricing',
+      (tester) async {
+    final item = product();
+    final provider = await setup(tester, item, surface: suggestions(item));
+    try {
+      await tester.enterText(find.byType(TextField), 'Offer');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SAR 90.00'));
+      await tester.pumpAndSettle();
+      expect(provider.cartItems.single.price, 90);
+      expect(provider.cartItems.single.offerId, 9);
+      expect(provider.cartItems.single.standardUnitPrice, 100);
+      expect(provider.cartItems.single.isManualPriceOverride, isFalse);
+      await tester.pump(const Duration(seconds: 5));
+    } finally {
+      await finish(tester, provider);
+    }
+  });
+
+  testWidgets(
+      'a sidebar selection adds the displayed offer as automatic pricing',
+      (tester) async {
+    final provider = await setup(tester, product(), surface: sidebar());
+    try {
+      await tester.tap(find.text('SAR 90.00'));
+      await tester.pumpAndSettle();
+      expect(provider.cartItems.single.price, 90);
+      expect(provider.cartItems.single.offerId, 9);
+      expect(provider.cartItems.single.isManualPriceOverride, isFalse);
+      await tester.pump(const Duration(seconds: 5));
+    } finally {
+      await finish(tester, provider);
+    }
+  });
 
   for (final mode in ProductViewMode.values) {
     testWidgets(

@@ -125,12 +125,28 @@ void main() {
     expect(offers.refreshes, 2);
   });
 
-  test('a later window refreshes the same offer while the cart stays open',
+  test('a fresh server cutoff alone does not refetch offers', () async {
+    // While the cart is open every deferred pull carries a new `synced_at`.
+    for (final updatedTo in [
+      '2026-10-06T12:00:05Z',
+      '2026-10-06T12:00:10Z',
+      '2026-10-06T12:00:15Z',
+    ]) {
+      await expectLater(
+        apply('2026-10-06T12:00:00Z', updatedTo: updatedTo),
+        throwsA(isA<RealtimeSyncDeferredException>()),
+      );
+    }
+    expect(offers.refreshes, 1);
+  });
+
+  test('a new server event refreshes the same offer while the cart stays open',
       () async {
     await expectLater(
       apply('2026-10-06T12:00:00Z'),
       throwsA(isA<RealtimeSyncDeferredException>()),
     );
+    repository.noteRemoteChange();
     await expectLater(
       apply('2026-10-06T12:00:00Z', updatedTo: '2026-10-06T12:00:10Z'),
       throwsA(isA<RealtimeSyncDeferredException>()),

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/product_price_preview.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_price.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -114,7 +114,7 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     final saleUnit = _controller.resolveSaleUnit(widget.product, _selectedUnit);
     final rate = saleUnit?.conversionRateValue ?? 1.0;
     final quantity = num.tryParse(_quantityController.text) ?? 0;
-    final preview = previewMarketProductPrice(context, widget.product,
+    final preview = previewBillingProductPrice(context, widget.product,
         quantity: quantity * rate,
         saleUnitId: saleUnit?.id,
         includeCartQuantity: true,
@@ -325,7 +325,7 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
           if (!preview.requiresSelection || _priceEdited) ...[
             const SizedBox(height: 8),
             Text(
-                '${'billing.total'.tr}: ${formatMarketPrice(
+                '${'billing.total'.tr}: ${formatBillingPrice(
                   total,
                   currency,
                   decimals: 2,

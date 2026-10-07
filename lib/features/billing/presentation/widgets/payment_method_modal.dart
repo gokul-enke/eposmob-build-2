@@ -19,6 +19,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 
 class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
@@ -107,6 +108,7 @@ class PaymentMethodModal extends StatefulWidget {
 }
 
 class _PaymentMethodModalState extends State<PaymentMethodModal> {
+  VoidCallback? _releaseOfferPrices;
   static const _desktopController = BillingDesktopPaymentController();
 
   late bool isCashSelected;
@@ -185,6 +187,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   @override
   void initState() {
     super.initState();
+    try {
+      _releaseOfferPrices = context.read<LocalProductProvider>().holdOfferPricesForCheckout();
+    } on ProviderNotFoundException {
+      // Standalone payment hosts can omit the optional local cart.
+    }
 
     // Load payment methods from API
     _loadPaymentMethods();
@@ -575,6 +582,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   @override
   void dispose() {
+    _releaseOfferPrices?.call();
     HardwareKeyboard.instance.removeHandler(_onPaymentHardwareKey);
     _debounceTimer?.cancel();
     transactionNumberController.removeListener(_debounceNotifyChanges);

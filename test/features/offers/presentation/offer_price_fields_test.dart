@@ -167,6 +167,73 @@ void main() {
       ));
     }
 
+    testWidgets('desktop retyping automatic offer stays automatic', (tester) async {
+      final provider = await offerCart(tester);
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(of: find.byType(PriceTextField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      await tester.enterText(fieldFinder, '9');
+      await tester.pump();
+      await tester.enterText(fieldFinder, '90');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('other-field')));
+      await tester.pump();
+      final actual = provider.cartItems.single.price;
+      final manual = provider.cartItems.single.isManualPriceOverride;
+      await tearDownWidgets(tester, provider);
+      expect(actual, 90);
+      expect(manual, false);
+    });
+
+    testWidgets('a shortcut commits a typed price that still has focus',
+        (tester) async {
+      final provider = await offerCart(tester);
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(
+          of: find.byType(PriceTextField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      await tester.enterText(fieldFinder, '98');
+      await tester.pump();
+      // Typing alone keeps the cart unchanged until the edit is confirmed.
+      final beforeShortcut = provider.cartItems.single.price;
+
+      // What a checkout shortcut (F2/F10) runs before reading the cart; the
+      // field keeps focus.
+      PriceTextField.commitPendingEdits();
+      await tester.pump();
+      final afterShortcut = provider.cartItems.single.price;
+      final manual = provider.cartItems.single.isManualPriceOverride;
+      final total = provider.cartTotal;
+
+      // Leaving the field afterwards does not commit it a second time.
+      await tester.tap(find.byKey(const ValueKey('other-field')));
+      await tester.pump();
+      final afterBlur = provider.cartItems.single.price;
+      await tearDownWidgets(tester, provider);
+
+      expect(beforeShortcut, 90);
+      expect(afterShortcut, 98);
+      expect(manual, isTrue);
+      expect(total, 98);
+      expect(afterBlur, 98);
+    });
+
+    testWidgets('virtual keyboard trailing decimal survives rebuild', (tester) async {
+      final provider = await offerCart(tester);
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(of: find.byType(PriceTextField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      final field = tester.widget<TextField>(fieldFinder);
+      field.controller!.text = '90.';
+      provider.updateItemMrp(1, provider.cartItems.single.selectedStock, 120);
+      await tester.pump();
+      final text = field.controller!.text;
+      await tearDownWidgets(tester, provider);
+      expect(text, '90.');
+    });
     testWidgets('focus then blur keeps the offer price', (tester) async {
       final provider = await offerCart(tester);
       expect(provider.minimumSalePriceForCartItem(provider.cartItems.single),
@@ -362,6 +429,66 @@ void main() {
         .controller!
         .text;
 
+    testWidgets('mobile retyping automatic offer stays automatic', (tester) async {
+      final provider = await offerCart(tester);
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(of: find.byType(MobileCartPriceField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      await tester.enterText(fieldFinder, '9');
+      await tester.pump();
+      await tester.enterText(fieldFinder, '90');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('other-field')));
+      await tester.pump();
+      final actual = provider.cartItems.single.price;
+      final manual = provider.cartItems.single.isManualPriceOverride;
+      await tearDownWidgets(tester, provider);
+      expect(actual, 90);
+      expect(manual, false);
+    });
+
+    testWidgets('focused mobile resync permits appending decimal digit', (tester) async {
+      final provider = await offerCart(tester, price: '1371.67');
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(of: find.byType(MobileCartPriceField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      provider.offerRepository.debugSetCatalog(offerCatalog([productOffer(version: 4, lines: [offerLine(productId: 1, value: 20)])]));
+      await tester.pump();
+      await tester.pump();
+      final field = tester.widget<TextField>(fieldFinder);
+      final shown = field.controller!.text;
+      field.controller!.selection = TextSelection.collapsed(offset: shown.length);
+      tester.testTextInput.updateEditingValue(TextEditingValue(text: '${shown}1', selection: TextSelection.collapsed(offset: shown.length + 1)));
+      await tester.pump();
+      final actual = field.controller!.text;
+      await tearDownWidgets(tester, provider);
+      expect(actual, '${shown}1');
+    });
+
+    testWidgets('untouched fractional sale unit stays automatic without an offer', (tester) async {
+      final provider = await offerCart(tester, price: '1.235');
+      provider.clearCart();
+      final batch = stock(price: '1.235');
+      final item = product(price: '1.235', stocks: [batch]);
+      provider.initializeProducts([item]);
+      provider.addToCart(product: item, quantity: 5, selectedStock: batch,
+        price: 1.235, saleUnitId: 7, saleUnitName: 'Pack', saleUnitConversionRate: 2.5);
+      await pumpField(tester, provider);
+      final fieldFinder = find.descendant(of: find.byType(MobileCartPriceField), matching: find.byType(TextField));
+      await tester.tap(fieldFinder);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('other-field')));
+      await tester.pump();
+      final actual = provider.cartItems.single.price;
+      final manual = provider.cartItems.single.isManualPriceOverride;
+      final hasOffer = provider.cartItems.single.hasOffer;
+      await tearDownWidgets(tester, provider);
+      expect(hasOffer, false);
+      expect(actual, 1.235);
+      expect(manual, false);
+    });
     testWidgets('focus then blur keeps the offer price', (tester) async {
       final provider = await offerCart(tester);
       await pumpField(tester, provider);

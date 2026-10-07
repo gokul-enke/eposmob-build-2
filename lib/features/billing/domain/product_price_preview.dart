@@ -9,6 +9,7 @@ class ProductPricePreview {
     this.hasOffer = false,
     this.requiresSelection = false,
     this.offerAvailable = false,
+    this.roundedTotal,
   });
 
   final double unitPrice;
@@ -18,6 +19,7 @@ class ProductPricePreview {
   final bool hasOffer;
   final bool requiresSelection;
   final bool offerAvailable;
+  final double? roundedTotal;
 
-  double get total => baseUnitPrice * baseQuantity;
+  double get total => roundedTotal ?? baseUnitPrice * baseQuantity;
 }

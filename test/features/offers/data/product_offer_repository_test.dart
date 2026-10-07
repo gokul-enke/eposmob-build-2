@@ -223,6 +223,38 @@ void main() {
     expect(repo.catalog.offers.keys, [9]);
   });
 
+  test('a missing endpoint does not retry automatically and manual sync can recover', () async {
+    final urls = <Uri>[];
+    final repo = repository([
+      http.Response('Not found', 404),
+      http.Response(body(), 200),
+    ], urls);
+    await repo.applySetting(enabled: true, storeId: 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(timers, isEmpty);
+    expect(await repo.refresh(), true);
+    expect(repo.catalog.offers.keys, [9]);
+    repo.dispose();
+  });
+
+  test('identical offer sync advances cursor without notifying pricing listeners', () async {
+    final urls = <Uri>[];
+    final repo = repository([
+      http.Response(body(), 200),
+      http.Response(body(serverTime: '2026-10-06T12:00:00.500Z'), 200),
+      http.Response(body(offerIds: [10]), 200),
+    ], urls);
+    await repo.applySetting(enabled: true, storeId: 1);
+    var notifications = 0;
+    repo.addListener(() => notifications++);
+    expect(await repo.refresh(), true);
+    expect(notifications, 0);
+    expect(repo.catalog.lastSyncedAt, now.add(const Duration(milliseconds: 500)));
+    expect(await repo.refresh(), true);
+    expect(notifications, 1);
+    repo.dispose();
+  });
+
   test('a failed sync is retried with backoff until it succeeds', () async {
     final urls = <Uri>[];
     final repo = repository([
@@ -578,5 +610,35 @@ void main() {
       repo.trustedNow().difference(DateHelper.now().toUtc()).inSeconds.abs(),
       lessThan(1),
     );
+  });
+
+  test('a stale missing endpoint does not suppress the new session retry', () async {
+    final oldResponse = Completer<http.Response>();
+    final newResponse = Completer<http.Response>();
+    var requests = 0;
+    final repo = ProductOfferRepository(
+      api: ProductOfferApi(httpGet: (url, {headers}) {
+        requests++;
+        return requests == 1 ? oldResponse.future : newResponse.future;
+      }),
+      accessToken: () async => 'token',
+      clock: () => now,
+      retryTimer: fakeTimer,
+    );
+    final oldRefresh = repo.applySetting(enabled: true, storeId: 1);
+    await until(() => requests == 1);
+    await repo.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_key', 'new-tenant');
+    final newRefresh = repo.applySetting(enabled: true, storeId: 1);
+    await until(() => requests == 2);
+
+    oldResponse.complete(http.Response('{}', 404));
+    await oldRefresh;
+    newResponse.complete(http.Response('{}', 500));
+    await newRefresh;
+    await until(() => timers.isNotEmpty);
+    expect(timers.single.delay, ProductOfferRepository.firstRetryDelay);
+    repo.dispose();
   });
 }

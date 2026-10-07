@@ -15,6 +15,7 @@ import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/domain/product_price_preview.dart';
+import 'package:pos_machine/features/billing/domain/cart_line_amounts.dart';
 import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/offers/domain/offer_money.dart';
 import 'package:pos_machine/features/offers/domain/product_offer_pricing.dart';
@@ -162,6 +163,42 @@ class LocalCartItem {
         stockReservations = stockReservations ?? <StockReservation>[];
 
   bool get hasGroupedStockSelection => stockGroupIds.length > 1;
+
+  /// The same quantities/units used for upload, including oversold remainder.
+  Iterable<({int? stockId, num quantity, double price, double? mrp, bool saleUnit})>
+      get orderLineSplits sync* {
+    final reservations = stockReservations.where((r) => r.quantity > 0).toList();
+    final reserved = reservations.fold<num>(0, (sum, r) => sum + r.quantity);
+    final remainder = quantity - reserved;
+    for (var index = 0; index < (reservations.isEmpty ? 1 : reservations.length); index++) {
+      final reservation = reservations.isEmpty ? null : reservations[index];
+      final baseQuantity = reservation == null
+          ? quantity
+          : reservation.quantity +
+              (index == reservations.length - 1 && remainder > 0 ? remainder : 0);
+      final saleUnit = canUseSaleUnitPayloadFor(baseQuantity);
+      final payloadQuantity = saleUnit
+          ? toDisplayQuantity(baseQuantity)
+          : normalizeQuantityForUnit(baseQuantity, product.unit);
+      if (payloadQuantity <= 0) continue;
+      yield (
+        stockId: reservation?.stockId ?? selectedStock?.id,
+        quantity: payloadQuantity,
+        price: (saleUnit ? toDisplayAmount(price) : price) ?? 0,
+        mrp: saleUnit ? toDisplayAmount(mrp) : mrp,
+        saleUnit: saleUnit,
+      );
+    }
+  }
+
+  /// Sum separately rounded backend batch lines; never redistribute cents.
+  CartLineAmounts get amounts => CartLineAmounts.sum(orderLineSplits.map(
+        (split) => CartLineAmounts.calculate(
+          price: split.price,
+          quantity: split.quantity,
+          taxRate: taxRate ?? 0,
+        ),
+      ));
 
   bool get hasSaleUnit =>
       saleUnitId != null &&
@@ -578,15 +615,14 @@ class LocalProductProvider extends ChangeNotifier {
     final breakdown = <String, double>{};
 
     for (var item in _cartItems) {
-      final double itemTotal = (item.price ?? 0.0) * item.quantity;
+      final double itemTotal = item.amounts.total;
       final double currentTaxRate = item.taxRate ?? 0.0;
 
       if (currentTaxRate <= 0 || itemTotal <= 0) continue;
 
       // Extract total tax from tax-inclusive price
       // Formula: Tax = Price × TaxRate / (100 + TaxRate)
-      final double totalTaxAmount =
-          itemTotal * currentTaxRate / (100 + currentTaxRate);
+      final double totalTaxAmount = item.amounts.tax;
 
       final double productTotalTaxRate = item.product.totalTaxRate;
 
@@ -1118,11 +1154,12 @@ class LocalProductProvider extends ChangeNotifier {
         needsSelection = true;
       }
     }
-    if (tracksStock && selectedStock != null && groupIds.isEmpty) {
+    if (tracksStock && selectedStock != null) {
       groupIds = _expandCompatibleStockGroupIds(
         product: product,
         selectedStock: selectedStock,
         variantId: variantId,
+        stockGroupIds: groupIds,
       );
     }
     final index = !needsSelection && includeCartQuantity
@@ -1190,6 +1227,19 @@ class LocalProductProvider extends ChangeNotifier {
                 entry.$1.storeId == null ||
                 entry.$1.storeId == catalog.storeId);
     return ProductPricePreview(
+      roundedTotal: LocalCartItem(
+        lineId: 'price-preview-addition',
+        product: product,
+        price: line.price,
+        quantity: baseQuantity,
+        selectedStock: selectedStock,
+        stockReservations: reservations
+            .skip(existing?.stockReservations.length ?? 0).toList(),
+        saleUnitId: saleUnitId,
+        saleUnitConversionRate: saleUnit?.conversionRateValue,
+        taxRate: selectedStock == null ? product.totalTaxRate :
+            _resolveCartTaxRate(product, selectedStock: selectedStock),
+      ).amounts.total,
       unitPrice: line.displayPrice ?? 0,
       standardUnitPrice: standardPrice * rate,
       baseUnitPrice: line.price ?? 0,
@@ -1272,12 +1322,36 @@ class LocalProductProvider extends ChangeNotifier {
   Timer? _offerBoundaryTimer;
   DateTime? _offerBoundaryAt;
   bool _isDisposed = false;
+  int _checkoutPriceHolds = 0;
+  bool _offersPendingAfterCheckout = false;
+
+  /// Keep the accepted prices stable while payment is collected. Nested
+  /// payment dialogs share the hold; a cancelled checkout catches up again.
+  VoidCallback holdOfferPricesForCheckout() {
+    _checkoutPriceHolds++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      _checkoutPriceHolds--;
+      if (_checkoutPriceHolds == 0 && _offersPendingAfterCheckout) {
+        _offersPendingAfterCheckout = false;
+        scheduleMicrotask(() {
+          if (!_isDisposed) _reevaluateCartOffers(notifyPreviews: true);
+        });
+      }
+    };
+  }
 
   void _onOfferCatalogChanged() => _reevaluateCartOffers(notifyPreviews: true);
 
   /// Re-checks the offer of the open cart (offer synced, removed or ended,
   /// `POS_OFFERS` switched) and saves the cart only when a line changed.
   void _reevaluateCartOffers({bool notifyPreviews = false}) {
+    if (_checkoutPriceHolds > 0) {
+      _offersPendingAfterCheckout = true;
+      return;
+    }
     final changed = _reevaluateCartOfferLines();
     if (changed) {
       _saveCartToHive();
@@ -1485,6 +1559,11 @@ class LocalProductProvider extends ChangeNotifier {
     final enginePrice = item.price ?? standardPrice;
     if ((explicitPrice - enginePrice).abs() < _samePriceTolerance) {
       item.price = explicitPrice;
+    } else if (item.hasOffer && explicitPrice == roundMoney(enginePrice)) {
+      // The server echoed the 3-decimal offer price rounded to 2 (9.32 for
+      // 9.315): restore the exact offer price, so 2 units total 18.63 like
+      // the original sale and the price matches the offer the backend checks.
+      item.price = enginePrice;
     } else if ((explicitPrice - standardPrice).abs() >= _samePriceTolerance) {
       item.price = explicitPrice;
       item.clearOffer();
@@ -2123,15 +2202,14 @@ class LocalProductProvider extends ChangeNotifier {
     final reference = !differsFromStandard || base == null || base <= 0
         ? unitPrice
         : (useSaleUnit ? item.toDisplayAmount(base) ?? base : base);
-    final lineTotal = roundMoney(unitPrice * quantity);
     final taxRate = item.taxRate ?? 0.0;
-    final lineTax =
-        taxRate > 0 ? roundMoney(lineTotal * taxRate / (100 + taxRate)) : 0.0;
+    final amounts = CartLineAmounts.calculate(
+        price: unitPrice, quantity: quantity, taxRate: taxRate);
     return {
       'standard_unit_price': reference,
       'tax_rate': taxRate,
-      'tax_amount': lineTax,
-      'total_price': lineTotal,
+      'tax_amount': amounts.tax,
+      'total_price': amounts.total,
     };
   }
 
@@ -2144,46 +2222,14 @@ class LocalProductProvider extends ChangeNotifier {
     final items = <Map<String, dynamic>>[];
 
     for (final item in cartItems) {
-      final positiveReservations = item.stockReservations
-          .where((reservation) => reservation.quantity > 0)
-          .toList(growable: false);
-      final reservedQuantity = positiveReservations.fold<num>(
-        0,
-        (sum, reservation) => sum + reservation.quantity,
-      );
-      final unreservedQuantity = item.quantity - reservedQuantity;
-
-      for (var index = 0; index < positiveReservations.length; index++) {
-        final reservation = positiveReservations[index];
-        final isLastReservation = index == positiveReservations.length - 1;
-
-        // When negative stock is supported, charge an oversold remainder to
-        // the final batch used by the allocator instead of emitting a
-        // stock_id:null line. Combining before unit conversion also lets a
-        // partial reservation plus its overflow become a whole PACK/CASE.
-        final baseQuantity = isLastReservation && unreservedQuantity > 0
-            ? reservation.quantity + unreservedQuantity
-            : reservation.quantity;
-
-        final payloadQuantity = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayQuantity(baseQuantity)
-            // Base-unit line: guard against fractional reservations on
-            // non-decimal units (e.g. legacy persisted 1.3 splits).
-            : normalizeQuantityForUnit(baseQuantity, item.product.unit);
-        final payloadPrice = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayAmount(item.price)
-            : item.price;
-        final payloadMrp = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayAmount(item.mrp)
-            : item.mrp;
-
+      for (final split in item.orderLineSplits) {
         items.add({
           'product_id': item.product.productId,
-          'quantity': payloadQuantity,
-          'price': payloadPrice,
-          'mrp': payloadMrp,
-          'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(baseQuantity)) ...{
+          'quantity': split.quantity,
+          'price': split.price,
+          'mrp': split.mrp,
+          'stock_id': split.stockId,
+          if (split.saleUnit) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
@@ -2194,58 +2240,13 @@ class LocalProductProvider extends ChangeNotifier {
             'offer_version': item.offerVersion,
           },
           ..._completedSaleLineSnapshot(
-            item,
-            payloadPrice,
-            payloadQuantity,
-            item.canUseSaleUnitPayloadFor(baseQuantity),
-          ),
-          if (item.comment != null && item.comment!.trim().isNotEmpty)
-            'comment': item.comment!.trim(),
-        });
-      }
-
-      if (positiveReservations.isEmpty) {
-        final baseQuantity = item.quantity;
-        final canUseSaleUnitPayload =
-            item.canUseSaleUnitPayloadFor(baseQuantity);
-
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': canUseSaleUnitPayload
-              ? item.toDisplayQuantity(baseQuantity)
-              : normalizeQuantityForUnit(baseQuantity, item.product.unit),
-          'price': canUseSaleUnitPayload
-              ? item.toDisplayAmount(item.price)
-              : item.price,
-          'mrp':
-              canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
-          'stock_id': item.selectedStock?.id,
-          if (canUseSaleUnitPayload) ...{
-            'sale_unit_id': item.saleUnitId,
-            'product_sale_unit_id': item.saleUnitId,
-          },
-          if (item.variantId != null) 'product_variant_id': item.variantId,
-          'warranty_enabled': item.warrantyEnabled,
-          if (item.offerId != null) ...{
-            'offer_id': item.offerId,
-            'offer_version': item.offerVersion,
-          },
-          ..._completedSaleLineSnapshot(
-            item,
-            canUseSaleUnitPayload
-                ? item.toDisplayAmount(item.price)
-                : item.price,
-            canUseSaleUnitPayload
-                ? item.toDisplayQuantity(baseQuantity)
-                : normalizeQuantityForUnit(baseQuantity, item.product.unit),
-            canUseSaleUnitPayload,
+            item, split.price, split.quantity, split.saleUnit,
           ),
           if (item.comment != null && item.comment!.trim().isNotEmpty)
             'comment': item.comment!.trim(),
         });
       }
     }
-
     return items.where((item) {
       final quantity = item['quantity'];
       return quantity is num ? quantity > 0 : false;
@@ -2866,7 +2867,7 @@ class LocalProductProvider extends ChangeNotifier {
   double get subTotalBeforeDiscount {
     double total = 0.0;
     for (var item in _cartItems) {
-      total += (item.price ?? 0) * item.quantity;
+      total += item.amounts.total;
     }
     return total;
   }
@@ -2878,21 +2879,21 @@ class LocalProductProvider extends ChangeNotifier {
     // Calculate subtotal and extract tax from cart items
     // NOTE: Prices are TAX-INCLUSIVE, so tax is extracted for display purposes only
     for (var item in _cartItems) {
-      final itemTotal = (item.price ?? 0) * item.quantity;
+      final itemTotal = item.amounts.total;
       subTotal += itemTotal;
 
       // Extract tax from the tax-inclusive price for display purposes
       // Formula: Tax = Price × TaxRate / (100 + TaxRate)
       final taxRate = item.taxRate ?? 0.0;
       if (taxRate > 0) {
-        final extractedTax = itemTotal * taxRate / (100 + taxRate);
+        final extractedTax = item.amounts.tax;
         totalTax += extractedTax;
       }
     }
 
     // Calculate discount amounts
     double flatDiscountAmount = _flatDiscount;
-    double percentageDiscountAmount = (subTotal * _percentageDiscount / 100);
+    double percentageDiscountAmount = roundMoney(subTotal * _percentageDiscount / 100);
     double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
 
     // Ensure discount doesn't exceed subtotal
@@ -2914,7 +2915,7 @@ class LocalProductProvider extends ChangeNotifier {
     double netPayable = subTotal - totalDiscount;
 
     // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
-    double netTotal = netPayable;
+    double netTotal = roundMoney(netPayable);
 
     // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(

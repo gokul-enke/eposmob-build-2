@@ -27,6 +27,11 @@ class _CartOpenRepository implements RealtimeSyncRepository {
     throw const RealtimeSyncDeferredException('Cart is open.');
   }
 
+  int remoteChanges = 0;
+
+  @override
+  void noteRemoteChange() => remoteChanges++;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

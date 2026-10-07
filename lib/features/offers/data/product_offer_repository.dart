@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/core/network/tenant_session.dart';
@@ -61,6 +62,7 @@ class ProductOfferRepository extends ChangeNotifier {
   Future<ProductOfferCatalog?>? _loadingStore;
   Timer? _retry;
   Duration? _retryDelay;
+  bool _endpointMissing = false;
 
   /// The catalog pricing should use right now.
   ProductOfferCatalog get catalog => _catalog;
@@ -107,7 +109,6 @@ class ProductOfferRepository extends ChangeNotifier {
     _tenant = tenant;
     _catalog = ProductOfferCatalog(storeId: storeId);
     final loading = _loadingStore = _cache.load(storeId, tenant: tenant);
-    notifyListeners();
     try {
       final cached = await loading;
       if (generation != _generation) return null;
@@ -173,6 +174,7 @@ class ProductOfferRepository extends ChangeNotifier {
   }
 
   Future<bool> _startRefresh({required bool full}) {
+    _endpointMissing = false;
     // This run replaces a scheduled retry; its outcome schedules the next.
     _retry?.cancel();
     _retry = null;
@@ -196,7 +198,7 @@ class ProductOfferRepository extends ChangeNotifier {
       queued.complete(_startRefresh(full: queuedFull));
       return;
     }
-    if (!synced) {
+    if (!synced && !_endpointMissing) {
       _scheduleRetry(full: full);
     }
   }
@@ -226,6 +228,7 @@ class ProductOfferRepository extends ChangeNotifier {
   }
 
   Future<bool> _refresh({required bool full}) async {
+    int? requestGeneration;
     try {
       final storeId = await _session.activeStoreId();
       final apiKey = await _session.apiKey();
@@ -236,6 +239,7 @@ class ProductOfferRepository extends ChangeNotifier {
       if (generation == null || !_catalog.enabled || storeId == null) {
         return true;
       }
+      requestGeneration = generation;
 
       final accessToken = await _accessToken();
       if (generation != _generation || apiKey == null || accessToken == null) {
@@ -261,25 +265,44 @@ class ProductOfferRepository extends ChangeNotifier {
 
       final clock = _clock;
       final serverTime = response.serverTime;
+      final previous = _catalog;
       _catalog = _catalog.applySync(
         response,
         fullSync: since == null,
         deviceNow: clock?.call() ?? response.receivedAt ?? DateTime.now(),
       );
-      if (clock == null && serverTime != null) {
+      final clockChanged = previous.lastSyncedAt == null ||
+          (_catalog.clockOffset - previous.clockOffset).inMilliseconds.abs() >= 1000;
+      if (!clockChanged) {
+        _catalog = _catalog.copyWith(clockOffset: previous.clockOffset);
+      }
+      if (clock == null && serverTime != null && clockChanged) {
         // Offer validity and receipt timestamps share DateHelper's clock.
         DateHelper.setServerTime(serverTime, deviceTime: response.receivedAt);
       }
       await _save(generation);
-      notifyListeners();
+      if (clockChanged || _pricingFingerprint(previous) != _pricingFingerprint(_catalog)) {
+        notifyListeners();
+      }
       return true;
     } on ProductOfferEndpointMissing catch (error) {
+      if (requestGeneration != _generation) return true;
+      _endpointMissing = true;
       debugPrint('Product offers: $error');
       return false;
     } catch (error) {
       debugPrint('Product offers: sync failed, keeping cached offers: $error');
       return false;
     }
+  }
+
+  static String _pricingFingerprint(ProductOfferCatalog catalog) {
+    final ids = catalog.offers.keys.toList()..sort();
+    return jsonEncode([
+      catalog.enabled,
+      catalog.storeId,
+      for (final id in ids) catalog.offers[id]!.toJson(),
+    ]);
   }
 
   /// Forgets every cached offer (logout or tenant switch).
