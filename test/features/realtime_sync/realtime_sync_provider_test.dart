@@ -11,9 +11,10 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_pr
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Every pull is deferred, as with a cart open while products changed.
+/// Pulls are deferred while a cart is open and products have changed.
 class _CartOpenRepository implements RealtimeSyncRepository {
   int applies = 0;
+  bool cartOpen = true;
 
   @override
   Future<void> apply({
@@ -24,7 +25,9 @@ class _CartOpenRepository implements RealtimeSyncRepository {
     required bool Function() isCurrent,
   }) async {
     applies++;
-    throw const RealtimeSyncDeferredException('Cart is open.');
+    if (cartOpen) {
+      throw const RealtimeSyncDeferredException('Cart is open.');
+    }
   }
 
   int remoteChanges = 0;
@@ -49,12 +52,14 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('a pull deferred for the cart waits for the pending catch-up',
-      () async {
+  testWidgets('a pull deferred for the cart retries only once an hour',
+      (tester) async {
     var pulls = 0;
+    final cursors = <String?>[];
     final api = RealtimeSyncApi(
       client: MockClient((request) async {
         pulls++;
+        cursors.add(request.url.queryParameters['since']);
         return http.Response(
           jsonEncode({
             'success': true,
@@ -80,17 +85,83 @@ void main() {
       config: const RealtimeSyncConfig(appKey: ''),
       api: api,
     );
-    addTearDown(provider.dispose);
+    try {
+      await provider.start(session);
+      await tester.pump(const Duration(seconds: 5));
+      expect(pulls, 1);
+      expect(repository.applies, 1);
 
-    await provider.start(session);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    // Before: the finally block re-pulled at once, in a tight loop.
-    expect(pulls, 1);
-    expect(repository.applies, 1);
+      await tester.pump(const Duration(minutes: 59, seconds: 54));
+      expect(pulls, 1);
 
-    // The scheduled pending catch-up (5 s while waiting for the cart) runs.
-    await Future<void>.delayed(const Duration(milliseconds: 5200));
-    expect(pulls, 2);
-    expect(repository.applies, 2);
+      await tester.pump(const Duration(seconds: 1));
+      expect(pulls, 2);
+      expect(repository.applies, 2);
+
+      await tester.pump(const Duration(hours: 1));
+      expect(pulls, 3);
+      expect(repository.applies, 3);
+      // Deferred changes keep their original cursor until they are applied.
+      expect(cursors, ['', '', '']);
+
+      repository.cartOpen = false;
+      // An explicit catch-up can still run without waiting for the hour.
+      await provider.catchUp();
+      expect(pulls, 4);
+      expect(provider.lastSyncedAt, '2026-10-06T12:00:05Z');
+
+      await tester.pump(const Duration(hours: 1));
+      expect(pulls, 4);
+    } finally {
+      provider.dispose();
+    }
+  });
+
+  testWidgets('hourly cart retry does not delay recovery from a failed pull',
+      (tester) async {
+    var pulls = 0;
+    final api = RealtimeSyncApi(
+      client: MockClient((request) async {
+        pulls++;
+        if (pulls == 2) return http.Response('Unavailable', 503);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'synced_at': '2026-10-06T12:00:05Z',
+            'changes': {
+              'products': {
+                'upserted': [1],
+              },
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    final repository = _CartOpenRepository();
+    final provider = RealtimeSyncProvider(
+      repository: repository,
+      manualSync: SyncProvider(),
+      config: const RealtimeSyncConfig(appKey: ''),
+      api: api,
+    );
+
+    try {
+      await provider.start(session);
+      expect(pulls, 1);
+
+      await provider.catchUp();
+      expect(pulls, 2);
+      expect(provider.status, RealtimeSyncStatus.retrying);
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(pulls, 3);
+      expect(repository.applies, 2);
+
+      await tester.pump(const Duration(seconds: 5));
+      expect(pulls, 3);
+    } finally {
+      provider.dispose();
+    }
   });
 }

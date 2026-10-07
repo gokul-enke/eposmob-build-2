@@ -54,7 +54,7 @@ class RealtimeSyncRepository {
 
     // Offers are applied even when product changes wait for the cart. While
     // the cart is open the starting cursor stays fixed and the same change
-    // set is pulled again every few seconds; `updatedTo` is a fresh server
+    // set is retried hourly or on a new event; `updatedTo` is a fresh server
     // cutoff on every pull, so it is not part of the key. A real new edit
     // arrives as a socket event ([noteRemoteChange]). A failed offer fetch is
     // retried by the offer repository.
