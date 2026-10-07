@@ -14,12 +14,14 @@ import 'package:pos_machine/features/purchases/presentation/state/purchase_provi
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/screens/product/add_product.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/pages/barcode_list_page.dart';
 import 'package:pos_machine/features/stock/presentation/pages/stock_list_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_support/hive_test_teardown.dart';
+import 'test_support/header_actions.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 
 class _FakeAppSettingsProvider extends AppSettingsProvider {
   @override
@@ -305,40 +307,35 @@ void main() {
     );
   });
 
-  testWidgets('Product Barcode collapses its real desktop filter panel',
+  testWidgets('Product Barcode collapses its shared desktop filter panel',
       (tester) async {
-    await verifyDesktopCollapse(
-      tester,
-      screen: const ProductBarcodeScreen(),
-      toggleKey: const ValueKey('product-barcode-filter-toggle'),
-      panelKey: const ValueKey('product-barcode-desktop-filters'),
-    );
+    await pumpScreen(tester, const BarcodeListPage(),
+        size: const Size(1200, 900));
+    expect(find.byType(FilterPanel), findsOneWidget);
+    await tapFilterToggle(tester);
+    expect(find.byType(FilterPanel), findsNothing);
+    expect(tester.takeException(), isNull);
   });
-
   testWidgets('Product Barcode starts with mobile filters collapsed',
       (tester) async {
-    await verifyMobileStartsCollapsed(
-      tester,
-      screen: const ProductBarcodeScreen(),
-      toggleKey: const ValueKey('product-barcode-filter-toggle'),
-      panelKey: const ValueKey('product-barcode-mobile-filters'),
-    );
+    await pumpScreen(tester, const BarcodeListPage(),
+        size: const Size(390, 800));
+    expect(hasFilterToggle(), isTrue);
+    expect(find.byType(FilterPanel), findsNothing);
   });
-
   testWidgets('Stock and Barcode filters expand without overflow on a phone',
       (tester) async {
-    await verifyMobileExpansion(
-      tester,
-      screen: const StockListPage(),
-      toggleKey: const ValueKey('stock-filter-toggle'),
-      panelKey: const ValueKey('stock-mobile-filters'),
-    );
-    await verifyMobileExpansion(
-      tester,
-      screen: const ProductBarcodeScreen(),
-      toggleKey: const ValueKey('product-barcode-filter-toggle'),
-      panelKey: const ValueKey('product-barcode-mobile-filters'),
-    );
+    await verifyMobileExpansion(tester,
+        screen: const StockListPage(),
+        toggleKey: const ValueKey('stock-filter-toggle'),
+        panelKey: const ValueKey('stock-mobile-filters'));
+    await pumpScreen(tester, const BarcodeListPage(),
+        size: const Size(390, 650));
+    await tapFilterToggle(tester);
+    await tester.tap(find.byType(ExpansionTile));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Product Barcode selected actions do not overflow on tablet',
@@ -354,7 +351,7 @@ void main() {
 
     await pumpScreen(
       tester,
-      const ProductBarcodeScreen(),
+      const BarcodeListPage(),
       size: const Size(650, 800),
       contentWidth: 500,
       localProductProvider: productProvider,

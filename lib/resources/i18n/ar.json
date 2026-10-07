@@ -3018,7 +3018,19 @@
     "sent_to_printer": "تم الإرسال إلى الطابعة: @name",
     "stickers": "ملصقات الباركود",
     "stickers_pdf": "ملف PDF لملصقات الباركود",
-    "too_many_labels": "تحتوي هذه المهمة على @count ملصق. قلّلها إلى 2000 أو أقل."
+    "too_many_labels": "تحتوي هذه المهمة على @count ملصق. قلّلها إلى 2000 أو أقل.",
+    "filters": "الفلاتر",
+    "export": "تصدير",
+    "refresh": "تحديث",
+    "filters_title": "البحث عن الباركود",
+    "filters_hint": "تصفية حسب الفئة واسم المنتج والباركود.",
+    "search_category": "البحث عن فئة",
+    "export_failed": "تعذر تصدير القائمة. يرجى المحاولة مرة أخرى.",
+    "load_failed": "تعذر تحميل الباركود",
+    "retry": "إعادة المحاولة",
+    "page_count": "@count صفوف باركود في هذه الصفحة",
+    "select": "تحديد",
+    "copy_barcode": "نسخ الباركود"
   },
   "product_tabs": {
     "back_all_products": "جميع المنتجات",

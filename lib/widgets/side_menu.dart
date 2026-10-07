@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/navigation/barcode_navigation.dart';
 
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -654,7 +655,7 @@ class _SideMenuState extends State<SideMenu> {
                           SideBarController.stockListScreenIndex;
                     },
                     onTapTitle3: () {
-                      sideBarController.index.value = 83;
+                      BarcodeNavigation.openList();
                     },
                     onTapTitle4: () {
                       sideBarController.index.value =
@@ -680,7 +681,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 18 ||
                         sideBarController.index.value == 28 ||
                         sideBarController.index.value == 33 ||
-                        sideBarController.index.value == 83 ||
+                        sideBarController.index.value ==
+                            SideBarController.productBarcodeListScreenIndex ||
                         sideBarController.index.value == 35 ||
                         sideBarController.index.value ==
                             SideBarController.weighMachineExportIndex),
