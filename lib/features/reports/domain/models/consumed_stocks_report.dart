@@ -73,10 +73,10 @@ class ConsumedStockData {
       this.createdAt});
 
   ConsumedStockData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = _integer(json['id']);
     product = json['product'];
     store = json['store'];
-    quantityWithdrawn = json['quantity_withdrawn'];
+    quantityWithdrawn = json['quantity_withdrawn']?.toString();
     oldQuantity = json['old_quantity'];
     newQuantity = json['new_quantity'];
     withdrawnBy = json['withdrawn_by'];
@@ -118,10 +118,10 @@ class Pagination {
       this.prevPageUrl});
 
   Pagination.fromJson(Map<String, dynamic> json) {
-    currentPage = json['current_page'];
-    lastPage = json['last_page'];
-    perPage = json['per_page'];
-    total = json['total'];
+    currentPage = _integer(json['current_page']);
+    lastPage = _integer(json['last_page']);
+    perPage = _integer(json['per_page']);
+    total = _integer(json['total']);
     firstPageUrl = json['first_page_url'];
     lastPageUrl = json['last_page_url'];
     nextPageUrl = json['next_page_url'];
@@ -141,3 +141,6 @@ class Pagination {
     return data;
   }
 }
+
+int? _integer(Object? value) =>
+    value is int ? value : int.tryParse(value?.toString() ?? '');
