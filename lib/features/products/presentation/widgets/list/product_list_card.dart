@@ -52,9 +52,13 @@ class ProductListCard extends StatelessWidget {
               style: AppTextStyles.body),
           if (itemCodeEnabled)
             ProductListCopy(
-                value: product.itemCode, message: 'product.item_code_copied'),
+                label: 'product.item_code'.tr,
+                value: product.itemCode,
+                message: 'product.item_code_copied'),
           ProductListCopy(
-              value: product.barcode, message: 'product.barcode_copied'),
+              label: 'product.barcode'.tr,
+              value: product.barcode,
+              message: 'product.barcode_copied'),
           ProductListActions(onView: onView, onDelete: onDelete),
         ]),
       );
