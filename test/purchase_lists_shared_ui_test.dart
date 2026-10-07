@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/core/ui/list/app_pagination_bar.dart';
+import 'package:pos_machine/core/ui/buttons/app_buttons.dart';
 import 'package:pos_machine/features/purchases/presentation/pages/purchase_order_list_page.dart';
 import 'package:pos_machine/features/purchases/presentation/widgets/list/purchase_order_list_view.dart';
 import 'package:pos_machine/features/purchases/presentation/widgets/list/purchase_list_filter_fields.dart';
@@ -64,8 +65,24 @@ void main() {
         await pump(tester, returns, width: width);
         expect(find.byType(AppPaginationBar), findsOneWidget);
         expect(tester.takeException(), isNull);
+        if (width >= 768) {
+          final filter = tester.widget<AppSquareIconButton>(find.byKey(ValueKey(
+              returns
+                  ? 'purchase-return-filter-toggle'
+                  : 'purchase-order-filter-toggle')));
+          expect(filter.icon, Icons.filter_alt_rounded);
+          expect(filter.tooltip, 'list.hide_filters'.tr);
+        }
         await tapFilterToggle(tester);
         await tester.pumpAndSettle();
+        if (width >= 768) {
+          final filter = tester.widget<AppSquareIconButton>(find.byKey(ValueKey(
+              returns
+                  ? 'purchase-return-filter-toggle'
+                  : 'purchase-order-filter-toggle')));
+          expect(filter.icon, Icons.filter_alt_outlined);
+          expect(filter.tooltip, 'list.filters'.tr);
+        }
         expect(tester.takeException(), isNull);
       });
     }

@@ -121,11 +121,11 @@ class PurchaseOrderListView extends StatelessWidget {
           addLabel: 'purchase_order.create_purchase_order_btn'.tr,
           addShortLabel: 'purchase_order.add_short'.tr,
           actions: [
-            HeaderAction(
+            HeaderAction.filters(
                 key: const ValueKey('purchase-order-filter-toggle'),
-                icon: Icons.filter_alt_outlined,
-                label: 'purchase_order.filters'.tr,
-                active: controller.showFilters,
+                showFilters: controller.showFilters,
+                showLabel: 'list.filters'.tr,
+                hideLabel: 'list.hide_filters'.tr,
                 badge: controller.hasActiveFilters,
                 onPressed: () => controller.update(
                     () => controller.showFilters = !controller.showFilters)),
