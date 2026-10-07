@@ -8,7 +8,7 @@ import 'package:pos_machine/core/ui/tokens/app_text_styles.dart';
 
 /// Shared purchase-list adapter: the searchable menu uses the same decoration
 /// and palette as FilterPanel, without a full-screen popup route.
-class PurchaseListPicker extends StatelessWidget {
+class PurchaseListPicker extends StatefulWidget {
   const PurchaseListPicker(
       {super.key,
       required this.label,
@@ -23,16 +23,82 @@ class PurchaseListPicker extends StatelessWidget {
   final List<String> options;
   final TextEditingController search;
   final ValueChanged<String> onChanged;
+
+  @override
+  State<PurchaseListPicker> createState() => _PurchaseListPickerState();
+}
+
+class _PurchaseListPickerState extends State<PurchaseListPicker> {
+  final _focus = FocusNode();
+  final _menu = MenuController();
+  bool _wasOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_handleFocusChange);
+  }
+
+  void _restoreSelection() {
+    final selected =
+        widget.options.contains(widget.value) ? widget.value : 'All';
+    final label = selected == 'All' ? 'purchase_order.hint_all'.tr : selected;
+    if (widget.search.text != label) {
+      widget.search.value = TextEditingValue(
+          text: label,
+          selection: TextSelection.collapsed(offset: label.length));
+    }
+  }
+
+  void _handleFocusChange() {
+    if (_focus.hasFocus) return;
+    // Defer until any menu selection and parent rebuild have finished. Never
+    // replace a newly selected value with the previous filter's label.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _focus.hasFocus) return;
+      _menu.close();
+      _restoreSelection();
+    });
+  }
+
+  Widget _leadingIcon(BuildContext context) {
+    // Depend on the native menu's open state so Escape, the arrow button and
+    // outside clicks also restore the label when the text field keeps focus.
+    final open = MenuController.maybeIsOpenOf(context) ?? false;
+    if (_wasOpen && !open) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_menu.isOpen) _restoreSelection();
+      });
+    }
+    _wasOpen = open;
+    return Icon(widget.icon, size: 18, color: AppColors.muted);
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_handleFocusChange);
+    _focus.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final label = widget.label;
+    final icon = widget.icon;
+    final value = widget.value;
+    final options = widget.options;
+    final search = widget.search;
+    final onChanged = widget.onChanged;
     final choices = options.toSet().toList();
     final decoration = AppInputDecoration.filter(
         label: label, hint: 'purchase_order.hint_all'.tr, icon: icon);
     return DropdownMenu<String>(
       controller: search,
+      focusNode: _focus,
+      menuController: _menu,
       initialSelection: choices.contains(value) ? value : 'All',
       label: Text(label),
-      leadingIcon: Icon(icon, size: 18, color: AppColors.muted),
+      leadingIcon: Builder(builder: _leadingIcon),
       expandedInsets: EdgeInsets.zero,
       menuHeight: 280,
       enableFilter: true,

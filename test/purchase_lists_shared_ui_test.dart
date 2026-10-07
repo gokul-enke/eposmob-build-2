@@ -1,5 +1,6 @@
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +35,111 @@ void main() {
     return fixture;
   }
 
+  for (final scenario in [
+    (
+      returns: false,
+      index: 0,
+      field: 'supplier_id',
+      selected: 'Other Supplier',
+      id: '8',
+      next: 'Supplier Funzcart',
+      nextId: '7',
+      search: 'Funz'
+    ),
+    (
+      returns: true,
+      index: 0,
+      field: 'supplier_id',
+      selected: 'Other Supplier',
+      id: '8',
+      next: 'Supplier Funzcart',
+      nextId: '7',
+      search: 'Funz'
+    ),
+    (
+      returns: false,
+      index: 1,
+      field: 'store_id',
+      selected: 'Second Store',
+      id: '5',
+      next: 'Main Store',
+      nextId: '4',
+      search: 'Main'
+    ),
+  ]) {
+    final returns = scenario.returns;
+    for (final dismissal in ['Escape', 'Tab', 'outside click', 'arrow']) {
+      testWidgets(
+          '${returns ? 'return' : 'order'} abandoned ${scenario.field} search via $dismissal keeps applied selection and export',
+          (tester) async {
+        final export = CapturingExport();
+        addTearDown(export.dispose);
+        final fixture = await pump(tester, returns, export: export);
+        final picker = find.byType(PurchaseListPicker).at(scenario.index);
+        final input =
+            find.descendant(of: picker, matching: find.byType(TextField));
+        await tester.tap(input);
+        await tester.pumpAndSettle();
+        await tester.tap(find
+            .descendant(
+                of: find.byType(MenuItemButton),
+                matching: find.text(scenario.selected))
+            .last);
+        await tester.pumpAndSettle();
+        expect(
+            fixture.requests.last.queryParameters[scenario.field], scenario.id);
+        final beforeDismissal = fixture.requests.length;
+        await tester.tap(input);
+        await tester.enterText(input, scenario.search);
+        await tester.pumpAndSettle();
+        if (dismissal == 'Escape') {
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else if (dismissal == 'Tab') {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        } else if (dismissal == 'arrow') {
+          await tester.tap(find
+              .descendant(of: picker, matching: find.byType(IconButton))
+              .last);
+        } else {
+          await tester
+              .tap(find.text(returns ? 'Purchase Returns' : 'Purchase Order'));
+        }
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(input).controller!.text,
+            scenario.selected);
+        expect(fixture.requests.length, beforeDismissal);
+        expect(find.byType(MenuItemButton), findsNothing);
+
+        // The next export must use the same selection the field now displays.
+        await tester.tap(find.byKey(
+            ValueKey('purchase-${returns ? 'return' : 'order'}-export')));
+        await tester.pump();
+        await useTempExportDirectory(tester, 'purchase-cancelled-search');
+        await tester.runAsync(export.createFile!);
+        expect(
+            fixture.requests.takeLast(2).every((request) =>
+                request.queryParameters[scenario.field] == scenario.id),
+            isTrue);
+        await tester.pumpAndSettle();
+
+        // Reopening and choosing a new entry still changes the actual filter.
+        await tester.tap(input);
+        await tester.enterText(input, scenario.search);
+        await tester.pumpAndSettle();
+        await tester.tap(find
+            .descendant(
+                of: find.byType(MenuItemButton),
+                matching: find.text(scenario.next))
+            .last);
+        await tester.pumpAndSettle();
+        expect(fixture.requests.last.queryParameters[scenario.field],
+            scenario.nextId);
+        expect(tester.widget<TextField>(input).controller!.text, scenario.next);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets(
       'order store menu retains all options and selected ID; Reset clears it',
       (tester) async {
@@ -58,6 +164,45 @@ void main() {
   });
   for (final returns in [false, true]) {
     final kind = returns ? 'return' : 'order';
+    testWidgets(
+        '$kind cancelled unselected search restores All; Reset and disposal remain safe',
+        (tester) async {
+      final fixture = await pump(tester, returns);
+      final picker = find.byType(PurchaseListPicker).first;
+      final input =
+          find.descendant(of: picker, matching: find.byType(TextField));
+      final before = fixture.requests.length;
+      await tester.enterText(input, 'No matching supplier');
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(input).controller!.text, 'All');
+      expect(fixture.requests.length, before);
+      expect(fixture.requests.last.queryParameters.containsKey('supplier_id'),
+          isFalse);
+      await tester.enterText(input, 'Other');
+      await tester.pumpAndSettle();
+      await tester.tap(find
+          .descendant(
+              of: find.byType(MenuItemButton),
+              matching: find.text('Other Supplier'))
+          .last);
+      await tester.pumpAndSettle();
+      await tester.enterText(input, 'Unselected');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(input).controller!.text, 'All');
+      expect(fixture.requests.last.queryParameters.containsKey('supplier_id'),
+          isFalse);
+      await tester.enterText(input, 'Pending search');
+      await tester.pumpAndSettle();
+      // Closing queues label restoration, then the page is immediately removed.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
     for (final width in [375.0, 768.0, 1280.0]) {
       testWidgets(
           '$kind populated list at $width and filters open without overflow',
