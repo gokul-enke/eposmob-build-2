@@ -3038,6 +3038,15 @@
     "heading_show_product": "Show Product"
   },
   "purchase_order": {
+    "find_orders": "Find purchase orders",
+    "filter_hint": "Filter by supplier, store and purchase date.",
+    "page_total": "Total price on this page",
+    "page_count": "@count orders on this page",
+    "export_error": "Unable to export purchase orders. Refresh and try again.",
+    "export_fetching": "Fetching page @page of @total…",
+    "add_short": "New",
+    "clear_filter": "Clear filter",
+    "currency": "Currency",
     "supplier": "Supplier",
     "manufacturing_date": "Manufacturing Date",
     "store": "Store",
@@ -5946,6 +5955,11 @@
     "btn_add_to_order": "Add to Order"
   },
   "purchase_return": {
+    "find_returns": "Find purchase returns",
+    "filter_hint": "Filter by supplier and return date.",
+    "page_count": "@count returns on this page",
+    "export_error": "Unable to export purchase returns. Refresh and try again.",
+    "copy_reference": "Copy reference",
     "title": "Purchase Returns",
     "subtitle": "View and manage purchase returns",
     "create_btn": "Create Purchase Return",

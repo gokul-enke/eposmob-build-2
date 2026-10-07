@@ -3031,6 +3031,15 @@
     "heading_show_product": "عرض المنتج"
   },
   "purchase_order": {
+    "find_orders": "البحث عن أوامر الشراء",
+    "filter_hint": "التصفية حسب المورد والمتجر وتاريخ الشراء.",
+    "page_total": "إجمالي السعر في هذه الصفحة",
+    "page_count": "@count أوامر في هذه الصفحة",
+    "export_error": "تعذر تصدير أوامر الشراء. حدّث وحاول مرة أخرى.",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "add_short": "جديد",
+    "clear_filter": "مسح التصفية",
+    "currency": "العملة",
     "supplier": "المورد",
     "manufacturing_date": "تاريخ التصنيع",
     "store": "المتجر",
@@ -5767,6 +5776,11 @@
     "btn_add_to_order": "إضافة للطلب"
   },
   "purchase_return": {
+    "find_returns": "البحث عن مرتجعات الشراء",
+    "filter_hint": "التصفية حسب المورد وتاريخ الإرجاع.",
+    "page_count": "@count مرتجعات في هذه الصفحة",
+    "export_error": "تعذر تصدير مرتجعات الشراء. حدّث وحاول مرة أخرى.",
+    "copy_reference": "نسخ المرجع",
     "title": "مرتجعات المشتريات",
     "subtitle": "عرض وإدارة مرتجعات المشتريات",
     "create_btn": "إنشاء مرتجع مشتريات",
