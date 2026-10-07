@@ -22,7 +22,7 @@ import 'package:pos_machine/screens/homenew/home_new.dart';
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
-import 'package:pos_machine/screens/product/add_product.dart';
+import 'package:pos_machine/features/products/presentation/pages/product_list_page.dart';
 import 'package:pos_machine/screens/product/product_barcode.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
@@ -155,6 +155,9 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Catalog listing only. Inner product screen slots remain unchanged.
+  static const int productListScreenIndex = 14;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -188,7 +191,7 @@ class SideBarController extends GetxController {
     SalesOrderDetailsScreen(), //11
     AddCategoryScreen(), //12
     AddCategoryPropertiesScreen(), //13
-    AddProductScreen(), //14
+    ProductListPage(), // 14 productListScreenIndex
     StockListPage(), // stockListScreenIndex (15)
     AddCategoryPageScreen(), //16
     TabBarForAddNewProduct(), //17
