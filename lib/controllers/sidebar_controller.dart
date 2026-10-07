@@ -4,7 +4,7 @@ import 'package:pos_machine/features/billing/presentation/pages/billing_quotatio
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
-import 'package:pos_machine/screens/category/add_category.dart';
+import 'package:pos_machine/features/categories/presentation/pages/category_list_page.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
 import 'package:pos_machine/screens/category/edit_category_screen.dart';
@@ -155,6 +155,11 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Category listing and the existing Add/Edit destinations.
+  static const int categoryListScreenIndex = 12;
+  static const int addCategoryScreenIndex = 16;
+  static const int editCategoryScreenIndex = 34;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -186,7 +191,7 @@ class SideBarController extends GetxController {
     AddCustomerPage(), //9
     OpenProfileScreen(), //10
     SalesOrderDetailsScreen(), //11
-    AddCategoryScreen(), //12
+    CategoryListPage(), // categoryListScreenIndex
     AddCategoryPropertiesScreen(), //13
     AddProductScreen(), //14
     StockListPage(), // stockListScreenIndex (15)

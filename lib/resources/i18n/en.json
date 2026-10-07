@@ -2368,6 +2368,18 @@
     "status_order_created": "Order created"
   },
   "category": {
+    "add_short": "Add",
+    "export": "Export",
+    "export_failed": "Unable to export categories. Please try again.",
+    "filters": "Filters",
+    "filters_hint": "Search category names in any available language.",
+    "filters_title": "Find categories",
+    "list_subtitle": "Review and manage your product categories.",
+    "load_failed": "Unable to load categories. Please try again.",
+    "open_failed": "Unable to open this category. Please try again.",
+    "page_count": "@count categories on this page",
+    "refresh": "Refresh",
+    "retry": "Retry",
     "title": "Category List",
     "add": "Add Category",
     "search_label": "Search Category",
