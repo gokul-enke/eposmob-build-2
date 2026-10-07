@@ -21,7 +21,8 @@ class BarcodeListController extends ChangeNotifier {
   static const pageSize = 20;
   int page = 1;
   int _version = -1;
-  bool loading = true;
+  bool initializing = true;
+  bool get loading => initializing || source.isLoading;
   Object? error;
   bool _disposed = false;
   Future<void>? _initializing;
@@ -41,7 +42,7 @@ class BarcodeListController extends ChangeNotifier {
   Future<void> initialize() =>
       _initializing ??= _initialize().whenComplete(() => _initializing = null);
   Future<void> _initialize() async {
-    loading = true;
+    initializing = true;
     error = null;
     _notify();
     try {
@@ -53,7 +54,7 @@ class BarcodeListController extends ChangeNotifier {
       if (!_disposed) error = e;
     } finally {
       if (!_disposed) {
-        loading = false;
+        initializing = false;
         _notify();
       }
     }
@@ -90,6 +91,13 @@ class BarcodeListController extends ChangeNotifier {
 
   void _catalogueChanged() {
     if (_disposed) return;
+    // Sync can replace the catalogue in batches. Keep the last complete rows
+    // behind the loading view until the provider finishes, even if its version
+    // has not changed when loading starts.
+    if (source.isLoading) {
+      _notify();
+      return;
+    }
     final version = source.version;
     if (version == _version) {
       // Keep quantity getters current when an existing stock list is mutated,
@@ -105,12 +113,14 @@ class BarcodeListController extends ChangeNotifier {
   }
 
   void goToPage(int target) {
+    if (_disposed || loading) return;
     if (flushSearch()) return; // new filters begin on page 1
     page = target.clamp(1, totalPages);
     _notify();
   }
 
   void setSelected(BarcodeRow row, bool value) {
+    if (_disposed || loading) return;
     if (value) {
       selected[row.selectionKey] = row;
     } else {
@@ -120,6 +130,7 @@ class BarcodeListController extends ChangeNotifier {
   }
 
   void selectPage(bool value) {
+    if (_disposed || loading) return;
     for (final row in pageRows) {
       if (value) {
         selected[row.selectionKey] = row;

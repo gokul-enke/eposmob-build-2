@@ -55,7 +55,8 @@ class BarcodeSelectionToolbar extends StatelessWidget {
   final bool pageSelected, selectionEnabled, printing;
   final int selectedCount;
   final ValueChanged<bool> onSelectPage;
-  final VoidCallback onClear, onPrint;
+  final VoidCallback onClear;
+  final VoidCallback? onPrint;
   @override
   Widget build(BuildContext context) => AppSurface(
       padding: const EdgeInsets.all(12),

@@ -18,6 +18,8 @@ class Source extends ChangeNotifier implements BarcodeListSource {
   List<GetProduct> filtered = [];
   int requests = 0, loads = 0, reads = 0;
   @override
+  bool isLoading = false;
+  @override
   int version = 0;
   Future<List<BarcodeCategory>> Function()? load;
   @override
@@ -152,6 +154,61 @@ void main() {
     controller.refresh();
     expect(source.reads, 2);
     expect(controller.page, 1);
+  });
+  test('sync start blocks actions without a version change; completion resumes',
+      () async {
+    await controller.initialize();
+    controller.goToPage(2);
+    controller.setSelected(controller.pageRows.first, true);
+    final rows = controller.rows;
+    final page = controller.page;
+    final selected = controller.selected.keys.toList();
+    final reads = source.reads;
+    source.isLoading = true;
+    source.signalUnchanged();
+    expect(controller.loading, isTrue);
+    controller.selectPage(true);
+    controller.setSelected(controller.pageRows.last, true);
+    controller.goToPage(3);
+    expect(controller.selected.keys.toList(), selected);
+    expect(controller.page, page);
+    expect(source.reads, reads);
+    source.all = [GetProduct(productId: 100, productName: 'Replacement')];
+    source.apply(controller.applied);
+    expect(identical(controller.rows, rows), isTrue);
+    source.isLoading = false;
+    source.signalUnchanged();
+    expect(controller.loading, isFalse);
+    expect(controller.rows.single.displayName, 'Replacement');
+    expect(controller.page, 1);
+    controller.selectPage(true);
+    expect(controller.selected.length, selected.length + 1);
+  });
+  test('sync failure with no replacement restores the retained page and rows',
+      () async {
+    await controller.initialize();
+    controller.goToPage(2);
+    final rows = controller.rows;
+    source.isLoading = true;
+    source.signalUnchanged();
+    expect(controller.loading, isTrue);
+    source.isLoading = false;
+    source.signalUnchanged();
+    expect(controller.loading, isFalse);
+    expect(identical(controller.rows, rows), isTrue);
+    expect(controller.page, 2);
+  });
+  test('directory completion cannot end an ongoing catalogue loading state',
+      () async {
+    source.isLoading = true;
+    await controller.initialize();
+    expect(controller.initializing, isFalse);
+    expect(controller.loading, isTrue);
+    expect(controller.rows, isEmpty);
+    source.isLoading = false;
+    source.signalUnchanged();
+    expect(controller.loading, isFalse);
+    expect(controller.rows.length, 45);
   });
   test(
       'unchanged source notification repaints stock values without re-expansion',

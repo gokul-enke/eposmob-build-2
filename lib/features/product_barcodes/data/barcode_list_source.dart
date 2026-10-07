@@ -6,6 +6,7 @@ import '../domain/barcode_list_query.dart';
 
 /// Existing provider contracts remain the source of filtering and cache updates.
 abstract interface class BarcodeListSource {
+  bool get isLoading;
   int get version;
   List<GetProduct> get products;
   Future<List<BarcodeCategory>> categories();
@@ -18,6 +19,8 @@ class LocalBarcodeListSource implements BarcodeListSource {
   LocalBarcodeListSource(this.catalogue, this.categoryProvider);
   final LocalProductProvider catalogue;
   final CategoryProvider categoryProvider;
+  @override
+  bool get isLoading => catalogue.isLoading;
   BarcodeListQuery _query = const BarcodeListQuery();
   int _version = 0;
   int _providerVersion = -1;

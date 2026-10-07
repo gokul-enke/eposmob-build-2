@@ -25,6 +25,8 @@ The list uses `ListPageScaffold`, `PageHeader`, `FilterPanel`, `AppDataTable`, `
 
 Select all selects the current expanded page only. Selection persists across pages and filters; Reset, Clear Selected and successful printing clear it. Print Selected includes the stored selection, including rows outside the current filter. Missing-barcode guards, confirmation arguments, sticker options and success handling retain the existing behavior. Viewing details and cancelling printing do not mutate products or stock.
 
+During provider catalogue synchronization, the list displays its shared loading view and suspends selection, pagination, export and new print requests. Existing print confirmations also check loading before invoking the printer. Rows resume after synchronization completes; an already captured export snapshot remains independent.
+
 ## Export
 
 Exports every expanded row matching the applied filters across all pages of the currently loaded local catalogue. It does not mean every server product if the catalogue cache is incomplete, and it is independent of print selection. Pending edits apply before snapshot capture; Reset cancels queued edits. Barcode/SKU values remain text, quantity/price/MRP remain numeric when valid, and unknown values are preserved. Export uses the existing `ExportController` and Excel service: Save As on Windows and the shared delivery behavior elsewhere. Failures use `AppToast`.

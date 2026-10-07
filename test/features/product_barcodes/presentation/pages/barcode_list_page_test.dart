@@ -427,6 +427,101 @@ void main() {
   });
 
   testWidgets(
+      'catalogue sync hides rows and blocks captured print/export callbacks',
+      (tester) async {
+    var deliveries = 0;
+    final export = ExportController(deliver: (context, file,
+        {required mimeType, shareText, shareOrigin, onStage}) async {
+      deliveries++;
+    });
+    addTearDown(export.dispose);
+    final provider = LocalProductProvider()..initializeProducts(catalogue());
+    await pumpScreen(tester, BarcodeListPage(exportController: export),
+        size: const Size(1280, 900), localProductProvider: provider);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pump();
+    final printBulk = tester
+        .widget<AppPrimaryButton>(find.byType(AppPrimaryButton))
+        .onPressed!;
+    final printSingle = tester
+        .widget<AppSquareIconButton>(find
+            .ancestor(
+                of: find.byIcon(Icons.print_outlined).first,
+                matching: find.byType(AppSquareIconButton))
+            .first)
+        .onPressed!;
+    final exportRows = tester
+        .widget<PageHeader>(find.byType(PageHeader))
+        .actions
+        .singleWhere((action) => action.icon == Icons.ios_share_rounded)
+        .onPressed!;
+    final version = provider.filteredProductsVersion;
+    provider.isLoading = true;
+    provider.updateFilteredProducts(provider.allFilteredProducts);
+    await tester.pump();
+    expect(provider.filteredProductsVersion, version);
+    expect(find.byType(AppLoadingView), findsOneWidget);
+    expect(find.byIcon(Icons.print_outlined), findsNothing);
+    expect(
+        tester
+            .widget<AppPrimaryButton>(find.byType(AppPrimaryButton))
+            .onPressed,
+        isNull);
+    expect(
+        tester.widget<Checkbox>(find.byType(Checkbox).first).onChanged, isNull);
+    expect(
+        tester
+            .widget<PageHeader>(find.byType(PageHeader))
+            .actions
+            .singleWhere((action) => action.icon == Icons.ios_share_rounded)
+            .onPressed,
+        isNull);
+    printSingle();
+    printBulk();
+    exportRows();
+    await tester.pump();
+    expect(find.byType(ConfirmBarcodePrintModal), findsNothing);
+    expect(export.busy, isFalse);
+    expect(deliveries, 0);
+    provider.initializeProducts([
+      GetProduct(productId: 100, productName: 'Synced product', barcode: 'NEW')
+    ]);
+    await tester.pump();
+    expect(find.byType(AppLoadingView), findsOneWidget);
+    provider.isLoading = false;
+    provider.updateFilteredProducts(provider.allFilteredProducts);
+    await tester.pumpAndSettle();
+    expect(find.byType(AppLoadingView), findsNothing);
+    expect(find.text('Synced product'), findsOneWidget);
+    expect(
+        tester
+            .widget<AppPrimaryButton>(find.byType(AppPrimaryButton))
+            .onPressed,
+        isNotNull);
+    expect(find.text('20 selected'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.print_outlined));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(ConfirmBarcodePrintModal), findsOneWidget);
+    final modal = tester.widget<ConfirmBarcodePrintModal>(
+        find.byType(ConfirmBarcodePrintModal));
+    provider.isLoading = true;
+    provider.updateFilteredProducts(provider.allFilteredProducts);
+    Navigator.of(tester.element(find.byType(ConfirmBarcodePrintModal))).pop(
+        BarcodePrintRequest(
+            items: [BarcodePrintItem(product: modal.selectedProducts.single)],
+            stickerSize: '50x25',
+            stickersPerRow: 1));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(ConfirmBarcodePrintModal), findsNothing);
+    expect(tester.widget<AppPrimaryButton>(find.byType(AppPrimaryButton)).busy,
+        isFalse);
+    provider.isLoading = false;
+    provider.updateFilteredProducts(provider.allFilteredProducts);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
       'local replacement cannot bypass active category or product-name filters',
       (tester) async {
     final provider = LocalProductProvider()..initializeProducts(catalogue());

@@ -48,7 +48,7 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
     if (!mounted) return;
     final token = context.read<AuthModel>().token;
     if (token == null || token.isEmpty) {
-      _controller.loading = false;
+      _controller.initializing = false;
       setState(() {});
       AppToast.error(context, 'product_barcode.auth_token_missing'.tr);
       return;
@@ -90,7 +90,7 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
   }
 
   Future<void> _handlePrintSelected(List<BarcodeRow> selectedRows) async {
-    if (_isPrinting) return;
+    if (_isPrinting || _controller.loading) return;
     setState(() => _isPrinting = true);
     try {
       final validRows = selectedRows
@@ -134,14 +134,17 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
       final validProducts =
           validRows.map((r) => r.toProductForPrint()).toList();
 
-      if (!mounted) return;
+      if (!mounted || _controller.loading) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
         context: context,
         builder: (context) =>
             ConfirmBarcodePrintModal(selectedProducts: validProducts),
       );
 
-      if (mounted && result != null && result.items.isNotEmpty) {
+      if (mounted &&
+          !_controller.loading &&
+          result != null &&
+          result.items.isNotEmpty) {
         final barcodePrinterService = BarcodePrinterService(context);
         final printResult = await barcodePrinterService.printBarcodes(
           printItems: result.items,
@@ -161,7 +164,7 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
   }
 
   Future<void> _handlePrintSingle(BarcodeRow row) async {
-    if (_isPrinting) return;
+    if (_isPrinting || _controller.loading) return;
     setState(() => _isPrinting = true);
     try {
       if (row.barcode == null || row.barcode!.trim().isEmpty) {
@@ -183,14 +186,17 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
 
       final printProduct = row.toProductForPrint();
 
-      if (!mounted) return;
+      if (!mounted || _controller.loading) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
         context: context,
         builder: (context) =>
             ConfirmBarcodePrintModal(selectedProducts: [printProduct]),
       );
 
-      if (mounted && result != null && result.items.isNotEmpty) {
+      if (mounted &&
+          !_controller.loading &&
+          result != null &&
+          result.items.isNotEmpty) {
         final barcodePrinterService = BarcodePrinterService(context);
         final printResult = await barcodePrinterService.printBarcodes(
           printItems: result.items,
@@ -273,8 +279,10 @@ class _BarcodeListPageState extends State<BarcodeListPage> {
                 onSelectPage: _controller.selectPage,
                 onClear: _controller.clearSelection,
                 printing: _isPrinting,
-                onPrint: () =>
-                    _handlePrintSelected(_controller.selected.values.toList())),
+                onPrint: _controller.loading
+                    ? null
+                    : () => _handlePrintSelected(
+                        _controller.selected.values.toList())),
             isLoading: _controller.loading,
             items: _controller.pageRows,
             columns: barcodeListColumns(
