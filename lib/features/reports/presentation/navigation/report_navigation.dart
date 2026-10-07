@@ -8,6 +8,9 @@ abstract final class ReportNavigation {
       ? Get.find<SideBarController>()
       : Get.put(SideBarController());
 
+  static void openNonStockReport() =>
+      _sidebar.index.value = SideBarController.nonStockReportScreenIndex;
+
   /// The selected customer's transactions (read from `CustomerProvider`).
   static void openCustomerTransactionDetails() => _sidebar.index.value =
       SideBarController.customerTransactionDetailsScreenIndex;

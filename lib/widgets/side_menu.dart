@@ -10,6 +10,7 @@ import 'package:pos_machine/features/customers/presentation/navigation/customer_
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
@@ -819,7 +820,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 98;
                     },
                     onTapTitle7: () {
-                      sideBarController.index.value = 77;
+                      ReportNavigation.openNonStockReport();
                     },
                     onTapTitle8: () {
                       sideBarController.index.value = 80;
@@ -855,7 +856,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
-                        sideBarController.index.value == 77 ||
+                        sideBarController.index.value ==
+                            SideBarController.nonStockReportScreenIndex ||
                         sideBarController.index.value == 80 ||
                         sideBarController.index.value == 85 ||
                         sideBarController.index.value == 98),

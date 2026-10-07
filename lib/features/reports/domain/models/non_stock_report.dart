@@ -1,10 +1,10 @@
-import 'package:pos_machine/models/pagination.dart';
+import 'non_stock_report_pagination.dart';
 
 class GetNonStockReportResponse {
   final String status;
   final String message;
   final List<NonStockReportData> data;
-  final Pagination? pagination;
+  final NonStockReportPagination? pagination;
 
   GetNonStockReportResponse({
     required this.status,
@@ -17,7 +17,7 @@ class GetNonStockReportResponse {
     // Some APIs return data as a Map containing 'data' (the list) and pagination info,
     // others return data directly as a List.
     List<NonStockReportData> dataList = [];
-    Pagination? paginationInfo;
+    NonStockReportPagination? paginationInfo;
 
     if (json['data'] is Map) {
       final dataMap = json['data'] as Map<String, dynamic>;
@@ -26,7 +26,10 @@ class GetNonStockReportResponse {
             .map((item) => NonStockReportData.fromJson(item))
             .toList();
       }
-      paginationInfo = Pagination.fromJson(dataMap);
+      if (dataMap.containsKey('current_page') ||
+          dataMap.containsKey('last_page')) {
+        paginationInfo = NonStockReportPagination.fromJson(dataMap);
+      }
     } else if (json['data'] is List) {
       dataList = (json['data'] as List)
           .map((item) => NonStockReportData.fromJson(item))

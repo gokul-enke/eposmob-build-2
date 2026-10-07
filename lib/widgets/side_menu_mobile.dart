@@ -6,6 +6,7 @@ import 'package:pos_machine/features/purchase_returns/presentation/navigation/pu
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
@@ -74,6 +75,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           break;
         case SideBarController.transactionSupplierVoucherListScreenIndex:
           VoucherNavigation.openSupplierList(transactions: true);
+          break;
+        case SideBarController.nonStockReportScreenIndex:
+          ReportNavigation.openNonStockReport();
           break;
         default:
           sideBarController.index.value = index;
@@ -577,7 +581,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   66,
                   67,
                   68,
-                  77,
+                  SideBarController.nonStockReportScreenIndex,
                   80,
                   85,
                   98,
@@ -616,7 +620,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   if (hasNonStockPermission)
                     _MobileDrawerSubItem(
                       title: 'nav.non_stock_report'.tr,
-                      onTap: () => navigate(77),
+                      onTap: () =>
+                          navigate(SideBarController.nonStockReportScreenIndex),
                     ),
                   if (hasConsumedStockPermission)
                     _MobileDrawerSubItem(
