@@ -227,6 +227,57 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();
   });
+  testWidgets('undone text edits preserve the Export page and allow Next',
+      (tester) async {
+    final export = CapturingExport();
+    addTearDown(export.dispose);
+    final provider = await mount(tester, 1440, count: 65, export: export);
+    provider.goToStockPage(2);
+    await tester.pump();
+    final input = find.byType(TextField).first;
+    await tester.enterText(input, 'Stock');
+    await tester.enterText(input, '');
+    await tester.tap(find.byKey(StockListPage.exportKey));
+    await tester.pump();
+    expect(export.runs, 1);
+    expect(provider.stockCurrentPage, 2);
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(provider.stockCurrentPage, 2);
+    await tester.enterText(input, 'Stock');
+    await tester.enterText(input, '');
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+    await tester.pump();
+    expect(provider.stockCurrentPage, 3);
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(provider.stockCurrentPage, 3);
+    // The normal timer also ignores edits undone without another action.
+    await tester.enterText(input, 'Stock');
+    await tester.enterText(input, '');
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(provider.stockCurrentPage, 3);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    expect(tester.takeException(), isNull);
+  });
+  for (final language in ['en', 'ar', 'ml']) {
+    testWidgets('missing mobile retail price uses the $language fallback',
+        (tester) async {
+      final provider = await mount(tester, 375, language: language);
+      provider.applyRealtimeStocks([
+        ListStockModelData(stockId: 1, productName: 'Missing price', qty: 0),
+      ]);
+      await tester.pumpAndSettle();
+      final retail = tester
+          .widgetList<AppMetric>(find.byType(AppMetric))
+          .singleWhere((metric) => metric.label == 'stock.retail_price'.tr);
+      expect(retail.value, 'stock.na'.tr);
+      expect(retail.value, isNot('null'));
+      expect(retail.value, isNot('stock.na'));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    });
+  }
   testWidgets(
       'store popup search can be abandoned without changing the filter; Reset clears it',
       (tester) async {

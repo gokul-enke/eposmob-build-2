@@ -188,6 +188,29 @@ void main() {
     expect(calls, isEmpty);
     expect(controller.loading, isFalse);
   });
+  testWidgets('undone or equivalent debounce edits do not reapply filters',
+      (tester) async {
+    controller.stockNameController.text = 'Apple';
+    controller.search();
+    final original = submitted;
+    controller.stockNameController.text = 'AppleX';
+    controller.scheduleSearch();
+    controller.stockNameController.text = 'Apple';
+    controller.scheduleSearch();
+    expect(controller.flushSearch(), isFalse);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(identical(submitted, original), isTrue);
+    controller.stockNameController.text = 'APPLE';
+    controller.scheduleSearch();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(identical(submitted, original), isTrue);
+    // A feature setting change is a real change, even with the same text.
+    variants = true;
+    controller.scheduleSearch();
+    expect(controller.flushSearch(), isTrue);
+    expect(submitted!.includeVariants, isTrue);
+    expect(identical(submitted, original), isFalse);
+  });
   testWidgets('debounce flush, reset and disposal cancel pending searches',
       (tester) async {
     controller.stockNameController.text = 'apple';

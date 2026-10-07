@@ -37,7 +37,7 @@ class StockListMobileCard extends StatelessWidget {
           AppMetric(
               icon: Icons.payments_outlined,
               label: 'stock.retail_price'.tr,
-              value: '${stock.retailPrice}'),
+              value: stock.retailPrice ?? 'stock.na'.tr),
           AppMetric(
               icon: Icons.sell_outlined,
               label: 'stock.mrp'.tr,

@@ -104,12 +104,16 @@ class StockListController extends ChangeNotifier {
   void scheduleSearch() {
     if (_disposed) return;
     _searchTimer?.cancel();
-    _searchTimer = Timer(const Duration(milliseconds: 300), search);
+    _searchTimer =
+        Timer(const Duration(milliseconds: 300), () => flushSearch());
     notifyListeners();
   }
 
   bool flushSearch() {
-    if (_searchTimer == null) return false;
+    if (_searchTimer == null || _disposed) return false;
+    _searchTimer?.cancel();
+    _searchTimer = null;
+    if (appliedQuery?.sameFiltersAs(query) ?? false) return false;
     search();
     return true;
   }
