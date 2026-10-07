@@ -69,7 +69,9 @@ class _CategoryListPageState extends State<CategoryListPage> {
     try {
       _provider.setEditCategoryId(categoryId: entry.id ?? 1);
       await _provider.viewCategoryApi(categoryId: entry.id ?? 1);
-      if (mounted && !_controller.loading) CategoryNavigation.openEdit();
+      // The details are already fetched; a background load of another
+      // category scope must not cancel the navigation the user asked for.
+      if (mounted) CategoryNavigation.openEdit();
     } catch (_) {
       if (mounted) AppToast.error(context, 'category.open_failed'.tr);
     } finally {

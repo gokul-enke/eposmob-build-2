@@ -157,6 +157,42 @@ void main() {
     expect(sidebar.index.value, 34);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('a background category load does not cancel an opened Edit',
+      (tester) async {
+    final sidebar = Get.put(SideBarController());
+    final provider = DirectoryProvider();
+    final pending = Completer<void>();
+    provider.viewer = () => pending.future;
+    await pumpPage(tester, provider);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pump();
+    // e.g. a sellable/purchasable reload started elsewhere mid-fetch.
+    provider.isLoading = true;
+    provider.signal();
+    pending.complete();
+    await tester.pump();
+    expect(sidebar.index.value, 34);
+    provider.isLoading = false;
+    provider.signal();
+    await tester.pumpAndSettle();
+  });
+  testWidgets('a failed category fetch stays on the list with feedback',
+      (tester) async {
+    final sidebar = Get.put(SideBarController());
+    final provider = DirectoryProvider();
+    provider.viewer =
+        () => Future.error(const HttpException('View category 1 failed (404)'));
+    await pumpPage(tester, provider);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pump();
+    expect(sidebar.index.value, 0);
+    expect(find.text('Unable to open this category. Please try again.'),
+        findsOneWidget);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'loading blocks captured export/edit/add controls and resumes the filtered replacement',
       (tester) async {

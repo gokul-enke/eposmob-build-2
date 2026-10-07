@@ -640,7 +640,11 @@ class CategoryProvider extends ChangeNotifier {
         viewCategory = viewCategoryModel.data;
 
         notifyListeners();
-      } else {}
+      } else {
+        // Fail loudly so callers never open Edit with the previous category.
+        throw HttpException(
+            'View category $categoryId failed (${response.statusCode})');
+      }
     } finally {}
   }
 
