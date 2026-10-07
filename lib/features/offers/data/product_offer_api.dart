@@ -23,12 +23,15 @@ class ProductOfferEndpointMissing implements Exception {
 
 /// HTTP access to `GET /api/v1/offers/pos-sync`. No state, no caching.
 class ProductOfferApi {
-  ProductOfferApi({ProductOfferHttpGet? httpGet}) : _get = httpGet ?? http.get;
+  ProductOfferApi({ProductOfferHttpGet? httpGet, DateTime Function()? clock})
+      : _get = httpGet ?? http.get,
+        _clock = clock ?? DateTime.now;
 
   static const requestTimeout = Duration(seconds: 20);
   static const maximumPages = 100;
 
   final ProductOfferHttpGet _get;
+  final DateTime Function() _clock;
 
   /// Fetches every page of offers for [storeId]. Leave [since] null for a
   /// full download.
@@ -41,6 +44,7 @@ class ProductOfferApi {
     final offers = <ProductOffer>[];
     final removed = <int>{};
     DateTime? serverTime;
+    DateTime? receivedAt;
     var fullSnapshot = false;
     int? page;
     final visitedPages = <int>{1};
@@ -56,6 +60,9 @@ class ProductOfferApi {
         'X-Tenant': apiKey,
         'Accept': 'application/json',
       }).timeout(requestTimeout);
+      // Paired with the first page's server_time to measure the clock offset;
+      // reading the device clock after the last page would skew it.
+      receivedAt ??= _clock();
 
       if (response.statusCode == 404 || response.statusCode == 405) {
         throw ProductOfferEndpointMissing(response.statusCode);
@@ -97,6 +104,7 @@ class ProductOfferApi {
       offers: offers,
       removedOfferIds: removed,
       serverTime: serverTime,
+      receivedAt: receivedAt,
       fullSnapshot: fullSnapshot,
     );
   }

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -59,6 +60,32 @@ class _OrderSubmissionStatusState extends State<OrderSubmissionStatus> {
   @override
   Widget build(BuildContext context) => widget.child;
 }
+
+/// Line fields that describe how a line was priced, not what was sold.
+///
+/// A saved attempt is sent without a receipt identity, so its lines never
+/// carry the completed-sale snapshot that the current cart always builds, and
+/// a product sync can re-stamp the offer version of an unchanged line.
+const _pricingLineKeys = {
+  ...OrderSubmissionPayload.completedSaleLineKeys,
+  'offer_id',
+  'offer_version',
+};
+
+/// [items] encoded for "Finish saved order". Every line field except
+/// [_pricingLineKeys] (product, batch, quantity, price, ...) is compared
+/// exactly.
+@visibleForTesting
+String comparableOrderItems(Object? items) => jsonEncode([
+      for (final item in items is Iterable ? items : const [])
+        item is Map
+            ? {
+                for (final entry in item.entries)
+                  if (!_pricingLineKeys.contains(entry.key))
+                    entry.key: entry.value,
+              }
+            : item,
+    ]);
 
 class OrdersToReviewPage extends StatefulWidget {
   const OrdersToReviewPage({super.key, this.coordinator});
@@ -201,9 +228,9 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
       final snapshot = Map<String, dynamic>.from(record['snapshot'] as Map);
       // The POST reverses items. Only clear the original cart, never a newer
       // one that happened to be opened before a late response arrived.
-      final originalItems = jsonEncode(snapshot['items']);
+      final originalItems = comparableOrderItems(snapshot['items']);
       final currentItems =
-          jsonEncode(products.buildOrderItemsPayload().reversed.toList());
+          comparableOrderItems(products.buildOrderItemsPayload().reversed);
       final hasCart = products.cartItems.isNotEmpty;
       if ((hasCart && originalItems != currentItems) ||
           (products.currentOrder != null &&
@@ -234,7 +261,7 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
         if (approved != true || !mounted) return;
         // Recheck after the dialog; asynchronous refresh must not change what
         // was reviewed while the operator was deciding.
-        if (jsonEncode(products.buildOrderItemsPayload().reversed.toList()) !=
+        if (comparableOrderItems(products.buildOrderItemsPayload().reversed) !=
                 currentItems ||
             products.currentOrder?.id != record['local_draft_id']) {
           throw StateError(recoveryText(

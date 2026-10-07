@@ -115,6 +115,72 @@ void main() {
       expect(winner.offerId, 3);
     });
 
+    test('a company-wide product rule beats a store-specific category rule',
+        () {
+      final winner = resolve([
+        productOffer(
+          id: 1,
+          lines: [offerLine(productId: 1, categoryDistance: 0, value: 50)],
+        ),
+        productOffer(
+          id: 2,
+          companyWide: true,
+          lines: [offerLine(productId: 1, lineId: 10, value: 5)],
+        ),
+      ])!;
+      expect(winner.offerId, 2);
+      expect(winner.price, closeTo(95, 0.0001));
+    });
+
+    test('a store-specific product-wide rule beats a company-wide batch rule',
+        () {
+      final winner = resolve([
+        productOffer(
+          id: 1,
+          companyWide: true,
+          lines: [
+            offerLine(productId: 1, lineId: 900, stockId: 88, value: 50),
+          ],
+        ),
+        productOffer(
+          id: 2,
+          lines: [offerLine(productId: 1, lineId: 10, value: 5)],
+        ),
+      ], stockIds: [
+        88
+      ])!;
+      expect(winner.offerId, 2);
+    });
+
+    test('among category rules a store-specific one beats a nearer one', () {
+      final winner = resolve([
+        productOffer(
+          id: 3,
+          companyWide: true,
+          lines: [offerLine(productId: 1, categoryDistance: 0, value: 50)],
+        ),
+        productOffer(
+          id: 1,
+          lines: [offerLine(productId: 1, categoryDistance: 2, value: 5)],
+        ),
+      ])!;
+      expect(winner.offerId, 1);
+    });
+
+    test('the highest line id wins over the highest offer id', () {
+      final winner = resolve([
+        productOffer(
+          id: 5,
+          lines: [offerLine(productId: 1, lineId: 10, value: 50)],
+        ),
+        productOffer(
+          id: 3,
+          lines: [offerLine(productId: 1, lineId: 20, value: 5)],
+        ),
+      ])!;
+      expect(winner.offerId, 3);
+    });
+
     test('the winner is used even when it does not lower the price', () {
       // The product rule is a no-op for a ₹10 product (flat ₹20 off still
       // lowers it, so use a zero value). The category rule must not be tried.

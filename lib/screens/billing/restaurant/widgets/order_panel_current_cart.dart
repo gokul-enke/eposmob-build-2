@@ -3,6 +3,51 @@
 part of 'order_panel.dart';
 
 extension OrderPanelCurrentCartExtension on OrderPanelState {
+  /// Unit price chip text. Offer lines get a compact offer marker (tag icon
+  /// and the struck-through price before the offer), like CartOfferBadge.
+  Widget _buildCurrentCartUnitPrice(LocalCartItem cartItem, double unitPrice) {
+    final priceText = Text(
+      unitPrice.toStringAsFixed(2),
+      style: buildCustomStyle(
+        FontWeightManager.bold,
+        FontSize.s11,
+        0.21,
+        const Color(0xFF2563EB),
+      ),
+    );
+    final standardPrice = cartItem.standardUnitPrice;
+    if (!cartItem.hasOffer || standardPrice == null) {
+      return priceText;
+    }
+    final standardText = standardPrice.toStringAsFixed(2);
+    return Semantics(
+      container: true,
+      label: 'offers.badge_semantics'.trParams({'price': standardText}),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.local_offer_outlined,
+            size: FontSize.s11 + 1,
+            color: Colors.green.shade800,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            standardText,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.21,
+              ColorManager.kTextColor,
+            ).copyWith(decoration: TextDecoration.lineThrough),
+          ),
+          const SizedBox(width: 4),
+          priceText,
+        ],
+      ),
+    );
+  }
+
   Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
     final productName = cartItem.displayName;
     final quantity = cartItem.quantity;
@@ -70,15 +115,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                             color: const Color(0xFF2563EB).withOpacity(0.08),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(
-                            unitPrice.toStringAsFixed(2),
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              FontSize.s11,
-                              0.21,
-                              const Color(0xFF2563EB),
-                            ),
-                          ),
+                          child: _buildCurrentCartUnitPrice(
+                              cartItem, unitPrice),
                         ),
                       ),
                     ),

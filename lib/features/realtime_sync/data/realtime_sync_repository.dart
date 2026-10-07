@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart';
@@ -34,6 +35,9 @@ class RealtimeSyncRepository {
   final SalesProvider _sales;
   final ProductOfferRepository _offers;
 
+  /// The session, complete cursor window and offer changes handed to [_offers].
+  String? _offerWindow;
+
   Future<void> apply({
     required RealtimeSyncSession session,
     required RealtimeChangeSet changes,
@@ -43,9 +47,27 @@ class RealtimeSyncRepository {
   }) async {
     if (!changes.hasChanges) return;
 
-    // Offers only change future cart lines, so an open cart never defers them.
+    // Offers are applied even when product changes wait for the cart. Only
+    // skip an identical result: the starting cursor stays fixed while the
+    // cart is open, but later windows may contain another edit to the same
+    // offer. A failed offer fetch is retried by the offer repository.
     if (changes.offers.hasChanges) {
-      unawaited(_offers.refresh());
+      final upserted = changes.offers.upserted.toSet().toList()..sort();
+      final deleted = changes.offers.deleted.toSet().toList()..sort();
+      final offerWindow = jsonEncode([
+        session.backendBaseUrl,
+        session.tenantApiKey,
+        session.companyId,
+        session.storeId,
+        updatedFrom,
+        updatedTo,
+        upserted,
+        deleted,
+      ]);
+      if (_offerWindow != offerWindow) {
+        _offerWindow = offerWindow;
+        unawaited(_offers.refresh());
+      }
     }
 
     if (changes.hasCatalogChanges && _localProducts.cartItems.isNotEmpty) {
@@ -122,5 +144,7 @@ class RealtimeSyncRepository {
       );
       if (!isCurrent()) return;
     }
+    // This window is applied; the next pull starts a new one.
+    _offerWindow = null;
   }
 }

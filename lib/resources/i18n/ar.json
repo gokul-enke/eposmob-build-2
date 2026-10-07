@@ -1,6 +1,9 @@
 {
   "offers": {
-    "badge": "عرض"
+    "badge": "عرض",
+    "badge_semantics": "تم تطبيق العرض، السعر السابق @price",
+    "available": "عرض متاح",
+    "price_pending_selection": "يتم تأكيد السعر النهائي بعد اختيار الدفعة أو النوع."
   },
   "mobile_order_card": {
     "opt_share": "مشاركة",

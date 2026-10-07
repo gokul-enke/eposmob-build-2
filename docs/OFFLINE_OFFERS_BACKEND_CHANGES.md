@@ -23,7 +23,7 @@ What the app reads from each offer: `id`, `version`, `name`, `store_id` (null me
 What it reads from each line: `line_id` (numeric on product lines; text such as `category-123` is ignored), `product_id`, `stock_id`, `category_distance` (set on category lines), `type` and `value`.
 
 - `type` is `percentage` or `flat_amount`. A line with any other type is skipped.
-- A disabled, deleted or moved offer must arrive in `removed_offer_ids`. The app does not read `enabled`.
+- A disabled, deleted or moved offer must arrive in `removed_offer_ids`. As a safeguard the app also removes an offer returned with `enabled: false`, an offer it cannot read (for example without `valid_until`), and an id sent in both `offers` and `removed_offer_ids`.
 - `full_snapshot: true` replaces the whole local cache. Without it, returned offers replace the cached ones by id.
 - `server_time` becomes the next `since`, and is used to correct the device clock.
 - `next_page` is followed if it is ever sent. The app replaces its cache only after the last page.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -184,6 +185,10 @@ class _CartItem extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (item.hasOffer) ...[
+                const SizedBox(height: 3),
+                CartOfferBadge(item: item, fontSize: 11),
+              ],
               const SizedBox(height: 3),
               Text(
                 _formatMoney(

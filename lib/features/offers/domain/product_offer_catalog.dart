@@ -75,7 +75,7 @@ class ProductOfferCatalog {
 
   /// Applies a sync response. A full sync ([since] was not sent) replaces
   /// every offer; a delta sync upserts the returned offers and drops
-  /// `removed_offer_ids`.
+  /// `removed_offer_ids`. An id in both lists is dropped.
   ProductOfferCatalog applySync(
     ProductOfferSyncResponse response, {
     required bool fullSync,
@@ -86,11 +86,11 @@ class ProductOfferCatalog {
     final replaceAll = fullSync || response.fullSnapshot;
     final merged =
         replaceAll ? <int, ProductOffer>{} : Map<int, ProductOffer>.of(offers);
-    for (final id in response.removedOfferIds) {
-      merged.remove(id);
-    }
     for (final offer in response.offers) {
       merged[offer.id] = offer;
+    }
+    for (final id in response.removedOfferIds) {
+      merged.remove(id);
     }
 
     final serverTime = response.serverTime;

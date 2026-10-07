@@ -213,4 +213,42 @@ void main() {
     expect(response.removedOfferIds, {7, 8});
     expect(response.serverTime, DateTime.utc(2026, 10, 6, 11));
   });
+
+  test('an unreadable offer with an id is removed, not silently kept', () {
+    final response = ProductOfferSyncResponse.fromJson({
+      'success': true,
+      'offers': [
+        {
+          'id': 7,
+          'version': 2,
+          'valid_from': '2026-10-01T00:00:00Z',
+          'valid_until': null,
+          'lines': [],
+        },
+      ],
+      'removed_offer_ids': [],
+    });
+    expect(response.offers, isEmpty);
+    expect(response.removedOfferIds, {7});
+  });
+
+  test('an offer returned with enabled false is removed', () {
+    for (final enabled in [false, 0, 'false']) {
+      final response = ProductOfferSyncResponse.fromJson({
+        'success': true,
+        'offers': [
+          {
+            'id': 9,
+            'version': 2,
+            'enabled': enabled,
+            'valid_from': '2026-10-01T00:00:00Z',
+            'valid_until': '2026-11-01T00:00:00Z',
+            'lines': [],
+          },
+        ],
+      });
+      expect(response.offers, isEmpty, reason: 'enabled: $enabled');
+      expect(response.removedOfferIds, {9}, reason: 'enabled: $enabled');
+    }
+  });
 }

@@ -192,7 +192,6 @@ class SessionResetService {
     } catch (_) {}
 
     await context.read<LocalProductProvider>().clearAllLocalData();
-    await ProductOfferRepository.instance.clear();
     await context.read<CategoryProvider>().clearAllCategories();
     await context.read<DocumentConfigProvider>().clearAllCaches();
     context.read<AdminSettingsProvider>().clear();
@@ -252,6 +251,11 @@ class SessionResetService {
         }
       }
     }
+
+    // After the preferences reset: an app-settings response that lands
+    // before this is wiped here, and one that lands after it no longer
+    // matches the cleared active store.
+    await ProductOfferRepository.instance.clear();
 
     context.read<AuthModel>().logout();
   }

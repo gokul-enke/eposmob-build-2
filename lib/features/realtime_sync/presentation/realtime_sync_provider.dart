@@ -161,6 +161,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     }
 
     final generation = _generation;
+    var deferredForCart = false;
     _pulling = true;
     _pullPending = false;
     _lastError = null;
@@ -195,6 +196,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
             : RealtimeSyncStatus.stopped,
       );
     } on RealtimeSyncDeferredException catch (error) {
+      deferredForCart = true;
       _lastError = error.message;
       _pullPending = true;
       _setStatus(RealtimeSyncStatus.waitingForCart);
@@ -214,7 +216,10 @@ class RealtimeSyncProvider extends ChangeNotifier {
     } finally {
       _pulling = false;
       SyncOperationGate.instance.release(_syncGateOwner);
-      if (_pullPending &&
+      // A pull deferred for the open cart waits for the scheduled pending
+      // catch-up; pulling again at once would loop until the cart closes.
+      if (!deferredForCart &&
+          _pullPending &&
           _session != null &&
           !_manualSync.isSyncing &&
           _online &&

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'offer_money.dart';
 
 /// How a product offer changes the price of one base unit.
@@ -185,12 +187,19 @@ class ProductOfferSyncResponse {
     required this.offers,
     this.removedOfferIds = const <int>{},
     this.serverTime,
+    this.receivedAt,
     this.fullSnapshot = false,
   });
 
   final List<ProductOffer> offers;
+
+  /// Offers to drop. Applied after [offers], so an id in both is removed.
   final Set<int> removedOfferIds;
   final DateTime? serverTime;
+
+  /// Device time when the response carrying [serverTime] arrived. Null when
+  /// the response was not received over the network.
+  final DateTime? receivedAt;
 
   /// The backend sent every offer of the store (`full_snapshot: true`), so
   /// the local cache must be replaced, not merged.
@@ -202,21 +211,50 @@ class ProductOfferSyncResponse {
     }
     final rawOffers = json['offers'];
     final rawRemoved = json['removed_offer_ids'];
+    final offers = <ProductOffer>[];
+    final removed = <int>{
+      if (rawRemoved is List)
+        for (final raw in rawRemoved)
+          if (_parseInt(raw) case final id?) id,
+    };
+    var dropped = 0;
+    if (rawOffers is List) {
+      for (final raw in rawOffers) {
+        final id = raw is Map ? _parseInt(raw['id']) : null;
+        // Disabled offers should arrive in removed_offer_ids; this is a
+        // safeguard for a backend that returns them with `enabled: false`.
+        if (raw is Map && _isDisabled(raw['enabled'])) {
+          if (id != null) removed.add(id);
+          continue;
+        }
+        final offer = ProductOffer.tryParse(raw);
+        if (offer != null) {
+          offers.add(offer);
+          continue;
+        }
+        dropped++;
+        // An unreadable new version must not leave the older cached version
+        // of the same offer applying.
+        if (id != null) removed.add(id);
+      }
+    }
+    if (dropped > 0) {
+      debugPrint('Product offers: dropped $dropped unreadable offer(s).');
+    }
     return ProductOfferSyncResponse(
       serverTime: _parseDate(json['server_time']),
       fullSnapshot: json['full_snapshot'] == true,
-      offers: [
-        if (rawOffers is List)
-          for (final raw in rawOffers)
-            if (ProductOffer.tryParse(raw) case final offer?) offer,
-      ],
-      removedOfferIds: {
-        if (rawRemoved is List)
-          for (final raw in rawRemoved)
-            if (_parseInt(raw) case final id?) id,
-      },
+      offers: offers,
+      removedOfferIds: removed,
     );
   }
+}
+
+bool _isDisabled(Object? value) {
+  if (value is bool) return !value;
+  if (value is num) return value == 0;
+  final text = value?.toString().trim().toLowerCase();
+  return text == 'false' || text == '0';
 }
 
 int? _parseInt(Object? value) {

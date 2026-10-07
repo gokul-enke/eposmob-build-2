@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/offers/data/product_offer_cache.dart';
 import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
@@ -152,6 +153,7 @@ const List<String> _optionalBoxNames = <String>[
   'categories_all',
   'categories_purchasable',
   'document_configs',
+  ProductOfferCache.boxName,
 ];
 
 /// Where Hive keeps its files on this machine. Set by [_initializeHiveStorage].
@@ -736,6 +738,7 @@ Future<void> _openTypedBox(String boxName) async {
   switch (boxName) {
     case 'order_submissions':
     case localSaleOutboxName:
+    case ProductOfferCache.boxName:
       await Hive.openBox(boxName);
       break;
     case 'products':

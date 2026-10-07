@@ -428,7 +428,13 @@ class SyncProvider extends ChangeNotifier {
           Provider.of<LocalProductProvider>(context, listen: false);
       await localProductProvider.fetchProductsFromAPI();
       // A manual product sync also re-downloads every offer for the store.
-      await ProductOfferRepository.instance.refresh(full: true);
+      final offersSynced =
+          await ProductOfferRepository.instance.refresh(full: true);
+      if (!offersSynced) {
+        // Non-critical: cached offers keep applying and the download is
+        // retried in the background.
+        debugPrint("⚠️ Warning: Offer sync failed, continuing...");
+      }
       debugPrint("✅ Products synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync products: $e");

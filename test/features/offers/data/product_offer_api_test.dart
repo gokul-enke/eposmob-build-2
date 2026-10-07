@@ -103,6 +103,27 @@ void main() {
     expect(response.serverTime, DateTime.utc(2026, 10, 6, 11));
   });
 
+  test('pairs server_time with the device time of the first page', () async {
+    final fake = _FakeGet([
+      http.Response(jsonEncode(_page(offerIds: [9], nextPage: 2)), 200),
+      http.Response(jsonEncode(_page(offerIds: [10])), 200),
+    ]);
+    final firstPageAt = DateTime.utc(2026, 10, 6, 10, 59, 58);
+    final clockReadsAfter = <int>[];
+    final response = await ProductOfferApi(
+      httpGet: fake.call,
+      clock: () {
+        clockReadsAfter.add(fake.urls.length);
+        return firstPageAt;
+      },
+    ).fetch(accessToken: 'token', apiKey: 'tenant', storeId: 1);
+
+    // Read once, right after page 1, not after the last page.
+    expect(clockReadsAfter, [1]);
+    expect(response.receivedAt, firstPageAt);
+    expect(response.serverTime, DateTime.utc(2026, 10, 6, 11));
+  });
+
   test('404 means the backend has no offer endpoint yet', () async {
     final fake = _FakeGet([http.Response('Not found', 404)]);
     expect(

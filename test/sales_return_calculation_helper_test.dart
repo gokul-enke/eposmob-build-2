@@ -22,71 +22,95 @@ SalesReturnCart _item({
   );
 }
 
+/// Offer fields the server sends on a sold line, next to its sold
+/// `unit_price`. A return must ignore them.
+const _offerFields = <String, dynamic>{
+  'standard_unit_price': '100.000',
+  'offer_id': 9,
+  'offer_version': 3,
+};
+
+/// Returns one unit of [soldLine] the way the return dialog prices it
+/// (returned quantity x the line's unit price) and calculates the refund.
+SalesReturnRefundSummary _returnOneUnit(
+  Map<String, dynamic> soldLine, {
+  double orderDiscount = 0,
+}) {
+  final sold = SalesReturnCart.fromJson(soldLine);
+  final returned = SalesReturnCart.fromJson({
+    ...soldLine,
+    'returned_quantity': 1,
+    'returned_total': (1 * double.parse(sold.unitPrice)).toStringAsFixed(3),
+  });
+  return SalesReturnCalculationHelper.calculateRefund(
+    items: [returned],
+    initialReturnedTotals: const {1: 0},
+    orderDiscount: orderDiscount,
+    shippingCost: 0,
+    deliveryRefundable: false,
+  );
+}
+
 void main() {
   group('SalesReturnCalculationHelper', () {
     test(
-        'an offer-priced return refunds the sold price without a second item discount',
-        () {
-      final sold = SalesReturnCart.fromJson({
+        'an offer line refunds its sold unit_price, not the higher '
+        'standard_unit_price', () {
+      const sold = <String, dynamic>{
         'cart_item_id': 1,
         'quantity': 2,
         'unit_price': '90.000',
-        'standard_unit_price': '100.000',
-        'offer_id': 9,
         'total_price': '180.000',
-        'returned_quantity': 1,
-        'returned_total': '90.000',
-      });
-      final summary = SalesReturnCalculationHelper.calculateRefund(
-        items: [sold],
-        initialReturnedTotals: const {1: 0},
-        orderDiscount: 0,
-        shippingCost: 0,
-        deliveryRefundable: false,
-      );
-      expect(sold.unitPrice, '90.000');
+      };
+      final offerLine = SalesReturnCart.fromJson({...sold, ..._offerFields});
+      expect(offerLine.unitPrice, '90.000');
+      expect(offerLine.totalPrice, '180.000');
+
+      final summary = _returnOneUnit({...sold, ..._offerFields});
+      expect(summary.sessionItemsTotal, 90);
       expect(summary.proRataDiscount, 0);
       expect(summary.netRefundAmount, 90);
+      expect(summary.maxCashRefundAmount, 90);
+
+      // The offer fields change nothing: same refund as a plain 90 line.
+      final plain = _returnOneUnit(sold);
+      expect(summary.netRefundAmount, plain.netRefundAmount);
+      expect(summary.maxCashRefundAmount, plain.maxCashRefundAmount);
     });
 
-    test('an order coupon is refunded pro-rata on top of the offer price', () {
-      final sold = SalesReturnCart.fromJson({
+    test(
+        'an order coupon is refunded pro-rata on the offer price, not on the '
+        'standard price', () {
+      const sold = <String, dynamic>{
         'cart_item_id': 1,
         'quantity': 2,
         'unit_price': '90.000',
-        'standard_unit_price': '100.000',
         'total_price': '180.000',
-        'returned_quantity': 1,
-        'returned_total': '90.000',
-      });
-      final summary = SalesReturnCalculationHelper.calculateRefund(
-        items: [sold],
-        initialReturnedTotals: const {1: 0},
-        orderDiscount: 18,
-        shippingCost: 0,
-        deliveryRefundable: false,
-      );
+      };
+      final summary =
+          _returnOneUnit({...sold, ..._offerFields}, orderDiscount: 18);
+      // Half of the 180 line is returned, so half of the 18 coupon.
+      expect(summary.orderItemsTotal, 180);
       expect(summary.proRataDiscount, 9);
       expect(summary.netRefundAmount, 81);
+
+      final plain = _returnOneUnit(sold, orderDiscount: 18);
+      expect(summary.proRataDiscount, plain.proRataDiscount);
+      expect(summary.netRefundAmount, plain.netRefundAmount);
     });
 
-    test('a free offer sale has a finite zero refund', () {
-      final sold = SalesReturnCart.fromJson({
+    test(
+        'a line made free by an offer refunds a finite zero, even with an '
+        'order discount', () {
+      final summary = _returnOneUnit({
         'cart_item_id': 1,
         'quantity': 1,
         'unit_price': '0.000',
-        'standard_unit_price': '100.000',
         'total_price': '0.000',
-        'returned_quantity': 1,
-        'returned_total': '0.000',
-      });
-      final summary = SalesReturnCalculationHelper.calculateRefund(
-        items: [sold],
-        initialReturnedTotals: const {1: 0},
-        orderDiscount: 0,
-        shippingCost: 0,
-        deliveryRefundable: false,
-      );
+        ..._offerFields,
+      }, orderDiscount: 5);
+      // The order lines total 0, so no share of the discount (no 0 / 0).
+      expect(summary.proRataDiscount, 0);
       expect(summary.netRefundAmount, 0);
       expect(summary.netRefundAmount.isFinite, isTrue);
     });

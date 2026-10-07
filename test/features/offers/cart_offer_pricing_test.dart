@@ -92,13 +92,21 @@ void main() {
     );
   }
 
-  LocalProductProvider providerWith(List<ProductOffer> offers,
-      {bool enabled = true}) {
-    final repository = ProductOfferRepository(clock: () => offerTestNow)
-      ..debugSetCatalog(offerCatalog(offers, enabled: enabled));
-    return LocalProductProvider()
+  LocalProductProvider providerWith(
+    List<ProductOffer> offers, {
+    bool enabled = true,
+    DateTime Function()? clock,
+    Duration clockOffset = Duration.zero,
+  }) {
+    final repository =
+        ProductOfferRepository(clock: clock ?? () => offerTestNow)
+          ..debugSetCatalog(offerCatalog(offers, enabled: enabled)
+              .copyWith(clockOffset: clockOffset));
+    final provider = LocalProductProvider()
       ..offerRepository = repository
       ..setStockEnabled(true);
+    addTearDown(provider.dispose);
+    return provider;
   }
 
   final tenPercent = productOffer(
@@ -119,6 +127,90 @@ void main() {
     expect(line.offerId, 9);
     expect(line.offerVersion, 3);
     expect(line.displayStandardPrice, 100);
+  });
+
+  test('price preview shares batch allocation and never reserves stock', () {
+    final first = stock(id: 87).copyWith(quantity: 2);
+    final second = stock(id: 88).copyWith(quantity: 10);
+    final item = product(stocks: [first, second]);
+    final provider = providerWith([
+      tenPercent,
+      productOffer(
+          id: 10, lines: [offerLine(productId: 1, stockId: 87, value: 20)]),
+    ]);
+    provider.initializeProducts([item]);
+    final oneBatch = provider.previewProductPrice(product: item, quantity: 2);
+    final twoBatches = provider.previewProductPrice(product: item, quantity: 3);
+    expect(oneBatch.unitPrice, 80);
+    expect(twoBatches.unitPrice, 90);
+    expect(provider.cartItems, isEmpty);
+    expect(provider.products.single.stock!.map((stock) => stock.quantity),
+        [2, 10]);
+    provider.addToCart(product: item, quantity: 3, selectedStock: first);
+    expect(provider.cartItems.single.price, twoBatches.baseUnitPrice);
+    expect(provider.cartItems.single.stockReservations.map((r) => r.stockId),
+        [87, 88]);
+  });
+
+  test('a preview includes existing reservations when adding across batches',
+      () {
+    final first = stock(id: 87).copyWith(quantity: 2);
+    final second = stock(id: 88).copyWith(quantity: 10);
+    final item = product(stocks: [first, second]);
+    final provider = providerWith([
+      tenPercent,
+      productOffer(
+          id: 10, lines: [offerLine(productId: 1, stockId: 87, value: 20)]),
+    ]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: first);
+    final preview = provider.previewProductPrice(
+        product: item, quantity: 1, includeCartQuantity: true);
+    expect(preview.unitPrice, 90);
+    expect(provider.cartItems.single.price, 80);
+    expect(second.quantity, 10);
+    provider.addToCart(product: item, quantity: 1, selectedStock: second);
+    expect(provider.cartItems.single.price, preview.baseUnitPrice);
+    expect(provider.cartItems.single.quantity, 3);
+  });
+
+  test('preview keeps a manual line price when the popup will merge into it',
+      () {
+    final batch = stock(wholesalePrice: '80', wholesaleMinUnit: 5);
+    final item = product(stocks: [batch]);
+    final provider = providerWith([tenPercent]);
+    provider.initializeProducts([item]);
+    provider.addToCart(
+        product: item,
+        quantity: 1,
+        selectedStock: batch,
+        price: 95,
+        markPriceAsManualOverride: true);
+    final preview = provider.previewProductPrice(
+        product: item, quantity: 4, includeCartQuantity: true);
+    expect(preview.unitPrice, 95);
+    expect(preview.hasOffer, isFalse);
+    expect(provider.cartItems.single.quantity, 1);
+    provider.addToCart(product: item, quantity: 4, selectedStock: batch);
+    expect(provider.cartItems.single.price, preview.baseUnitPrice);
+    expect(provider.cartItems.single.isManualPriceOverride, isTrue);
+  });
+
+  test(
+      'preview preserves three decimal offer prices and ignores manual margin floors',
+      () {
+    final batch = stock(price: '19.99');
+    final item = product(stocks: [batch]);
+    final provider = providerWith([
+      productOffer(lines: [offerLine(productId: 1, value: 15)]),
+    ]);
+    provider.initializeProducts([item]);
+    final preview = provider.previewProductPrice(product: item, quantity: 3);
+    expect(preview.unitPrice, 16.992);
+    expect(preview.standardUnitPrice, 19.99);
+    expect(preview.total, closeTo(50.976, 0.00001));
+    provider.addToCart(product: item, quantity: 3, selectedStock: batch);
+    expect(provider.cartItems.single.price, preview.baseUnitPrice);
   });
 
   test('a batch offer follows the reserved batch within a pricing group', () {
@@ -180,6 +272,79 @@ void main() {
     expect(provider.cartItems.single.price, closeTo(90, 0.0001));
   });
 
+  test('a line re-added at its offer price keeps it and the offer', () {
+    // Restaurant checkout re-adds kitchen lines at the price they carry.
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(
+      product: item,
+      quantity: 2,
+      price: 90,
+      selectedStock: batch,
+    );
+
+    final line = provider.cartItems.single;
+    expect(line.price, 90);
+    expect(line.offerId, 9);
+    expect(line.offerVersion, 3);
+    expect(line.standardUnitPrice, 100);
+    expect(line.isManualPriceOverride, isFalse);
+    expect(provider.cartTotal, 180);
+  });
+
+  test('a line re-added at another price keeps it without an offer', () {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(
+      product: item,
+      quantity: 1,
+      price: 95,
+      selectedStock: batch,
+    );
+
+    final line = provider.cartItems.single;
+    expect(line.price, 95);
+    expect(line.hasOffer, isFalse);
+    expect(line.standardUnitPrice, 100);
+    expect(line.isManualPriceOverride, isFalse);
+  });
+
+  test('a stock spill at the offer price is not discounted twice', () {
+    final provider = providerWith([tenPercent])
+      ..setActiveStockGroupingFields({'price', 'mrp', 'unit'});
+    final first = stock(id: 88);
+    // Another pricing group, so the spill creates a new line.
+    final other = stock(id: 89).copyWith(mrp: '130');
+    final item = product(stocks: [first, other]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: first);
+    final offerLine = provider.cartItems.single;
+    expect(offerLine.price, closeTo(90, 0.0001));
+
+    // What CartQuantityStockHelper does when the batch runs out.
+    provider.addToCart(
+      product: item,
+      quantity: 1,
+      price: offerLine.price,
+      mrp: offerLine.mrp,
+      markPriceAsManualOverride: offerLine.isManualPriceOverride,
+      isIncreamentUsingCompactQuantityControl: true,
+      selectedStock: other,
+    );
+
+    expect(provider.cartItems, hasLength(2));
+    for (final line in provider.cartItems) {
+      expect(line.price, closeTo(90, 0.0001));
+      expect(line.offerId, 9);
+      expect(line.standardUnitPrice, 100);
+    }
+    expect(provider.cartTotal, 180);
+  });
+
   test('no offer while POS_OFFERS is off', () {
     final provider = providerWith([tenPercent], enabled: false);
     final batch = stock();
@@ -228,6 +393,31 @@ void main() {
     provider.setCartItemQuantity(1, batch, 2);
     expect(provider.cartItems.single.price, 95);
     expect(provider.cartItems.single.hasOffer, isFalse);
+  });
+
+  test('committing the unchanged price keeps the offer line automatic', () {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    var notifications = 0;
+    provider.addListener(() => notifications++);
+
+    // Enter / Tab / blur on the price field commits the same value.
+    provider.updateItemPrice(1, batch, 90);
+    final line = provider.cartItems.single;
+    expect(line.price, closeTo(90, 0.0001));
+    expect(line.offerId, 9);
+    expect(line.isManualPriceOverride, isFalse);
+    expect(notifications, 0);
+
+    // A real change still becomes a manual price.
+    provider.updateItemPrice(1, batch, 85);
+    expect(line.price, 85);
+    expect(line.isManualPriceOverride, isTrue);
+    expect(line.hasOffer, isFalse);
+    expect(line.standardUnitPrice, 100);
   });
 
   test('a flat_amount offer ignores the minimum sale price', () {
@@ -380,15 +570,33 @@ void main() {
     provider.addToCart(product: item, quantity: 1, selectedStock: batch);
     await provider.flushPersistence();
 
-    // Offers are switched off after the restart: the restored line keeps the
-    // price it was rung up at until it is touched again.
-    final restarted = providerWith(const [], enabled: false);
+    final restarted = providerWith([tenPercent]);
     await restarted.hydrated;
     final line = restarted.cartItems.single;
     expect(line.price, closeTo(90, 0.0001));
     expect(line.offerId, 9);
     expect(line.offerVersion, 3);
     expect(line.standardUnitPrice, 100);
+    await restarted.flushPersistence();
+  });
+
+  test('a restored cart is re-priced when offers were switched off', () async {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    await provider.flushPersistence();
+
+    final restarted = providerWith(const [], enabled: false);
+    await restarted.hydrated;
+    final line = restarted.cartItems.single;
+    expect(line.price, 100);
+    expect(line.hasOffer, isFalse);
+    expect(line.standardUnitPrice, 100);
+    await restarted.flushPersistence();
+    expect(Hive.box<HiveLocalCartItem>('cart_items').values.single.offerId,
+        isNull);
   });
 
   test('an expired offer is not applied', () {
@@ -429,7 +637,7 @@ void main() {
     expect(provider.buildOrderItemsPayload().single['tax_amount'], 16.2);
   });
 
-  test('held offer cart resumes its frozen price after offers are disabled',
+  test('held offer cart is re-priced when resumed after offers are disabled',
       () async {
     final provider = providerWith([tenPercent]);
     final batch = stock();
@@ -441,10 +649,220 @@ void main() {
     provider.clearCart();
     provider.offerRepository.debugSetCatalog(offerCatalog([], enabled: false));
     provider.loadOrderForEditing(held.id);
+    // Offers must be valid when the sale is completed.
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, isFalse);
+    expect(provider.cartItems.single.standardUnitPrice, 100);
+    expect(provider.cartTotal, 200);
+  });
+
+  test('held offer cart is re-priced when resumed after the offer ended',
+      () async {
+    var now = offerTestNow;
+    final provider = providerWith([
+      productOffer(
+        version: 3,
+        validUntil: offerTestNow.add(const Duration(hours: 1)),
+        lines: [offerLine(productId: 1, value: 10)],
+      ),
+    ], clock: () => now);
+    final batch = stock(taxRate: '18');
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: batch);
+    expect(provider.cartItems.single.price, closeTo(90, 0.0001));
+    final held = provider.saveCurrentCartAsOrder(comment: 'QA offer hold');
+    await provider.flushPersistence();
+    provider.clearCart();
+    // Product previews still need the timer after the cart is held.
+    expect(provider.debugNextOfferBoundary,
+        offerTestNow.add(const Duration(hours: 1)));
+
+    now = offerTestNow.add(const Duration(hours: 2));
+    provider.loadOrderForEditing(held.id);
+    final line = provider.cartItems.single;
+    expect(line.price, 100);
+    expect(line.hasOffer, isFalse);
+    // 100 inclusive of 18% tax.
+    expect(line.taxAmount, closeTo(15.254, 0.001));
+    expect(provider.cartTotal, 200);
+    await provider.flushPersistence();
+  });
+
+  test('removing the offer while it is in the cart restores the standard price',
+      () async {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: batch);
+    expect(provider.cartTotal, 180);
+
+    provider.offerRepository.debugSetCatalog(offerCatalog(const []));
+    final line = provider.cartItems.single;
+    expect(line.price, 100);
+    expect(line.hasOffer, isFalse);
+    // The cart badge shows nothing without an offer.
+    expect(line.displayStandardPrice, isNull);
+    expect(provider.cartTotal, 200);
+    expect(provider.buildOrderItemsPayload().single.containsKey('offer_id'),
+        isFalse);
+    await provider.flushPersistence();
+    expect(Hive.box<HiveLocalCartItem>('cart_items').values.single.price, 100);
+  });
+
+  test('switching POS_OFFERS off re-prices the open cart', () {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+
+    provider.offerRepository
+        .debugSetCatalog(offerCatalog([tenPercent], enabled: false));
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, isFalse);
+  });
+
+  test('an offer synced while a line is in the cart is applied', () {
+    final provider = providerWith(const []);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: batch);
+    expect(provider.cartItems.single.price, 100);
+
+    provider.offerRepository.debugSetCatalog(offerCatalog([tenPercent]));
+    final line = provider.cartItems.single;
+    expect(line.price, closeTo(90, 0.0001));
+    expect(line.offerId, 9);
+    expect(line.offerVersion, 3);
+    expect(provider.cartTotal, 180);
+  });
+
+  test('offer changes never touch manual or explicit-price lines', () {
+    final provider = providerWith(const [])
+      ..setActiveStockGroupingFields({'price', 'mrp', 'unit'});
+    final batch = stock();
+    final otherBatch = stock(id: 89).copyWith(mrp: '130');
+    final item = product(stocks: [batch, otherBatch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    provider.updateItemPrice(1, batch, 95);
+    provider.addToCart(
+      product: item,
+      quantity: 1,
+      price: 97,
+      selectedStock: otherBatch,
+    );
+
+    provider.offerRepository.debugSetCatalog(offerCatalog([tenPercent]));
+    final byStock = {
+      for (final line in provider.cartItems) line.selectedStock!.id: line
+    };
+    expect(byStock[88]!.price, 95);
+    expect(byStock[88]!.isManualPriceOverride, isTrue);
+    expect(byStock[89]!.price, 97);
+    for (final line in provider.cartItems) {
+      expect(line.hasOffer, isFalse);
+    }
+  });
+
+  test('the boundary timer ends the offer at valid_until', () {
+    var now = offerTestNow;
+    final validUntil = offerTestNow.add(const Duration(hours: 1));
+    final provider = providerWith([
+      productOffer(validUntil: validUntil, lines: [offerLine(productId: 1)]),
+    ], clock: () => now);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    expect(provider.cartItems.single.price, 90);
+    expect(provider.debugNextOfferBoundary, validUntil);
+
+    now = validUntil;
+    provider.debugRunOfferBoundaryTimer();
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, isFalse);
+    expect(provider.debugNextOfferBoundary, isNull);
+  });
+
+  test('the boundary timer starts an offer at valid_from', () {
+    var now = offerTestNow;
+    final validFrom = offerTestNow.add(const Duration(minutes: 30));
+    final provider = providerWith([
+      productOffer(validFrom: validFrom, lines: [offerLine(productId: 1)]),
+    ], clock: () => now);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.debugNextOfferBoundary, validFrom);
+
+    now = validFrom;
+    provider.debugRunOfferBoundaryTimer();
     expect(provider.cartItems.single.price, 90);
     expect(provider.cartItems.single.offerId, 9);
-    expect(provider.cartItems.single.standardUnitPrice, 100);
-    expect(provider.cartTotal, 180);
+    expect(provider.debugNextOfferBoundary, DateTime.utc(2026, 11, 1));
+  });
+
+  test('the boundary timer fires on its own when the offer ends', () async {
+    final realNow = DateTime.now().toUtc();
+    final provider = providerWith([
+      productOffer(
+        validFrom: realNow.subtract(const Duration(hours: 1)),
+        validUntil: realNow.add(const Duration(milliseconds: 300)),
+        lines: [offerLine(productId: 1)],
+      ),
+    ], clock: DateTime.now);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    expect(provider.cartItems.single.price, 90);
+
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, isFalse);
+    await provider.flushPersistence();
+  });
+
+  test('offer validity is judged with the trusted clock, not DateTime.now', () {
+    // The device clock is 3 hours behind the server; the offer starts at
+    // 12:00 server time, years away from today.
+    final deviceNow = DateTime.utc(2031, 3, 1, 10);
+    final provider = providerWith([
+      productOffer(
+        validFrom: DateTime.utc(2031, 3, 1, 12),
+        validUntil: DateTime.utc(2031, 3, 2),
+        lines: [offerLine(productId: 1)],
+      ),
+    ], clock: () => deviceNow, clockOffset: const Duration(hours: 3));
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    expect(provider.cartItems.single.price, 90);
+    expect(provider.cartItems.single.offerId, 9);
+  });
+
+  test('an offer running today is not applied at another trusted time', () {
+    final realNow = DateTime.now().toUtc();
+    final provider = providerWith([
+      productOffer(
+        validFrom: realNow.subtract(const Duration(days: 1)),
+        validUntil: realNow.add(const Duration(days: 1)),
+        lines: [offerLine(productId: 1)],
+      ),
+    ], clock: () => DateTime.utc(2031, 3, 1, 10));
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 1, selectedStock: batch);
+    expect(provider.cartItems.single.price, 100);
+    expect(provider.cartItems.single.hasOffer, isFalse);
   });
 
   test('overall discount does not alter the offer line snapshot', () {

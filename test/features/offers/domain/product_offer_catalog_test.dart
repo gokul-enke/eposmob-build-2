@@ -30,6 +30,46 @@ void main() {
     expect(next.enabled, isTrue);
   });
 
+  test('an id both returned and removed is removed', () {
+    final next = base.applySync(
+      ProductOfferSyncResponse(
+        serverTime: offerTestNow,
+        offers: [
+          productOffer(id: 8, version: 2, lines: [offerLine(productId: 2)]),
+        ],
+        removedOfferIds: {8},
+      ),
+      fullSync: false,
+      deviceNow: offerTestNow,
+    );
+    expect(next.offers.keys, [7]);
+    expect(next.activeLinesFor(2, offerTestNow), isEmpty);
+  });
+
+  test('an unreadable new version evicts the cached offer', () {
+    final next = base.applySync(
+      ProductOfferSyncResponse.fromJson({
+        'success': true,
+        'server_time': '2026-10-06T12:00:00Z',
+        'offers': [
+          {
+            'id': 8,
+            'version': 2,
+            'valid_from': '2026-10-01T00:00:00Z',
+            'valid_until': null,
+            'lines': [
+              {'product_id': 2, 'type': 'percentage', 'value': 50},
+            ],
+          },
+        ],
+      }),
+      fullSync: false,
+      deviceNow: offerTestNow,
+    );
+    expect(next.offers.keys, [7]);
+    expect(next.activeLinesFor(2, offerTestNow), isEmpty);
+  });
+
   test('a full sync replaces every offer', () {
     final next = base.applySync(
       ProductOfferSyncResponse(

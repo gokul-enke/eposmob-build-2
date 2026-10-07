@@ -45,7 +45,7 @@ class ProductOfferPrice {
 /// - minimum-price (margin) rules are not applied to offer prices.
 ///
 /// [stockIds] are the batches the cart line draws from (empty when none).
-/// [at] should come from [ProductOfferCatalog.trustedNow].
+/// [at] should come from `ProductOfferRepository.trustedNow`.
 ProductOfferPrice? resolveProductOfferPrice({
   required ProductOfferCatalog catalog,
   required int? productId,

@@ -489,10 +489,15 @@ class BillingMobileMarketController {
     return null;
   }
 
+  /// [defaultPrice] is the price the form was prefilled with. Leaving it
+  /// unchanged is not a cashier price, so no `customPrice` is returned and
+  /// the cart resolves the price itself (stock, variant, sale unit, offer).
   MobileMarketAddParseResult parseAddForm({
     required String quantityText,
     required String priceText,
     String? mrpText,
+    double? defaultPrice,
+    bool? priceWasEdited,
   }) {
     final quantity = num.tryParse(quantityText.trim());
     if (quantity == null || quantity <= 0) {
@@ -518,10 +523,15 @@ class BillingMobileMarketController {
       }
     }
 
+    final priceChanged = priceWasEdited ??
+        (defaultPrice == null ||
+            !BillingMobileCartController.isSameDisplayPrice(
+                price, defaultPrice));
+
     return MobileMarketAddParseResult.success(
       MobileMarketAddFormValues(
         quantity: quantity,
-        customPrice: price > 0 ? price : null,
+        customPrice: price > 0 && priceChanged ? price : null,
         customMrp: mrp,
       ),
     );
@@ -605,6 +615,21 @@ class MobilePriceCommitResult {
 
 class BillingMobileCartController {
   const BillingMobileCartController();
+
+  /// Whether [entered] is the same price as [shown]. Offer prices carry up to
+  /// 3 decimals, so values within half a thousandth are the same price.
+  static bool isSameDisplayPrice(double entered, double shown) =>
+      (entered - shown).abs() < 0.0005;
+
+  /// Whether [displayPrice] is the current price of a line whose price is
+  /// still automatic (standard, wholesale or offer). Committing it is not an
+  /// edit: the line must not become manual, lose its offer, or be clamped to
+  /// the minimum margin (which never applies to offer prices).
+  bool isUnchangedAutomaticPrice(LocalCartItem item, double displayPrice) {
+    if (item.isManualPriceOverride) return false;
+    final current = item.displayPrice ?? item.price;
+    return current != null && isSameDisplayPrice(displayPrice, current);
+  }
 
   double? parseSaleUnitRate(SaleUnit saleUnit) {
     final rate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
@@ -780,7 +805,8 @@ class BillingMobileCartController {
     required LocalCartItem item,
     required double displayPrice,
   }) {
-    if (item.product.productId == null) {
+    if (item.product.productId == null ||
+        isUnchangedAutomaticPrice(item, displayPrice)) {
       return const MobilePriceCommitResult(committed: false);
     }
 
@@ -824,6 +850,10 @@ class BillingMobileCartController {
     }
 
     final parsedPrice = double.tryParse(text);
+    if (parsedPrice != null && isUnchangedAutomaticPrice(item, parsedPrice)) {
+      // e.g. "90." while editing 90: not a new price yet.
+      return;
+    }
     if (parsedPrice != null && parsedPrice >= 0) {
       provider.updateItemPrice(
         item.product.productId!,
