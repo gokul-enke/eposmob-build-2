@@ -68,7 +68,62 @@ void main() {
     ),
   ]) {
     final returns = scenario.returns;
-    for (final dismissal in ['Escape', 'Tab', 'outside click', 'arrow']) {
+    testWidgets(
+        '${returns ? 'return' : 'order'} ${scenario.field} Escape then arrow reopening and keyboard selection',
+        (tester) async {
+      final fixture = await pump(tester, returns);
+      final picker = find.byType(PurchaseListPicker).at(scenario.index);
+      final input =
+          find.descendant(of: picker, matching: find.byType(TextField));
+      await tester.tap(input);
+      await tester.enterText(input, scenario.search);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(input).controller!.text, 'All');
+      final before = fixture.requests.length;
+      await tester.tap(
+          find.descendant(of: picker, matching: find.byType(IconButton)).last);
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsWidgets);
+      expect(fixture.requests.length, before);
+      await tester.tap(find
+          .descendant(
+              of: find.byType(MenuItemButton),
+              matching: find.text(scenario.selected))
+          .last);
+      await tester.pumpAndSettle();
+      expect(
+          fixture.requests.last.queryParameters[scenario.field], scenario.id);
+      await tester.tap(input);
+      await tester.enterText(input, scenario.search);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(
+          tester.widget<TextField>(input).controller!.text, scenario.selected);
+      await tester.tap(
+          find.descendant(of: picker, matching: find.byType(IconButton)).last);
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsWidgets);
+      await tester.tap(input);
+      await tester.enterText(input, scenario.search);
+      await tester.pumpAndSettle();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(fixture.requests.last.queryParameters[scenario.field],
+          scenario.nextId);
+      expect(tester.widget<TextField>(input).controller!.text, scenario.next);
+      expect(find.byType(MenuItemButton), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+    for (final dismissal in [
+      'Escape',
+      'Tab',
+      'Shift+Tab',
+      'outside click',
+      'arrow'
+    ]) {
       testWidgets(
           '${returns ? 'return' : 'order'} abandoned ${scenario.field} search via $dismissal keeps applied selection and export',
           (tester) async {
@@ -96,6 +151,10 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         } else if (dismissal == 'Tab') {
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        } else if (dismissal == 'Shift+Tab') {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
         } else if (dismissal == 'arrow') {
           await tester.tap(find
               .descendant(of: picker, matching: find.byType(IconButton))

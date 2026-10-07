@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/core/ui/form/app_input_decoration.dart';
@@ -29,6 +30,8 @@ class PurchaseListPicker extends StatefulWidget {
 }
 
 class _PurchaseListPickerState extends State<PurchaseListPicker> {
+  // Track the entire picker, including its native arrow/keyboard focus nodes.
+  // Moving focus within the dropdown must not close a newly opened menu.
   final _focus = FocusNode();
   final _menu = MenuController();
   bool _wasOpen = false;
@@ -92,9 +95,8 @@ class _PurchaseListPickerState extends State<PurchaseListPicker> {
     final choices = options.toSet().toList();
     final decoration = AppInputDecoration.filter(
         label: label, hint: 'purchase_order.hint_all'.tr, icon: icon);
-    return DropdownMenu<String>(
+    final dropdown = DropdownMenu<String>(
       controller: search,
-      focusNode: _focus,
       menuController: _menu,
       initialSelection: choices.contains(value) ? value : 'All',
       label: Text(label),
@@ -138,6 +140,21 @@ class _PurchaseListPickerState extends State<PurchaseListPicker> {
       onSelected: (name) {
         if (name != null) onChanged(name);
       },
+    );
+    return Focus(
+      focusNode: _focus,
+      skipTraversal: true,
+      onKeyEvent: (_, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.tab) {
+          // Tab abandons the search even when native traversal first reaches
+          // the arrow inside the picker. Leave normal traversal unchanged.
+          _menu.close();
+          _restoreSelection();
+        }
+        return KeyEventResult.ignored;
+      },
+      child: dropdown,
     );
   }
 }
