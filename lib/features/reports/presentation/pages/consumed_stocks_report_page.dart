@@ -36,6 +36,15 @@ class _ConsumedStocksReportPageState extends State<ConsumedStocksReportPage> {
   late final ExportController _export = widget.export ?? ExportController();
   final _scroll = ScrollController();
   bool _showFilters = true, _cancelled = false;
+  // Built once per product-list change, not on every report/export notify:
+  // the same instance lets the picker skip its 10k-entry comparison.
+  Map<String, String>? _productOptions;
+  Map<String, String> get _productMap => _productOptions ??= {
+        for (final p in _products.products)
+          if (p.productId != null && p.productName != null)
+            '${p.productId}': p.productName!
+      };
+  void _productsChanged() => _productOptions = null;
   String _tr(String key) => 'consumed_stocks_report.$key'.tr;
   bool get _permission =>
       _roles.currentUserHasPermissionSync('menu.reports.consumed_stock.access');
@@ -45,7 +54,8 @@ class _ConsumedStocksReportPageState extends State<ConsumedStocksReportPage> {
     final reports = context.read<ReportsProvider>();
     _auth = context.read<AuthModel>();
     _roles = context.read<RoleProvider>();
-    _products = context.read<LocalProductProvider>();
+    _products = context.read<LocalProductProvider>()
+      ..addListener(_productsChanged);
     _report = ConsumedStocksReportController(
         readScope: () => reports.consumedStocksReportScope(_auth.token ?? ''),
         loadStores: consumedStocksStores,
@@ -63,6 +73,7 @@ class _ConsumedStocksReportPageState extends State<ConsumedStocksReportPage> {
 
   @override
   void dispose() {
+    _products.removeListener(_productsChanged);
     _report.dispose();
     _scroll.dispose();
     if (widget.export == null) _export.dispose();
@@ -146,11 +157,7 @@ class _ConsumedStocksReportPageState extends State<ConsumedStocksReportPage> {
                 from: _report.from,
                 until: _report.until,
                 resetRevision: _report.resetRevision,
-                products: {
-                  for (final p in _products.products)
-                    if (p.productId != null && p.productName != null)
-                      '${p.productId}': p.productName!
-                },
+                products: _productMap,
                 stores: _report.stores,
                 onProduct: _report.setProduct,
                 onStore: _report.setStore,

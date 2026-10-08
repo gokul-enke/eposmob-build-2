@@ -15,15 +15,13 @@ Future<List<ConsumedStockData>> consumedStocksReportSnapshot(
       throw StateError('Consumed stock report failed');
     }
     for (final row in data) {
-      final withdrawn = num.tryParse(row.quantityWithdrawn ?? ''),
-          remaining = num.tryParse(row.newQuantity?.toString() ?? '');
+      // Missing or text quantities are exported as shown in the table; only
+      // NaN/Infinity, which can never be a real stock level, are rejected.
       if (row.id == null ||
           row.id! <= 0 ||
           !seen.add(row.id!) ||
-          withdrawn == null ||
-          !withdrawn.isFinite ||
-          remaining == null ||
-          !remaining.isFinite) {
+          _nonFinite(row.quantityWithdrawn) ||
+          _nonFinite(row.newQuantity)) {
         throw StateError(
             'Missing, invalid or overlapping consumed stock record');
       }
@@ -36,7 +34,8 @@ Future<List<ConsumedStockData>> consumedStocksReportSnapshot(
       return List.unmodifiable(data);
     }
     first ??= meta;
-    if (meta.currentPage != page ||
+    // Like the listing, an omitted current_page is accepted; a wrong one is not.
+    if ((meta.currentPage != null && meta.currentPage != page) ||
         (meta.lastPage ?? 0) < page ||
         (meta.perPage ?? 0) < 1 ||
         (meta.total != null && meta.total! < 0) ||
@@ -56,4 +55,9 @@ Future<List<ConsumedStockData>> consumedStocksReportSnapshot(
     throw StateError('Incomplete consumed stock export');
   }
   return List.unmodifiable(rows);
+}
+
+bool _nonFinite(Object? value) {
+  final number = num.tryParse(value?.toString().trim() ?? '');
+  return number != null && !number.isFinite;
 }

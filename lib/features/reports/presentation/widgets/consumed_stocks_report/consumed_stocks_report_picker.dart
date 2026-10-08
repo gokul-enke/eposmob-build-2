@@ -35,9 +35,12 @@ class _ConsumedStocksReportPickerState
   final _scroll = ScrollController();
   late final _focus = FocusNode(onKeyEvent: _key);
   late final _text = TextEditingController(text: _selectedLabel);
+  // The committed choice's label; restored when the menu closes unselected.
+  late String _shown = _selectedLabel;
   List<String> _matches = [];
   String _query = '';
   int? _highlight;
+  bool _disposed = false;
   String get _all => widget.allLabel;
   String get _selectedLabel => widget.options[widget.value] ?? _all;
   String _label(String id) => id.isEmpty ? _all : widget.options[id]!;
@@ -54,7 +57,7 @@ class _ConsumedStocksReportPickerState
     final changed = oldWidget.value != widget.value ||
         oldWidget.allLabel != widget.allLabel;
     if (changed) {
-      _text.text = _selectedLabel;
+      _text.text = _shown = _selectedLabel;
       _query = '';
     }
     if (changed || !mapEquals(oldWidget.options, widget.options)) _filter();
@@ -62,6 +65,7 @@ class _ConsumedStocksReportPickerState
 
   @override
   void dispose() {
+    _disposed = true;
     _text.dispose();
     _focus.dispose();
     _scroll.dispose();
@@ -84,8 +88,23 @@ class _ConsumedStocksReportPickerState
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    _menu.open();
+    if (!_menu.isOpen) _menu.open();
     _focus.requestFocus();
+    // Select the label so typing replaces it instead of searching
+    // "All products<typed>".
+    _text.selection =
+        TextSelection(baseOffset: 0, extentOffset: _text.text.length);
+  }
+
+  /// Escape, Tab or an outside tap discards an unselected search.
+  void _closed() {
+    if (_disposed) return;
+    if (_text.text != _shown) _text.text = _shown;
+    if (_query.isEmpty) return;
+    setState(() {
+      _query = '';
+      _filter();
+    });
   }
 
   void _search(String text) {
@@ -94,12 +113,12 @@ class _ConsumedStocksReportPickerState
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    _menu.open();
+    if (!_menu.isOpen) _menu.open();
   }
 
   void _select(String id) {
     if (!mounted) return;
-    _text.text = _label(id);
+    _text.text = _shown = _label(id);
     _menu.close();
     widget.onChanged(id.isEmpty ? null : id);
   }
@@ -168,6 +187,7 @@ class _ConsumedStocksReportPickerState
   Widget build(BuildContext context) => LayoutBuilder(
       builder: (context, constraints) => MenuAnchor(
             controller: _menu,
+            onClose: _closed,
             childFocusNode: _focus,
             crossAxisUnconstrained: false,
             style: MenuStyle(
@@ -193,20 +213,26 @@ class _ConsumedStocksReportPickerState
                           padding: EdgeInsets.zero,
                           itemExtent: _rowHeight,
                           itemCount: _matches.length,
-                          itemBuilder: (context, index) => MenuItemButton(
-                            requestFocusOnHover: false,
-                            style: ButtonStyle(
-                              textStyle: const WidgetStatePropertyAll(
-                                  AppTextStyles.input),
-                              backgroundColor: WidgetStatePropertyAll(
-                                  _highlight == index
-                                      ? AppColors.softBlue
-                                      : null),
-                            ),
-                            onPressed: () => _select(_matches[index]),
-                            child: Text(_label(_matches[index]),
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
+                          itemBuilder: (context, index) {
+                            // MenuItemButton closes the menu (resetting
+                            // _matches) before onPressed runs post-frame, so
+                            // bind the id now rather than reading it by index.
+                            final id = _matches[index];
+                            return MenuItemButton(
+                              requestFocusOnHover: false,
+                              style: ButtonStyle(
+                                textStyle: const WidgetStatePropertyAll(
+                                    AppTextStyles.input),
+                                backgroundColor: WidgetStatePropertyAll(
+                                    _highlight == index
+                                        ? AppColors.softBlue
+                                        : null),
+                              ),
+                              onPressed: () => _select(id),
+                              child: Text(_label(id),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                            );
+                          },
                         )),
               )
             ],

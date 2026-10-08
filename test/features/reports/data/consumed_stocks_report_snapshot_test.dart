@@ -20,12 +20,28 @@ void main() {
             consumedPage(p, last: 2, total: 2, rows: [consumedRow(1)])),
         throwsStateError);
   });
+  test('missing or text quantities export as displayed', () async {
+    final rows = await consumedStocksReportSnapshot(
+        (p) async => consumedPage(p, last: 3, total: 3, rows: [
+              switch (p) {
+                1 => consumedRow(1)..quantityWithdrawn = null,
+                2 => consumedRow(2, quantity: '2 kg'),
+                _ => consumedRow(3, remaining: null),
+              }
+            ]));
+    expect(rows.map((r) => r.quantityWithdrawn), [null, '2 kg', '1.000000']);
+    expect(rows.last.newQuantity, isNull);
+  });
+  test('omitted current_page is accepted like the listing', () async {
+    final rows = await consumedStocksReportSnapshot((p) async =>
+        consumedPage(p, last: 2, total: 2)
+          ..data!.pagination!.currentPage = null);
+    expect(rows.map((r) => r.id), [1, 2]);
+  });
   for (final cause in [
     'missing id',
-    'missing quantity',
-    'invalid quantity',
     'nonfinite quantity',
-    'missing remainder',
+    'nonfinite remainder',
     'duplicate page',
     'changed total',
     'changed last',
@@ -42,14 +58,10 @@ void main() {
           switch (cause) {
             case 'missing id':
               row.id = null;
-            case 'missing quantity':
-              row.quantityWithdrawn = null;
-            case 'invalid quantity':
-              row.quantityWithdrawn = 'oops';
             case 'nonfinite quantity':
               row.quantityWithdrawn = 'NaN';
-            case 'missing remainder':
-              row.newQuantity = null;
+            case 'nonfinite remainder':
+              row.newQuantity = 'Infinity';
             case 'duplicate page':
               response.data!.pagination!.currentPage = 1;
             case 'changed total':

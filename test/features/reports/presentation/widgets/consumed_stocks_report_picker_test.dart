@@ -93,6 +93,61 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(selections, 0);
   });
+  testWidgets('opening selects the label so typing replaces it',
+      (tester) async {
+    await mount(tester, (_) {}, value: '42');
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    final text = tester.widget<TextField>(find.byType(TextField)).controller!;
+    expect(text.selection,
+        const TextSelection(baseOffset: 0, extentOffset: 'Product 42'.length));
+    // Typing over a selection replaces it: the search is just the typed text.
+    tester.testTextInput.updateEditingValue(const TextEditingValue(
+        text: '9999', selection: TextSelection.collapsed(offset: 4)));
+    await tester.pumpAndSettle();
+    expect(find.text('Product 9999'), findsOneWidget);
+  });
+  for (final close in ['escape', 'tab', 'outside']) {
+    testWidgets('$close after typing restores the applied label',
+        (tester) async {
+      var selections = 0;
+      await mount(tester, (_) => selections++, value: '42');
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Coke');
+      await tester.pumpAndSettle();
+      switch (close) {
+        case 'escape':
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        case 'tab':
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        default:
+          await tester.tapAt(const Offset(390, 750));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'Product 42');
+      expect(selections, 0);
+      // The next open lists everything again, not the abandoned search.
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(find.text('All products'), findsWidgets);
+    });
+  }
+  testWidgets('selection keeps the chosen label after the menu closes',
+      (tester) async {
+    String? selected;
+    await mount(tester, (value) => selected = value);
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), '9999');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Product 9999'));
+    await tester.pumpAndSettle();
+    expect(selected, '9999');
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Product 9999');
+  });
   testWidgets(
       'reset revision clears typed search without requiring a selection',
       (tester) async {
