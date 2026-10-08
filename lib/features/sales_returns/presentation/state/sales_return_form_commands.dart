@@ -31,7 +31,13 @@ extension SalesReturnFormCommands on SalesReturnFormController {
         return false;
       }
     }
-    final request = detailsRequest;
+    // A non-resetting refresh bumps detailsRequest but keeps the same
+    // order/draft, so staleness is judged on the selection instead.
+    final orderNumber = selectedOrderNumber;
+    bool stillCurrent() =>
+        mounted &&
+        activeReturnOrderId == id &&
+        selectedOrderNumber == orderNumber;
     setState(() => isCompletingReturn = true);
     try {
       await completeSalesReturn(
@@ -41,9 +47,11 @@ extension SalesReturnFormCommands on SalesReturnFormController {
           paidAmount: hasPayment ? amount : null,
           hasPayment: hasPayment,
           isDeliveryRefundable: deliveryChargeRefundable);
-      return mounted && request == detailsRequest;
+      if (!stillCurrent()) return false;
+      activeReturnOrderId = null;
+      return true;
     } catch (error) {
-      if (mounted && request == detailsRequest)
+      if (stillCurrent())
         ports.error(error is Exception
             ? error.toString().replaceFirst('Exception: ', '')
             : 'sales_return_form.error_create_failed'.tr);

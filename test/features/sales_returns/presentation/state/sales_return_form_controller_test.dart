@@ -103,6 +103,29 @@ void main() {
     expect(await complete, isFalse);
     controller.dispose();
   });
+  test('refresh during completion still reports success once', () async {
+    final pending = Completer<SalesReturnRefundBreakdown?>();
+    final controller = makeForm(
+        complete: (
+                {required accessToken,
+                required returnOrderId,
+                paymentMethod,
+                paidAmount,
+                hasPayment,
+                isDeliveryRefundable = false}) =>
+            pending.future);
+    controller.salesReturnItems = returnItems().data;
+    controller.activeReturnOrderId = 75;
+    controller.selectedOrderNumber = 'ORD-1';
+    controller.isOrderSelected = true;
+    final complete = controller.completeCurrentReturn();
+    // A pull-to-refresh (non-resetting getOrderDetails) bumps the counter.
+    controller.detailsRequest++;
+    pending.complete(null);
+    expect(await complete, isTrue);
+    expect(controller.canCompleteReturn, isFalse);
+    controller.dispose();
+  });
   test('Reset during passed-order initialization cannot reopen the order',
       () async {
     final pending = Completer<void>();
