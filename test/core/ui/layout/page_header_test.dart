@@ -38,11 +38,11 @@ void main() {
   }
 
   List<HeaderAction> threeActions(List<String> log, {bool badge = false}) => [
-        HeaderAction(
+        HeaderAction.filters(
           key: filterKey,
-          icon: Icons.filter_alt,
-          label: 'Hide filters',
-          active: true,
+          showFilters: true,
+          showLabel: 'Filters',
+          hideLabel: 'Hide filters',
           badge: badge,
           onPressed: () => log.add('filter'),
         ),

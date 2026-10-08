@@ -14,6 +14,8 @@ import 'package:pos_machine/resources/app_translations.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -142,31 +144,48 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
-  testWidgets('Orders List uses the shared filter toggle on mobile',
-      (tester) async {
-    await verifyMobileToggle(
-      tester,
-      screen: const SalesScreen(),
-      toggleKey: const ValueKey('orders-list-filter-toggle'),
-      filtersKey: const ValueKey('orders-list-filters'),
-    );
-
-    final toggle = find.byKey(const ValueKey('orders-list-filter-toggle'));
-    expect(find.descendant(of: toggle, matching: find.byType(Container)),
-        findsNothing);
-
-    final firstFilter = find
-        .descendant(
-          of: find.byKey(const ValueKey('orders-list-filters')),
-          matching: find.byType(TextFormField),
-        )
-        .first;
-    await tester.enterText(firstFilter, 'ORD-1');
-    await tester.pump();
-
-    expect(find.descendant(of: toggle, matching: find.byType(Container)),
-        findsOneWidget);
-  });
+  for (final online in [false, true]) {
+    for (final width in [390.0, 1600.0]) {
+      testWidgets(
+          'Sales compatibility entry uses shared filters online=$online width=$width',
+          (tester) async {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(wrapScreen(SalesScreen(isOnlineSales: online)));
+        await tester.pumpAndSettle();
+        expect(
+            tester
+                .widget<SalesListPage>(find.byType(SalesListPage))
+                .isOnlineSales,
+            online);
+        final scaffold = find.byWidgetPredicate((w) => w is ListPageScaffold);
+        expect(scaffold, findsOneWidget);
+        final header = find.byKey(SalesListPage.filterKey);
+        expect(find.byType(FilterToggleButton), findsNothing);
+        if (width < 700) {
+          expect(find.byType(CollapsibleFilterTile), findsNothing);
+          await tester.tap(find.byKey(PageHeader.moreActionsKey));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byWidgetPredicate(
+              (w) => w is PopupMenuItem<int> && w.value == 0));
+          await tester.pumpAndSettle();
+          expect(find.byType(CollapsibleFilterTile), findsOneWidget);
+          await tester.tap(find.byType(ExpansionTile));
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNWidgets(5));
+        } else {
+          expect(find.byType(FilterPanel), findsOneWidget);
+          await tester.tap(header);
+          await tester.pumpAndSettle();
+          expect(find.byType(FilterPanel), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+  }
 
   testWidgets('Day Close uses the shared filter toggle on mobile',
       (tester) async {
@@ -175,16 +194,6 @@ void main() {
       screen: const DailySalesCloseListScreen(),
       toggleKey: const ValueKey('day-close-filter-toggle'),
       filtersKey: const ValueKey('day-close-filters'),
-    );
-  });
-
-  testWidgets('Orders List uses the shared filter toggle on desktop',
-      (tester) async {
-    await verifyDesktopToggle(
-      tester,
-      screen: const SalesScreen(),
-      toggleKey: const ValueKey('orders-list-filter-toggle'),
-      filtersKey: const ValueKey('orders-list-filters'),
     );
   });
 
