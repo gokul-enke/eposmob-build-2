@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -67,6 +68,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
 
     void navigate(int index) {
       switch (index) {
+        case SideBarController.stockReportScreenIndex:
+          ReportNavigation.openStockReport();
+          break;
         case SideBarController.customerVoucherListScreenIndex:
           VoucherNavigation.openCustomerList();
           break;
@@ -584,7 +588,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   77,
                   SideBarController.consumedStocksReportScreenIndex,
                   85,
-                  98,
+                  SideBarController.stockReportScreenIndex,
                 ].contains(sideBarController.index.value),
                 subItems: [
                   if (hasSalesExecutiveReportsPermission)
@@ -616,7 +620,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   if (hasStockReportPermission)
                     _MobileDrawerSubItem(
                       title: 'nav.stock_report'.tr,
-                      onTap: () => navigate(98),
+                      onTap: () =>
+                          navigate(SideBarController.stockReportScreenIndex),
                     ),
                   if (hasNonStockPermission)
                     _MobileDrawerSubItem(

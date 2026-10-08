@@ -1,8 +1,8 @@
 # features/reports
 
 Report screens built on the shared listing kit (`core/ui`). So far:
-**My Sales Report**, **Customer Transactions Report** and
-**Supplier Transactions Report**. The other reports
+**My Sales Report**, **Customer Transactions Report**,
+**Supplier Transactions Report** and **Stock Report**. The other reports
 still live in `lib/screens/reports/` and move here one at a time.
 
 **Supplier Transactions Report listing** uses the same header, filter panel,
@@ -90,6 +90,49 @@ features/reports/
 - **From after To never reaches the API.**
 - Header actions are Filters → Export → Refresh (`HeaderAction`); filters
   start hidden on phones.
+
+## Stock Report public surface
+
+- `domain/models/stock_report.dart`: moved response, rows and summary. Its
+  local `StockReportPagination` retains current/per/last page metadata and
+  additionally reads `total` for export completeness checks. No storage/UI imports.
+- `domain/stock_report_query.dart`: local store/category/product selections,
+  date-only values, stock/expiry enums and the session scope record. The API's
+  product parameter remains a **name**, not an ID.
+- `data/stock_report_api.dart`: injectable GET transport and `TenantSession`;
+  the same stock endpoint, headers, 15-second timeout and active-store fallback.
+- `data/stock_report_snapshot.dart`: all-page export reads, rejecting failed,
+  missing or changing pagination and declared total-count mismatches.
+- `StockReportController`: owns filters, reset revision, serialized loading,
+  requested retry page, visible rows and guarded export snapshots.
+- `ReportsProvider.fetchStockReport`: existing named parameters and shared
+  getter/notifications remain. `fetchStockReportSnapshot` is the new local read
+  used by this page and export. Other reports in this shared provider stay put.
+- `StockReportPage`: caches provider dependencies once; renders shared header,
+  filter panel, metrics, table/cards, error banner and pagination. Directories
+  come from existing store/category/local-product providers, with no new loads.
+- `ReportNavigation.openStockReport`: sole setter of sidebar slot
+  `SideBarController.stockReportScreenIndex` (98), used by desktop/mobile menus.
+
+Purchase-price and stock-cost fields, including the summary and Excel columns,
+use the existing `menu.purchase.orders.access` permission. Export fetches every
+filtered page without changing visible/shared rows and checks query, token,
+tenant, active store and cost permission before/after asynchronous work. No
+period or record cap is introduced. Windows uses the shared Save As flow;
+other platforms use its existing share flow.
+
+Stock export rejects repeated product IDs within or across pages instead of
+deduplicating a possibly incomplete snapshot. Keyboard-opened product menus
+scroll their highlight after layout, with close/disposal guards.
+
+Stock-specific leaf widgets live under `widgets/stock_report/` and receive only
+data and callbacks. Small directories use the shared native searchable picker.
+The large product directory uses a bounded MenuAnchor/ListView.builder adapter
+with the same shared input, text, spacing and white surface tokens; all products
+remain searchable without building the entire catalog as menu buttons. Reset
+keys clear unselected searches. Dates use the existing auto-dismiss date
+picker with explicit placeholders and clear actions. Inner stock workflows are
+outside this report listing migration.
 
 ## Tests
 
