@@ -16,10 +16,14 @@ class ListPagination {
     required this.itemsPerPage,
     required this.onPageChanged,
     required this.countLabel,
+    this.totalPagesKnown = true,
   });
 
   final int currentPage;
   final int totalPages;
+
+  /// False for APIs which expose only whether another page exists.
+  final bool totalPagesKnown;
   final int itemsPerPage;
   final ValueChanged<int> onPageChanged;
 
@@ -40,6 +44,7 @@ class AppPaginationBar extends StatelessWidget {
     required this.countLabel,
     required this.onPageChanged,
     this.enabled = true,
+    this.totalPagesKnown = true,
   });
 
   AppPaginationBar.fromState(
@@ -53,12 +58,14 @@ class AppPaginationBar extends StatelessWidget {
           countLabel: state.countLabel,
           onPageChanged: state.onPageChanged,
           enabled: enabled,
+          totalPagesKnown: state.totalPagesKnown,
         );
 
   static const compactBreakpoint = 440.0;
 
   final int currentPage;
   final int totalPages;
+  final bool totalPagesKnown;
   final String countLabel;
   final ValueChanged<int> onPageChanged;
 
@@ -95,7 +102,10 @@ class AppPaginationBar extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text(
-                  'pagination.page_of'.trParams({
+                  (totalPagesKnown
+                          ? 'pagination.page_of'
+                          : 'pagination.current_page')
+                      .trParams({
                     'current': '$currentPage',
                     'total': '$totalPages',
                   }),
