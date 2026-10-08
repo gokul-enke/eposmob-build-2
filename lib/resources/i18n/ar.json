@@ -903,6 +903,7 @@
     "version_unavailable": "غير متاح"
   },
   "pagination": {
+    "current_page": "الصفحة @current",
     "previous": "السابق",
     "next": "التالي",
     "page": "صفحة",
@@ -1884,6 +1885,22 @@
     "view_order_items": "عرض @count عناصر"
   },
   "sales": {
+    "list_copy": "نسخ رقم الطلب أو الإيصال",
+    "list_subtitle": "مراجعة وإدارة طلبات المبيعات.",
+    "list_filter_title": "البحث عن طلبات المبيعات",
+    "list_filter_hint": "التصفية حسب الطلب والعميل والهاتف والسعر والحالة والتواريخ.",
+    "list_count": "@count طلبات في هذه الصفحة",
+    "email": "البريد الإلكتروني",
+    "list_export_empty": "لا توجد طلبات للتصدير.",
+    "list_receipt_number": "رقم الإيصال",
+    "list_load_error": "تعذر تحميل الطلبات. قد تكون النتائج السابقة قديمة.",
+    "list_export_error": "تعذر تصدير الطلبات. حدّث وحاول مرة أخرى.",
+    "list_export_page_error": "تعذر تصدير الطلبات: تعذر تحميل الصفحة @page. حاول مرة أخرى أو تواصل مع الدعم.",
+    "list_export_progress": "جلب الصفحة @page…",
+    "view_order": "عرض الطلب",
+    "print_order": "طباعة الطلب",
+    "more_actions": "المزيد من الإجراءات",
+
     "orders_list": "قائمة الطلبات",
     "online_orders_list": "قائمة الطلبات الإلكترونية",
     "order_number_short": "رقم الطلب",
@@ -1916,6 +1933,7 @@
     "status_new": "جديد",
     "status_pending": "معلق",
     "status_confirmed": "مؤكد",
+    "status_delivered": "تم التسليم",
     "status_cancelled": "ملغى",
     "invoice_downloaded": "تم تنزيل الفاتورة بنجاح إلى @path",
     "invoice_not_found": "لم يتم العثور على الفاتورة. قد لا يحتوي الطلب على فاتورة تم إنشاؤها.",
