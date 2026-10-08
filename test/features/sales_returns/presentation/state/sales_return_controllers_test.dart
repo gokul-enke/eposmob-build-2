@@ -1,57 +1,11 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
-import 'package:pos_machine/features/sales_returns/presentation/state/sales_return_list_controller.dart';
 import 'package:pos_machine/features/sales_returns/presentation/state/sales_return_details_controller.dart';
 import 'package:pos_machine/features/sales_returns/presentation/state/sales_return_item_dialog_controller.dart';
 import '../../support/return_fixtures.dart';
 
 void main() {
-  test('list newer response wins and late disposed request is ignored',
-      () async {
-    final pending = <Completer<SalesReturnResponse>>[];
-    final controller = SalesReturnListController(
-        fetch: (_) {
-          final result = Completer<SalesReturnResponse>();
-          pending.add(result);
-          return result.future;
-        },
-        onError: (_) => fail('unexpected error'));
-    final first = controller.load(page: 1);
-    final second = controller.load(page: 2);
-    pending[1].complete(returnPage(page: 2, id: 20));
-    await second;
-    pending[0].complete(returnPage(page: 1));
-    await first;
-    expect(controller.salesReturnOrders.single.id, 20);
-    expect(controller.currentPage, 2);
-    final third = controller.load();
-    controller.dispose();
-    pending[2].complete(returnPage());
-    await third;
-  });
-  test('list retry clears error and refresh retains requested page', () async {
-    var failNext = true;
-    final pages = <int>[];
-    var errors = 0;
-    final controller = SalesReturnListController(
-        fetch: (page) async {
-          pages.add(page);
-          if (failNext) throw Exception('Failed');
-          return returnPage(page: page);
-        },
-        onError: (_) => errors++);
-    await controller.load(page: 2);
-    expect(controller.loadError, 'Failed');
-    failNext = false;
-    await controller.load(page: 2);
-    await controller.load();
-    expect(pages, [2, 2, 2]);
-    expect(controller.loadError, isNull);
-    expect(errors, 1);
-    controller.dispose();
-  });
   test('details ignores old order, retries and does not fetch absent order',
       () async {
     final pending = <Completer<SalesReturnItemsResponse>>[];

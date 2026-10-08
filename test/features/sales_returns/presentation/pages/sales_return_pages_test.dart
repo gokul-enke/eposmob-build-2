@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:pos_machine/features/sales_returns/presentation/pages/create_sales_return_page.dart';
 import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_list_page.dart';
 import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_detail_modal.dart';
+import '../../support.dart';
 import '../../support/page_fakes.dart';
 import '../../support/return_fixtures.dart';
 
@@ -41,9 +42,11 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(wrapReturnPage(const SalesReturnListPage()));
+      await tester.pumpWidget(wrapReturnPage(SalesReturnListPage(
+          readSource: () async =>
+              ReturnSource((_) async => returnData([returnRow(10)])))));
       await tester.pumpAndSettle();
-      expect(find.textContaining('2.00'), findsWidgets);
+      expect(find.textContaining('12.50'), findsWidgets);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(wrapReturnPage(
           SalesReturnDetailModal(order: returnPage().data.data.single)));

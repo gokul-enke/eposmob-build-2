@@ -2082,6 +2082,17 @@
     "minutes_suffix": "m"
   },
   "sales_return": {
+    "order_or_receipt_number": "Order or bill number",
+    "copy_number": "Copy order or bill number",
+    "status": "Status",
+    "date": "Date",
+    "list_return_id": "Return ID",
+    "list_currency": "Currency",
+    "list_count": "@count returns on this page",
+    "list_export": "Export to Excel",
+    "list_export_error": "Unable to export sales returns. Refresh and try again.",
+    "list_export_fetching": "Fetching page @page of @total…",
+    "list_load_failed": "Unable to load sales returns. Previous results may be out of date.",
     "total_items": "Total Items",
     "total_mrp": "Total MRP",
     "net_total": "Net Total",
