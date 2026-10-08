@@ -3323,6 +3323,18 @@
     "customer_id": "Customer ID"
   },
   "supplier_transaction_report": {
+    "directory_load_error": "Could not load supplier filter options. Use Retry to load them.",
+    "retry": "Retry",
+    "subtitle": "Manage supplier transaction totals and balances.",
+    "find": "Find supplier transactions",
+    "filter_hint": "Filter suppliers and transaction dates.",
+    "all_suppliers": "All suppliers",
+    "count": "@count suppliers on this page",
+    "supplier_id": "Supplier ID",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_error": "Could not export the supplier report. Refresh and try again.",
+    "export_cancelled": "Export cancelled because the filters, page or store changed. Try again.",
+    "export_invalid_data": "Export stopped: the server returned incomplete supplier totals. Refresh and try again.",
     "hide": "Hide",
     "filters": "Filters",
     "from_date": "From Date",
