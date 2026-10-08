@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:get/get.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
 import 'package:pos_machine/services/list_excel_export_service.dart';
 import '../widgets/day_close_list_rows.dart';
 

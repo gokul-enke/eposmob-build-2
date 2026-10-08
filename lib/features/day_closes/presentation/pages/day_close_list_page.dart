@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/core/network/tenant_session.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
-import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
+import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -67,11 +67,11 @@ class _DayCloseListPageState extends State<DayCloseListPage> {
   }
 
   Future<DayCloseListSource> _readSource() async {
-    final preferences = await SharedPreferences.getInstance();
+    final tenant = await const TenantSession().apiKey();
     if (!mounted) throw StateError('Day close list closed');
     return DayCloseListRepository(DayCloseListScope(
         token: _auth!.token ?? '',
-        tenant: preferences.getString('api_key') ?? '',
+        tenant: tenant ?? '',
         storeId: _stores!.activeStore?.storeId ?? 0,
         userId: _auth!.userId ?? 0,
         endpoint: APPUrl.listDailySalesClose,

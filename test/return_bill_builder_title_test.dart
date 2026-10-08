@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -18,33 +18,50 @@ class _Settings extends AppSettingsProvider {
 }
 
 void main() {
-  testWidgets('return builder preserves configured B2B title when base title is blank',
+  testWidgets(
+      'return builder preserves configured B2B title when base title is blank',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     late BuildContext context;
-    await tester.pumpWidget(MultiProvider(providers: [
-      ChangeNotifierProvider<AppSettingsProvider>(create: (_) => _Settings()),
-      ChangeNotifierProvider<BankProvider>(create: (_) => BankProvider()),
-      ChangeNotifierProvider<StoreSessionProvider>(create: (_) => StoreSessionProvider()),
-    ], child: MaterialApp(home: Builder(builder: (value) {
-      context = value;
-      return const SizedBox();
-    }))));
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppSettingsProvider>(
+              create: (_) => _Settings()),
+          ChangeNotifierProvider<BankProvider>(create: (_) => BankProvider()),
+          ChangeNotifierProvider<StoreSessionProvider>(
+              create: (_) => StoreSessionProvider()),
+        ],
+        child: MaterialApp(home: Builder(builder: (value) {
+          context = value;
+          return const SizedBox();
+        }))));
     for (final language in ['en', 'ar', 'en_ar']) {
       for (final visible in [false, true]) {
         final params = await ReturnBillLayoutParamsBuilder.build(
-          context: context, selectedPrinter: BluetoothPrinter.development(),
-          returnItems: const [], returnTotalAmount: '0,021.00',
-          orderDate: '2026-09-26', orderNumber: 'QA-VERIFY', selectedPaperSize: 'A4',
-          originalInvoiceNumber: 'SALE-789', originalInvoiceDate: '2026-08-20',
-          customerType: 'B2B', customerVatNumber: '300000000000003',
+          context: context,
+          selectedPrinter: BluetoothPrinter.development(),
+          returnItems: const [],
+          returnTotalAmount: '0,021.00',
+          orderDate: '2026-09-26',
+          orderNumber: 'QA-VERIFY',
+          selectedPaperSize: 'A4',
+          originalInvoiceNumber: 'SALE-789',
+          originalInvoiceDate: '2026-08-20',
+          customerType: 'B2B',
+          customerVatNumber: '300000000000003',
           returnBillDocumentConfig: DocumentConfig.fromJson({
             'language': language,
             'display_configuration': {
-              'showInvoiceTitle': {'visible': visible, 'value': '', 'default': ''},
-              'showInvoiceTitleB2b': {'visible': visible,
+              'showInvoiceTitle': {
+                'visible': visible,
+                'value': '',
+                'default': ''
+              },
+              'showInvoiceTitleB2b': {
+                'visible': visible,
                 'value': language == 'en' ? 'Business return' : 'مرتجع تجاري',
-                'default': language == 'en_ar' ? 'Business return' : ''},
+                'default': language == 'en_ar' ? 'Business return' : ''
+              },
             },
           }),
         );
@@ -55,8 +72,8 @@ void main() {
         if (!visible) {
           expect(params.invoiceTitleText, isEmpty);
         } else {
-          expect(params.invoiceTitleText, contains(
-              language == 'en' ? 'Business return' : 'مرتجع تجاري'));
+          expect(params.invoiceTitleText,
+              contains(language == 'en' ? 'Business return' : 'مرتجع تجاري'));
           if (language == 'en_ar') {
             expect(params.invoiceTitleText, contains('Business return'));
           }
@@ -68,30 +85,48 @@ void main() {
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     late BuildContext context;
-    await tester.pumpWidget(MultiProvider(providers: [
-      ChangeNotifierProvider<AppSettingsProvider>(create: (_) => _Settings()),
-      ChangeNotifierProvider<BankProvider>(create: (_) => BankProvider()),
-      ChangeNotifierProvider<StoreSessionProvider>(create: (_) => StoreSessionProvider()),
-    ], child: MaterialApp(home: Builder(builder: (value) {
-      context = value;
-      return const SizedBox();
-    }))));
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppSettingsProvider>(
+              create: (_) => _Settings()),
+          ChangeNotifierProvider<BankProvider>(create: (_) => BankProvider()),
+          ChangeNotifierProvider<StoreSessionProvider>(
+              create: (_) => StoreSessionProvider()),
+        ],
+        child: MaterialApp(home: Builder(builder: (value) {
+          context = value;
+          return const SizedBox();
+        }))));
     for (final language in ['en', 'ar', 'en_ar']) {
       for (final entry in {
-        '': 21.0, 'invalid': 21.0, 'NaN': 21.0, 'Infinity': 21.0,
-        '-Infinity': 21.0, '0': 0.0, '1,200.50': 1200.50,
+        '': 21.0,
+        'invalid': 21.0,
+        'NaN': 21.0,
+        'Infinity': 21.0,
+        '-Infinity': 21.0,
+        '0': 0.0,
+        '1,200.50': 1200.50,
       }.entries) {
         final params = await ReturnBillLayoutParamsBuilder.build(
-          context: context, selectedPrinter: BluetoothPrinter.development(),
+          context: context,
+          selectedPrinter: BluetoothPrinter.development(),
           returnItems: [
             OrderReturnItem(quantity: 1, unitPrice: '11'),
             OrderReturnItem(quantity: 2, unitPrice: '5'),
-          ], returnTotalAmount: entry.key,
-          orderDate: '', orderNumber: '758', selectedPaperSize: 'A4',
+          ],
+          returnTotalAmount: entry.key,
+          orderDate: '',
+          orderNumber: '758',
+          selectedPaperSize: 'A4',
           returnBillDocumentConfig: DocumentConfig.fromJson({
-            'language': language, 'display_configuration': {
-              for (final key in ['showReturnTotalAmount', 'showReturnNetAmount',
-                'showReturnAmountInWords']) key: {'visible': true},
+            'language': language,
+            'display_configuration': {
+              for (final key in [
+                'showReturnTotalAmount',
+                'showReturnNetAmount',
+                'showReturnAmountInWords'
+              ])
+                key: {'visible': true},
             },
           }),
         );
@@ -105,12 +140,18 @@ void main() {
       }
     }
     final originalCart = await ReturnBillLayoutParamsBuilder.build(
-      context: context, selectedPrinter: BluetoothPrinter.development(),
+      context: context,
+      selectedPrinter: BluetoothPrinter.development(),
       returnItems: [OrderReturnItem(cartItemId: 13386, quantity: 2)],
-      originalCartItems: [OrderDetailsModelDataCartItem(id: 13386,
-          quantity: 7, unitPrice: '180', mrp: '200')],
-      returnTotalAmount: '', orderDate: '', orderNumber: '758',
-      selectedPaperSize: 'A4', returnBillDocumentConfig: DocumentConfig(),
+      originalCartItems: [
+        OrderDetailsModelDataCartItem(
+            id: 13386, quantity: 7, unitPrice: '180', mrp: '200')
+      ],
+      returnTotalAmount: '',
+      orderDate: '',
+      orderNumber: '758',
+      selectedPaperSize: 'A4',
+      returnBillDocumentConfig: DocumentConfig(),
     );
     expect(originalCart.formattedTotal, '360.00');
     expect(originalCart.returnTotalValue, 360,

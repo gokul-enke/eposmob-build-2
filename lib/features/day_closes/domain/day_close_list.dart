@@ -1,5 +1,5 @@
-import 'package:pos_machine/models/daily_sales_close.dart';
-import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
+import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
 
 class DayCloseListScope {
   const DayCloseListScope(

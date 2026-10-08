@@ -21,6 +21,21 @@ class HeaderAction {
     this.key,
   });
 
+  /// Shared filter action: filled while shown, outlined while hidden.
+  /// Pages supply translated labels and their existing toggle callback.
+  const HeaderAction.filters({
+    required bool showFilters,
+    required String showLabel,
+    required String hideLabel,
+    required this.onPressed,
+    this.badge = false,
+    this.key,
+  })  : icon =
+            showFilters ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+        label = showFilters ? hideLabel : showLabel,
+        active = showFilters,
+        busy = false;
+
   final IconData icon;
 
   /// Tooltip on wide headers, menu text on narrow ones.

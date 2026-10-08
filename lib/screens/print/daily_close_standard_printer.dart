@@ -1,18 +1,19 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
-import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/services/standard_pdf_direct_print_service.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:open_file/open_file.dart';
-import 'package:intl/intl.dart';
 
 /// Daily Close Standard Printer
 /// Generates A4/A5 PDF for Daily Sales Close Report

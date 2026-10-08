@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
 import '../../domain/day_close_list.dart';
 
 String dayCloseStatusLabel(String? status) {

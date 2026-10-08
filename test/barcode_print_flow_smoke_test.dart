@@ -6,7 +6,8 @@ import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/barcode_printer_service.dart';
 import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/models/barcode_row.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/pages/barcode_list_page.dart';
 import 'package:pos_machine/screens/product/widgets/confirm_barcode_print_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,7 +22,7 @@ void main() {
     expect(BarcodeLayoutSettings().barcodeWidthPercent, 70);
     expect(BarcodeLayoutSettings().printRotationDegrees, isNull);
     expect(const PrinterSettings(), isA<PrinterSettings>());
-    expect(const ProductBarcodeScreen(), isA<ProductBarcodeScreen>());
+    expect(const BarcodeListPage(), isA<BarcodeListPage>());
     expect(
       const BarcodeLayoutSettingsPanel(),
       isA<BarcodeLayoutSettingsPanel>(),

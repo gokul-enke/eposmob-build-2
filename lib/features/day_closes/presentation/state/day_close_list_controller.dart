@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
 import '../../domain/day_close_list.dart';
 
 class DayCloseListController extends ChangeNotifier {

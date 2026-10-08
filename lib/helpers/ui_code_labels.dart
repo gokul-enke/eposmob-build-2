@@ -36,6 +36,8 @@ class UiCodeLabels {
         return 'sales.status_new'.tr;
       case 'confirmed':
         return 'sales.status_confirmed'.tr;
+      case 'delivered':
+        return 'sales.status_delivered'.tr;
       case 'start':
       case 'preparing':
         return 'ui_codes.status_preparing'.tr;

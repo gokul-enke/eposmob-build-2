@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:pos_machine/features/customers/data/customer_repository.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,12 +11,15 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
-import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
-import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -28,7 +30,6 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -38,7 +39,6 @@ import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/compact_quantity_control.dart';
 import 'package:pos_machine/widgets/horizontal_product_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
-import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
@@ -465,9 +465,10 @@ class _EditOrderState extends State<EditOrder> {
                                             if (value["status"] == "success") {
                                               showScaffold(
                                                 context: context,
-                                                message:
-                                                    addToCartModel.message ??
-                                                        'edit_order.msg_added_to_cart'.tr,
+                                                message: addToCartModel
+                                                        .message ??
+                                                    'edit_order.msg_added_to_cart'
+                                                        .tr,
                                               );
                                               setState(() {
                                                 _autocompleteProductKey =
@@ -485,7 +486,8 @@ class _EditOrderState extends State<EditOrder> {
                                                 context: context,
                                                 message: addToCartModel
                                                         .message ??
-                                                    'edit_order.msg_error_try_again'.tr,
+                                                    'edit_order.msg_error_try_again'
+                                                        .tr,
                                               );
                                               //  'Added To Cart',
                                             }
@@ -532,9 +534,10 @@ class _EditOrderState extends State<EditOrder> {
                                                   "success") {
                                                 showScaffold(
                                                   context: context,
-                                                  message:
-                                                      addToCartModel.message ??
-                                                          'edit_order.msg_added_to_cart'.tr,
+                                                  message: addToCartModel
+                                                          .message ??
+                                                      'edit_order.msg_added_to_cart'
+                                                          .tr,
                                                 );
                                                 setState(() {
                                                   _autocompleteProductKey =
@@ -552,7 +555,8 @@ class _EditOrderState extends State<EditOrder> {
                                                   context: context,
                                                   message: addToCartModel
                                                           .message ??
-                                                      'edit_order.msg_error_try_again'.tr,
+                                                      'edit_order.msg_error_try_again'
+                                                          .tr,
                                                 );
                                                 //  'Added To Cart',
                                               }
@@ -980,7 +984,8 @@ class _EditOrderState extends State<EditOrder> {
                 },
               );
             } else if (snapshot.hasError) {
-              return Text('edit_order.err_snapshot'.trParams({'error': '${snapshot.error}'}));
+              return Text('edit_order.err_snapshot'
+                  .trParams({'error': '${snapshot.error}'}));
             } else {
               return const Center(child: BuildCartListDesign());
             }
@@ -1497,9 +1502,8 @@ class _EditOrderState extends State<EditOrder> {
                       // debugPrint(mobileNumberTextController.text);
 
                       try {
-                        final response = await CustomerRepository()
-                            .findByPhone(accessToken ?? "",
-                                mobileNumberTextController.text);
+                        final response = await CustomerRepository().findByPhone(
+                            accessToken ?? "", mobileNumberTextController.text);
 
                         if (response["status"] == "success") {
                           CustomerListModel customerListModel =

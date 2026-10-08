@@ -9,8 +9,8 @@ import 'package:pos_machine/features/day_closes/data/day_close_list_repository.d
 import 'package:pos_machine/features/day_closes/domain/day_close_list.dart';
 import 'package:pos_machine/features/day_closes/presentation/export/day_close_list_excel.dart';
 import 'package:pos_machine/features/day_closes/presentation/state/day_close_list_controller.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
-import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
+import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
 import 'day_close_fixtures.dart';
 
 String response(

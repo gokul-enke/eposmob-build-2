@@ -7,4 +7,7 @@ abstract final class AppSizes {
 
   /// Height of compact controls (table actions, pagination arrows).
   static const double compactControl = 36;
+
+  /// Icons beside metric labels and values.
+  static const double metricIcon = 24;
 }

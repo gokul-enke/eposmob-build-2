@@ -1,15 +1,11 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/models/barcode_rows.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_support/hive_test_teardown.dart';
@@ -382,7 +378,9 @@ void main() {
     expect(provider.getProductById(1)!.stock!.single.quantity, 1);
   });
 
-  test('LocalProductProvider.listAllProducts filters by variant and sale unit barcodes', () {
+  test(
+      'LocalProductProvider.listAllProducts filters by variant and sale unit barcodes',
+      () {
     final provider = LocalProductProvider();
     final product = GetProduct(
       productId: 1,
@@ -414,31 +412,7 @@ void main() {
     expect(provider.paginatedProducts, isEmpty);
   });
 
-  testWidgets('ProductBarcodeScreen._expandProductsToBarcodeRows filters correctly based on barcodeController', (tester) async {
-    final authModel = AuthModel()..login('mock-token', 1);
-    final categoryProvider = FakeCategoryProvider();
-    final localProductProvider = LocalProductProvider();
-
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AuthModel>.value(value: authModel),
-          ChangeNotifierProvider<CategoryProvider>.value(value: categoryProvider),
-          ChangeNotifierProvider<LocalProductProvider>.value(value: localProductProvider),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ProductBarcodeScreen(),
-          ),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    final state = tester.state(find.byType(ProductBarcodeScreen)) as dynamic;
-
+  test('Barcode list expands and filters the actual printable rows', () {
     final product = GetProduct(
       productId: 1,
       productName: 'Product 1',
@@ -452,30 +426,17 @@ void main() {
     );
 
     // 1. When barcodeController is empty, should return all 3 rows (base, variant, sale unit)
-    state.barcodeController.text = '';
-    var rows = state.expandProductsToBarcodeRows([product]);
+    var rows = expandProductsToBarcodeRows([product]);
     expect(rows.length, 3);
 
     // 2. When barcodeController matches variant barcode, should only return the variant row
-    state.barcodeController.text = 'VAR_BC';
-    rows = state.expandProductsToBarcodeRows([product]);
+    rows = expandProductsToBarcodeRows([product], barcode: 'VAR_BC');
     expect(rows.length, 1);
     expect(rows.first.barcode, 'VAR_BC');
 
     // 3. When barcodeController matches base barcode, should only return the base row
-    state.barcodeController.text = 'BASE_BC';
-    rows = state.expandProductsToBarcodeRows([product]);
+    rows = expandProductsToBarcodeRows([product], barcode: 'BASE_BC');
     expect(rows.length, 1);
     expect(rows.first.barcode, 'BASE_BC');
   });
-}
-
-class FakeCategoryProvider extends CategoryProvider {
-  @override
-  bool get isCategoriesLoaded => true;
-
-  @override
-  Future<void> ensureCategoriesLoaded() async {
-    // No-op for testing to avoid API call timeout
-  }
 }

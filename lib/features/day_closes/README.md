@@ -1,9 +1,10 @@
 # Daily Sales Close list
 
 This feature owns only the user list (sidebar index 78), its date filter,
-pagination, and Excel export. The compatibility screen delegates to the shared
-list UI. Admin lists, Open Shift, Day Close calculations/submission, and View
-details remain in their existing implementations.
+pagination, and Excel export. The Sales feature's `DailySalesCloseListPage`
+delegates to `DayCloseListPage` and supplies `OpenShiftModal`, `DayCloseModal`
+and the `SalesNavigation` detail route. Admin lists, Day Close
+calculations/submission, and View details remain in the Sales feature.
 
 - The repository freezes authentication, tenant, store, and user for each
   request. Listing keeps `store_id[]`, `user_id[]`, and identical `start_date`
@@ -29,4 +30,4 @@ Regression tests cover the wire contract, empty/error distinction, full-page
 snapshots, legacy rows, filter/reset/retry, asynchronous races and disposal,
 pending status, callbacks, workbook cell types, and localized layouts. Live
 business mutations must be checked manually; tests do not open or close a real
-shift. The unchanged modal retains its pre-existing analyzer warnings.
+shift.
