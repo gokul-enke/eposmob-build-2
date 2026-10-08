@@ -1,3 +1,5 @@
+import '../../../../test_support/header_actions.dart';
+import 'package:pos_machine/core/ui/buttons/app_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -145,21 +147,20 @@ void main() {
         (tester) async {
       await pump(tester, const PurchaseReturnListPage(), size);
       expect(find.text('RET-9'), findsOneWidget);
-      expect(find.byKey(const ValueKey('purchase-return-create-action')),
-          findsOneWidget);
+      expect(find.byType(AppPrimaryButton), findsOneWidget);
       final panel = find.byKey(const ValueKey('purchase-return-filters'));
       expect(panel, size.width < 600 ? findsNothing : findsOneWidget);
-      await tester
-          .tap(find.byKey(const ValueKey('purchase-return-filter-toggle')));
+      await tapFilterToggle(tester,
+          key: const ValueKey('purchase-return-filter-toggle'));
       await tester.pumpAndSettle();
       expect(panel, size.width < 600 ? findsOneWidget : findsNothing);
       expect(tester.takeException(), isNull);
       if (size.width < 600) {
-        await tester
-            .tap(find.byKey(const ValueKey('purchase-return-filter-toggle')));
+        await tapFilterToggle(tester,
+            key: const ValueKey('purchase-return-filter-toggle'));
         await tester.pumpAndSettle();
       }
-      await tester.tap(find.byIcon(Icons.visibility).first);
+      await tester.tap(find.byIcon(Icons.visibility_outlined).first);
       await tester.pumpAndSettle();
       expect(find.byType(PurchaseReturnDetailsPage), findsOneWidget);
       expect(tester.takeException(), isNull);
