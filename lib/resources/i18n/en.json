@@ -2448,6 +2448,20 @@
     "is_primary": "Is Primary",
     "attachment": "Attachment"
   },
+  "product_list": {
+    "manufacturer": "Manufacturer",
+    "color": "Color",
+    "shirt_size": "Shirt size",
+    "shoe_size": "Shoe size",
+    "subtitle": "Review and manage your product catalog.",
+    "find": "Find products",
+    "filter_hint": "Filter by name, category, price, barcode, HSN or item code.",
+    "empty_hint": "Try adjusting or resetting the filters.",
+    "count": "@count products on this page",
+    "load_error": "Unable to load product categories. Your local products remain available.",
+    "retry": "Retry",
+    "export_error": "Unable to export products. Refresh and try again."
+  },
   "product": {
     "sku_prefix": "SKU: ",
     "title": "Product List",
