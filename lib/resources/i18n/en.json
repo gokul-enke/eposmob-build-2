@@ -909,6 +909,7 @@
     "page": "Page",
     "of": "of",
     "page_of": "Page @current of @total",
+    "current_page": "Page @current",
     "previous_page": "Previous page",
     "next_page": "Next page"
   },
@@ -2389,7 +2390,19 @@
     "status_pending": "Pending",
     "status_confirmed": "Confirmed",
     "status_cancelled": "Cancelled",
-    "status_order_created": "Order created"
+    "status_order_created": "Order created",
+    "list_find": "Find quotations",
+    "list_new_short": "New",
+    "list_filter_hint": "Filter by quotation number, customer, store, status and dates.",
+    "list_search": "Type to search...",
+    "list_select_date": "Select Date",
+    "list_copy": "Copy quotation number",
+    "list_count": "@count quotations on this page",
+    "list_retry": "Retry",
+    "list_load_error": "Unable to load quotations. Previous results may be out of date.",
+    "list_export_error": "Unable to export quotations. Refresh and try again.",
+    "list_export_empty": "No quotations to export.",
+    "list_export_progress": "Loading page @page"
   },
   "category": {
     "add_short": "Add",

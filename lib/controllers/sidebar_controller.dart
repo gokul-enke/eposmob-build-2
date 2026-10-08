@@ -96,7 +96,7 @@ import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
-import 'package:pos_machine/screens/sales/quotations_list.dart';
+import 'package:pos_machine/features/quotations/presentation/pages/quotation_list_page.dart';
 
 class SideBarController extends GetxController {
   static const int stockListScreenIndex = 15;
