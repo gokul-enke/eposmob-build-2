@@ -31,6 +31,11 @@ class StockListController extends ChangeNotifier {
   Timer? _searchTimer;
   Object? loadError;
   StockListQuery? appliedQuery;
+  int _filterRevision = 0;
+
+  /// Explicit filter actions supersede refresh pagination restoration, even
+  /// when Reset or an undone search leaves the effective query unchanged.
+  int get filterRevision => _filterRevision;
   List<String> categories = ['All Categories'];
   List<String> stores = ['All Stores'];
 
@@ -67,7 +72,7 @@ class StockListController extends ChangeNotifier {
       if (_disposed) return;
       // The stock loader replaces the visible page with unfiltered rows.
       // Restore the inputs before another request can fail or keep us waiting.
-      search();
+      _applySearch();
       await fetchStores(token);
       if (_disposed) return;
       final categoryNames =
@@ -80,7 +85,7 @@ class StockListController extends ChangeNotifier {
       categories = ['All Categories', ...categoryNames];
       stores = ['All Stores', ...storeNames];
       initialized = true;
-      search();
+      _applySearch();
     } catch (error) {
       if (!_disposed) loadError = error;
       rethrow;
@@ -93,6 +98,12 @@ class StockListController extends ChangeNotifier {
   }
 
   void search() {
+    if (_disposed) return;
+    _filterRevision++;
+    _applySearch();
+  }
+
+  void _applySearch() {
     _searchTimer?.cancel();
     _searchTimer = null;
     if (_disposed) return;
@@ -127,6 +138,7 @@ class StockListController extends ChangeNotifier {
 
   void reset() {
     if (_disposed) return;
+    _filterRevision++;
     _searchTimer?.cancel();
     _searchTimer = null;
     stockNameController.clear();

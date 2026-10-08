@@ -111,10 +111,24 @@ class _StockListPageState extends State<StockListPage> {
       AppToast.error(context, 'stock.auth_token_missing'.tr);
       return;
     }
+    final previousPage = _stocks.stockCurrentPage;
+    final previousQuery = _controller.appliedQuery;
+    final filterRevision = _controller.filterRevision;
     try {
       await _controller.load(token);
     } catch (error) {
       if (mounted) {
+        final applied = _controller.appliedQuery;
+        // A stock reload resets paging before the store request completes.
+        // Restore only the same query, bounded by the refreshed result count.
+        if (previousQuery != null &&
+            applied != null &&
+            filterRevision == _controller.filterRevision &&
+            previousQuery.sameFiltersAs(applied)) {
+          _stocks.goToStockPage(previousPage > _stocks.stockTotalPages
+              ? _stocks.stockTotalPages
+              : previousPage);
+        }
         AppToast.error(context,
             'stock.error_loading_stocks'.trParams({'error': '$error'}));
       }

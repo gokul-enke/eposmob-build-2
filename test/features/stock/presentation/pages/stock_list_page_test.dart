@@ -27,6 +27,8 @@ import 'package:pos_machine/providers/stock_provider.dart';
 class TestStockProvider extends StockProvider {
   bool fails = false;
   bool reloading = false;
+  bool resetPageOnLoad = false;
+  List<ListStockModelData>? refreshedRows;
   @override
   bool get stockIsLoading => reloading || super.stockIsLoading;
   Future<void> reloadAfterMutation(List<ListStockModelData> entries,
@@ -45,12 +47,21 @@ class TestStockProvider extends StockProvider {
   @override
   Future<void> loadAllStocks(String token) async {
     if (fails) throw StateError('offline');
+    if (resetPageOnLoad) {
+      applyRealtimeStocks(refreshedRows ?? allStocks ?? []);
+      applyStockFiltersLocally(page: 1);
+    }
   }
 }
 
 class TestPurchaseProvider extends PurchaseProvider {
+  bool fails = false;
+  Future<void>? waitFor;
   @override
-  Future<void> listAllStores(String token, String? name) async {}
+  Future<void> listAllStores(String token, String? name) async {
+    await waitFor;
+    if (fails) throw StateError('stores offline');
+  }
 }
 
 class TestSettings extends AppSettingsProvider {
@@ -150,6 +161,7 @@ void main() {
       {int count = 3,
       String language = 'en',
       ExportController? export,
+      TestPurchaseProvider? purchases,
       bool costPermission = true}) async {
     tester.view.physicalSize = Size(width, width == 375 ? 812 : 900);
     tester.view.devicePixelRatio = 1;
@@ -163,7 +175,7 @@ void main() {
               create: (_) => AuthModel()..login('token', 1)),
           ChangeNotifierProvider<StockProvider>.value(value: provider),
           ChangeNotifierProvider<PurchaseProvider>(
-              create: (_) => TestPurchaseProvider()),
+              create: (_) => purchases ?? TestPurchaseProvider()),
           ChangeNotifierProvider<AppSettingsProvider>(
               create: (_) => TestSettings()),
           ChangeNotifierProvider<CategoryProvider>(
@@ -484,6 +496,118 @@ void main() {
     expect(button.onPressed, isNotNull);
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();
+  });
+  for (final refreshedCount in [65, 25, 0]) {
+    testWidgets(
+        'partial refresh failure preserves a valid filtered page with $refreshedCount rows',
+        (tester) async {
+      final purchases = TestPurchaseProvider();
+      final provider =
+          await mount(tester, 1440, count: 65, purchases: purchases);
+      await tester.enterText(find.byType(TextField).first, 'Stock item');
+      await tester.pump(const Duration(milliseconds: 350));
+      provider.goToStockPage(3);
+      provider.resetPageOnLoad = true;
+      provider.refreshedRows = List.generate(refreshedCount, row);
+      purchases.fails = true;
+      await tester.tap(find.byKey(StockListPage.refreshKey));
+      await tester.pumpAndSettle();
+      final expectedPage = refreshedCount == 65
+          ? 3
+          : refreshedCount == 25
+              ? 2
+              : 1;
+      expect(provider.stockCurrentPage, expectedPage);
+      expect(provider.stockFilterName, 'Stock item');
+      expect(
+          provider.listStockModelDataList!.length,
+          refreshedCount == 65
+              ? 20
+              : refreshedCount == 25
+                  ? 5
+                  : 0);
+      expect(
+          tester
+              .widget<AppSquareIconButton>(find.byKey(StockListPage.exportKey))
+              .onPressed,
+          isNull);
+      purchases.fails = false;
+      await tester.tap(find.byKey(StockListPage.refreshKey));
+      await tester.pumpAndSettle();
+      // Successful refresh retains the existing page-one behavior.
+      expect(provider.stockCurrentPage, 1);
+      expect(provider.stockFilterName, 'Stock item');
+      expect(
+          tester
+              .widget<AppSquareIconButton>(find.byKey(StockListPage.exportKey))
+              .onPressed,
+          refreshedCount == 0 ? isNull : isNotNull);
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(provider.stockFilterName, isNull);
+      expect(provider.stockCurrentPage, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets(
+      'failed refresh does not restore an old page after filters change',
+      (tester) async {
+    final purchases = TestPurchaseProvider();
+    final provider = await mount(tester, 1440, count: 65, purchases: purchases);
+    provider.goToStockPage(3);
+    provider.resetPageOnLoad = true;
+    purchases.fails = true;
+    final gate = Completer<void>();
+    purchases.waitFor = gate.future;
+    await tester.tap(find.byKey(StockListPage.refreshKey));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).first, 'Stock item 2');
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(provider.stockTotalPages, 1);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(provider.stockCurrentPage, 1);
+    expect(provider.stockFilterName, 'Stock item 2');
+    expect(provider.listStockModelDataList!.length, 11);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('Reset during a failed refresh keeps page one for the same query',
+      (tester) async {
+    final purchases = TestPurchaseProvider();
+    final provider = await mount(tester, 1440, count: 65, purchases: purchases);
+    provider.goToStockPage(3);
+    provider.resetPageOnLoad = true;
+    purchases.fails = true;
+    final gate = Completer<void>();
+    purchases.waitFor = gate.future;
+    await tester.tap(find.byKey(StockListPage.refreshKey));
+    await tester.pump();
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(provider.stockCurrentPage, 1);
+    expect(provider.stockFilterName, isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('stock request failure preserves the existing later page',
+      (tester) async {
+    final provider = await mount(tester, 1440, count: 65);
+    provider.goToStockPage(3);
+    provider.fails = true;
+    await tester.tap(find.byKey(StockListPage.refreshKey));
+    await tester.pumpAndSettle();
+    expect(provider.stockCurrentPage, 3);
+    expect(provider.listStockModelDataList!.first.stockId, 41);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+    expect(tester.takeException(), isNull);
   });
   testWidgets('phone shared action menu exposes Export and filters',
       (tester) async {
