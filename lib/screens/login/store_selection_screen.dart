@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/models/executive.dart';
-import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
+import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/widgets/closing/day_close_modal.dart';
+import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
-import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:provider/provider.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;

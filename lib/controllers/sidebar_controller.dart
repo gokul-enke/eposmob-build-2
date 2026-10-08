@@ -60,8 +60,8 @@ import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profi
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
-import 'package:pos_machine/screens/sales_return/sales_return.dart';
-import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/create_sales_return_page.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_list_page.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
 import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
@@ -89,13 +89,13 @@ import 'package:pos_machine/features/expenses/presentation/pages/create_expense_
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
 
 import '../screens/product/widgets/stock_details.dart';
-import '../screens/sales/widgets/sales_order_details.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_order_details_page.dart';
 import '../widgets/category_list.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/suppliers_list_page.dart';
-import 'package:pos_machine/screens/sales/confirmed_orders.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
-import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
+import 'package:pos_machine/features/sales/presentation/pages/confirmed_orders_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_detail_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_list_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/admin_daily_sales_close_list_page.dart';
 import 'package:pos_machine/features/quotations/presentation/pages/quotation_list_page.dart';
 
 class SideBarController extends GetxController {
@@ -162,6 +162,19 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Sales screens in [screens]. Navigate through SalesNavigation.
+  static const int salesScreenIndex = 2;
+  static const int salesOrderDetailsScreenIndex = 11;
+  static const int confirmedOrdersScreenIndex = 54;
+  static const int dailySalesCloseListScreenIndex = 78;
+  static const int dailySalesCloseDetailScreenIndex = 79;
+  static const int adminDailySalesCloseListScreenIndex = 84;
+  static const int onlineSalesScreenIndex = 92;
+
+  /// Sales Returns screens; navigate through SalesReturnNavigation.
+  static const int createSalesReturnScreenIndex = 49;
+  static const int salesReturnListScreenIndex = 50;
+
   /// Barcode listing in [screens]. Navigate through [BarcodeNavigation].
   static const int productBarcodeListScreenIndex = 83;
 
@@ -194,7 +207,7 @@ class SideBarController extends GetxController {
   var screens = const [
     BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
-    SalesListPage(), //2
+    SalesListPage(), // salesScreenIndex
     CartScreen(), //3
     TransactionScreen(), //4
     CustomersListPage(), //5
@@ -203,7 +216,7 @@ class SideBarController extends GetxController {
     SupportScreen(), //8
     AddCustomerPage(), //9
     OpenProfileScreen(), //10
-    SalesOrderDetailsScreen(), //11
+    SalesOrderDetailsPage(), // salesOrderDetailsScreenIndex
     CategoryListPage(), // categoryListScreenIndex
     AddCategoryPropertiesScreen(), //13
     ProductListPage(), // 14 productListScreenIndex
@@ -241,12 +254,12 @@ class SideBarController extends GetxController {
     HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
-    SalesReturnScreen(), //49 Sales Return
-    SalesReturnPage(), //50 Sales Return List
+    CreateSalesReturnPage(), // createSalesReturnScreenIndex
+    SalesReturnListPage(), // salesReturnListScreenIndex
     EditOrder(), // 51 Edit Order
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
-    ConfirmedOrdersScreen(), // 54 Confirmed Orders
+    ConfirmedOrdersPage(), // confirmedOrdersScreenIndex
     RestaurantPage(
       allowCounterBillingFromAttender: false,
       defaultCounterBillingMode: false,
@@ -273,13 +286,13 @@ class SideBarController extends GetxController {
     SupplierVoucherListPage(), // 75 Supplier Voucher List (alias for Transactions)
     CreateSupplierVoucherPage(), // 76 Create Supplier Voucher (alias for Transactions)
     NonStockReportPage(), // 77 Non-Stock Report
-    DailySalesCloseListScreen(), // 78 Daily Sales Close List
-    DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
+    DailySalesCloseListPage(), // dailySalesCloseListScreenIndex
+    DailySalesCloseDetailPage(), // dailySalesCloseDetailScreenIndex
     ConsumedStocksReportPage(), // 80 Consumed Stocks Report
     PurchaseOrderListPage(), // purchaseOrderListScreenIndex
     CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
     BarcodeListPage(), // productBarcodeListScreenIndex
-    AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
+    AdminDailySalesCloseListPage(), // adminDailySalesCloseListScreenIndex
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
     BillingQuotationPageResponsive(), // 86 Quotations
     QuotationsListScreen(), // 87 Quotation List
@@ -291,7 +304,7 @@ class SideBarController extends GetxController {
     ), // 89 Restaurant Billing Page
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
-    SalesListPage(isOnlineSales: true), // 92 Online Sales
+    SalesListPage(isOnlineSales: true), // onlineSalesScreenIndex
     ExpenseListPage(), // expenseListScreenIndex (93)
     CreateExpensePage(), // createExpenseScreenIndex (94)
     ViewExpensePage(), // viewExpenseScreenIndex (95)

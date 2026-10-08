@@ -1,4 +1,4 @@
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import 'package:pos_machine/models/order_details.dart';
 
 /// Identifies the return record independently of the original sale reference.

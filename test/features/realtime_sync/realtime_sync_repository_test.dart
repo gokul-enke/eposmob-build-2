@@ -6,7 +6,7 @@ import 'package:pos_machine/features/realtime_sync/data/realtime_sync_repository
 import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 
 class _CountingOffers extends ProductOfferRepository {
