@@ -3107,7 +3107,19 @@
     "select_date": "Select Date",
     "confirm_btn": "Confirm",
     "all_categories": "All Categories",
-    "pdf_shared": "PDF shared"
+    "pdf_shared": "PDF shared",
+    "filters": "Filters",
+    "export": "Export",
+    "refresh": "Refresh",
+    "filters_title": "Find barcodes",
+    "filters_hint": "Filter by category, product name and barcode.",
+    "search_category": "Search category",
+    "export_failed": "Unable to export the list. Please try again.",
+    "load_failed": "Unable to load barcodes",
+    "retry": "Retry",
+    "page_count": "@count barcode rows on this page",
+    "select": "Select",
+    "copy_barcode": "Copy barcode"
   },
   "product_tabs": {
     "back_all_products": "All Products",
