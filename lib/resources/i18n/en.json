@@ -1890,6 +1890,8 @@
     "list_filter_title": "Find sales orders",
     "list_filter_hint": "Filter by order, customer, phone, price, status and dates.",
     "list_count": "@count orders on this page",
+    "email": "Email",
+    "list_export_empty": "No orders to export.",
     "list_receipt_number": "Receipt number",
     "list_load_error": "Unable to load orders. Previous results may be out of date.",
     "list_export_error": "Unable to export the orders. Refresh and try again.",

@@ -30,6 +30,12 @@ FilterPanel salesListFilters(SalesListController controller) => FilterPanel(
             keyboardType: TextInputType.phone,
             icon: Icons.phone_outlined),
         TextFilterField(
+            controller: controller.email,
+            label: 'sales.email'.tr,
+            hint: 'sales.email'.tr,
+            keyboardType: TextInputType.emailAddress,
+            icon: Icons.email_outlined),
+        TextFilterField(
             controller: controller.price,
             label: 'sales.price'.tr,
             hint: 'sales.price'.tr,
@@ -121,7 +127,9 @@ class SalesDateFilter extends StatelessWidget {
               date.month,
               date.day,
               time?.hour ?? (until ? 23 : 0),
-              time?.minute ?? (until ? 59 : 0)));
+              time?.minute ?? (until ? 59 : 0),
+              // The picker has no seconds; an upper bound covers its minute.
+              until ? 59 : 0));
         },
         child: InputDecorator(
           decoration: AppInputDecoration.filter(

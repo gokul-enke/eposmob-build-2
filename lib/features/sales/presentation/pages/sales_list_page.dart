@@ -52,13 +52,16 @@ class _SalesListPageState extends State<SalesListPage>
   @override
   bool get onlineSales => widget.isOnlineSales;
   @override
-  bool get useSharedSalesActions => true;
-  @override
   Future<void> refreshSalesOrders({bool preserveOnlineFilter = false}) =>
       _refresh();
   Future<void> _refresh() async {
     if (!mounted || _stores.isBootstrapping) return;
     await _controller.refresh();
+  }
+
+  Future<void> _realtimeRefresh() async {
+    if (!mounted || _stores.isBootstrapping) return;
+    await _controller.refreshShown();
   }
 
   @override
@@ -80,7 +83,7 @@ class _SalesListPageState extends State<SalesListPage>
     _wasBootstrapping = _stores.isBootstrapping;
     _stores.addListener(_sessionChanged);
     _auth.addListener(_sessionChanged);
-    _sales.attachListRefresh(this, _refresh);
+    _sales.attachListRefresh(this, _realtimeRefresh);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _controller.showFilters =
@@ -146,7 +149,17 @@ class _SalesListPageState extends State<SalesListPage>
     _preparing = true;
     try {
       await _controller.prepareExport();
-      if (!mounted || !_controller.canExport) return;
+      if (!mounted) return;
+      if (!_controller.canExport) {
+        // The pre-export search failed or matched nothing; say so instead of
+        // ignoring the tap.
+        if (_controller.error != null) {
+          AppToast.error(context, 'sales.list_export_error'.tr);
+        } else if (!_controller.loading && _controller.rows.isEmpty) {
+          AppToast.error(context, 'sales.list_export_empty'.tr);
+        }
+        return;
+      }
       final query = _controller.applied!, token = _auth.token ?? '';
       final revision = _sessionRevision;
       void checkSession() {
@@ -254,8 +267,7 @@ class _SalesListPageState extends State<SalesListPage>
                         AppOutlinedButton(
                             label: 'sales.retry'.tr,
                             icon: Icons.refresh,
-                            onPressed: () =>
-                                _controller.load(_controller.requestedPage))
+                            onPressed: _refresh)
                       ])),
             isLoading: _controller.loading,
             items: _controller.rows,

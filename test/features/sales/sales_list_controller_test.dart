@@ -196,6 +196,28 @@ void main() {
     expect(c.canExport, false);
     expect(c.query.storeId, 7);
   });
+  test('realtime refresh keeps the shown page and pending typed filters',
+      () async {
+    final source = Source();
+    final c = SalesListController(source, () => 'token');
+    addTearDown(c.dispose);
+    var load = c.load(2);
+    source.complete(0);
+    await load;
+    c.email.text = 'ann@';
+    c.scheduleSearch();
+    load = c.refreshShown();
+    expect(source.requests.last.page, 2);
+    expect(source.requests.last.query.email, '');
+    source.complete(1);
+    await load;
+    expect(c.current, 2);
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+    expect(source.requests.last.page, 1);
+    expect(source.requests.last.query.email, 'ann@');
+    expect(
+        source.requests.last.query.parameters(1, null)['filter_email'], 'ann@');
+  });
   test('realtime refresh routes to the current listing and detaches by owner',
       () async {
     final provider = SalesProvider(), first = Object(), second = Object();

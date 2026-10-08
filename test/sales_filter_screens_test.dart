@@ -174,7 +174,7 @@ void main() {
           expect(find.byType(CollapsibleFilterTile), findsOneWidget);
           await tester.tap(find.byType(ExpansionTile));
           await tester.pumpAndSettle();
-          expect(find.byType(TextField), findsNWidgets(4));
+          expect(find.byType(TextField), findsNWidgets(5));
         } else {
           expect(find.byType(FilterPanel), findsOneWidget);
           await tester.tap(header);

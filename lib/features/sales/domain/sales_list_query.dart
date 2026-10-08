@@ -5,6 +5,7 @@ class SalesListQuery {
       {this.number = '',
       this.customer = '',
       this.phone = '',
+      this.email = '',
       this.price = '',
       this.status = 'all',
       this.from,
@@ -12,7 +13,7 @@ class SalesListQuery {
       this.businessDate,
       this.storeId,
       this.isOnlineSales = false});
-  final String number, customer, phone, price, status;
+  final String number, customer, phone, email, price, status;
   final DateTime? from, until, businessDate;
   final int? storeId;
   final bool isOnlineSales;
@@ -28,6 +29,7 @@ class SalesListQuery {
         if (number.trim().isNotEmpty) 'number': number.trim().toUpperCase(),
         if (customer.trim().isNotEmpty) 'filter_name': customer.trim(),
         if (phone.trim().isNotEmpty) 'filter_phone': phone.trim(),
+        if (email.trim().isNotEmpty) 'filter_email': email.trim(),
         if (price.trim().isNotEmpty) 'filter_price': price.trim(),
         if (status.isNotEmpty && status != 'all')
           'filter_status': status.trim(),
@@ -47,6 +49,7 @@ class SalesListQuery {
       number.trim().isNotEmpty ||
       customer.trim().isNotEmpty ||
       phone.trim().isNotEmpty ||
+      email.trim().isNotEmpty ||
       price.trim().isNotEmpty ||
       status != 'all' ||
       from != null ||

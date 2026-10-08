@@ -17,7 +17,7 @@ String salesDate(ListOrderModelData row) =>
 Widget salesStatus(ListOrderModelData row) => AppBadge(
     label: UiCodeLabels.status(row.status ?? 'pending'),
     tone: switch ((row.status ?? 'pending').toLowerCase()) {
-      'confirmed' => AppBadgeTone.success,
+      'confirmed' || 'delivered' => AppBadgeTone.success,
       'cancelled' => AppBadgeTone.danger,
       'new' => AppBadgeTone.info,
       'pending' => AppBadgeTone.warning,

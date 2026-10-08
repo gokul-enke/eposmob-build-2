@@ -42,7 +42,6 @@ import 'package:pos_machine/core/ui/ui.dart';
 /// Retained row workflows shared by Sales and the existing Online Orders screen.
 mixin SalesOrderActions<T extends StatefulWidget> on State<T> {
   bool get onlineSales;
-  bool get useSharedSalesActions => false;
   Future<void> refreshSalesOrders({bool preserveOnlineFilter = false});
   DocumentConfig? _resolvePdfBillDocumentConfig(
     DocumentConfigProvider docConfigProvider,
@@ -1065,32 +1064,19 @@ Powered by CloudPOS''',
 
   Widget _buildActionIcon({
     required IconData icon,
-    required Color color,
     required VoidCallback onPressed,
   }) {
-    if (useSharedSalesActions) {
-      return AppSquareIconButton(
-        icon: icon,
-        size: AppSizes.compactControl,
-        foreground: AppColors.primary,
-        tooltip: (icon == Icons.visibility
-                ? 'sales.view_order'
-                : icon == Icons.print
-                    ? 'sales.print_order'
-                    : 'sales.more_actions')
-            .tr,
-        onPressed: onPressed,
-      );
-    }
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: IconButton(
-        icon: Icon(icon, size: 18, color: color),
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-        onPressed: onPressed,
-      ),
+    return AppSquareIconButton(
+      icon: icon,
+      size: AppSizes.compactControl,
+      foreground: AppColors.primary,
+      tooltip: (icon == Icons.visibility
+              ? 'sales.view_order'
+              : icon == Icons.print
+                  ? 'sales.print_order'
+                  : 'sales.more_actions')
+          .tr,
+      onPressed: onPressed,
     );
   }
 
@@ -1099,11 +1085,10 @@ Powered by CloudPOS''',
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
-      spacing: useSharedSalesActions ? 6 : 0,
+      spacing: 6,
       children: [
         _buildActionIcon(
           icon: Icons.visibility,
-          color: ColorManager.kPrimaryColor,
           onPressed: () {
             final provider = Provider.of<SalesProvider>(context, listen: false);
             provider.setOrderNumber(order.orderNumber ?? "0");
@@ -1126,7 +1111,6 @@ Powered by CloudPOS''',
         //   ),
         _buildActionIcon(
           icon: Icons.print,
-          color: Colors.blue,
           onPressed: () async {
             try {
               final orderNumber = order.orderNumber?.toString();
@@ -1143,7 +1127,6 @@ Powered by CloudPOS''',
         ),
         _buildActionIcon(
           icon: Icons.more_vert,
-          color: Colors.blue,
           onPressed: () async {
             // Show bottom sheet with options instead of popup menu
             if (!context.mounted) return;

@@ -13,6 +13,7 @@ class SalesListController extends ChangeNotifier {
   final number = TextEditingController();
   final customer = TextEditingController();
   final phone = TextEditingController();
+  final email = TextEditingController();
   final price = TextEditingController();
   DateTime? from, until, businessDate;
   int? storeId;
@@ -29,6 +30,7 @@ class SalesListController extends ChangeNotifier {
       number: number.text,
       customer: customer.text,
       phone: phone.text,
+      email: email.text,
       price: price.text,
       status: status,
       from: from,
@@ -73,8 +75,20 @@ class SalesListController extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     final target = applied != null && !matchesInputs ? 1 : page;
+    return _fetch(query, target);
+  }
+
+  /// Realtime refresh: re-runs the query on screen (or in flight) without
+  /// consuming filter text that is still being typed.
+  Future<void> refreshShown() {
+    if (_disposed) return Future.value();
+    final shown = _inFlight ?? applied;
+    if (shown != null) return _fetch(shown, requestedPage);
+    return _timer == null ? load(requestedPage) : Future.value();
+  }
+
+  Future<void> _fetch(SalesListQuery requested, int target) async {
     requestedPage = target;
-    final requested = query;
     final generation = ++_generation;
     _inFlight = requested;
     loading = true;
@@ -118,7 +132,7 @@ class SalesListController extends ChangeNotifier {
   }
 
   void clearFilters() {
-    for (final field in [number, customer, phone, price]) {
+    for (final field in [number, customer, phone, email, price]) {
       field.clear();
     }
     status = 'all';
@@ -138,7 +152,7 @@ class SalesListController extends ChangeNotifier {
     _disposed = true;
     _generation++;
     _timer?.cancel();
-    for (final field in [number, customer, phone, price]) {
+    for (final field in [number, customer, phone, email, price]) {
       field.dispose();
     }
     super.dispose();
