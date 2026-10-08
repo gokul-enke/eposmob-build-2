@@ -2,6 +2,7 @@ import 'package:pos_machine/features/reports/domain/models/non_stock_report_pagi
 import 'package:flutter/widgets.dart';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/features/reports/data/non_stock_report_snapshot.dart';
 import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
 import 'package:pos_machine/features/reports/presentation/state/non_stock_report_controller.dart';
 import '../../support/non_stock_fixtures.dart';
@@ -177,6 +178,34 @@ void main() {
             build: (rows) async => rows.length,
             permissionUnchanged: () => true),
         throwsStateError);
+  });
+  test('export rereads when live data moves, and gives up after the limit',
+      () async {
+    for (final failures in [1, NonStockReportController.exportAttempts]) {
+      var exporting = false, attempt = 0;
+      final report = NonStockReportController(
+          readScope: () async => nonStockScope,
+          fetch: (q, p) async {
+            if (!exporting) return nonStockPage(p, last: 2, total: 2);
+            if (p == 1) attempt++;
+            // A sale adds a low-stock product between page 1 and page 2.
+            final moved = attempt <= failures;
+            return nonStockPage(p, last: 2, total: moved && p == 2 ? 3 : 2);
+          });
+      await report.load();
+      exporting = true;
+      final export = report.export(
+          build: (rows) async => rows.length, permissionUnchanged: () => true);
+      if (failures == 1) {
+        expect(await export, 2);
+        expect(attempt, 2);
+      } else {
+        await expectLater(
+            export, throwsA(isA<NonStockReportSnapshotChanged>()));
+        expect(attempt, NonStockReportController.exportAttempts);
+      }
+      report.dispose();
+    }
   });
   test('changed session cannot publish a table response', () async {
     var scope = nonStockScope;

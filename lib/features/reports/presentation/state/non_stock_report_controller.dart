@@ -15,6 +15,7 @@ class NonStockReportController extends ChangeNotifier {
     _search = SearchDebouncer(() => load());
     barcode.addListener(_barcodeChanged);
   }
+  static const exportAttempts = 3;
   final NonStockReportFetch fetch;
   final Future<NonStockReportScope> Function() readScope;
   final barcode = TextEditingController();
@@ -163,12 +164,24 @@ class NonStockReportController extends ChangeNotifier {
       }
     }
 
-    final rows = await nonStockReportSnapshot((page) async {
-      await check();
-      final response = await fetch(q, page);
-      await check();
-      return response;
-    }, progress: progress);
+    Future<List<NonStockReportData>> snapshot() =>
+        nonStockReportSnapshot((page) async {
+          await check();
+          final response = await fetch(q, page);
+          await check();
+          return response;
+        }, progress: progress);
+
+    // Live sales can move rows between page reads; reread a few times before
+    // failing. Filter, session and permission changes still stop at once.
+    List<NonStockReportData>? rows;
+    for (var attempt = 1; rows == null; attempt++) {
+      try {
+        rows = await snapshot();
+      } on NonStockReportSnapshotChanged {
+        if (attempt >= exportAttempts) rethrow;
+      }
+    }
     await check();
     final result = await build(rows);
     await check();

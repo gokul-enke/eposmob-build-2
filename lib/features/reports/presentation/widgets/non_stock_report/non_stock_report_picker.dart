@@ -36,6 +36,7 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
   List<String> _matches = [];
   String _query = '';
   int? _highlight;
+  bool _selecting = false;
   String get _all => widget.allLabel;
   String get _selectedLabel => widget.options[widget.value] ?? _all;
   String _label(String id) => id.isEmpty ? _all : widget.options[id]!;
@@ -68,10 +69,14 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
 
   void _filter() {
     final query = _query.toLowerCase();
+    final all = _all.toLowerCase().contains(query);
+    // Typed text targets an option: list "All" after the matches so Enter
+    // without a highlight picks the first real match.
     _matches = [
-      if (_all.toLowerCase().contains(query)) '',
+      if (all && query.isEmpty) '',
       for (final entry in widget.options.entries)
         if (entry.value.toLowerCase().contains(query)) entry.key,
+      if (all && query.isNotEmpty) '',
     ];
     _highlight = null;
   }
@@ -79,10 +84,11 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
   void _open() {
     setState(() {
       _query = '';
+      _selecting = false;
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    _menu.open();
+    if (!_menu.isOpen) _menu.open();
     _focus.requestFocus();
   }
 
@@ -92,14 +98,28 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    _menu.open();
+    // Reopening an open MenuAnchor closes it first, which would fire onClose.
+    if (!_menu.isOpen) _menu.open();
   }
 
   void _select(String id) {
     if (!mounted) return;
+    _selecting = true;
     _text.text = _label(id);
     _menu.close();
     widget.onChanged(id.isEmpty ? null : widget.options[id]);
+  }
+
+  /// Closing without a selection discards typed search text, so the field
+  /// always shows the filter that is actually applied.
+  void _closed() {
+    if (!mounted) return;
+    _query = '';
+    if (_selecting) {
+      _selecting = false;
+    } else if (_text.text != _selectedLabel) {
+      _text.text = _selectedLabel;
+    }
   }
 
   double _menuHeight(BuildContext context) {
@@ -167,6 +187,7 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
       builder: (context, constraints) => MenuAnchor(
             controller: _menu,
             childFocusNode: _focus,
+            onClose: _closed,
             crossAxisUnconstrained: false,
             style: MenuStyle(
               backgroundColor: const WidgetStatePropertyAll(AppColors.surface),

@@ -104,6 +104,65 @@ void main() {
         'All products');
     expect(find.byType(MenuItemButton), findsNothing);
   });
+  testWidgets('closing without a selection restores the applied label',
+      (tester) async {
+    var selections = 0;
+    await mount(tester, (_) => selections++, value: 'Product 7');
+    TextEditingController text() =>
+        tester.widget<TextField>(find.byType(TextField)).controller!;
+    for (final close in ['escape', 'tab', 'outside']) {
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Product 12');
+      await tester.pumpAndSettle();
+      expect(text().text, 'Product 12');
+      if (close == 'outside') {
+        await tester.tapAt(const Offset(390, 750));
+      } else {
+        await tester.sendKeyEvent(close == 'tab'
+            ? LogicalKeyboardKey.tab
+            : LogicalKeyboardKey.escape);
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(MenuItemButton), findsNothing);
+      expect(text().text, 'Product 7', reason: close);
+    }
+    expect(selections, 0);
+  });
+  testWidgets('Enter picks the first real match when text also matches All',
+      (tester) async {
+    String? selected = 'unset';
+    await mount(tester, (value) => selected = value);
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    // "product" is part of "All products" and of every product name.
+    await tester.enterText(find.byType(TextField), 'product 42');
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(selected, 'Product 42');
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Product 42');
+  });
+  testWidgets('All stays first with no typed text and reachable by typing',
+      (tester) async {
+    String? selected = 'unset';
+    await mount(tester, (value) => selected = value, value: 'Product 1');
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(selected, isNull);
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'all');
+    await tester.pumpAndSettle();
+    selected = 'unset';
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(selected, isNull);
+  });
   testWidgets('short narrow viewport opens and keeps the shared white surface',
       (tester) async {
     await mount(tester, (_) {}, width: 190, height: 300);

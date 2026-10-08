@@ -73,6 +73,24 @@ void main() {
             (p) async => nonStockPage(p, last: 2, perPage: 2)),
         throwsStateError);
   });
+  test('live data moves are retryable; malformed metadata is not', () async {
+    final changed = isA<NonStockReportSnapshotChanged>();
+    await expectLater(
+        nonStockReportSnapshot(
+            (p) async => nonStockPage(p, last: 2, total: p == 1 ? 2 : 3)),
+        throwsA(changed));
+    await expectLater(
+        nonStockReportSnapshot((p) async =>
+            nonStockPage(p, last: 2, total: 2, rows: [nonStockRow(1)])),
+        throwsA(changed));
+    await expectLater(
+        nonStockReportSnapshot(
+            (p) async => nonStockPage(p, rows: [nonStockRow(0)])),
+        throwsA(isNot(changed)));
+    await expectLater(
+        nonStockReportSnapshot((p) async => nonStockPage(p, perPage: 0)),
+        throwsA(isNot(changed)));
+  });
   test('no arbitrary data/page limit: 1001 pages succeed', () async {
     final rows = await nonStockReportSnapshot(
         (p) async => nonStockPage(p, last: 1001, total: 1001));
