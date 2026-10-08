@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -207,6 +208,9 @@ class StoreSessionProvider extends ChangeNotifier {
       await sharedPrefProvider.saveActiveStoreDetails(store.toJson());
       await sharedPrefProvider.saveActiveStoreId(selectedStoreId);
       _activeStore = store;
+      // Select this store's cached offers even if its settings cannot be
+      // fetched offline. Pricing must stop using the previous store's catalog.
+      await ProductOfferRepository.instance.loadCached();
       _setStatus('Preparing environment for ${store.storeName ?? "store"}...');
 
       await _updateStatus('store_bootstrap.loading_permissions'.tr);

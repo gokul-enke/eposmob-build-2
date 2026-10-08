@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -15,7 +16,6 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:get/get.dart';
 
@@ -871,65 +871,14 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                 ),
                                                 Positioned(
                                                   bottom: 0,
+                                                  left: 0,
                                                   right: 0,
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 4,
-                                                        vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: ColorManager
-                                                          .kPrimaryColor
-                                                          .withOpacity(0.8),
-                                                      borderRadius:
-                                                          const BorderRadius
-                                                              .only(
-                                                        topLeft:
-                                                            Radius.circular(4),
-                                                      ),
-                                                    ),
-                                                    child: Consumer<
-                                                        AppSettingsProvider>(
-                                                      builder: (context,
-                                                          appSettingsProvider,
-                                                          _) {
-                                                        final currency =
-                                                            appSettingsProvider
-                                                                    .appSettings
-                                                                    ?.currency ??
-                                                                'INR';
-                                                        final raw = product
-                                                            .price
-                                                            ?.price; // can be String or num
-                                                        String amount;
-                                                        if (raw is num) {
-                                                          amount = raw
-                                                              .toStringAsFixed(
-                                                                  2);
-                                                        } else if (raw
-                                                            is String) {
-                                                          final parsed =
-                                                              double.tryParse(
-                                                                  raw);
-                                                          amount = parsed !=
-                                                                  null
-                                                              ? parsed
-                                                                  .toStringAsFixed(
-                                                                      2)
-                                                              : raw;
-                                                        } else {
-                                                          amount = '0.00';
-                                                        }
-                                                        return Text(
-                                                          '$currency $amount',
-                                                          style:
-                                                              const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 8,
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.bottomRight,
+                                                    child:
+                                                        BillingProductPriceTag(
+                                                            product: product),
                                                   ),
                                                 ),
                                                 if (isSelected)
@@ -965,7 +914,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                           ),
                                           Padding(
                                             padding: const EdgeInsets.all(4.0),
-                                           child: Text(
+                                            child: Text(
                                               "${product.localizedName} / ${product.unit}",
                                               maxLines: 3,
                                               overflow: TextOverflow.ellipsis,

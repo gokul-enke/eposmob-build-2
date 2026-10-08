@@ -82,6 +82,10 @@ class AppSettings {
   /// device and syncs in the background. When false (online-first), Confirm
   /// Order waits for the server before clearing the cart or printing.
   final bool posOfflineSales;
+
+  /// `POS_OFFERS`: when true, the POS downloads product offers and applies
+  /// them to cart prices. Missing means false.
+  final bool posOffers;
   final bool companySubscriptionFallbackEnabled;
   final String companySubscriptionStatus;
   final String companySubscriptionMessage;
@@ -136,6 +140,7 @@ class AppSettings {
     this.posHideNonStockProduct = false,
     this.ecommerceEnabled = false,
     this.posOfflineSales = true,
+    this.posOffers = false,
     this.companySubscriptionFallbackEnabled = false,
     this.companySubscriptionStatus = 'active',
     this.companySubscriptionMessage = '',
@@ -326,6 +331,11 @@ class AppSettings {
         settingsMap,
         'POS_OFFLINE_SALES',
         defaultValue: true,
+      ),
+      posOffers: _readSettingStatus(
+        settingsMap,
+        'POS_OFFERS',
+        defaultValue: false,
       ),
       // The row status enables this temporary compatibility source. The
       // subscription state itself is stored in the row value.
@@ -617,6 +627,12 @@ class AppSettings {
           "code": "POS_OFFLINE_SALES",
           "value": "",
           "status": posOfflineSales.toString(),
+        },
+        {
+          "name": "POS Offers",
+          "code": "POS_OFFERS",
+          "value": "",
+          "status": posOffers.toString(),
         },
         {
           "name": "Company Subscription Status",

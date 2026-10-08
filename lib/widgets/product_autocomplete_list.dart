@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -233,8 +234,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
         },
         optionsViewBuilder: (context, onSelected, options) {
           // Get currency from app settings
-          final appSettingsProvider =
-              Provider.of<AppSettingsProvider>(context, listen: false);
+          final appSettingsProvider = Provider.of<AppSettingsProvider>(context);
           final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
           final itemCodeEnabled =
               appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
@@ -321,14 +321,21 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                                   overflow: TextOverflow.ellipsis,
                                 )
                               : null,
-                          trailing: Text(
-                            '$currency ${option.price?.price ?? ''}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: isHighlighted
-                                  ? Colors.blue.shade900
-                                  : Colors.black87,
+                          trailing: ConstrainedBox(
+                            constraints:
+                                BoxConstraints(maxWidth: widget.size.width / 8),
+                            child: BillingProductPrice(
+                              product: option,
+                              currency: currency,
+                              badgeFontSize: 9,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              priceStyle: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isHighlighted
+                                    ? Colors.blue.shade900
+                                    : Colors.black87,
+                              ),
                             ),
                           ),
                           onTap: () => onSelected(option),

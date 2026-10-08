@@ -518,7 +518,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '${((item.price ?? 0) * item.quantity).toStringAsFixed(2)}',
+                          '${item.amounts.total.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14, // Slightly smaller font

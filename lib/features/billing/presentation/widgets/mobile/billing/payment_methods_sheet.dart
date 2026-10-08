@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/payment_methods_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -60,6 +62,7 @@ class _PaymentMethodsSheet extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
+                    key: const ValueKey('mobile_payment_done'),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       backgroundColor: ColorManager.kPrimaryColor,
@@ -68,7 +71,21 @@ class _PaymentMethodsSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      final bp = context.read<BillingProvider>();
+                      final result = const BillingMobilePaymentController()
+                          .completePaymentStep(bp);
+                      if (!result.isValid) {
+                        showScaffoldError(
+                          context: context,
+                          message: result.message ??
+                              BillingMobileErrorMessages
+                                  .configurePaymentBeforeConfirm,
+                        );
+                        return;
+                      }
+                      Navigator.pop(context);
+                    },
                     child: const Text(
                       'Done',
                       style: TextStyle(
@@ -92,36 +109,30 @@ class _PaymentMethodsSheet extends StatelessWidget {
 class _BalanceSnapshot {
   const _BalanceSnapshot({
     required this.effectiveOrderTotal,
-    required this.totalPaidAmount,
-    required this.balanceAmount,
+    required this.remainingPaymentDue,
   });
 
   factory _BalanceSnapshot.from(BillingProvider bp) => _BalanceSnapshot(
         effectiveOrderTotal: bp.effectiveOrderTotal,
-        totalPaidAmount: bp.totalPaidAmount,
-        balanceAmount: bp.balanceAmount,
+        remainingPaymentDue: bp.remainingPaymentDue,
       );
 
   final double effectiveOrderTotal;
-  final double totalPaidAmount;
-  final double balanceAmount;
+  final double remainingPaymentDue;
 
   @override
   bool operator ==(Object other) {
     return other is _BalanceSnapshot &&
         other.effectiveOrderTotal == effectiveOrderTotal &&
-        other.totalPaidAmount == totalPaidAmount &&
-        other.balanceAmount == balanceAmount;
+        other.remainingPaymentDue == remainingPaymentDue;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(effectiveOrderTotal, totalPaidAmount, balanceAmount);
+  int get hashCode => Object.hash(effectiveOrderTotal, remainingPaymentDue);
 }
 
 /// Pinned status bar directly under the sheet header showing the remaining
-/// balance, sourced from [BillingProvider]. Green when fully paid (balance
-/// <= 0), amber/red otherwise.
+/// unpaid amount, sourced from the same totals and credit rules as validation.
 class _RemainingBalanceBar extends StatelessWidget {
   const _RemainingBalanceBar();
 
@@ -133,9 +144,9 @@ class _RemainingBalanceBar extends StatelessWidget {
     return Selector<BillingProvider, _BalanceSnapshot>(
       selector: (_, bp) => _BalanceSnapshot.from(bp),
       builder: (context, snapshot, _) {
-        final balance = snapshot.balanceAmount;
+        final balance = snapshot.remainingPaymentDue;
         final isPaidInFull =
-            snapshot.effectiveOrderTotal <= 0 || balance <= 0.001;
+            snapshot.effectiveOrderTotal <= 0 || balance <= 0.009;
         final color = isPaidInFull
             ? const Color(0xFF15803D) // Dark green
             : (balance > snapshot.effectiveOrderTotal * 0.5

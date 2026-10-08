@@ -17,6 +17,7 @@ class ListPagination {
     required this.onPageChanged,
     required this.countLabel,
     this.totalPagesKnown = true,
+    this.enabled = true,
   });
 
   final int currentPage;
@@ -29,6 +30,10 @@ class ListPagination {
 
   /// e.g. "20 customers on this page".
   final String countLabel;
+
+  /// False keeps the displayed page/count while disabling navigation (for
+  /// example, when retained rows do not match the newly selected filters).
+  final bool enabled;
 
   /// 1-based number of the row at [index] on the current page.
   int rowNumber(int index) => index + 1 + (currentPage - 1) * itemsPerPage;
@@ -57,7 +62,7 @@ class AppPaginationBar extends StatelessWidget {
           totalPages: state.totalPages,
           countLabel: state.countLabel,
           onPageChanged: state.onPageChanged,
-          enabled: enabled,
+          enabled: enabled && state.enabled,
           totalPagesKnown: state.totalPagesKnown,
         );
 
