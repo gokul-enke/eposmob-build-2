@@ -82,6 +82,17 @@ class HiveLocalCartItem {
   @HiveField(19)
   final bool warrantyEnabled;
 
+  /// Product offer applied to [price]; null for standard-price lines.
+  @HiveField(20)
+  final int? offerId;
+
+  @HiveField(21)
+  final int? offerVersion;
+
+  /// Per-base-unit price before the offer.
+  @HiveField(22)
+  final double? standardUnitPrice;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -103,6 +114,9 @@ class HiveLocalCartItem {
     this.serializedVariantAttributes,
     this.lineId,
     this.warrantyEnabled = false,
+    this.offerId,
+    this.offerVersion,
+    this.standardUnitPrice,
   });
 }
 

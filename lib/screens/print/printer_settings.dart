@@ -359,7 +359,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             '[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
-      if (!Platform.isWindows) {
+      // The printer plugin supports USB discovery on Android and Windows only.
+      // Windows printers are handled above via Printing.listPrinters().
+      if (Platform.isAndroid) {
         debugPrint('[PrinterSettings] Beginning USB discovery');
         await printerManager.discovery(type: PrinterType.usb).forEach((device) {
           debugPrint(

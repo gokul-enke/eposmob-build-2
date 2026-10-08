@@ -1,22 +1,22 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:provider/provider.dart';
+import 'dart:convert';
+
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
-import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
-import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/screens/print/return_bill_print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/screens/print/print.dart';
-import 'package:pos_machine/screens/print/return_bill_print.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/services/receipt_print_request.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
-import 'package:provider/provider.dart';
+import 'package:pos_machine/helpers/return_print_identity.dart';
+import 'package:pos_machine/features/offers/domain/offer_money.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -36,14 +36,12 @@ class PrintService {
   double _calculateSavedOrderDiscountAmount(SavedOrder savedOrder) {
     final subtotal = savedOrder.items.fold<double>(
       0.0,
-      (sum, item) =>
-          sum +
-          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+      (sum, item) => sum + item.amounts.total,
     );
 
     final flatDiscount = savedOrder.flatDiscount ?? 0.0;
     final percentageValue = savedOrder.percentageDiscount ?? 0.0;
-    final percentageDiscount = subtotal * percentageValue / 100;
+    final percentageDiscount = roundMoney(subtotal * percentageValue / 100);
     final totalDiscount = flatDiscount + percentageDiscount;
 
     if (totalDiscount > subtotal) {
@@ -378,8 +376,7 @@ class PrintService {
         ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
-            completedReturnCartItems:
-                orderDetails.data?.completedReturnCartItems,
+            completedReturnCartItems: orderDetails.data?.completedReturnCartItems,
           )
         : cart.cartItems!;
 
@@ -486,8 +483,7 @@ class PrintService {
             _isDefaultCustomerPhone(context, customerPhone))
         : _isDefaultCustomerPhone(context, customerPhone);
 
-    final autoPrintSuccess = await PrintPage.autoPrint(
-      context,
+    return ReceiptPrintRequest(
       storeName: storeName,
       cartItems: cartItems,
       formattedTotal: formattedTotal,
@@ -518,52 +514,10 @@ class PrintService {
       netExcTax: netExcTax,
       apiTotalTax: apiTotalTax,
       documentConfigType: documentConfigType,
-    );
-
-    if (!autoPrintSuccess && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PrintPage(
-            storeName: storeName,
-            cartItems: cartItems,
-            formattedTotal: formattedTotal,
-            savedTotal: savedTotal,
-            discountAmount:
-                orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-            orderDate: orderDate,
-            orderNumber: orderDetails.data!.customerReceiptNumber ?? '',
-            tokenNumber: orderDetails.data?.tokenNumber,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            customerEmail: customerEmail,
-            customerAddress: customerAddress,
-            customerAlternatePhone: customerAlternatePhone,
-            customerVatNumber: customerVatNumber,
-            customerCrNumber: customerCrNumber,
-            customerType: customerType,
-            paymentMethod: paymentMethod,
-            paymentBreakdown: paymentBreakdown,
-            orderComment: orderComment,
-            deliveryMethod: deliveryMethod,
-            deliveryPhone: deliveryPhone,
-            orderReturns: effectiveOrderReturns,
-            paidAmount: paidAmount,
-            customerOldBalance: customerOldBalance,
-            customerCurrentBalance: customerCurrentBalance,
-            isDefaultCustomer: isDefaultCustomer,
-            netExcTax: netExcTax,
-            apiTotalTax: apiTotalTax,
-            documentConfigType: documentConfigType,
-          ),
-        ),
-      );
-    }
-
-    return autoPrintSuccess;
+    ).send(context);
   }
 
-  /// Print a locally saved order (offline/confirmed in local storage)
+  /// Print a locally saved order (offline/confirmed in local storage).
   Future<bool> printSavedOrder(
     BuildContext context,
     SavedOrder savedOrder, {
@@ -571,268 +525,119 @@ class PrintService {
     double? customerCurrentBalance,
   }) async {
     try {
-      {
-        final cartItems = <Map<String, dynamic>>[];
-        double totalMRP = 0.0;
-        double netTotal = 0.0;
-        double totalTax = 0.0;
-
-        for (var item in savedOrder.items) {
-          final double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-          final double itemPrice =
-              item.price ?? item.product.price?.price ?? 0.0;
-          final double itemTotalPrice = itemPrice * item.quantity;
-          final double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
-
-          totalMRP += itemMrp * item.quantity;
-          netTotal += itemTotalPrice;
-          totalTax += itemTax;
-
-          cartItems.add({
-            'productName': item.displayName,
-            'product_name': item.displayName,
-            'product_variant_id': item.variantId,
-            'variant_attributes': item.variantAttributes,
-            'mrp': itemMrp.toString(),
-            'quantity': item.quantity.toString(),
-            'product_unit': item.product.unit ?? '',
-            'unitPrice': itemPrice.toString(),
-            'totalPrice': itemTotalPrice.toString(),
-            'tax_amount': itemTax.toString(),
-          });
-        }
-
-        double youSaved = totalMRP - netTotal;
-        if (youSaved < 0) youSaved = 0.0;
-        final double displayedTotalTax =
-            AmountHelper.truncateToTwoDecimals(totalTax);
-        final double netExcTax = netTotal - displayedTotalTax;
-        final double discountAmount =
-            _calculateSavedOrderDiscountAmount(savedOrder);
-
-        debugPrint("LOCAL PRINT CALCULATION:");
-        debugPrint("  - Total MRP: $totalMRP");
-        debugPrint("  - Net Total: $netTotal");
-        debugPrint("  - Total Tax: $displayedTotalTax");
-        debugPrint("  - Net Exc Tax: $netExcTax");
-        debugPrint("  - You Saved: $youSaved");
-        if (cartItems.isNotEmpty) {
-          debugPrint("  - Sample item: ${json.encode(cartItems.first)}");
-        }
-
-        if (!context.mounted) return false;
-
-        final storeSession =
-            Provider.of<StoreSessionProvider>(context, listen: false);
-        final storeName = storeSession.activeStore?.storeName ?? "Store";
-        final parsedPayment = PaymentHelper.parseLocalMultiPayment(
-            context, savedOrder.paymentMethod);
-        final String? displayPaymentMethod =
-            parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod;
-        final Map<String, dynamic>? paymentBreakdown =
-            parsedPayment?.paymentBreakdown;
-        final double? paidAmount =
-            (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-                ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-                : null;
-        final customerAddress = _savedOrderAddress(savedOrder);
-
-        final autoPrintSuccess = await PrintPage.autoPrint(
-          context,
-          storeName: storeName,
-          cartItems: cartItems,
-          formattedTotal: savedOrder.total.toString(),
-          savedTotal: youSaved.toString(),
-          discountAmount: discountAmount.toString(),
-          orderDate: savedOrder.createdAt,
-          orderNumber: savedOrder.orderNumber,
-          isFromLocalStorage: true,
-          customerName: savedOrder.customerName,
-          customerPhone: savedOrder.customerPhone,
-          customerAddress: customerAddress,
-          paymentMethod: displayPaymentMethod,
-          paymentBreakdown: paymentBreakdown,
-          customerAlternatePhone: savedOrder.alternatePhone,
-          customerVatNumber: savedOrder.customerVatNumber,
-          customerCrNumber: savedOrder.customerCrNumber,
-          customerType: savedOrder.customerType,
-          orderComment: savedOrder.comment,
-          deliveryMethod: savedOrder.deliveryMethod,
-          paidAmount: paidAmount,
-          customerOldBalance: customerOldBalance,
-          customerCurrentBalance: customerCurrentBalance,
-          isDefaultCustomer:
-              _isDefaultCustomerPhone(context, savedOrder.customerPhone),
-          netExcTax: netExcTax.toString(),
-        );
-
-        if (!autoPrintSuccess && context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PrintPage(
-                storeName: storeName,
-                cartItems: cartItems,
-                formattedTotal: savedOrder.total.toString(),
-                savedTotal: youSaved.toString(),
-                discountAmount: discountAmount.toString(),
-                orderDate: savedOrder.createdAt,
-                orderNumber: savedOrder.orderNumber,
-                isFromLocalStorage: true,
-                customerName: savedOrder.customerName,
-                customerPhone: savedOrder.customerPhone,
-                customerAddress: customerAddress,
-                paymentMethod: displayPaymentMethod,
-                paymentBreakdown: paymentBreakdown,
-                customerAlternatePhone: savedOrder.alternatePhone,
-                customerVatNumber: savedOrder.customerVatNumber,
-                customerCrNumber: savedOrder.customerCrNumber,
-                customerType: savedOrder.customerType,
-                orderComment: savedOrder.comment,
-                deliveryMethod: savedOrder.deliveryMethod,
-                paidAmount: paidAmount,
-                customerOldBalance: customerOldBalance,
-                customerCurrentBalance: customerCurrentBalance,
-                isDefaultCustomer:
-                    _isDefaultCustomerPhone(context, savedOrder.customerPhone),
-                netExcTax: netExcTax.toString(),
-              ),
-            ),
-          );
-        }
-
-        return autoPrintSuccess;
-      }
-
-/*
-      // Build items payload for PrintPage
-      List<Map<String, dynamic>> cartItems = [];
-      double totalMRP = 0.0;
-      double netTotal = 0.0;
-
-      for (var item in savedOrder.items) {
-        final double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-        final double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        final double itemTotalPrice = itemPrice * item.quantity;
-
-        totalMRP += itemMrp * item.quantity;
-        netTotal += itemTotalPrice;
-
-        cartItems.add({
-          'productName': item.displayName,
-          'product_name': item.displayName,
-          'product_variant_id': item.variantId,
-          'variant_attributes': item.variantAttributes,
-          'mrp': itemMrp.toString(),
-          'quantity': item.quantity.toString(),
-          'product_unit': item.product.unit ?? '',
-          'unitPrice': itemPrice.toString(),
-          'totalPrice': itemTotalPrice.toString(),
-        });
-      }
-
-      double youSaved = totalMRP - netTotal;
-      if (youSaved < 0) youSaved = 0.0;
-
-      // Debug
-      debugPrint("🖨️ LOCAL PRINT CALCULATION:");
-      debugPrint("  - Total MRP: $totalMRP");
-      debugPrint("  - Net Total: $netTotal");
-      debugPrint("  - You Saved: $youSaved");
-      if (cartItems.isNotEmpty) {
-        debugPrint("  - Sample item: ${json.encode(cartItems.first)}");
-      }
-
-      if (!context.mounted) return false;
-
-      // Get active store name
-      final storeSession = Provider.of<StoreSessionProvider>(context, listen: false);
-      final storeName = storeSession.activeStore?.storeName ?? "Store";
-        final parsedPayment =
-          PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
-        final String? displayPaymentMethod =
-          parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod;
-        final Map<String, dynamic>? paymentBreakdown =
-          parsedPayment?.paymentBreakdown;
-        final double? paidAmount =
-          (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
-            ? (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0)
-            : null;
-
-      // Try auto-print with default printer first
-      final autoPrintSuccess = await PrintPage.autoPrint(
+      return await receiptRequestFromSavedOrder(
         context,
-        storeName: storeName,
-        cartItems: cartItems,
-        formattedTotal: savedOrder.total.toString(),
-        savedTotal: youSaved.toString(),
-        discountAmount: (savedOrder.flatDiscount != null ||
-                savedOrder.percentageDiscount != null)
-            ? ((savedOrder.flatDiscount ?? 0.0) +
-                    ((savedOrder.percentageDiscount ?? 0.0) > 0
-                        ? (savedOrder.total *
-                            (savedOrder.percentageDiscount ?? 0.0) /
-                            100)
-                        : 0.0))
-                .toString()
-            : "0.00",
-        orderDate: savedOrder.createdAt,
-        orderNumber: savedOrder.orderNumber,
-        isFromLocalStorage: true,
-        customerName: savedOrder.customerName,
-        customerPhone: savedOrder.customerPhone,
-        customerAddress: savedOrder.address,
-        paymentMethod: displayPaymentMethod,
-        paymentBreakdown: paymentBreakdown,
-        customerAlternatePhone: savedOrder.alternatePhone,
-        orderComment: savedOrder.comment,
-        deliveryMethod: savedOrder.deliveryMethod,
-        paidAmount: paidAmount,
-        isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
-      );
-
-      // Only show print page if auto-print failed
-      if (!autoPrintSuccess && context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PrintPage(
-              storeName: storeName,
-              cartItems: cartItems,
-              formattedTotal: savedOrder.total.toString(),
-              savedTotal: youSaved.toString(),
-              discountAmount: (savedOrder.flatDiscount != null ||
-                      savedOrder.percentageDiscount != null)
-                  ? ((savedOrder.flatDiscount ?? 0.0) +
-                          ((savedOrder.percentageDiscount ?? 0.0) > 0
-                              ? (savedOrder.total *
-                                  (savedOrder.percentageDiscount ?? 0.0) /
-                                  100)
-                              : 0.0))
-                      .toString()
-                  : "0.00",
-              orderDate: savedOrder.createdAt,
-              orderNumber: savedOrder.orderNumber,
-              isFromLocalStorage: true,
-              customerName: savedOrder.customerName,
-              customerPhone: savedOrder.customerPhone,
-              customerAddress: savedOrder.address,
-              paymentMethod: displayPaymentMethod,
-              paymentBreakdown: paymentBreakdown,
-              customerAlternatePhone: savedOrder.alternatePhone,
-              orderComment: savedOrder.comment,
-              deliveryMethod: savedOrder.deliveryMethod,
-              paidAmount: paidAmount,
-              isDefaultCustomer: _isDefaultCustomerPhone(context, savedOrder.customerPhone),
-            ),
-          ),
-        );
-      }
-      return autoPrintSuccess;
-*/
+        savedOrder,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+      ).send(context);
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
       return false;
     }
+  }
+
+  static double _roundToCents(double amount) =>
+      double.parse(amount.toStringAsFixed(2));
+
+  /// One local cart line in the item shape the receipt templates read.
+  static Map<String, dynamic> savedOrderReceiptItem(LocalCartItem item) {
+    final double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+    final double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+    return {
+      'productName': item.displayName,
+      'product_name': item.displayName,
+      // Every language's name ({"en": .., "ar": ..}), so bilingual and Arabic
+      // templates print the Arabic name as they do for server orders.
+      'names': item.product.names,
+      'product_variant_id': item.variantId,
+      'variant_attributes': item.variantAttributes,
+      'mrp': itemMrp.toString(),
+      'quantity': item.quantity.toString(),
+      'product_unit': item.product.unit ?? '',
+      'unitPrice': itemPrice.toString(),
+      'totalPrice': item.amounts.total.toStringAsFixed(2),
+      'tax_amount': item.amounts.tax.toStringAsFixed(2),
+    };
+  }
+
+  /// The receipt of a locally saved order, carrying the same fields a server
+  /// order prints with (see [_executeOrderPrint]). Only what the server alone
+  /// assigns, such as the token number, is missing.
+  ReceiptPrintRequest receiptRequestFromSavedOrder(
+    BuildContext context,
+    SavedOrder savedOrder, {
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+  }) {
+    final cartItems = <Map<String, dynamic>>[];
+    double totalMRP = 0.0;
+    double netTotal = 0.0;
+    double totalTax = 0.0;
+
+    for (var item in savedOrder.items) {
+      totalMRP += (item.mrp ?? item.product.mrp ?? 0.0) * item.quantity;
+      netTotal += item.amounts.total;
+      // Each line's tax rounded as the line prints it, so the VAT total
+      // equals the sum of the printed lines, as on the server's order.
+      totalTax += item.amounts.tax;
+      cartItems.add(savedOrderReceiptItem(item));
+    }
+
+    // Not clamped at zero: the server's saved_total is negative when an item
+    // sells above its MRP, and the MRP total (net + saved) relies on it.
+    final double youSaved = totalMRP - netTotal;
+    final double displayedTotalTax = _roundToCents(totalTax);
+    final double netExcTax = netTotal - displayedTotalTax;
+    final double discountAmount =
+        _calculateSavedOrderDiscountAmount(savedOrder);
+
+    debugPrint("LOCAL PRINT CALCULATION:");
+    debugPrint("  - Total MRP: $totalMRP");
+    debugPrint("  - Net Total: $netTotal");
+    debugPrint("  - Total Tax: $displayedTotalTax");
+    debugPrint("  - Net Exc Tax: $netExcTax");
+    debugPrint("  - You Saved: $youSaved");
+    if (cartItems.isNotEmpty) {
+      debugPrint("  - Sample item: ${json.encode(cartItems.first)}");
+    }
+
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    final storeName = storeSession.activeStore?.storeName ?? "Store";
+    final parsedPayment =
+        PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
+    final double savedPaidAmount =
+        double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0;
+
+    return ReceiptPrintRequest(
+      storeName: storeName,
+      cartItems: cartItems,
+      formattedTotal: savedOrder.total.toString(),
+      savedTotal: youSaved.toString(),
+      discountAmount: discountAmount.toString(),
+      orderDate: savedOrder.createdAt,
+      orderNumber: savedOrder.orderNumber,
+      isFromLocalStorage: true,
+      customerName: savedOrder.customerName,
+      customerPhone: savedOrder.customerPhone,
+      customerAddress: _savedOrderAddress(savedOrder),
+      customerAlternatePhone: savedOrder.alternatePhone,
+      customerVatNumber: savedOrder.customerVatNumber,
+      customerCrNumber: savedOrder.customerCrNumber,
+      customerType: savedOrder.customerType,
+      paymentMethod:
+          parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
+      paymentBreakdown: parsedPayment?.paymentBreakdown,
+      paidAmount: savedPaidAmount > 0 ? savedPaidAmount : null,
+      customerOldBalance: customerOldBalance,
+      customerCurrentBalance: customerCurrentBalance,
+      isDefaultCustomer:
+          _isDefaultCustomerPhone(context, savedOrder.customerPhone),
+      orderComment: savedOrder.comment,
+      deliveryMethod: savedOrder.deliveryMethod,
+      netExcTax: netExcTax.toString(),
+      apiTotalTax: displayedTotalTax > 0 ? displayedTotalTax : null,
+    );
   }
 }

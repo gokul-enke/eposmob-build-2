@@ -3,10 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_sections.dart';
+import 'package:pos_machine/services/print_service.dart';
 
 /// The shared field-text helpers every template (thermal and A4/A5 PDF) uses.
 /// The fixture follows the bilingual audit brief: every option carries an
@@ -183,8 +186,9 @@ void main() {
       expect(_hasArabic(row.$1), isTrue, reason: row.$1);
     }
     expect(params.bankDetailsHeading, 'تفاصيل البنك');
+    // Payment methods print their untranslated code (user decision).
     for (final row in params.paymentBreakdownRows) {
-      expect(_hasArabic(row.$1), isTrue, reason: row.$1);
+      expect(row.$1, 'CASH');
     }
     for (final row in params.customerBalanceRows) {
       expect(_hasArabic(row.$1), isTrue, reason: row.$1);
@@ -228,30 +232,71 @@ void main() {
     expect(arabic.fieldLabel('showCustomerName'), 'العميل');
   });
 
-  testWidgets('payment rows use the cash label and renderer method names',
+  testWidgets('payment rows print each method by its untranslated code',
       (tester) async {
     await pump(tester);
-    final single = _params(context, language: 'en_ar');
-    expect(single.paymentBreakdownRows, [('نقدي', 100.0)]);
-    expect(single.paymentMethodSummary, 'نقدي');
+    for (final language in ['en', 'ar', 'en_ar']) {
+      final single = _params(context, language: language);
+      expect(single.paymentBreakdownRows, [('CASH', 100.0)]);
+      expect(single.paymentMethodSummary, 'CASH');
 
-    final multi = _params(
-      context,
-      language: 'en_ar',
-      paymentBreakdown: {'CASH': 60.0, 'Card': 40.0, 'BANK': 0},
-    );
-    expect(multi.paymentBreakdownRows, [('نقدي', 60.0), ('بطاقة', 40.0)]);
-    expect(multi.paymentMethodSummary, 'نقدي, بطاقة');
+      final multi = _params(
+        context,
+        language: language,
+        paymentBreakdown: {'CASH': 60.0, 'Card': 40.0, 'BANK': 0},
+      );
+      expect(multi.paymentBreakdownRows, [('CASH', 60.0), ('CARD', 40.0)]);
+      expect(multi.paymentMethodSummary, 'CASH, CARD');
+    }
 
     final english = _params(
       context,
       language: 'en',
       paymentBreakdown: {'isMultiPayment': true, 'amounts': {'CASH': 60.0}},
     );
-    expect(english.paymentBreakdownRows, [('Cash', 60.0)]);
+    expect(english.paymentBreakdownRows, [('CASH', 60.0)]);
 
     final noPaid = _params(context, language: 'en', paidAmount: null);
     expect(noPaid.paymentBreakdownRows, isEmpty);
+  });
+
+  testWidgets('the on-account amount prints as CREDIT whatever its key',
+      (tester) async {
+    await pump(tester);
+    // Billing stores it as DEBIT; server orders may say CREDIT or BALANCE.
+    for (final key in ['DEBIT', 'CREDIT', 'BALANCE']) {
+      for (final language in ['en', 'ar', 'en_ar']) {
+        final params = _params(
+          context,
+          language: language,
+          paidAmount: 60,
+          paymentBreakdown: {'CASH': 60.0, key: 40.0},
+        );
+        expect(params.paymentBreakdownRows.last, ('CREDIT', 40.0));
+        expect(params.paymentMethodSummary, endsWith(', CREDIT'));
+      }
+    }
+  });
+
+  testWidgets('a local sale prints the Arabic item name like a server order',
+      (tester) async {
+    await pump(tester);
+    final item = PrintService.savedOrderReceiptItem(LocalCartItem(
+      product: GetProduct(
+        productId: 1,
+        productName: '3D BALL SMALL',
+        names: const {'en': '3D BALL SMALL', 'ar': 'كرة صغيرة'},
+        price: ProductPrice(price: '5'),
+      ),
+      quantity: 1,
+      price: 5,
+    ));
+
+    expect(_params(context, language: 'en_ar').itemNameLines(item),
+        ['كرة صغيرة', '3D BALL SMALL']);
+    expect(_params(context, language: 'ar').itemNameLines(item), ['كرة صغيرة']);
+    expect(_params(context, language: 'en').itemNameLines(item),
+        ['3D BALL SMALL']);
   });
 
   testWidgets('item names follow the document language', (tester) async {

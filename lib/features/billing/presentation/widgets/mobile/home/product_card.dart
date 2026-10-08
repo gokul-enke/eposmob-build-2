@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_price.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/stock_badge.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/resources/color_manager.dart';
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -28,7 +28,7 @@ class ProductCard extends StatelessWidget {
   final bool isDense;
 
   /// Tenant currency symbol (from `appSettings.currency`), supplied by the
-  /// parent grid. Defaults to empty so this stays a provider-free widget.
+  /// parent grid. Defaults to empty for isolated embeddings.
   final String currency;
 
   /// When false, cards show only available/out-of-stock (no low-stock state).
@@ -43,7 +43,6 @@ class ProductCard extends StatelessWidget {
       stockEnabled: stockEnabled,
     );
     final imageUrl = resolveMarketProductImageUrl(product);
-    final price = formatMarketProductPrice(product, currency);
     final category = resolveMarketProductCategory(product);
 
     return Container(
@@ -132,19 +131,10 @@ class ProductCard extends StatelessWidget {
                         SizedBox(height: isDense ? 2 : 4),
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              price,
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                color: ColorManager.kPrimaryColor,
-                                fontWeight: FontWeight.w700,
-                                fontSize: isDense ? 11 : 14,
-                              ),
-                            ),
-                          ),
+                          child: MarketProductPrice(
+                              product: product,
+                              currency: currency,
+                              fontSize: isDense ? 11 : 14),
                         ),
                       ],
                     ),

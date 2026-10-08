@@ -1,154 +1,160 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
+import '../../data/sales_list_repository.dart';
+import '../../domain/sales_list_query.dart';
 
-import 'package:flutter/widgets.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-import 'package:pos_machine/models/get_store.dart';
-
-import '../../data/sales_action_response.dart';
-import '../../domain/sales_order_query.dart';
-
+/// Listing inputs and request generations are independent of detail/mutation state.
 class SalesListController extends ChangeNotifier {
-  SalesListController(
-      {required this.fetch,
-      required this.activeStore,
-      required this.onError,
-      this.isOnlineSales = false});
-  final Future<void> Function(SalesOrderQuery) fetch;
-  final String? Function() activeStore;
-  final ValueChanged<String> onError;
+  SalesListController(this.source, this.readToken,
+      {this.isOnlineSales = false});
+  final SalesListSource source;
+  final String Function() readToken;
+  final number = TextEditingController();
+  final customer = TextEditingController();
+  final phone = TextEditingController();
+  final email = TextEditingController();
+  final price = TextEditingController();
+  DateTime? from, until, businessDate;
+  int? storeId;
   bool isOnlineSales;
-  bool initLoading = false;
-  bool lastRequestFailed = false;
-  bool _disposed = false;
-  int _request = 0;
-  Timer? _debounce;
-  String? selectedStatus;
-  GetStoreModelData? storeSelected;
-  DateTime? selectedBusinessDate;
-  Key businessCalendarPickerKey = UniqueKey();
-  final TextEditingController orderNumberController = TextEditingController();
-  final TextEditingController customerNameController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController storeController = TextEditingController();
-  final TextEditingController storeSearchController = TextEditingController();
-  final TextEditingController statusController = TextEditingController();
-  final TextEditingController fromDateController = TextEditingController();
-  final TextEditingController toDateController = TextEditingController();
-  bool get hasActiveFilters =>
-      orderNumberController.text.isNotEmpty ||
-      customerNameController.text.isNotEmpty ||
-      amountController.text.isNotEmpty ||
-      emailController.text.isNotEmpty ||
-      phoneController.text.isNotEmpty ||
-      storeController.text.isNotEmpty ||
-      (selectedStatus != null && selectedStatus != 'all') ||
-      fromDateController.text.isNotEmpty ||
-      toDateController.text.isNotEmpty ||
-      selectedBusinessDate != null;
-
-  void update(VoidCallback change) {
-    if (_disposed) return;
-    change();
-    notifyListeners();
+  String status = 'all';
+  bool loading = false, showFilters = true, _disposed = false;
+  Object? error;
+  int _generation = 0, requestedPage = 1;
+  Timer? _timer;
+  SalesListPageData? data;
+  SalesListQuery? applied;
+  SalesListQuery? _inFlight;
+  SalesListQuery get query => SalesListQuery(
+      number: number.text,
+      customer: customer.text,
+      phone: phone.text,
+      email: email.text,
+      price: price.text,
+      status: status,
+      from: from,
+      until: until,
+      businessDate: businessDate,
+      storeId: storeId,
+      isOnlineSales: isOnlineSales);
+  List<ListOrderModelData> get rows => data?.rows ?? const [];
+  int get current => data?.current ?? 1;
+  int get last => data?.last ?? 1;
+  bool get matchesInputs => applied?.sameAs(query) ?? false;
+  bool get canExport =>
+      !loading && error == null && rows.isNotEmpty && matchesInputs;
+  void notify() {
+    if (!_disposed) notifyListeners();
   }
 
-  void onFilterTextChanged() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      if (!_disposed) searchOrders(1);
+  void toggleFilters() {
+    showFilters = !showFilters;
+    notify();
+  }
+
+  void scheduleSearch() {
+    if (_disposed) return;
+    _timer?.cancel();
+    _timer = Timer(const Duration(milliseconds: 400), () {
+      _timer = null;
+      // Keep a refresh for the same query alive when input is abandoned.
+      // Replace an in-flight search for different inputs even when the user
+      // has returned to the previously applied query.
+      if (!matchesInputs || (_inFlight != null && !_inFlight!.sameAs(query))) {
+        search();
+      }
     });
+    notify();
   }
 
-  Future<void> loadInitData() => _load(
-      SalesOrderQuery(
-          filterStore: activeStore(),
-          filterOnlineSales: isOnlineSales ? true : null),
-      reportError: false);
-  Future<void> searchOrders(int page) => _load(SalesOrderQuery(
-      orderNumber: orderNumberController.text.isEmpty
-          ? null
-          : orderNumberController.text.trim().toUpperCase(),
-      filterName: customerNameController.text.isEmpty
-          ? null
-          : customerNameController.text.trim(),
-      filterPrice:
-          amountController.text.isEmpty ? null : amountController.text.trim(),
-      filterEmail:
-          emailController.text.isEmpty ? null : emailController.text.trim(),
-      filterPhone:
-          phoneController.text.isEmpty ? null : phoneController.text.trim(),
-      from: fromDateController.text.isEmpty ? null : fromDateController.text,
-      until: toDateController.text.isEmpty ? null : toDateController.text,
-      businessDate: selectedBusinessDate == null
-          ? null
-          : DateFormat('yyyy-MM-dd').format(selectedBusinessDate!),
-      filterStore: activeStore(),
-      filterStatus: selectedStatus == null || selectedStatus == 'all'
-          ? null
-          : selectedStatus!.trim(),
-      page: page,
-      filterOnlineSales: isOnlineSales ? true : null));
-  Future<void> _load(SalesOrderQuery query, {bool reportError = true}) async {
+  Future<void> search() => load(1);
+  Future<void> refresh() => load(requestedPage);
+  Future<void> load(int page) async {
     if (_disposed) return;
-    final request = ++_request;
-    update(() => initLoading = true);
-    var failed = false;
+    _timer?.cancel();
+    _timer = null;
+    final target = applied != null && !matchesInputs ? 1 : page;
+    return _fetch(query, target);
+  }
+
+  /// Realtime refresh: re-runs the query on screen (or in flight) without
+  /// consuming filter text that is still being typed.
+  Future<void> refreshShown() {
+    if (_disposed) return Future.value();
+    final shown = _inFlight ?? applied;
+    if (shown != null) return _fetch(shown, requestedPage);
+    return _timer == null ? load(requestedPage) : Future.value();
+  }
+
+  Future<void> _fetch(SalesListQuery requested, int target) async {
+    requestedPage = target;
+    final generation = ++_generation;
+    _inFlight = requested;
+    loading = true;
+    error = null;
+    notify();
     try {
-      await fetch(query);
-    } catch (error) {
-      failed = true;
-      if (!_disposed && request == _request && reportError)
-        onError(SalesActionResponse.apiErrorMessage(error,
-            fallback: 'sales.orders_load_failed'.tr));
+      final result = await source.fetch(readToken(), requested, target);
+      if (_disposed || generation != _generation) return;
+      data = result;
+      applied = requested;
+    } catch (failure) {
+      if (_disposed || generation != _generation) return;
+      error = failure;
     } finally {
-      if (!_disposed && request == _request)
-        update(() {
-          initLoading = false;
-          lastRequestFailed = failed;
-        });
+      if (!_disposed && generation == _generation) {
+        _inFlight = null;
+        loading = false;
+        notify();
+      }
     }
   }
 
-  Future<void> resetSearch() {
-    _debounce?.cancel();
-    update(() {
-      orderNumberController.clear();
-      customerNameController.clear();
-      amountController.clear();
-      emailController.clear();
-      phoneController.clear();
-      storeController.clear();
-      statusController.clear();
-      fromDateController.clear();
-      toDateController.clear();
-      storeSelected = null;
-      selectedStatus = null;
-      selectedBusinessDate = null;
-      businessCalendarPickerKey = UniqueKey();
-    });
-    return searchOrders(1);
+  Future<void> prepareExport() async {
+    _timer?.cancel();
+    _timer = null;
+    if (!matchesInputs) await search();
+  }
+
+  void invalidateSession(int? activeStore) {
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
+    data = null;
+    _inFlight = null;
+    applied = null;
+    error = null;
+    loading = false;
+    storeId = activeStore;
+    requestedPage = 1;
+    notify();
+  }
+
+  void clearFilters() {
+    for (final field in [number, customer, phone, email, price]) {
+      field.clear();
+    }
+    status = 'all';
+    from = null;
+    until = null;
+    businessDate = null;
+  }
+
+  Future<void> reset() {
+    if (_disposed) return Future.value();
+    clearFilters();
+    return search();
   }
 
   @override
   void dispose() {
     _disposed = true;
-    _request++;
-    _debounce?.cancel();
-    orderNumberController.dispose();
-    customerNameController.dispose();
-    dateController.dispose();
-    amountController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    storeController.dispose();
-    storeSearchController.dispose();
-    statusController.dispose();
-    fromDateController.dispose();
-    toDateController.dispose();
+    _generation++;
+    _timer?.cancel();
+    for (final field in [number, customer, phone, email, price]) {
+      field.dispose();
+    }
     super.dispose();
   }
 }

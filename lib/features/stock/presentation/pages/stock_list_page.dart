@@ -1,0 +1,379 @@
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
+import 'package:pos_machine/helpers/purchase_price_permission.dart';
+import 'package:pos_machine/models/list_stock.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/providers/stock_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/product/widgets/adjust_stock_modal.dart';
+import 'package:pos_machine/screens/product/widgets/move_stock_modal.dart';
+import 'package:pos_machine/screens/product/widgets/stock_responsive.dart';
+import 'package:pos_machine/screens/product/widgets/withdraw_stock_modal.dart';
+import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+import 'package:provider/provider.dart';
+import '../navigation/stock_navigation.dart';
+import '../state/stock_list_controller.dart';
+import '../widgets/list/stock_list_desktop_table.dart';
+import '../widgets/list/stock_list_filters.dart';
+import '../widgets/list/stock_list_frame.dart';
+import '../widgets/list/stock_list_header.dart';
+import '../widgets/list/stock_list_load_state.dart';
+import '../widgets/list/stock_list_mobile_card.dart';
+import '../widgets/list/stock_list_row_actions.dart';
+
+class StockListPage extends StatefulWidget {
+  const StockListPage({super.key});
+  @override
+  State<StockListPage> createState() => _StockListPageState();
+}
+
+class _StockListPageState extends State<StockListPage> {
+  late final AuthModel _auth;
+  late final StockProvider _stocks;
+  late final PurchaseProvider _purchases;
+  late final CategoryProvider _categories;
+  late final AppSettingsProvider _settings;
+  late final RoleProvider _role;
+  late final StockListController _controller;
+  late final StockNavigation _navigation;
+  bool _variantFeatureEnabled() =>
+      _settings.appSettings?.productVariantEnabled ?? false;
+  bool _canViewPurchasePrice() =>
+      _role.currentUserHasPermissionSync(purchaseOrdersAccessPermission);
+
+  @override
+  void initState() {
+    super.initState();
+    _auth = context.read<AuthModel>();
+    _stocks = context.read<StockProvider>();
+    _purchases = context.read<PurchaseProvider>();
+    _categories = context.read<CategoryProvider>();
+    _settings = context.read<AppSettingsProvider>();
+    _role = context.read<RoleProvider>();
+    _navigation = StockNavigation(Get.put(SideBarController()));
+    _controller = StockListController(
+        ensureCategories: () async {
+          if (!_categories.isCategoriesLoaded)
+            await _categories.ensureCategoriesLoaded();
+        },
+        fetchStocks: _stocks.loadAllStocks,
+        fetchStores: (token) => _purchases.listAllStores(token, null),
+        readCategoryNames: () =>
+            (_categories.category ?? []).map((item) => item.categoryName ?? ''),
+        readStoreNames: () =>
+            (_stocks.allStocks ?? []).map((item) => item.storeName ?? ''),
+        readVariantEnabled: _variantFeatureEnabled,
+        resetFilters: _stocks.resetStockFilters,
+        applyFilters: (query) => _stocks.applyStockFiltersLocally(
+            filterName: query.name,
+            filterCategory: query.category,
+            filterBarcode: query.barcode,
+            filterRack: query.rack,
+            filterStore: query.store,
+            filterStatus: query.status,
+            includeVariants: query.includeVariants,
+            page: 1));
+    _stocks.addListener(_rebuild);
+    _settings.addListener(_rebuild);
+    _role.addListener(_rebuild);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.setFiltersVisible(!stockIsPhone(context));
+      _load();
+    });
+  }
+
+  Future<void> _load() async {
+    final token = _auth.token;
+    if (token == null || token.isEmpty) {
+      AppToast.error(context, 'stock.auth_token_missing'.tr);
+      return;
+    }
+    try {
+      await _controller.load(token);
+    } catch (error) {
+      if (mounted)
+        AppToast.error(context,
+            'stock.error_loading_stocks'.trParams({'error': '$error'}));
+    }
+  }
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _stocks.removeListener(_rebuild);
+    _settings.removeListener(_rebuild);
+    _role.removeListener(_rebuild);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _actions(ListStockModelData stock, bool isMobile) =>
+      StockListRowActions(
+          isMobile: isMobile,
+          stock: stock,
+          onEdit: _showEditStockModal,
+          onView: _showStockDetails,
+          onAdjust: _showAdjustStockModal,
+          onMove: _showMoveStockModal,
+          onWithdraw: _showWithdrawStockModal);
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final isMobile = stockIsPhone(context);
+        final rows =
+            _stocks.listStockModelDataList ?? const <ListStockModelData>[];
+        final loading = _controller.loading || _stocks.stockIsLoading;
+        final Widget content;
+        if (loading || rows.isEmpty) {
+          content = StockListLoadState(
+              loading: loading,
+              hasFilters: _controller.hasActiveFilters,
+              onReset: _controller.reset);
+        } else if (isMobile) {
+          content = ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, index) => StockListMobileCard(
+                  stock: rows[index],
+                  variantEnabled: _variantFeatureEnabled(),
+                  actions: _actions(rows[index], true)));
+        } else {
+          content = StockListDesktopTable(
+              listStockModelDataList: rows,
+              canViewPurchasePrice: _canViewPurchasePrice(),
+              variantEnabled: _variantFeatureEnabled(),
+              buildActions: (stock) => _actions(stock, false));
+        }
+        return StockListFrame(
+            showFilters: _controller.showFilters,
+            header: StockListHeader(
+                isMobile: isMobile,
+                showFilters: _controller.showFilters,
+                hasActiveFilters: () => _controller.hasActiveFilters,
+                inputs: _controller,
+                onAdd: _navigation.openAdd,
+                onToggle: () =>
+                    _controller.setFiltersVisible(!_controller.showFilters)),
+            filters: StockListFilters(
+                isMobile: isMobile,
+                showFilters: _controller.showFilters,
+                size: MediaQuery.sizeOf(context),
+                inputs: _controller,
+                onSearch: _controller.search,
+                onReset: _controller.reset,
+                onHide: () => _controller.setFiltersVisible(false)),
+            content: content,
+            currentPage: _stocks.stockCurrentPage,
+            totalPages: _stocks.stockTotalPages,
+            onPageChanged: _stocks.goToStockPage);
+      });
+  void _showStockDetails(ListStockModelData stock) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'stock.details_title'.tr,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDetailRow('stock.product_name'.tr,
+                        stock.productName ?? 'stock.na'.tr),
+                    if (_variantFeatureEnabled() &&
+                        stock.productVariantId != null)
+                      _buildDetailRow(
+                        'stock.product_variant'.tr,
+                        stock.variantName?.trim().isNotEmpty == true
+                            ? stock.variantName!
+                            : 'Variant #${stock.productVariantId}',
+                      ),
+                    _buildDetailRow('stock.category'.tr,
+                        stock.categoryName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.store_name'.tr,
+                        stock.storeName ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.supplier'.tr,
+                        stock.supplierName ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.unit'.tr, stock.unit ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.retail_price'.tr,
+                        stock.retailPrice?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.mrp'.tr, stock.mrp?.toString() ?? 'stock.na'.tr),
+                    if (_canViewPurchasePrice())
+                      _buildDetailRow('stock.purchase_price'.tr,
+                          stock.purchaseRate?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.quantity'.tr,
+                        stock.qty?.toString() ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.rack'.tr, stock.rack ?? 'stock.na'.tr),
+                    _buildDetailRow(
+                        'stock.barcode'.tr, stock.barCode ?? 'stock.na'.tr),
+                    _buildDetailRow('stock.wholesale_price'.tr,
+                        stock.wholesalePrice?.toString() ?? 'stock.na'.tr),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CustomRoundButton(
+                    title: 'stock.close'.tr,
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: () => Navigator.pop(context),
+                    height: 45,
+                    width: 120,
+                    fontSize: FontSize.s12,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditStockModal(ListStockModelData stock) {
+    if (stock.stockId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'stock.edit_missing_id'.tr,
+      );
+      return;
+    }
+
+    showEditStockDialog(
+      context: context,
+      stockId: stock.stockId!,
+      title: 'stock.edit_stock_title'
+          .trParams({'productName': stock.productName ?? ''}),
+      initialRetailPrice: stock.retailPrice ?? '',
+      initialMrp: stock.mrp ?? '',
+      initialPurchasePrice: stock.purchaseRate ?? '',
+      showPurchasePrice: _canViewPurchasePrice(),
+      initialQuantity: stock.qty?.toString() ?? '0',
+      initialRack: stock.rack ?? '',
+    );
+  }
+
+  void _showAdjustStockModal(ListStockModelData stock) {
+    debugPrint(
+        '🛠️ SHOW ADJUST STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    showDialog(
+      context: context,
+      builder: (context) => AdjustStockModal(stock: stock),
+    );
+  }
+
+  void _showMoveStockModal(ListStockModelData stock) {
+    debugPrint(
+        '🚚 SHOW MOVE STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    final purchaseProvider = _purchases;
+    debugPrint('   STORES AVAILABLE: ${purchaseProvider.storeList.length}');
+    showDialog(
+      context: context,
+      builder: (context) => MoveStockModal(
+        stock: stock,
+        stores: purchaseProvider.storeList,
+      ),
+    );
+  }
+
+  void _showWithdrawStockModal(ListStockModelData stock) {
+    debugPrint(
+        '💸 SHOW WITHDRAW STOCK MODAL: ID=${stock.stockId}, Name=${stock.productName}');
+    showDialog(
+      context: context,
+      builder: (context) => WithdrawStockModal(stock: stock),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label: ',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

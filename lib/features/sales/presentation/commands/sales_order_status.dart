@@ -14,7 +14,7 @@ Future<void> statusSalesOrder(
     BuildContext ctx,
     SalesPageServices services,
     ListOrderModelData order,
-    bool isOnlineSales) async {
+    Future<void> Function() refresh) async {
   Navigator.pop(ctx);
   showDialog(
     context: context,
@@ -50,10 +50,7 @@ Future<void> statusSalesOrder(
                   .replaceAll('@status', newStatus.toString()),
             );
             try {
-              await salesProvider.fetchOrders(
-                accessToken: authModel.token ?? "",
-                page: salesProvider.currentPage,
-              );
+              await refresh();
             } catch (refreshError) {
               if (context.mounted) {
                 showScaffoldError(

@@ -1,93 +1,94 @@
+import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
+import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-import 'package:pos_machine/components/build_confirmation_dialog.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/components/order_submission_guard.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/delivery_method_display.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
-import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
+import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
-import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
-import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
-import 'package:pos_machine/features/billing/presentation/utils/billing_sidebar_metrics.dart';
-import 'package:pos_machine/features/customers/data/customer_repository.dart';
-import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
-import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
-import 'package:pos_machine/features/customers/presentation/widgets/purchase_history/customer_purchase_history_dialog.dart';
-import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
-import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
-import 'package:pos_machine/features/sales/presentation/widgets/closing/open_shift_modal.dart';
-import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
-import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
-import 'package:pos_machine/helpers/delivery_method_display.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
-import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
-import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/models/quotation_model.dart';
-import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
-import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/sales_executive_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
-import 'package:pos_machine/providers/sales_executive_provider.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
+import 'package:pos_machine/services/local_sale_sync_service.dart';
+import 'package:pos_machine/services/local_first_sale_coordinator.dart';
+import 'package:pos_machine/services/receipt_identity_service.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/features/sales/presentation/widgets/closing/open_shift_modal.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_sidebar_metrics.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
-import 'package:pos_machine/services/local_first_sale_coordinator.dart';
-import 'package:pos_machine/services/local_sale_sync_service.dart';
-import 'package:pos_machine/services/order_submission_coordinator.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/services/quotation_print_service.dart';
-import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
+import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/widgets/sidebar_product_list.dart';
+import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/features/customers/presentation/widgets/purchase_history/customer_purchase_history_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
-import 'package:pos_machine/widgets/product_autocomplete_list.dart';
-import 'package:pos_machine/widgets/product_details_dialog.dart';
-import 'package:pos_machine/widgets/sidebar_product_list.dart';
-import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:provider/provider.dart';
+
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
@@ -1238,6 +1239,9 @@ class BillingPageState extends State<BillingPage>
     }
     debugPrint(
         "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
+    // A shortcut does not move focus, so a price still being typed would only
+    // be committed after checkout or payment has read the cart.
+    PriceTextField.commitPendingEdits();
     _handleKeyPress(event);
     return true;
   }
@@ -3721,6 +3725,17 @@ class BillingPageState extends State<BillingPage>
                                                               overflow:
                                                                   TextOverflow
                                                                       .ellipsis,
+                                                            ),
+                                                          if (item.hasOffer)
+                                                            CartOfferBadge(
+                                                              item: item,
+                                                              fontSize:
+                                                                  (fontProvider
+                                                                              .billingTableItemSize -
+                                                                          2)
+                                                                      .clamp(
+                                                                          9.0,
+                                                                          12.0),
                                                             ),
                                                         ],
                                                       ),
@@ -8659,29 +8674,23 @@ class BillingPageState extends State<BillingPage>
 
     showDialog(
       context: context,
-      builder: (context) => CouponModal(
+      builder: (dialogContext) => CouponModal(
         subTotal: localProductProvider.subTotalBeforeDiscount,
         initialFlatDiscount: currentDiscounts['flatDiscount'],
         initialPercentageDiscount: currentDiscounts['percentageDiscount'],
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) async {
+            {double? flatDiscount, double? percentageDiscount}) {
           if (shouldApply) {
-            // Apply coupon to API first if provided
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
+            // CouponModal validates the downloaded coupon details before
+            // calling this action, just like Finalize Order.
+            coupenCodeTextController.text = couponCode;
 
-            // Then apply manual discounts to local product provider
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
             );
-
-            coupenCodeTextController.text = couponCode;
 
             setState(() {
               isCouponApplied = true;
@@ -8712,73 +8721,6 @@ class BillingPageState extends State<BillingPage>
         },
       ),
     );
-  }
-
-  Future<void> _applyCoupon() async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-
-    if (localProductProvider.priceSummary == null) {
-      showScaffoldError(
-        context: context,
-        message: 'billing.cart_empty_or_data_unavailable'.tr,
-      );
-      return;
-    }
-
-    double? totalAmount = localProductProvider.priceSummary!.netTotal;
-    String couponCode = coupenCodeTextController.text;
-
-    if (accessToken != null && totalAmount != null) {
-      final result =
-          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount,
-        couponCode: couponCode,
-        accessToken: accessToken,
-      );
-
-      if (result != null) {
-        // Check if the response indicates success
-        if (result['success'] == true) {
-          final couponData = result['data']['data'];
-          double discountAmount = double.parse(couponData['discount_amount']
-              .replaceAll(',', '')); // Convert discount amount to double
-          double discountedTotal = totalAmount - discountAmount;
-
-          // Update the price summary with the new values
-          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-            discountAmount: discountAmount,
-            discountedTotal: discountedTotal,
-          );
-
-          setState(() {
-            isCouponApplied = true;
-          });
-
-          showScaffold(
-            context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
-          );
-        } else {
-          // Handle failure to apply coupon
-          showScaffoldError(
-            context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
-          );
-        }
-      } else {
-        // Handle case where result is null
-        showScaffoldError(
-          context: context,
-          message: 'billing.error_occurred'.tr,
-        );
-      }
-    } else {
-      // Handle unauthenticated state
-      showScaffoldError(
-          context: context, message: 'billing.not_authenticated'.tr);
-    }
   }
 
   void resetAutocomplete({bool shouldFetchCustomers = false}) {
@@ -8994,8 +8936,8 @@ class BillingPageState extends State<BillingPage>
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        double itemTotalPrice = itemPrice * item.quantity;
-        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+        double itemTotalPrice = item.amounts.total;
+        double itemTax = item.amounts.tax;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;

@@ -9,7 +9,6 @@ import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart'
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -22,7 +21,8 @@ import 'package:pos_machine/features/purchases/presentation/state/purchase_provi
 import 'package:pos_machine/features/sales/domain/models/day_close_pending_status.dart';
 import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_list_page.dart';
-import 'package:pos_machine/features/sales/presentation/pages/sales_page.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
 import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -217,31 +217,43 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
-  testWidgets('Orders List uses the shared filter toggle on mobile',
-      (tester) async {
-    await verifyMobileToggle(
-      tester,
-      screen: const SalesPage(),
-      toggleKey: const ValueKey('orders-list-filter-toggle'),
-      filtersKey: const ValueKey('orders-list-filters'),
-    );
-
-    final toggle = find.byKey(const ValueKey('orders-list-filter-toggle'));
-    expect(find.descendant(of: toggle, matching: find.byType(Container)),
-        findsNothing);
-
-    final firstFilter = find
-        .descendant(
-          of: find.byKey(const ValueKey('orders-list-filters')),
-          matching: find.byType(TextFormField),
-        )
-        .first;
-    await tester.enterText(firstFilter, 'ORD-1');
-    await tester.pump();
-
-    expect(find.descendant(of: toggle, matching: find.byType(Container)),
-        findsOneWidget);
-  });
+  for (final online in [false, true]) {
+    for (final width in [390.0, 1600.0]) {
+      testWidgets(
+          'Sales list uses shared filters online=$online width=$width',
+          (tester) async {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(wrapScreen(SalesListPage(isOnlineSales: online)));
+        await tester.pumpAndSettle();
+        final scaffold = find.byWidgetPredicate((w) => w is ListPageScaffold);
+        expect(scaffold, findsOneWidget);
+        final header = find.byKey(SalesListPage.filterKey);
+        expect(find.byType(FilterToggleButton), findsNothing);
+        if (width < 700) {
+          expect(find.byType(CollapsibleFilterTile), findsNothing);
+          await tester.tap(find.byKey(PageHeader.moreActionsKey));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byWidgetPredicate(
+              (w) => w is PopupMenuItem<int> && w.value == 0));
+          await tester.pumpAndSettle();
+          expect(find.byType(CollapsibleFilterTile), findsOneWidget);
+          await tester.tap(find.byType(ExpansionTile));
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNWidgets(5));
+        } else {
+          expect(find.byType(FilterPanel), findsOneWidget);
+          await tester.tap(header);
+          await tester.pumpAndSettle();
+          expect(find.byType(FilterPanel), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+  }
 
   testWidgets('Day Close uses the shared filter toggle on mobile',
       (tester) async {
@@ -250,16 +262,6 @@ void main() {
       screen: const DailySalesCloseListPage(),
       toggleKey: const ValueKey('day-close-filter-toggle'),
       filtersKey: const ValueKey('day-close-filters'),
-    );
-  });
-
-  testWidgets('Orders List uses the shared filter toggle on desktop',
-      (tester) async {
-    await verifyDesktopToggle(
-      tester,
-      screen: const SalesPage(),
-      toggleKey: const ValueKey('orders-list-filter-toggle'),
-      filtersKey: const ValueKey('orders-list-filters'),
     );
   });
 
@@ -272,46 +274,6 @@ void main() {
       filtersKey: const ValueKey('day-close-filters'),
     );
   });
-  for (final width in [375.0, 1280.0]) {
-    testWidgets('Orders render populated rows at $width and preserve actions',
-        (tester) async {
-      tester.view.physicalSize = Size(width, 812);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final key = GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(
-          key: key,
-          child: wrapScreen(const SalesPage(), rows: [
-            ListOrderModelData(
-                id: 1,
-                orderNumber: 'ORD-1',
-                customerName: 'Test Customer',
-                orderDate: DateTime(2026, 10, 5),
-                grantTotal: '4.190',
-                status: 'confirmed',
-                priceSummary: PriceSummary(grandTotal: '4.190'))
-          ])));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Test Customer'), findsWidgets);
-      expect(find.byIcon(Icons.visibility), findsWidgets);
-      expect(tester.takeException(), isNull);
-      if (Platform.environment['SALES_CAPTURE_PREVIEWS'] == '1')
-        await tester.runAsync(() async {
-          final boundary =
-              key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-          final image = await boundary.toImage(pixelRatio: 1);
-          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-          final folder = Directory(
-              '${Directory.systemTemp.path}/sales-architecture-preview')
-            ..createSync(recursive: true);
-          File('${folder.path}/orders-${width.toInt()}.png')
-              .writeAsBytesSync(bytes!.buffer.asUint8List());
-          image.dispose();
-        });
-    });
-  }
   for (final width in [375.0, 1440.0]) {
     final screens = <String, Widget Function()>{
       'admin closing list': () => const AdminDailySalesCloseListPage(),

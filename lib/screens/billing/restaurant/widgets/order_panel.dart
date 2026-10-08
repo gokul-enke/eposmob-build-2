@@ -7321,8 +7321,8 @@ class OrderPanelState extends State<OrderPanel> {
     for (final item in savedOrder.items) {
       final itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
       final itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-      final itemTotalPrice = itemPrice * item.quantity;
-      final itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+      final itemTotalPrice = item.amounts.total;
+      final itemTax = item.amounts.tax;
 
       totalMrp += itemMrp * item.quantity;
       netTotal += itemTotalPrice;
@@ -7410,7 +7410,7 @@ class OrderPanelState extends State<OrderPanel> {
         'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'totalPrice': item.amounts.total.toStringAsFixed(2),
         'mrp': item.mrp?.toStringAsFixed(2) ??
             item.price?.toStringAsFixed(2) ??
             '0.00',

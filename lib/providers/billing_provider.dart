@@ -1013,6 +1013,20 @@ class BillingProvider extends ChangeNotifier {
   /// so callers that only set [setTotalOrderAmount] keep their prior behaviour.
   double get effectiveOrderTotal => _effectiveOrderTotal;
 
+  /// Unpaid amount, separate from [balanceAmount], which shows excess/change.
+  double get remainingPaymentDue {
+    final isDefaultCustomer = _resolveIsDefaultCustomerForPayment();
+    final netDue = PaymentValidation.computeNetDue(
+      orderTotal: _effectiveOrderTotal,
+      toCustomerCreditEnabled: _toCustomerCreditEnabled,
+      isDefaultCustomer: isDefaultCustomer,
+      customerPrevBalance:
+          isDefaultCustomer ? 0.0 : (_selectedCustomer?.balance ?? 0.0),
+    );
+    final remaining = netDue - getTotalPaidAmount() - creditSaleAmount;
+    return remaining > 0 ? remaining : 0.0;
+  }
+
   double? get deliveryChargeOverride => _deliveryChargeOverride;
 
   String? get pristinePaymentMethodKey => _pristinePaymentMethodKey;

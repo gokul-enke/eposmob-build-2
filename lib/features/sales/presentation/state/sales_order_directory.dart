@@ -117,10 +117,28 @@ mixin SalesOrderDirectory on ChangeNotifier {
     }
   }
 
+  Object? _activeListOwner;
+  Future<void> Function()? _activeListRefresh;
+
+  /// The mounted listing owns its own rows; notifications must refresh that
+  /// collection rather than replaying an unrelated detail/provider query.
+  void attachListRefresh(Object owner, Future<void> Function() refresh) {
+    _activeListOwner = owner;
+    _activeListRefresh = refresh;
+  }
+
+  void detachListRefresh(Object owner) {
+    if (!identical(owner, _activeListOwner)) return;
+    _activeListOwner = null;
+    _activeListRefresh = null;
+  }
+
   Future<void> refreshOrdersForRealtime({
     required String accessToken,
     required int storeId,
   }) {
+    final activeRefresh = _activeListRefresh;
+    if (activeRefresh != null) return activeRefresh();
     final lastQuery = _lastOrdersQuery;
 
     // Replay the query the user is currently looking at. Refreshing with only

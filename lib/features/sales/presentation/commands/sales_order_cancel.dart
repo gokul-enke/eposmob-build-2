@@ -14,7 +14,7 @@ Future<void> cancelSalesOrder(
     BuildContext ctx,
     SalesPageServices services,
     ListOrderModelData order,
-    bool isOnlineSales) async {
+    Future<void> Function() refresh) async {
   Navigator.pop(ctx);
   if (!context.mounted) return;
   showDialog(
@@ -44,11 +44,7 @@ Future<void> cancelSalesOrder(
             );
             // Refresh orders
             try {
-              await salesProvider.fetchOrders(
-                accessToken: authModel.token ?? "",
-                page: salesProvider.currentPage,
-                filterOnlineSales: isOnlineSales ? true : null,
-              );
+              await refresh();
             } catch (refreshError) {
               if (context.mounted) {
                 showScaffoldError(

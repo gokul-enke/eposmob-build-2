@@ -36,7 +36,7 @@ class LocalOrderItemsTable extends StatelessWidget {
           ],
           rows: order.items.map((item) {
             double unitPrice = item.price ?? item.product.price?.price ?? 0.0;
-            double totalPrice = unitPrice * item.quantity;
+            double totalPrice = item.amounts.total;
 
             return DataRow(cells: [
               DataCell(Text(

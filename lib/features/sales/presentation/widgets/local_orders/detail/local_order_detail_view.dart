@@ -385,8 +385,7 @@ class LocalOrderDetailView extends StatelessWidget {
     double totalMRP = _calculateTotalMRP();
     double netTotal = 0.0;
     for (var item in order.items) {
-      final price = item.price ?? item.product.price?.price ?? 0.0;
-      netTotal += price * item.quantity;
+      netTotal += item.amounts.total;
     }
     double youSaved = totalMRP - netTotal;
     return youSaved > 0 ? youSaved : 0.0;
