@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/models/list_sales_return_items.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
 
 void main() {
   group('OrderDetailsModelDataCartItem variant parsing', () {

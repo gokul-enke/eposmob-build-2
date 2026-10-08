@@ -31,6 +31,7 @@ void main() {
     required int total,
     double width = 800,
     ValueChanged<int>? onPageChanged,
+    bool totalPagesKnown = true,
   }) {
     return tester.pumpWidget(
       MaterialApp(
@@ -41,6 +42,7 @@ void main() {
               child: AppPaginationBar(
                 currentPage: current,
                 totalPages: total,
+                totalPagesKnown: totalPagesKnown,
                 countLabel: '20 on this page',
                 onPageChanged: onPageChanged ?? (_) {},
               ),
@@ -71,6 +73,43 @@ void main() {
     await tester.tap(find.byTooltip('Previous page'));
     await tester.tap(find.byTooltip('Next page'));
     expect(calls, 0);
+  });
+  testWidgets(
+      'unknown total shows only current page and uses reachable next page',
+      (tester) async {
+    var selected = 0;
+    await pumpBar(tester,
+        current: 1,
+        total: 2,
+        totalPagesKnown: false,
+        onPageChanged: (page) => selected = page);
+    expect(find.text('Page 1'), findsOneWidget);
+    expect(find.text('Page 1 of 2'), findsNothing);
+    await tester.tap(find.byTooltip('Next page'));
+    expect(selected, 2);
+    await pumpBar(tester,
+        current: 3,
+        total: 3,
+        totalPagesKnown: false,
+        onPageChanged: (page) => selected = page);
+    await tester.tap(find.byTooltip('Next page'));
+    expect(selected, 2);
+    await tester.tap(find.byTooltip('Previous page'));
+    expect(selected, 2);
+  });
+  testWidgets('ListPagination carries unknown total through shared bar',
+      (tester) async {
+    final state = ListPagination(
+        currentPage: 2,
+        totalPages: 3,
+        totalPagesKnown: false,
+        itemsPerPage: 15,
+        onPageChanged: (_) {},
+        countLabel: '15 on this page');
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: AppPaginationBar.fromState(state))));
+    expect(find.text('Page 2'), findsOneWidget);
+    expect(state.rowNumber(0), 16);
   });
 
   testWidgets('fills its parent with the card radius and a border',

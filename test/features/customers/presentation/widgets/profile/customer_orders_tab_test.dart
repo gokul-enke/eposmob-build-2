@@ -5,7 +5,7 @@ import 'package:pos_machine/features/customers/presentation/state/customer_order
 import 'package:pos_machine/features/customers/presentation/widgets/profile/customer_orders_tab.dart';
 import 'package:pos_machine/features/customers/presentation/widgets/profile/orders/customer_orders_view.dart';
 import 'package:pos_machine/features/customers/presentation/widgets/profile/orders/order_card.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:provider/provider.dart';

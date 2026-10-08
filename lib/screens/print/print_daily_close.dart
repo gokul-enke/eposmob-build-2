@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/features/sales/domain/models/daily_sales_close.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
-import 'package:pos_machine/models/daily_sales_close.dart';
-import 'package:pos_machine/screens/print/daily_close_thermal_printer.dart';
 import 'package:pos_machine/screens/print/daily_close_standard_printer.dart';
+import 'package:pos_machine/screens/print/daily_close_thermal_printer.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Daily Close Print Page
 /// Supports thermal (58mm/80mm) and standard (A4/A5) printing for Daily Sales Close Report

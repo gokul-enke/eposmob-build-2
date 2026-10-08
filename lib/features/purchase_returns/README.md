@@ -1,8 +1,21 @@
 # Purchase Returns
 
-Architecture-only migration of the purchase-return list, create flow and detail
-dialog. Their existing PurchaseOrders responsive UI is preserved. The separate
-UI migration onto the shared listing kit follows review/merge of this work.
+The Purchase Returns **list** now uses the shared listing layout, with searchable
+supplier and date-only filters, Reset, Refresh, cards/table and pagination.
+Create still uses `PurchaseReturnNavigation.openCreate`; View still opens the
+existing details dialog. The create, voucher selection, payment and details
+pages, list controller, models and repository API contracts are unchanged.
+
+The added Export action uses request-local all-pages reads and the shared
+Excel/Windows Save As delivery. It retains raw numeric amounts in the workbook
+and the existing completed/pending labels. Its validation and session/filter
+invalidation reuse the documented public purchase-list helpers in
+`lib/features/purchases/README.md`. Export never replaces the visible provider
+or controller list. The shared picker Reset also clears unselected search text.
+
+The earlier architecture migration split the list, create flow and details
+dialog into owned layers. This follow-up replaces only the list UI; form and
+detail widgets retain their existing PurchaseOrders responsive UI.
 
 ## Ownership
 
@@ -16,9 +29,9 @@ UI migration onto the shared listing kit follows review/merge of this work.
 - `presentation/state/`: legacy observable provider and separate list, create
   and detail controllers. Controllers receive fetch/submit functions.
 - `presentation/pages/`: provider/auth wiring, lifecycle, toasts and navigation.
-- `presentation/widgets/`: unchanged list/form/detail sections, supplied with
-  state, currency and callbacks. Part files share private UI helpers without
-  looking up providers or accessing storage/HTTP.
+- `presentation/widgets/`: a shared-layout list plus the existing form/detail
+  sections, supplied with state, currency and callbacks. They do not look up
+  providers or access storage/HTTP.
 - `presentation/navigation/`: named sidebar routes, preserving slots 99/100.
 
 ## Public surface
@@ -33,8 +46,7 @@ UI migration onto the shared listing kit follows review/merge of this work.
 
 `PurchaseProvider` remains in its existing location because it owns Purchases as
 well. Its return methods, mutable fields/getters/setters and notifications remain
-compatible through a feature-owned adapter. Moving the entire provider belongs
-to the subsequent Purchases migration, not this module.
+compatible through a feature-owned adapter. The Purchases migration also retains this public facade.
 
 Pages use request-local `fetchPage` / `fetchItems` and never publish their active
 rows into the legacy shared provider. The return form's purchase-voucher lookup

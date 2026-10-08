@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 
 /// One page of a customer's orders.
 @immutable

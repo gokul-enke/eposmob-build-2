@@ -1,10 +1,11 @@
+import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
-import 'package:pos_machine/screens/category/add_category.dart';
+import 'package:pos_machine/features/categories/presentation/pages/category_list_page.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
 import 'package:pos_machine/screens/category/edit_category_screen.dart';
@@ -22,8 +23,8 @@ import 'package:pos_machine/screens/homenew/home_new.dart';
 import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
-import 'package:pos_machine/screens/product/add_product.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/features/products/presentation/pages/product_list_page.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/pages/barcode_list_page.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
@@ -46,22 +47,21 @@ import 'package:pos_machine/screens/reports/customer_transactions_reports/custom
 // Adding imports for supplier transaction report screens
 import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_details_screen.dart';
-import 'package:pos_machine/screens/reports/product_sales_report/product_sales_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/product_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
-import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
-import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
-import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/non_stock_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profile_page.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
-import 'package:pos_machine/screens/sales/sales.dart';
-import 'package:pos_machine/screens/sales_return/sales_return.dart';
-import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/create_sales_return_page.dart';
+import 'package:pos_machine/features/sales_returns/presentation/pages/sales_return_list_page.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
 import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
@@ -89,14 +89,14 @@ import 'package:pos_machine/features/expenses/presentation/pages/create_expense_
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
 
 import '../screens/product/widgets/stock_details.dart';
-import '../screens/sales/widgets/sales_order_details.dart';
+import 'package:pos_machine/features/sales/presentation/pages/sales_order_details_page.dart';
 import '../widgets/category_list.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/suppliers_list_page.dart';
-import 'package:pos_machine/screens/sales/confirmed_orders.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
-import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
-import 'package:pos_machine/screens/sales/quotations_list.dart';
+import 'package:pos_machine/features/sales/presentation/pages/confirmed_orders_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_detail_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/daily_sales_close_list_page.dart';
+import 'package:pos_machine/features/sales/presentation/pages/admin_daily_sales_close_list_page.dart';
+import 'package:pos_machine/features/quotations/presentation/pages/quotation_list_page.dart';
 
 class SideBarController extends GetxController {
   static const int stockListScreenIndex = 15;
@@ -108,6 +108,9 @@ class SideBarController extends GetxController {
   /// caller navigates to it, and the list is positional — inserting a screen
   /// above it would otherwise silently point those callers elsewhere.
   static const int invoiceListScreenIndex = 21;
+
+  /// Stock Report listing in the Reports section.
+  static const int stockReportScreenIndex = 98;
 
   /// Customer screens in [screens]. Navigate through [CustomerNavigation]
   /// rather than setting these indices directly.
@@ -125,6 +128,8 @@ class SideBarController extends GetxController {
 
   /// Report screens in [screens]. Navigate through [ReportNavigation].
   static const int mySalesReportScreenIndex = 58;
+  static const int nonStockReportScreenIndex = 77;
+  static const int consumedStocksReportScreenIndex = 80;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
   static const int supplierTransactionsReportScreenIndex = 67;
@@ -157,6 +162,33 @@ class SideBarController extends GetxController {
   static const int createPurchaseOrderScreenIndex = 82;
   static const int purchaseDetailsScreenIndex = 36;
 
+  /// Product Sales Report listing. Navigate through ReportNavigation.
+  static const int productSalesReportScreenIndex = 40;
+
+  /// Sales screens in [screens]. Navigate through SalesNavigation.
+  static const int salesScreenIndex = 2;
+  static const int salesOrderDetailsScreenIndex = 11;
+  static const int confirmedOrdersScreenIndex = 54;
+  static const int dailySalesCloseListScreenIndex = 78;
+  static const int dailySalesCloseDetailScreenIndex = 79;
+  static const int adminDailySalesCloseListScreenIndex = 84;
+  static const int onlineSalesScreenIndex = 92;
+
+  /// Sales Returns screens; navigate through SalesReturnNavigation.
+  static const int createSalesReturnScreenIndex = 49;
+  static const int salesReturnListScreenIndex = 50;
+
+  /// Barcode listing in [screens]. Navigate through [BarcodeNavigation].
+  static const int productBarcodeListScreenIndex = 83;
+
+  /// Catalog listing only. Inner product screen slots remain unchanged.
+  static const int productListScreenIndex = 14;
+
+  /// Category listing and the existing Add/Edit destinations.
+  static const int categoryListScreenIndex = 12;
+  static const int addCategoryScreenIndex = 16;
+  static const int editCategoryScreenIndex = 34;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
@@ -178,7 +210,7 @@ class SideBarController extends GetxController {
   var screens = const [
     BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
-    SalesScreen(), //2
+    SalesListPage(), // salesScreenIndex
     CartScreen(), //3
     TransactionScreen(), //4
     CustomersListPage(), //5
@@ -187,10 +219,10 @@ class SideBarController extends GetxController {
     SupportScreen(), //8
     AddCustomerPage(), //9
     OpenProfileScreen(), //10
-    SalesOrderDetailsScreen(), //11
-    AddCategoryScreen(), //12
+    SalesOrderDetailsPage(), // salesOrderDetailsScreenIndex
+    CategoryListPage(), // categoryListScreenIndex
     AddCategoryPropertiesScreen(), //13
-    AddProductScreen(), //14
+    ProductListPage(), // 14 productListScreenIndex
     StockListPage(), // stockListScreenIndex (15)
     AddCategoryPageScreen(), //16
     TabBarForAddNewProduct(), //17
@@ -216,7 +248,7 @@ class SideBarController extends GetxController {
     AddVoucherDetailsWidget(), //37
     CustomerProfilePage(), //38
     AccountBookScreen(), //39
-    ProductSalesReportScreen(), //40
+    ProductSalesReportPage(), //40 productSalesReportScreenIndex
     SalesReportScreen(), //41
     SupplierSalesReportScreen(), //42
     LocationManagementScreen(), //43
@@ -225,12 +257,12 @@ class SideBarController extends GetxController {
     HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
-    SalesReturnScreen(), //49 Sales Return
-    SalesReturnPage(), //50 Sales Return List
+    CreateSalesReturnPage(), // createSalesReturnScreenIndex
+    SalesReturnListPage(), // salesReturnListScreenIndex
     EditOrder(), // 51 Edit Order
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
-    ConfirmedOrdersScreen(), // 54 Confirmed Orders
+    ConfirmedOrdersPage(), // confirmedOrdersScreenIndex
     RestaurantPage(
       allowCounterBillingFromAttender: false,
       defaultCounterBillingMode: false,
@@ -256,14 +288,14 @@ class SideBarController extends GetxController {
     TransactionScreen(), // 74 Supplier Transactions (alias for Party Accounts)
     SupplierVoucherListPage(), // 75 Supplier Voucher List (alias for Transactions)
     CreateSupplierVoucherPage(), // 76 Create Supplier Voucher (alias for Transactions)
-    NonStockReportScreen(), // 77 Non-Stock Report
-    DailySalesCloseListScreen(), // 78 Daily Sales Close List
-    DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
-    ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
+    NonStockReportPage(), // 77 Non-Stock Report
+    DailySalesCloseListPage(), // dailySalesCloseListScreenIndex
+    DailySalesCloseDetailPage(), // dailySalesCloseDetailScreenIndex
+    ConsumedStocksReportPage(), // 80 Consumed Stocks Report
     PurchaseOrderListPage(), // purchaseOrderListScreenIndex
     CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
-    ProductBarcodeScreen(), // 83 Product Barcode Screen
-    AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
+    BarcodeListPage(), // productBarcodeListScreenIndex
+    AdminDailySalesCloseListPage(), // adminDailySalesCloseListScreenIndex
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
     BillingQuotationPageResponsive(), // 86 Quotations
     QuotationsListScreen(), // 87 Quotation List
@@ -275,7 +307,7 @@ class SideBarController extends GetxController {
     ), // 89 Restaurant Billing Page
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
-    SalesScreen(isOnlineSales: true), // 92 Online Sales
+    SalesListPage(isOnlineSales: true), // onlineSalesScreenIndex
     ExpenseListPage(), // expenseListScreenIndex (93)
     CreateExpensePage(), // createExpenseScreenIndex (94)
     ViewExpensePage(), // viewExpenseScreenIndex (95)
@@ -285,7 +317,7 @@ class SideBarController extends GetxController {
       defaultCounterBillingMode: true,
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
-    StockReportScreen(), // 98 Stock Report Screen
+    StockReportPage(), // 98 Stock Report Screen
     PurchaseReturnListPage(), // 99 purchaseReturnListScreenIndex
     CreatePurchaseReturnPage(), // 100 createPurchaseReturnScreenIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex

@@ -5,17 +5,71 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pos_machine/models/get_product_sales_report_model.dart';
+import 'package:pos_machine/features/reports/domain/models/product_sales_report.dart';
 import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
-import 'package:pos_machine/models/get_non_stock_report_model.dart';
-import 'package:pos_machine/models/get_consumed_stocks_report_model.dart';
-import 'package:pos_machine/models/get_stock_report_model.dart';
+import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
+import 'package:pos_machine/features/reports/data/non_stock_report_api.dart';
+import 'package:pos_machine/features/reports/domain/non_stock_report_query.dart';
+import 'package:pos_machine/features/reports/domain/models/consumed_stocks_report.dart';
+import 'package:pos_machine/features/reports/domain/consumed_stocks_report_query.dart';
+import 'package:pos_machine/features/reports/data/consumed_stocks_report_api.dart';
+import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 
+import 'package:pos_machine/features/reports/data/product_sales_api.dart';
+import '../features/reports/data/stock_report_api.dart';
 import '../models/get_customer_account_book_model.dart';
 import '../resources/app_url.dart';
 
 class ReportsProvider with ChangeNotifier {
+  ReportsProvider(
+      {ProductSalesApi? productSalesApi,
+      StockReportApi? stockReportApi,
+      ConsumedStocksReportApi? consumedStocksApi,
+      NonStockReportApi? nonStockApi})
+      : productSalesApi = productSalesApi ?? ProductSalesApi(),
+        stockReportApi = stockReportApi ?? StockReportApi(),
+        _consumedStocksApi = consumedStocksApi ?? ConsumedStocksReportApi(),
+        _nonStockApi = nonStockApi ?? NonStockReportApi();
+  final ProductSalesApi productSalesApi;
+  final StockReportApi stockReportApi;
+  final ConsumedStocksReportApi _consumedStocksApi;
+  final NonStockReportApi _nonStockApi;
+  Future<NonStockReportScope> nonStockReportScope(String token) =>
+      _nonStockApi.scope(token);
+
+  Future<GetNonStockReportResponse> fetchNonStockReportSnapshot(
+          {required String accessToken,
+          String? store,
+          String? category,
+          String? product,
+          String? barcode,
+          int? page}) =>
+      _nonStockApi.fetch(
+          accessToken: accessToken,
+          store: store,
+          category: category,
+          product: product,
+          barcode: barcode,
+          page: page);
+
+  Future<ConsumedStocksReportScope> consumedStocksReportScope(String token) =>
+      _consumedStocksApi.scope(token);
+  Future<GetConsumedStocksReportResponse> fetchConsumedStocksReportSnapshot(
+          {required String accessToken,
+          String? productId,
+          String? storeId,
+          String? from,
+          String? until,
+          int? page}) =>
+      _consumedStocksApi.fetch(
+          accessToken: accessToken,
+          productId: productId,
+          storeId: storeId,
+          from: from,
+          until: until,
+          page: page);
+
   GetCustomerAccountBookResponse? _customerAccountBook;
   GetProductSalesReportResponse? _productSalesReport;
   GetSalesReportResponse? _salesReport;
@@ -45,28 +99,15 @@ class ReportsProvider with ChangeNotifier {
     int page = 1,
     int perPage = 25,
   }) {
-    final queryParameters = <String, String>{
-      'page': page.toString(),
-      'per_page': perPage.toString(),
-    };
-
-    if (categoryId != null && categoryId.isNotEmpty) {
-      queryParameters['category_id'] = categoryId;
-    }
-    if (productId != null && productId.isNotEmpty) {
-      queryParameters['product_id'] = productId;
-    }
-    if (customerId != null && customerId.isNotEmpty) {
-      queryParameters['customer_id'] = customerId;
-    }
-    if (startDate != null && startDate.isNotEmpty) {
-      queryParameters['from'] = startDate;
-    }
-    if (endDate != null && endDate.isNotEmpty) {
-      queryParameters['to'] = endDate;
-    }
-
-    return Uri.parse(endpoint).replace(queryParameters: queryParameters);
+    return ProductSalesApi.uri(
+        endpoint: endpoint,
+        categoryId: categoryId,
+        productId: productId,
+        customerId: customerId,
+        startDate: startDate,
+        endDate: endDate,
+        page: page,
+        perPage: perPage);
   }
 
   Future<void> fetchCustomerAccountBook({
@@ -138,53 +179,20 @@ class ReportsProvider with ChangeNotifier {
     int perPage = 25,
     bool updateState = true,
   }) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
+    final report = await productSalesApi.fetch(
+        accessToken: accessToken,
+        categoryId: categoryId,
+        productId: productId,
+        customerId: customerId,
+        startDate: startDate,
+        endDate: endDate,
+        page: page,
+        perPage: perPage);
+    if (updateState) {
+      _productSalesReport = report;
+      notifyListeners();
     }
-
-    final uri = buildProductSalesReportUri(
-      endpoint: APPUrl.productSalesReport,
-      categoryId: categoryId,
-      productId: productId,
-      customerId: customerId,
-      startDate: startDate,
-      endDate: endDate,
-      page: page,
-      perPage: perPage,
-    );
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          final report = GetProductSalesReportResponse.fromJson(jsonData);
-          if (updateState) {
-            _productSalesReport = report;
-            notifyListeners();
-          }
-          return report;
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load product sales report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load product sales report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+    return report;
   }
 
   Future<void> fetchSalesReport({
@@ -324,134 +332,31 @@ class ReportsProvider with ChangeNotifier {
     String? barcode,
     int? page,
   }) async {
-    final queryParameters = <String, String>{};
-
-    if (store != null && store.isNotEmpty) {
-      queryParameters['store'] = store;
-    }
-    if (category != null && category.isNotEmpty) {
-      queryParameters['category'] = category;
-    }
-    if (product != null && product.isNotEmpty) {
-      queryParameters['product'] = product;
-    }
-    if (barcode != null && barcode.isNotEmpty) {
-      queryParameters['barcode'] = barcode;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.nonStockReportUrl)
-        .replace(queryParameters: queryParameters);
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          _nonStockReport = GetNonStockReportResponse.fromJson(jsonData);
-          notifyListeners();
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load non-stock report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load non-stock report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+    _nonStockReport = await fetchNonStockReportSnapshot(
+        accessToken: accessToken,
+        store: store,
+        category: category,
+        product: product,
+        barcode: barcode,
+        page: page);
+    notifyListeners();
   }
 
-  Future<void> fetchConsumedStocksReport({
-    required String accessToken,
-    String? productId,
-    String? storeId,
-    String? from,
-    String? until,
-    int? page,
-  }) async {
-    final queryParameters = <String, String>{};
-
-    if (productId != null && productId.isNotEmpty) {
-      queryParameters['product_id'] = productId;
-    }
-    if (storeId != null && storeId.isNotEmpty) {
-      queryParameters['store_id'] = storeId;
-    }
-    if (from != null && from.isNotEmpty) {
-      queryParameters['from'] = from;
-    }
-    if (until != null && until.isNotEmpty) {
-      queryParameters['until'] = until;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    // Only add activeStoreId if store_id is not already provided as parameter
-    if (!queryParameters.containsKey('store_id') && activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.consumedStocksReport)
-        .replace(queryParameters: queryParameters);
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          _consumedStocksReport =
-              GetConsumedStocksReportResponse.fromJson(jsonData);
-          notifyListeners();
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load consumed stocks report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load consumed stocks report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+  Future<void> fetchConsumedStocksReport(
+      {required String accessToken,
+      String? productId,
+      String? storeId,
+      String? from,
+      String? until,
+      int? page}) async {
+    _consumedStocksReport = await fetchConsumedStocksReportSnapshot(
+        accessToken: accessToken,
+        productId: productId,
+        storeId: storeId,
+        from: from,
+        until: until,
+        page: page);
+    notifyListeners();
   }
 
   Future<void> fetchStockReport({
@@ -469,87 +374,51 @@ class ReportsProvider with ChangeNotifier {
     int? page,
     int? perPage,
   }) async {
-    final queryParameters = <String, String>{};
-
-    if (product != null && product.isNotEmpty) {
-      queryParameters['product'] = product;
-    }
-    if (sortBy != null && sortBy.isNotEmpty) {
-      queryParameters['sort_by'] = sortBy;
-    }
-    if (sortDirection != null && sortDirection.isNotEmpty) {
-      queryParameters['sort_direction'] = sortDirection;
-    }
-    if (storeId != null) {
-      queryParameters['store_id'] = storeId.toString();
-    }
-    if (categoryId != null) {
-      queryParameters['category_id'] = categoryId.toString();
-    }
-    if (stockLevel != null && stockLevel.isNotEmpty && stockLevel != 'All') {
-      queryParameters['stock_level'] = stockLevel;
-    }
-    if (expiringWithin != null &&
-        expiringWithin.isNotEmpty &&
-        expiringWithin != 'All') {
-      queryParameters['expiring_within'] = expiringWithin;
-    }
-    if (snapshotDate != null && snapshotDate.isNotEmpty) {
-      queryParameters['snapshot_date'] = snapshotDate;
-    }
-    if (from != null && from.isNotEmpty) {
-      queryParameters['from'] = from;
-    }
-    if (until != null && until.isNotEmpty) {
-      queryParameters['until'] = until;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-    if (perPage != null) {
-      queryParameters['per_page'] = perPage.toString();
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    // Set fallback store_id from activeStoreId if not explicitly filtered
-    if (storeId == null && activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.stockReportUrl)
-        .replace(queryParameters: queryParameters);
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          _stockReport = GetStockReportResponse.fromJson(jsonData);
-          notifyListeners();
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load stock report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load stock report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+    _stockReport = await fetchStockReportSnapshot(
+        accessToken: accessToken,
+        product: product,
+        sortBy: sortBy,
+        sortDirection: sortDirection,
+        storeId: storeId,
+        categoryId: categoryId,
+        stockLevel: stockLevel,
+        expiringWithin: expiringWithin,
+        snapshotDate: snapshotDate,
+        from: from,
+        until: until,
+        page: page,
+        perPage: perPage);
+    notifyListeners();
   }
+
+  /// A request-local page for listing/export; leaves shared rows untouched.
+  Future<GetStockReportResponse> fetchStockReportSnapshot({
+    required String accessToken,
+    String? product,
+    String? sortBy,
+    String? sortDirection,
+    int? storeId,
+    int? categoryId,
+    String? stockLevel,
+    String? expiringWithin,
+    String? snapshotDate,
+    String? from,
+    String? until,
+    int? page,
+    int? perPage,
+  }) =>
+      stockReportApi.fetch(
+          accessToken: accessToken,
+          product: product,
+          sortBy: sortBy,
+          sortDirection: sortDirection,
+          storeId: storeId,
+          categoryId: categoryId,
+          stockLevel: stockLevel,
+          expiringWithin: expiringWithin,
+          snapshotDate: snapshotDate,
+          from: from,
+          until: until,
+          page: page,
+          perPage: perPage);
 }

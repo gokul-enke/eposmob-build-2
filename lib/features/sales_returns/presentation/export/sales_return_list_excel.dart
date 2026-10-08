@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:get/get.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import 'package:pos_machine/services/list_excel_export_service.dart';
 import '../../domain/sales_return_list.dart';
 

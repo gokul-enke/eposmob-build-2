@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import '../../domain/sales_return_list.dart';
 
 String salesReturnListDate(SalesReturnOrder row) => row.hasCreatedAt

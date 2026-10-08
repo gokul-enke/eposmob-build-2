@@ -1,4 +1,4 @@
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 
 /// Authentication and store scope frozen for a listing or export request.
 class SalesReturnListScope {

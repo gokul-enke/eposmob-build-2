@@ -1,44 +1,47 @@
 import 'dart:async';
-import 'package:pos_machine/features/customers/data/customer_repository.dart';
 import 'dart:convert';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
+import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/customers/data/customer_repository.dart';
+import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
+import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/delivery_method_display.dart';
-import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
+import 'package:pos_machine/models/category_list.dart';
+import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/models/category_list.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
-import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
+import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/sales_executive_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -46,21 +49,18 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
-import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
-import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:pos_machine/widgets/horizontal_product_view_local.dart';
 import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
-import 'package:pos_machine/widgets/product_autocomplete_list.dart';
-import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
+import 'package:pos_machine/widgets/product_autocomplete_list.dart';
+import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:provider/provider.dart';
-
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
@@ -1909,13 +1909,11 @@ class BillingPageState extends State<BillingPageRestaurant>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-          confirmButtonTitle: isSaveMode
-              ? 'billing.save_order'.tr
-              : 'general.confirm'.tr,
-          printButtonTitle:
-              isSaveMode
-                  ? 'billing.save_and_print'.tr
-                  : 'general.confirm_and_print'.tr,
+          confirmButtonTitle:
+              isSaveMode ? 'billing.save_order'.tr : 'general.confirm'.tr,
+          printButtonTitle: isSaveMode
+              ? 'billing.save_and_print'.tr
+              : 'general.confirm_and_print'.tr,
           requireCheckoutCompletion: !isSaveMode,
           initialStep: initialStep,
 
@@ -1949,7 +1947,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
-            final result = await showAddCustomerDialog(context, mobileNumber: phoneToPreFill, customerName: initialName);
+            final result = await showAddCustomerDialog(context,
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -3731,13 +3730,13 @@ class BillingPageState extends State<BillingPageRestaurant>
                             final response;
                             if (RegExp(r'^[0-9]+$')
                                 .hasMatch(mobileNumberTextController.text)) {
-                              response = await CustomerRepository()
-                                  .findByPhone(accessToken ?? "",
-                                      mobileNumberTextController.text);
+                              response = await CustomerRepository().findByPhone(
+                                  accessToken ?? "",
+                                  mobileNumberTextController.text);
                             } else {
-                              response = await CustomerRepository()
-                                  .findByName(accessToken ?? "",
-                                      mobileNumberTextController.text);
+                              response = await CustomerRepository().findByName(
+                                  accessToken ?? "",
+                                  mobileNumberTextController.text);
                             }
 
                             if (response["status"] == "success") {
@@ -4149,7 +4148,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                     child: InkWell(
                       onTap: () async {
                         debugPrint("ADD NEW CUSTOMER BUTTON PRESSED");
-                        final result = await showAddCustomerDialog(context, mobileNumber: mobileNumberTextController.text);
+                        final result = await showAddCustomerDialog(context,
+                            mobileNumber: mobileNumberTextController.text);
                         if (result != null &&
                             result is Map &&
                             result['status'] == 'success') {
@@ -4162,8 +4162,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                 Provider.of<AuthModel>(context, listen: false)
                                     .token;
                             final response = await CustomerRepository()
-                                .findByPhone(
-                                    accessToken ?? '', createdPhone);
+                                .findByPhone(accessToken ?? '', createdPhone);
                             if (response != null &&
                                 response['status'] == 'success') {
                               final listModel =
@@ -9222,7 +9221,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           child: Padding(
             padding: const EdgeInsets.all(6),
             child: Text(
-           "${product.localizedName} / ${product.unit}",
+              "${product.localizedName} / ${product.unit}",
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

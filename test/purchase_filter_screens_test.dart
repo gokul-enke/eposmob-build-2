@@ -1,3 +1,6 @@
+import 'test_support/header_actions.dart';
+import 'test_support/app_translations.dart';
+import 'package:pos_machine/core/ui/buttons/app_buttons.dart';
 import 'package:pos_machine/features/purchases/data/purchase_api.dart';
 import 'package:pos_machine/features/purchases/data/purchase_repository.dart';
 import 'package:pos_machine/features/purchase_returns/data/purchase_return_api.dart';
@@ -68,22 +71,6 @@ class _FakeAppSettingsProvider extends AppSettingsProvider {
   Future<void> fetchAppSettings() async {}
 }
 
-class _TestTranslations extends Translations {
-  @override
-  Map<String, Map<String, String>> get keys => {
-        'en_US': {
-          'pagination.previous': 'Previous',
-          'pagination.page': 'Page',
-          'pagination.of': 'of',
-          'pagination.next': 'Next',
-          'purchase_order.summary': 'Summary',
-          'purchase_order.total_price': 'Total Price',
-          'purchase_order.create_purchase_order_btn': 'Create Purchase Order',
-          'purchase_return.create_btn': 'Create Purchase Return',
-        },
-      };
-}
-
 void main() {
   setUpAll(() {
     Get.testMode = true;
@@ -114,8 +101,8 @@ void main() {
         ),
       ],
       child: GetMaterialApp(
-        translations: _TestTranslations(),
-        locale: const Locale('en', 'US'),
+        translations: EnglishTranslations(),
+        locale: const Locale('en'),
         home: Scaffold(body: screen),
       ),
     );
@@ -144,16 +131,16 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(1200, 900));
 
-    expect(find.byKey(toggleKey), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
     expect(find.byKey(panelKey), findsOneWidget);
-    expect(find.byKey(actionKey), findsOneWidget);
+    expect(find.byType(AppPrimaryButton), findsOneWidget);
 
-    await tester.tap(find.byKey(toggleKey));
+    await tapFilterToggle(tester, key: toggleKey);
     await tester.pump();
 
     expect(find.byKey(panelKey), findsNothing);
-    expect(find.byKey(toggleKey), findsOneWidget);
-    expect(find.byKey(actionKey), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
+    expect(find.byType(AppPrimaryButton), findsOneWidget);
   }
 
   Future<void> verifyMobileStartsCollapsed(
@@ -164,15 +151,8 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(390, 800));
 
-    expect(find.byKey(toggleKey), findsOneWidget);
+    expect(hasFilterToggle(), isTrue);
     expect(find.byKey(panelKey), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byKey(toggleKey),
-        matching: find.byIcon(Icons.filter_alt_outlined),
-      ),
-      findsOneWidget,
-    );
   }
 
   Future<Object?> verifyMobileExpansion(
@@ -183,7 +163,7 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(390, 650));
 
-    await tester.tap(find.byKey(toggleKey));
+    await tapFilterToggle(tester, key: toggleKey);
     await tester.pump();
 
     expect(find.byKey(panelKey), findsOneWidget);

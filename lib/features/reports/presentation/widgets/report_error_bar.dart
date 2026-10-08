@@ -3,18 +3,21 @@ import 'package:pos_machine/core/ui/ui.dart';
 
 /// Banner above a report's list: why the data is stale, with a Retry. The
 /// rows already loaded stay visible below it. Pass a null [onRetry] for input
-/// errors that retrying cannot fix; the button is then hidden.
+/// errors that retrying cannot fix; the button is then hidden. Set
+/// [retryEnabled] false to keep it visible but disabled while a retry runs.
 class ReportErrorBar extends StatelessWidget {
   const ReportErrorBar({
     super.key,
     required this.message,
     required this.retryLabel,
     this.onRetry,
+    this.retryEnabled = true,
   });
 
   final String message;
   final String retryLabel;
   final VoidCallback? onRetry;
+  final bool retryEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,9 @@ class ReportErrorBar extends StatelessWidget {
               style: AppTextStyles.body.copyWith(color: AppColors.red)),
         ),
         if (onRetry != null)
-          TextButton(onPressed: onRetry, child: Text(retryLabel)),
+          TextButton(
+              onPressed: retryEnabled ? onRetry : null,
+              child: Text(retryLabel)),
       ]),
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/api_response_helper.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
 import '../domain/sales_return_list.dart';
 
 class SalesReturnListRepository implements SalesReturnListSource {
