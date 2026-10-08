@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/stock_list_query.dart';
 
@@ -21,15 +22,20 @@ class StockListController extends ChangeNotifier {
   final bool Function() readVariantEnabled;
   final stockNameController = TextEditingController();
   final categoryController = TextEditingController(text: 'All Categories');
-  final categorySearchController = TextEditingController();
   final barcodeController = TextEditingController();
   final rackController = TextEditingController();
   final storeController = TextEditingController(text: 'All Stores');
-  final storeSearchController = TextEditingController();
   final stockStatusController = TextEditingController(text: 'All Statuses');
-  final statusSearchController = TextEditingController();
   bool loading = false, initialized = false, showFilters = false;
   bool _disposed = false;
+  Timer? _searchTimer;
+  Object? loadError;
+  StockListQuery? appliedQuery;
+  int _filterRevision = 0;
+
+  /// Explicit filter actions supersede refresh pagination restoration, even
+  /// when Reset or an undone search leaves the effective query unchanged.
+  int get filterRevision => _filterRevision;
   List<String> categories = ['All Categories'];
   List<String> stores = ['All Stores'];
 
@@ -57,12 +63,16 @@ class StockListController extends ChangeNotifier {
     if (_disposed || loading) return;
     if (token.isEmpty) throw StateError('stock.auth_token_missing');
     loading = true;
+    loadError = null;
     notifyListeners();
     try {
       await ensureCategories();
       if (_disposed) return;
       await fetchStocks(token);
       if (_disposed) return;
+      // The stock loader replaces the visible page with unfiltered rows.
+      // Restore the inputs before another request can fail or keep us waiting.
+      _applySearch();
       await fetchStores(token);
       if (_disposed) return;
       final categoryNames =
@@ -75,6 +85,10 @@ class StockListController extends ChangeNotifier {
       categories = ['All Categories', ...categoryNames];
       stores = ['All Stores', ...storeNames];
       initialized = true;
+      _applySearch();
+    } catch (error) {
+      if (!_disposed) loadError = error;
+      rethrow;
     } finally {
       if (!_disposed) {
         loading = false;
@@ -84,17 +98,56 @@ class StockListController extends ChangeNotifier {
   }
 
   void search() {
-    if (!_disposed) applyFilters(query);
+    if (_disposed) return;
+    _filterRevision++;
+    _applySearch();
+  }
+
+  void _applySearch() {
+    _searchTimer?.cancel();
+    _searchTimer = null;
+    if (_disposed) return;
+    appliedQuery = query;
+    applyFilters(appliedQuery!);
+    notifyListeners();
+  }
+
+  /// Mutation reloads may clear the provider filters. Restore the last applied
+  /// query without committing input edits whose debounce is still pending.
+  void restoreAppliedFilters() {
+    if (_disposed || loading || !initialized || appliedQuery == null) return;
+    applyFilters(appliedQuery!);
+  }
+
+  void scheduleSearch() {
+    if (_disposed) return;
+    _searchTimer?.cancel();
+    _searchTimer =
+        Timer(const Duration(milliseconds: 300), () => flushSearch());
+    notifyListeners();
+  }
+
+  bool flushSearch() {
+    if (_searchTimer == null || _disposed) return false;
+    _searchTimer?.cancel();
+    _searchTimer = null;
+    if (appliedQuery?.sameFiltersAs(query) ?? false) return false;
+    search();
+    return true;
   }
 
   void reset() {
     if (_disposed) return;
+    _filterRevision++;
+    _searchTimer?.cancel();
+    _searchTimer = null;
     stockNameController.clear();
     categoryController.text = 'All Categories';
     barcodeController.clear();
     rackController.clear();
     storeController.text = 'All Stores';
     stockStatusController.text = 'All Statuses';
+    appliedQuery = query;
     resetFilters();
     notifyListeners();
   }
@@ -109,16 +162,14 @@ class StockListController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _searchTimer?.cancel();
     for (final input in [
       stockNameController,
       categoryController,
-      categorySearchController,
       barcodeController,
       rackController,
       storeController,
-      storeSearchController,
       stockStatusController,
-      statusSearchController
     ]) {
       input.dispose();
     }

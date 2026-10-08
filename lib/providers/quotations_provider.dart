@@ -10,13 +10,6 @@ import '../models/quotation_model.dart';
 import '../resources/app_url.dart';
 
 class QuotationsProvider with ChangeNotifier {
-  List<Quotation> _quotations = [];
-  List<Quotation> get quotations => _quotations;
-
-  int currentPage = 1;
-  int totalPages = 1;
-  int paginationFrom = 1;
-
   QuotationDetailsData? _currentQuotationDetails;
   QuotationDetailsData? get currentQuotationDetails => _currentQuotationDetails;
 
@@ -46,87 +39,6 @@ class QuotationsProvider with ChangeNotifier {
       'Content-Type': 'application/json',
       'X-Tenant': apiKey,
     };
-  }
-
-  Future<void> fetchQuotations({
-    required String accessToken,
-    int? storeId,
-    String? quotationNumber,
-    String? startDate,
-    String? endDate,
-    String? customerId,
-    String? filterStatus,
-    int? page,
-  }) async {
-    final queryParameters = <String, String>{};
-
-    if (storeId != null) {
-      queryParameters['store_id'] = storeId.toString();
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-      if (activeStoreId != null) {
-        queryParameters['store_id'] = activeStoreId.toString();
-      }
-    }
-
-    if (quotationNumber != null && quotationNumber.isNotEmpty) {
-      queryParameters['quotation_number'] = quotationNumber;
-    }
-    if (startDate != null && startDate.isNotEmpty) {
-      queryParameters['quotation_date_from'] = startDate;
-      queryParameters['quotation_date_to'] = startDate;
-    }
-    if (endDate != null && endDate.isNotEmpty) {
-      queryParameters['expiry_date_from'] = endDate;
-      queryParameters['expiry_date_to'] = endDate;
-    }
-    if (customerId != null && customerId.isNotEmpty) {
-      queryParameters['customer_id'] = customerId;
-    }
-    if (filterStatus != null &&
-        filterStatus.isNotEmpty &&
-        filterStatus.toLowerCase() != 'all') {
-      queryParameters['status'] = filterStatus;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.listQuotations)
-        .replace(queryParameters: queryParameters);
-
-    try {
-      final response = await http
-          .get(uri, headers: await _authHeaders(accessToken))
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          throw Exception('Received empty response');
-        }
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        List<Quotation> loadedQuotations = [];
-        if (_isSuccessResponse(jsonData) && jsonData['data'] != null) {
-          final dataWrapper = QuotationDataWrapper.fromJson(jsonData['data']);
-          loadedQuotations = dataWrapper.data ?? [];
-
-          currentPage = dataWrapper.currentPage ?? 1;
-          totalPages = dataWrapper.lastPage ?? 1;
-          paginationFrom = dataWrapper.from ?? 1;
-        }
-
-        _quotations = loadedQuotations;
-        notifyListeners();
-      } else {
-        throw Exception(
-            'Failed to load quotations: HTTP ${response.statusCode}');
-      }
-    } catch (_) {
-      _quotations = [];
-      notifyListeners();
-      rethrow;
-    }
   }
 
   Future<QuotationDetailsData?> fetchQuotationDetails({

@@ -512,6 +512,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       if (!mounted) return;
       _controller.onCartChanged(context);
     };
+    _controller.startTrackingCartPayments(context);
     localProductProvider.addListener(_cartChangeListener!);
   }
 
@@ -1262,6 +1263,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                     ),
                     // Billing Tab
                     MobileBillingTab(
+                      isActive: _currentTabIndex == 1,
                       isQuotationMode: _isQuotationPage,
                       autocompletePhoneKey: _autocompletePhoneKey,
                       onConfirmOrder: confirmOrder,

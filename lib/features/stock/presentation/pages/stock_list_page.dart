@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:pos_machine/core/ui/feedback/app_toast.dart';
+import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/list_stock.dart';
@@ -18,22 +19,24 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/product/widgets/adjust_stock_modal.dart';
 import 'package:pos_machine/screens/product/widgets/move_stock_modal.dart';
-import 'package:pos_machine/screens/product/widgets/stock_responsive.dart';
 import 'package:pos_machine/screens/product/widgets/withdraw_stock_modal.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 import '../navigation/stock_navigation.dart';
 import '../state/stock_list_controller.dart';
-import '../widgets/list/stock_list_desktop_table.dart';
-import '../widgets/list/stock_list_filters.dart';
-import '../widgets/list/stock_list_frame.dart';
+import '../../data/stock_list_snapshot.dart';
+import '../../domain/stock_list_query.dart';
+import '../export/stock_list_excel.dart';
 import '../widgets/list/stock_list_header.dart';
-import '../widgets/list/stock_list_load_state.dart';
-import '../widgets/list/stock_list_mobile_card.dart';
+import '../widgets/list/stock_list_layout.dart';
 import '../widgets/list/stock_list_row_actions.dart';
 
 class StockListPage extends StatefulWidget {
-  const StockListPage({super.key});
+  const StockListPage({super.key, this.exportController});
+  final ExportController? exportController;
+  static const filterToggleKey = ValueKey('stock-filter-toggle');
+  static const exportKey = ValueKey('stock-list-export');
+  static const refreshKey = ValueKey('stock-list-refresh');
   @override
   State<StockListPage> createState() => _StockListPageState();
 }
@@ -47,6 +50,9 @@ class _StockListPageState extends State<StockListPage> {
   late final RoleProvider _role;
   late final StockListController _controller;
   late final StockNavigation _navigation;
+  late final ExportController _export;
+  final _tableScroll = ScrollController();
+  bool _stockWasLoading = false;
   bool _variantFeatureEnabled() =>
       _settings.appSettings?.productVariantEnabled ?? false;
   bool _canViewPurchasePrice() =>
@@ -62,10 +68,13 @@ class _StockListPageState extends State<StockListPage> {
     _settings = context.read<AppSettingsProvider>();
     _role = context.read<RoleProvider>();
     _navigation = StockNavigation(Get.put(SideBarController()));
+    _export = widget.exportController ?? ExportController();
+    _export.addListener(_rebuild);
     _controller = StockListController(
         ensureCategories: () async {
-          if (!_categories.isCategoriesLoaded)
+          if (!_categories.isCategoriesLoaded) {
             await _categories.ensureCategoriesLoaded();
+          }
         },
         fetchStocks: _stocks.loadAllStocks,
         fetchStores: (token) => _purchases.listAllStores(token, null),
@@ -84,12 +93,14 @@ class _StockListPageState extends State<StockListPage> {
             filterStatus: query.status,
             includeVariants: query.includeVariants,
             page: 1));
-    _stocks.addListener(_rebuild);
+    _stockWasLoading = _stocks.stockIsLoading;
+    _stocks.addListener(_stockChanged);
     _settings.addListener(_rebuild);
     _role.addListener(_rebuild);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _controller.setFiltersVisible(!stockIsPhone(context));
+      _controller.setFiltersVisible(MediaQuery.sizeOf(context).width >=
+          ListLayoutBreakpoints.mobileBelow);
       _load();
     });
   }
@@ -100,12 +111,27 @@ class _StockListPageState extends State<StockListPage> {
       AppToast.error(context, 'stock.auth_token_missing'.tr);
       return;
     }
+    final previousPage = _stocks.stockCurrentPage;
+    final previousQuery = _controller.appliedQuery;
+    final filterRevision = _controller.filterRevision;
     try {
       await _controller.load(token);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
+        final applied = _controller.appliedQuery;
+        // A stock reload resets paging before the store request completes.
+        // Restore only the same query, bounded by the refreshed result count.
+        if (previousQuery != null &&
+            applied != null &&
+            filterRevision == _controller.filterRevision &&
+            previousQuery.sameFiltersAs(applied)) {
+          _stocks.goToStockPage(previousPage > _stocks.stockTotalPages
+              ? _stocks.stockTotalPages
+              : previousPage);
+        }
         AppToast.error(context,
             'stock.error_loading_stocks'.trParams({'error': '$error'}));
+      }
     }
   }
 
@@ -113,12 +139,40 @@ class _StockListPageState extends State<StockListPage> {
     if (mounted) setState(() {});
   }
 
+  void _stockChanged() {
+    if (!mounted) return;
+    final finishedLoading = _stockWasLoading && !_stocks.stockIsLoading;
+    // Consume the loading edge before restoring: filtering also notifies us.
+    _stockWasLoading = _stocks.stockIsLoading;
+    final applied = _controller.appliedQuery;
+    if (finishedLoading &&
+        !_controller.loading &&
+        _controller.initialized &&
+        applied != null) {
+      final providerQuery = StockListQuery(
+          name: _stocks.stockFilterName ?? '',
+          category: _stocks.stockFilterCategory,
+          barcode: _stocks.stockFilterBarcode,
+          rack: _stocks.stockFilterRack,
+          store: _stocks.stockFilterStore,
+          status: _stocks.stockFilterStatus,
+          includeVariants: applied.includeVariants);
+      if (!applied.sameFiltersAs(providerQuery)) {
+        _controller.restoreAppliedFilters();
+      }
+    }
+    _rebuild();
+  }
+
   @override
   void dispose() {
-    _stocks.removeListener(_rebuild);
+    _stocks.removeListener(_stockChanged);
     _settings.removeListener(_rebuild);
     _role.removeListener(_rebuild);
     _controller.dispose();
+    _export.removeListener(_rebuild);
+    if (widget.exportController == null) _export.dispose();
+    _tableScroll.dispose();
     super.dispose();
   }
 
@@ -131,60 +185,84 @@ class _StockListPageState extends State<StockListPage> {
           onAdjust: _showAdjustStockModal,
           onMove: _showMoveStockModal,
           onWithdraw: _showWithdrawStockModal);
+  Future<void> _copyBarcode(ListStockModelData stock) async {
+    final barcode = stock.barCode;
+    if (barcode == null || barcode.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: barcode));
+    if (mounted) {
+      AppToast.success(context,
+          'stock.copied_to_clipboard'.trParams({'label': 'stock.barcode'.tr}));
+    }
+  }
+
+  Future<void> _exportStocks() async {
+    if (_export.busy) return;
+    // Commit only pending text edits; exporting never resets an unchanged page.
+    _controller.flushSearch();
+    if (_controller.loading ||
+        _stocks.stockIsLoading ||
+        !_controller.initialized ||
+        _controller.loadError != null) {
+      return;
+    }
+    if (_stocks.listStockModelDataList?.isEmpty ?? true) {
+      AppToast.info(context, 'stock.no_stock_filtered'.tr);
+      return;
+    }
+    final applied = _controller.appliedQuery;
+    if (applied == null) return;
+    final snapshot = stockListSnapshot(
+        _stocks.allStocks ?? const <ListStockModelData>[], applied,
+        secondaryName: _stocks.stockFilterNameSecondary);
+    final canViewCost = _canViewPurchasePrice();
+    final variants = _variantFeatureEnabled();
+    final exported = await _export.run(context,
+        createFile: () => exportStockListExcel(snapshot,
+            canViewPurchasePrice: canViewCost, variantEnabled: variants));
+    if (!exported && mounted) {
+      AppToast.error(context, 'stock.list_export_error'.tr);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
-        final isMobile = stockIsPhone(context);
         final rows =
             _stocks.listStockModelDataList ?? const <ListStockModelData>[];
         final loading = _controller.loading || _stocks.stockIsLoading;
-        final Widget content;
-        if (loading || rows.isEmpty) {
-          content = StockListLoadState(
+        final failed = _controller.loadError != null;
+        return stockListLayout(
+          inputs: _controller,
+          rows: rows,
+          loading: loading,
+          failed: failed,
+          header: stockListHeader(
+              inputs: _controller,
+              export: _export,
               loading: loading,
-              hasFilters: _controller.hasActiveFilters,
-              onReset: _controller.reset);
-        } else if (isMobile) {
-          content = ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, index) => StockListMobileCard(
-                  stock: rows[index],
-                  variantEnabled: _variantFeatureEnabled(),
-                  actions: _actions(rows[index], true)));
-        } else {
-          content = StockListDesktopTable(
-              listStockModelDataList: rows,
-              canViewPurchasePrice: _canViewPurchasePrice(),
-              variantEnabled: _variantFeatureEnabled(),
-              buildActions: (stock) => _actions(stock, false));
-        }
-        return StockListFrame(
-            showFilters: _controller.showFilters,
-            header: StockListHeader(
-                isMobile: isMobile,
-                showFilters: _controller.showFilters,
-                hasActiveFilters: () => _controller.hasActiveFilters,
-                inputs: _controller,
-                onAdd: _navigation.openAdd,
-                onToggle: () =>
-                    _controller.setFiltersVisible(!_controller.showFilters)),
-            filters: StockListFilters(
-                isMobile: isMobile,
-                showFilters: _controller.showFilters,
-                size: MediaQuery.sizeOf(context),
-                inputs: _controller,
-                onSearch: _controller.search,
-                onReset: _controller.reset,
-                onHide: () => _controller.setFiltersVisible(false)),
-            content: content,
-            currentPage: _stocks.stockCurrentPage,
-            totalPages: _stocks.stockTotalPages,
-            onPageChanged: _stocks.goToStockPage);
+              failed: failed,
+              hasRows: rows.isNotEmpty,
+              onExport: _exportStocks,
+              onRefresh: _load,
+              onAdd: _navigation.openAdd),
+          canViewPurchasePrice: _canViewPurchasePrice(),
+          variantEnabled: _variantFeatureEnabled(),
+          tableScroll: _tableScroll,
+          onRefresh: _load,
+          actions: _actions,
+          onCopy: _copyBarcode,
+          pagination: ListPagination(
+              currentPage: _stocks.stockCurrentPage,
+              totalPages: _stocks.stockTotalPages,
+              itemsPerPage: _stocks.stockItemsPerPage,
+              onPageChanged: (page) {
+                if (_controller.flushSearch()) return;
+                _stocks.goToStockPage(page);
+              },
+              countLabel:
+                  'stock.list_count'.trParams({'count': '${rows.length}'})),
+        );
       });
   void _showStockDetails(ListStockModelData stock) {
     showDialog(

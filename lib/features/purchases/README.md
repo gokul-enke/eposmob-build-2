@@ -84,3 +84,39 @@ removed page. Directory lookups use their own generation so Reset does not
 cancel option loading. These extraction safeguards do not change API contracts.
 Unrelated pre-existing `pubspec.lock` changes are excluded from the migration.
 Senior review and live application acceptance remain external to local checks.
+
+## Purchase Orders list UI and export
+
+The order list uses the shared `ListPageScaffold`, `PageHeader`, `FilterPanel`,
+table/card, badge and pagination components. Its supplier/store filters remain
+searchable and its date fields retain the date-only calendar and yyyy-MM-dd API
+values. Header Refresh and pull-to-refresh retain the existing Reset behavior.
+The total-price strip is explicitly the sum of the visible page. View, Receive
+and Create keep the existing navigation and provider preparation callbacks;
+inner pages, repositories, models and list/form controllers are unchanged.
+
+The two purchase lists share the public purchase-list adapters
+`PurchaseListPicker` / `PurchaseListDateField`, the request-local
+`PurchaseExportPage` / `collectPurchaseExport` collector and export-only
+`PurchaseListExportGuard`. Purchase Returns consumes these helpers without
+depending on order page or controller internals. Other modules need not use them.
+
+Export uses `ExportController` and the shared Excel/file delivery services:
+Save As on Windows, sharing on other platforms. It captures the filters, starts
+at page 1 and reads every declared page without changing the visible list.
+Missing/inconsistent page metadata, empty batches or duplicate/missing IDs fail
+the export. A filter, Reset, token, tenant, active-store, endpoint, currency,
+permission or page-disposal change aborts before delivery. The endpoint provides
+no snapshot token or total row count: these checks detect pagination defects,
+but cannot guarantee an atomic snapshot during concurrent backend edits.
+
+Verification: 135 focused purchase/return/filter/export tests pass; touched files
+analyze cleanly. Fixtures cover populated phone/tablet/desktop lists, hidden
+mobile filters, supplier/store choices, date values, Reset including unselected
+search text, filtered all-pages workbooks from page 2, duplicate IDs, request and
+session failures, disposal and the existing inner-page regressions. Screenshots
+for both lists at 375, 768 and 1280 are in `docs/screenshots/purchase-lists`.
+Full suite: 2,339 passed, two skipped and the existing failure in
+`standard_pdf_layout_contract_test.dart` (all six standard themes resolve the
+active-store address centrally, line 391). No print sources are changed here.
+Live APIs and native Windows Save As remain manual acceptance checks.

@@ -71,13 +71,16 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       serializedVariantAttributes: fields[17] as HiveStringValue?,
       lineId: fields[18] as String?,
       warrantyEnabled: fields[19] == null ? false : fields[19] as bool,
+      offerId: fields[20] as int?,
+      offerVersion: fields[21] as int?,
+      standardUnitPrice: fields[22] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveLocalCartItem obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -117,7 +120,13 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       ..writeByte(18)
       ..write(obj.lineId)
       ..writeByte(19)
-      ..write(obj.warrantyEnabled);
+      ..write(obj.warrantyEnabled)
+      ..writeByte(20)
+      ..write(obj.offerId)
+      ..writeByte(21)
+      ..write(obj.offerVersion)
+      ..writeByte(22)
+      ..write(obj.standardUnitPrice);
   }
 
   @override

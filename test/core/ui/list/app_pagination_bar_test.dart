@@ -3,12 +3,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 
 void main() {
+  testWidgets(
+      'retained-results pagination disables navigation without changing its page',
+      (tester) async {
+    var calls = 0;
+    final state = ListPagination(
+        currentPage: 2,
+        totalPages: 3,
+        itemsPerPage: 20,
+        countLabel: 'Previous results',
+        enabled: false,
+        onPageChanged: (_) => calls++);
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: AppPaginationBar.fromState(state))));
+    expect(find.text('Page 2 of 3'), findsOneWidget);
+    expect(find.text('Previous results'), findsOneWidget);
+    final buttons = tester
+        .widgetList<AppSquareIconButton>(find.byType(AppSquareIconButton));
+    expect(buttons.every((button) => button.onPressed == null), isTrue);
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.tap(find.byTooltip('Previous page'));
+    expect(calls, 0);
+  });
   Future<void> pumpBar(
     WidgetTester tester, {
     required int current,
     required int total,
     double width = 800,
     ValueChanged<int>? onPageChanged,
+    bool totalPagesKnown = true,
   }) {
     return tester.pumpWidget(
       MaterialApp(
@@ -19,6 +42,7 @@ void main() {
               child: AppPaginationBar(
                 currentPage: current,
                 totalPages: total,
+                totalPagesKnown: totalPagesKnown,
                 countLabel: '20 on this page',
                 onPageChanged: onPageChanged ?? (_) {},
               ),
@@ -49,6 +73,43 @@ void main() {
     await tester.tap(find.byTooltip('Previous page'));
     await tester.tap(find.byTooltip('Next page'));
     expect(calls, 0);
+  });
+  testWidgets(
+      'unknown total shows only current page and uses reachable next page',
+      (tester) async {
+    var selected = 0;
+    await pumpBar(tester,
+        current: 1,
+        total: 2,
+        totalPagesKnown: false,
+        onPageChanged: (page) => selected = page);
+    expect(find.text('Page 1'), findsOneWidget);
+    expect(find.text('Page 1 of 2'), findsNothing);
+    await tester.tap(find.byTooltip('Next page'));
+    expect(selected, 2);
+    await pumpBar(tester,
+        current: 3,
+        total: 3,
+        totalPagesKnown: false,
+        onPageChanged: (page) => selected = page);
+    await tester.tap(find.byTooltip('Next page'));
+    expect(selected, 2);
+    await tester.tap(find.byTooltip('Previous page'));
+    expect(selected, 2);
+  });
+  testWidgets('ListPagination carries unknown total through shared bar',
+      (tester) async {
+    final state = ListPagination(
+        currentPage: 2,
+        totalPages: 3,
+        totalPagesKnown: false,
+        itemsPerPage: 15,
+        onPageChanged: (_) {},
+        countLabel: '15 on this page');
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: AppPaginationBar.fromState(state))));
+    expect(find.text('Page 2'), findsOneWidget);
+    expect(state.rowNumber(0), 16);
   });
 
   testWidgets('fills its parent with the card radius and a border',

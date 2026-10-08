@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/domain/product_price_preview.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
@@ -47,6 +50,11 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
   late final FocusNode _mrpFocus;
 
   String _selectedUnit = 'base';
+  bool _priceEdited = false;
+  bool _writingAutomaticPrice = false;
+  late String _lastPriceText;
+  ProductPricePreview? _preview;
+  double? _shownAutomaticPrice;
 
   @override
   void initState() {
@@ -58,6 +66,9 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
         _controller.defaultUnitPrice(widget.product),
       ),
     );
+    _lastPriceText = _priceController.text;
+    _priceController.addListener(_handlePriceChanged);
+    _quantityController.addListener(_handleQuantityChanged);
     _mrpController = TextEditingController(
       text: _controller.formatAddFieldPrice(
         _controller.defaultMrp(widget.product),
@@ -83,6 +94,43 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     });
   }
 
+  void _handleQuantityChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handlePriceChanged() {
+    if (_priceController.text == _lastPriceText) return;
+    _lastPriceText = _priceController.text;
+    if (_writingAutomaticPrice) return;
+    final value = double.tryParse(_priceController.text);
+    _priceEdited = value == null ||
+        _preview == null ||
+        !BillingMobileCartController.isSameDisplayPrice(
+            value, _preview!.unitPrice);
+    if (mounted) setState(() {});
+  }
+
+  ProductPricePreview _refreshPreview({bool listen = true}) {
+    final saleUnit = _controller.resolveSaleUnit(widget.product, _selectedUnit);
+    final rate = saleUnit?.conversionRateValue ?? 1.0;
+    final quantity = num.tryParse(_quantityController.text) ?? 0;
+    final preview = previewBillingProductPrice(context, widget.product,
+        quantity: quantity * rate,
+        saleUnitId: saleUnit?.id,
+        includeCartQuantity: true,
+        listen: listen);
+    _preview = preview;
+    if (!_priceEdited && _shownAutomaticPrice != preview.unitPrice) {
+      _writingAutomaticPrice = true;
+      _priceController.text =
+          _controller.formatAddFieldPrice(preview.unitPrice);
+      _lastPriceText = _priceController.text;
+      _writingAutomaticPrice = false;
+      _shownAutomaticPrice = preview.unitPrice;
+    }
+    return preview;
+  }
+
   void _attachSelectAllOnFocus(
       FocusNode node, TextEditingController controller) {
     node.addListener(() {
@@ -105,6 +153,8 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
 
   @override
   void dispose() {
+    _quantityController.removeListener(_handleQuantityChanged);
+    _priceController.removeListener(_handlePriceChanged);
     _quantityController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
@@ -115,12 +165,15 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
   }
 
   void _submit() {
+    final preview = _refreshPreview(listen: false);
     final showMrp =
         context.read<AppSettingsProvider>().appSettings?.showMrpPos ?? false;
     final parseResult = _controller.parseAddForm(
       quantityText: _quantityController.text,
       priceText: _priceController.text,
       mrpText: showMrp ? _mrpController.text : null,
+      defaultPrice: preview.unitPrice,
+      priceWasEdited: _priceEdited,
     );
 
     if (!parseResult.success) {
@@ -132,12 +185,32 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     }
 
     final saleUnit = _controller.resolveSaleUnit(widget.product, _selectedUnit);
-    final values = parseResult.values!.copyWith(selectedSaleUnit: saleUnit);
+    final rate = saleUnit?.conversionRateValue ?? 1.0;
+    final parsed = parseResult.values!;
+    final values = MobileMarketAddFormValues(
+      quantity: parsed.quantity * rate,
+      customPrice:
+          parsed.customPrice == null ? null : parsed.customPrice! / rate,
+      customMrp: parsed.customMrp,
+      selectedSaleUnit: saleUnit,
+    );
     Navigator.of(context).pop(values);
   }
 
   @override
   Widget build(BuildContext context) {
+    final preview = _refreshPreview();
+    final currency =
+        context.watch<AppSettingsProvider>().appSettings?.currency ?? '';
+    final rate = _controller
+            .resolveSaleUnit(widget.product, _selectedUnit)
+            ?.conversionRateValue ??
+        1.0;
+    final total = _priceEdited
+        ? (double.tryParse(_priceController.text) ?? 0) /
+            rate *
+            preview.baseQuantity
+        : preview.total;
     final productName = widget.product.productName ?? 'Product';
     final showMrp =
         context.watch<AppSettingsProvider>().appSettings?.showMrpPos ?? false;
@@ -240,6 +313,26 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
               ),
             ],
           ),
+          if (!_priceEdited && preview.hasOffer) ...[
+            const SizedBox(height: 8),
+            OfferPriceBadge(standardPrice: preview.standardUnitPrice),
+          ],
+          if (!_priceEdited && preview.requiresSelection) ...[
+            const SizedBox(height: 8),
+            Text('offers.price_pending_selection'.tr,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+          if (!preview.requiresSelection || _priceEdited) ...[
+            const SizedBox(height: 8),
+            Text(
+                '${'billing.total'.tr}: ${formatBillingPrice(
+                  total,
+                  currency,
+                  decimals: 2,
+                )}',
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          ],
           if (showMrp) ...[
             const SizedBox(height: 12),
             _SelectAllNumberField(

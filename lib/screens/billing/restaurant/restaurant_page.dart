@@ -2486,7 +2486,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
         double total = 0;
         for (final item in items) {
-          total += (item.price ?? 0) * item.quantity;
+          total += item.amounts.total;
         }
         final currency =
             Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
@@ -3377,7 +3377,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   double _totalForKitchenItems(List<LocalCartItem> cartItems) {
     final total = cartItems.fold<double>(
       0,
-      (sum, item) => sum + ((item.price ?? 0) * item.quantity).toDouble(),
+      (sum, item) => sum + item.amounts.total.toDouble(),
     );
     final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
     if (appSettingsProvider.appSettings?.priceRoundOff == true) {
@@ -3584,7 +3584,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           'productName': item.product.productName ?? '',
           'quantity': item.quantity.toString(),
           'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-          'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+          'totalPrice': item.amounts.total.toStringAsFixed(2),
           'mrp': item.mrp?.toStringAsFixed(2) ?? item.price?.toStringAsFixed(2) ?? '0.00',
           if (item.comment != null && item.comment!.isNotEmpty) 'notes': item.comment,
         });

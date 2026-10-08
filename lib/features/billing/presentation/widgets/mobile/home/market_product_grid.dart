@@ -8,6 +8,7 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_contr
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_price.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_market_add_sheet.dart';
 
@@ -240,8 +241,6 @@ class ProductListRow extends StatelessWidget {
 
     final imageUrl = resolveMarketProductImageUrl(product);
 
-    final price = formatMarketProductPrice(product, currency);
-
     final category = resolveMarketProductCategory(product);
 
     return Container(
@@ -323,19 +322,10 @@ class ProductListRow extends StatelessWidget {
                         Row(
                           children: [
                             Flexible(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  price,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    color: ColorManager.kPrimaryColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
+                              child: MarketProductPrice(
+                                  product: product,
+                                  currency: currency,
+                                  fontSize: 15),
                             ),
                             const SizedBox(width: 8),
                             _ListStockChip(status: stockStatus),

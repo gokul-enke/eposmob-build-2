@@ -14,6 +14,11 @@ import 'package:pos_machine/helpers/product_display_order.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
+import 'package:pos_machine/features/billing/domain/product_price_preview.dart';
+import 'package:pos_machine/features/billing/domain/cart_line_amounts.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
+import 'package:pos_machine/features/offers/domain/offer_money.dart';
+import 'package:pos_machine/features/offers/domain/product_offer_pricing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
@@ -22,7 +27,8 @@ import '../resources/app_url.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/master_data_provider.dart';
 import '../providers/shared_preferences.dart' as prefs_provider;
-import '../widgets/stock_selection_modal.dart' show buildStockGroupingKey;
+import '../widgets/stock_selection_modal.dart'
+    show buildStockGroupingKey, groupStocksByPricing;
 import '../resources/api_locale.dart';
 
 /// A model representing a local cart item.
@@ -114,6 +120,20 @@ class LocalCartItem {
   final int? variantId;
   final Map<String, dynamic>? variantAttributes;
 
+  /// Product offer applied to [price], or null when the line is at its
+  /// standard price. Sent with the order as `offer_id` / `offer_version`,
+  /// together with [standardUnitPrice] as `standard_unit_price`.
+  int? offerId;
+  int? offerVersion;
+
+  /// Per-base-unit standard price (before any offer or manual change). Set on
+  /// every priced line, and kept on manual lines as their reference; shown
+  /// struck through in the cart while [offerId] is set and sent as
+  /// `standard_unit_price`.
+  double? standardUnitPrice;
+
+  bool get hasOffer => offerId != null;
+
   LocalCartItem({
     String? lineId,
     required this.product,
@@ -134,12 +154,51 @@ class LocalCartItem {
     this.saleUnitConversionRate,
     this.variantId,
     this.variantAttributes,
+    this.offerId,
+    this.offerVersion,
+    this.standardUnitPrice,
   })  : lineId =
             lineId == null || lineId.trim().isEmpty ? _newLineId() : lineId,
         stockGroupIds = stockGroupIds ?? <int>[],
         stockReservations = stockReservations ?? <StockReservation>[];
 
   bool get hasGroupedStockSelection => stockGroupIds.length > 1;
+
+  /// The same quantities/units used for upload, including oversold remainder.
+  Iterable<({int? stockId, num quantity, double price, double? mrp, bool saleUnit})>
+      get orderLineSplits sync* {
+    final reservations = stockReservations.where((r) => r.quantity > 0).toList();
+    final reserved = reservations.fold<num>(0, (sum, r) => sum + r.quantity);
+    final remainder = quantity - reserved;
+    for (var index = 0; index < (reservations.isEmpty ? 1 : reservations.length); index++) {
+      final reservation = reservations.isEmpty ? null : reservations[index];
+      final baseQuantity = reservation == null
+          ? quantity
+          : reservation.quantity +
+              (index == reservations.length - 1 && remainder > 0 ? remainder : 0);
+      final saleUnit = canUseSaleUnitPayloadFor(baseQuantity);
+      final payloadQuantity = saleUnit
+          ? toDisplayQuantity(baseQuantity)
+          : normalizeQuantityForUnit(baseQuantity, product.unit);
+      if (payloadQuantity <= 0) continue;
+      yield (
+        stockId: reservation?.stockId ?? selectedStock?.id,
+        quantity: payloadQuantity,
+        price: (saleUnit ? toDisplayAmount(price) : price) ?? 0,
+        mrp: saleUnit ? toDisplayAmount(mrp) : mrp,
+        saleUnit: saleUnit,
+      );
+    }
+  }
+
+  /// Sum separately rounded backend batch lines; never redistribute cents.
+  CartLineAmounts get amounts => CartLineAmounts.sum(orderLineSplits.map(
+        (split) => CartLineAmounts.calculate(
+          price: split.price,
+          quantity: split.quantity,
+          taxRate: taxRate ?? 0,
+        ),
+      ));
 
   bool get hasSaleUnit =>
       saleUnitId != null &&
@@ -173,6 +232,16 @@ class LocalCartItem {
   double? get displayPrice => toDisplayAmount(price);
 
   double? get displayMrp => toDisplayAmount(mrp);
+
+  /// Price before the offer, or null when no offer is applied.
+  double? get displayStandardPrice =>
+      hasOffer ? toDisplayAmount(standardUnitPrice) : null;
+
+  /// Drops the offer (for example after a manual price edit).
+  void clearOffer() {
+    offerId = null;
+    offerVersion = null;
+  }
 
   num toDisplayQuantity(num baseQuantity) {
     final rate = saleUnitConversionRate;
@@ -546,15 +615,14 @@ class LocalProductProvider extends ChangeNotifier {
     final breakdown = <String, double>{};
 
     for (var item in _cartItems) {
-      final double itemTotal = (item.price ?? 0.0) * item.quantity;
+      final double itemTotal = item.amounts.total;
       final double currentTaxRate = item.taxRate ?? 0.0;
 
       if (currentTaxRate <= 0 || itemTotal <= 0) continue;
 
       // Extract total tax from tax-inclusive price
       // Formula: Tax = Price × TaxRate / (100 + TaxRate)
-      final double totalTaxAmount =
-          itemTotal * currentTaxRate / (100 + currentTaxRate);
+      final double totalTaxAmount = item.amounts.tax;
 
       final double productTotalTaxRate = item.product.totalTaxRate;
 
@@ -801,6 +869,7 @@ class LocalProductProvider extends ChangeNotifier {
   LocalProductProvider() {
     _loadStockEnabledFromPrefs();
     _hydration = _hydrateProductsFromHive();
+    _offerRepository.addListener(_onOfferCatalogChanged);
     _loadCartFromHive();
     _loadSavedOrdersFromHive();
     _initConfirmedOrdersBox();
@@ -1030,6 +1099,157 @@ class LocalProductProvider extends ChangeNotifier {
     );
   }
 
+  /// Previews an addition without reserving stock, changing the cart, or
+  /// freezing a price. Uses the same allocation and pricing as [addToCart].
+  ProductPricePreview previewProductPrice({
+    required GetProduct product,
+    num quantity = 1,
+    Stock? selectedStock,
+    List<int>? stockGroupIds,
+    int? saleUnitId,
+    int? variantId,
+    bool variantsEnabled = false,
+    bool includeCartQuantity = false,
+    bool? stockEnabled,
+    bool hideNonStockProduct = false,
+    int? activeStoreId,
+    String? activeStoreName,
+    Set<String>? groupingFields,
+  }) {
+    final tracksStock = stockEnabled ?? isStockEnabled;
+    final fields = groupingFields ?? _activeStockGroupingFields;
+    final saleUnit = _findSaleUnit(product, saleUnitId);
+    final rate = saleUnit?.conversionRateValue ?? 1.0;
+    final baseQuantity = normalizeQuantityForUnit(quantity, product.unit);
+    var needsSelection = false;
+    if (variantsEnabled && product.hasVariants && variantId == null) {
+      variantId = ProductVariantSelection.tryResolveWithoutPicker(
+        product,
+        activeStoreId: activeStoreId,
+      )?.id;
+      needsSelection = variantId == null;
+    }
+    var groupIds = _normalizeStockGroupIds(stockGroupIds);
+    if (tracksStock && selectedStock == null && !needsSelection) {
+      final stocks = filterStocksForVariant(
+        getStockOptionsForStore(
+          product,
+          activeStoreId: activeStoreId,
+          activeStoreName: activeStoreName,
+          includeNonPositive: !hideNonStockProduct,
+        ),
+        variantId,
+      );
+      final groups = groupStocksByPricing(stocks, activeFields: fields);
+      if (groups.length == 1) {
+        // The add flow automatically selects this same pricing group.
+        selectedStock = groups.single.firstStock;
+        groupIds = _normalizeStockGroupIds(
+          groups.single.originalStocks
+              .map((stock) => stock.id)
+              .whereType<int>()
+              .toList(),
+        );
+      } else if (groups.length > 1) {
+        needsSelection = true;
+      }
+    }
+    if (tracksStock && selectedStock != null) {
+      groupIds = _expandCompatibleStockGroupIds(
+        product: product,
+        selectedStock: selectedStock,
+        variantId: variantId,
+        stockGroupIds: groupIds,
+      );
+    }
+    final index = !needsSelection && includeCartQuantity
+        ? _findCartItemIndex(
+            product.productId ?? -1,
+            selectedStock: selectedStock,
+            stockGroupIds: groupIds,
+            saleUnitId: saleUnitId,
+            variantId: variantId,
+            groupingFields: fields,
+          )
+        : -1;
+    final existing = index < 0 ? null : _cartItems[index];
+    final totalQuantity = baseQuantity + (existing?.quantity ?? 0);
+    groupIds = _normalizeStockGroupIds([
+      ...groupIds,
+      ...?existing?.stockGroupIds,
+    ]);
+    final reservations = [
+      ...?existing?.stockReservations.map((reservation) => reservation.copy()),
+      if (tracksStock && selectedStock != null && !needsSelection)
+        ..._reserveStockForSelection(
+          product: product,
+          quantity: baseQuantity,
+          selectedStock: selectedStock,
+          stockGroupIds: groupIds,
+          variantId: variantId,
+          operation: 'PRICE_PREVIEW',
+          dryRun: true,
+        ),
+    ];
+    final standardPrice = _resolveUnitPrice(
+      product: product,
+      quantity: totalQuantity,
+      selectedStock: selectedStock,
+      saleUnitId: saleUnitId,
+      variantId: variantId,
+    );
+    final line = LocalCartItem(
+      lineId: 'price-preview',
+      product: product,
+      quantity: totalQuantity,
+      price: existing?.isManualPriceOverride == true
+          ? existing!.price
+          : standardPrice,
+      standardUnitPrice: standardPrice,
+      selectedStock: selectedStock,
+      stockGroupIds: groupIds,
+      stockReservations: reservations,
+      saleUnitId: saleUnitId,
+      saleUnitConversionRate: saleUnit?.conversionRateValue,
+      variantId: variantId,
+    );
+    if (!needsSelection && existing?.isManualPriceOverride != true) {
+      _applyOfferPricing(line, standardPrice);
+    }
+    final catalog = offerRepository.catalog;
+    final offerAvailable = needsSelection &&
+        saleUnitId == null &&
+        catalog.enabled &&
+        catalog
+            .activeLinesFor(
+                product.productId ?? -1, offerRepository.trustedNow())
+            .any((entry) =>
+                entry.$1.storeId == null ||
+                entry.$1.storeId == catalog.storeId);
+    return ProductPricePreview(
+      roundedTotal: LocalCartItem(
+        lineId: 'price-preview-addition',
+        product: product,
+        price: line.price,
+        quantity: baseQuantity,
+        selectedStock: selectedStock,
+        stockReservations: reservations
+            .skip(existing?.stockReservations.length ?? 0).toList(),
+        saleUnitId: saleUnitId,
+        saleUnitConversionRate: saleUnit?.conversionRateValue,
+        taxRate: selectedStock == null ? product.totalTaxRate :
+            _resolveCartTaxRate(product, selectedStock: selectedStock),
+      ).amounts.total,
+      unitPrice: line.displayPrice ?? 0,
+      standardUnitPrice: standardPrice * rate,
+      baseUnitPrice: line.price ?? 0,
+      baseQuantity: baseQuantity,
+      hasOffer: line.hasOffer,
+      requiresSelection: needsSelection,
+      offerAvailable: offerAvailable,
+    );
+  }
+
   void _refreshCartItemPricing(
     LocalCartItem item, {
     Stock? selectedStock,
@@ -1037,11 +1257,25 @@ class LocalProductProvider extends ChangeNotifier {
   }) {
     final effectiveStock = selectedStock ?? item.selectedStock;
     if (forcePriceRefresh || !item.isManualPriceOverride) {
-      item.price = _resolveUnitPrice(
+      final standardPrice = _resolveUnitPrice(
         product: item.product,
         quantity: item.quantity,
         selectedStock: effectiveStock,
-        fallbackPrice: item.price,
+        // The current price may already include an offer; fall back to the
+        // price before it so the offer is never applied twice.
+        fallbackPrice: item.standardUnitPrice ?? item.price,
+        saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
+      );
+      _applyOfferPricing(item, standardPrice, selectedStock: effectiveStock);
+    } else {
+      item.clearOffer();
+      // A manual price keeps the current standard price as its reference.
+      item.standardUnitPrice = _resolveUnitPrice(
+        product: item.product,
+        quantity: item.quantity,
+        selectedStock: effectiveStock,
+        fallbackPrice: item.standardUnitPrice ?? item.price,
         saleUnitId: item.saleUnitId,
         variantId: item.variantId,
       );
@@ -1062,6 +1296,279 @@ class LocalProductProvider extends ChangeNotifier {
     item.taxRate = effectiveTaxRate;
     item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, effectiveTaxRate);
     _clampManualCartItemToMinimumPrice(item);
+  }
+
+  ProductOfferRepository _offerRepository = ProductOfferRepository.instance;
+
+  /// Where product offers come from. Tests swap in their own repository.
+  ProductOfferRepository get offerRepository => _offerRepository;
+
+  @visibleForTesting
+  set offerRepository(ProductOfferRepository repository) {
+    if (identical(repository, _offerRepository)) return;
+    _offerRepository.removeListener(_onOfferCatalogChanged);
+    _offerRepository = repository;
+    repository.addListener(_onOfferCatalogChanged);
+    _reevaluateCartOffers();
+  }
+
+  /// Two unit prices closer than this are the same price.
+  static const double _samePriceTolerance = 0.0005;
+
+  /// Longest single wait of the offer boundary timer; a long offer is
+  /// re-checked on the way, which also absorbs device clock changes.
+  static const Duration _maxOfferBoundaryWait = Duration(hours: 1);
+
+  Timer? _offerBoundaryTimer;
+  DateTime? _offerBoundaryAt;
+  bool _isDisposed = false;
+  int _checkoutPriceHolds = 0;
+  bool _offersPendingAfterCheckout = false;
+
+  /// Keep the accepted prices stable while payment is collected. Nested
+  /// payment dialogs share the hold; a cancelled checkout catches up again.
+  VoidCallback holdOfferPricesForCheckout() {
+    _checkoutPriceHolds++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      _checkoutPriceHolds--;
+      if (_checkoutPriceHolds == 0 && _offersPendingAfterCheckout) {
+        _offersPendingAfterCheckout = false;
+        scheduleMicrotask(() {
+          if (!_isDisposed) _reevaluateCartOffers(notifyPreviews: true);
+        });
+      }
+    };
+  }
+
+  void _onOfferCatalogChanged() => _reevaluateCartOffers(notifyPreviews: true);
+
+  /// Re-checks the offer of the open cart (offer synced, removed or ended,
+  /// `POS_OFFERS` switched) and saves the cart only when a line changed.
+  void _reevaluateCartOffers({bool notifyPreviews = false}) {
+    if (_checkoutPriceHolds > 0) {
+      _offersPendingAfterCheckout = true;
+      return;
+    }
+    final changed = _reevaluateCartOfferLines();
+    if (changed) {
+      _saveCartToHive();
+    }
+    if (changed || notifyPreviews) {
+      notifyListeners();
+    }
+  }
+
+  /// Re-applies the offer rules to every non-manual cart line at the trusted
+  /// time, so a sale is never priced with an offer outside its window.
+  /// Changes only the offer, the price it implies and the tax amount.
+  /// Returns whether any line changed.
+  bool _reevaluateCartOfferLines() {
+    var changed = false;
+    for (final item in _cartItems) {
+      if (_reevaluateLineOffer(item)) changed = true;
+    }
+    _scheduleOfferBoundaryTimer();
+    return changed;
+  }
+
+  bool _reevaluateLineOffer(LocalCartItem item) {
+    final price = item.price;
+    if (item.isManualPriceOverride || price == null) return false;
+    final standardPrice = item.standardUnitPrice ??
+        _resolveUnitPrice(
+          product: item.product,
+          quantity: item.quantity,
+          selectedStock: item.selectedStock,
+          fallbackPrice: price,
+          saleUnitId: item.saleUnitId,
+          variantId: item.variantId,
+        );
+    // A line without an offer that is not at its standard price was given an
+    // explicit price; an offer is never applied on top of it.
+    if (!item.hasOffer &&
+        (price - standardPrice).abs() >= _samePriceTolerance) {
+      return false;
+    }
+    final offerId = item.offerId;
+    final offerVersion = item.offerVersion;
+    _applyOfferPricing(item, standardPrice);
+    // Filling in a missing reference on an older line is not a change.
+    if (item.price == price &&
+        item.offerId == offerId &&
+        item.offerVersion == offerVersion) {
+      return false;
+    }
+    item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, item.taxRate ?? 0);
+    return true;
+  }
+
+  /// One timer updates both the cart and product price previews when an
+  /// offer starts or ends, judged with the trusted clock.
+  void _scheduleOfferBoundaryTimer() {
+    _offerBoundaryTimer?.cancel();
+    _offerBoundaryTimer = null;
+    final boundary =
+        _offerBoundaryAt = _isDisposed ? null : _nextOfferBoundary();
+    if (boundary == null) return;
+    var wait = boundary.difference(offerRepository.trustedNow());
+    if (wait.isNegative) wait = Duration.zero;
+    if (wait > _maxOfferBoundaryWait) wait = _maxOfferBoundaryWait;
+    _offerBoundaryTimer = Timer(wait, _onOfferBoundary);
+  }
+
+  void _onOfferBoundary() {
+    _offerBoundaryTimer = null;
+    _offerBoundaryAt = null;
+    // Re-evaluating also schedules the next boundary.
+    _reevaluateCartOffers(notifyPreviews: true);
+  }
+
+  /// The next `valid_from` / `valid_until` after the trusted now among the
+  /// store's offers, or null when nothing can change.
+  DateTime? _nextOfferBoundary() {
+    final catalog = offerRepository.catalog;
+    if (!catalog.enabled || catalog.offers.isEmpty) return null;
+    final now = offerRepository.trustedNow();
+    DateTime? next;
+    for (final offer in catalog.offers.values) {
+      if (offer.storeId != null && offer.storeId != catalog.storeId) {
+        continue;
+      }
+      for (final boundary in [offer.validFrom, offer.validUntil]) {
+        if (boundary.isAfter(now) &&
+            (next == null || boundary.isBefore(next))) {
+          next = boundary;
+        }
+      }
+    }
+    return next;
+  }
+
+  /// The offer start or end the boundary timer is waiting for, or null when
+  /// it is off.
+  @visibleForTesting
+  DateTime? get debugNextOfferBoundary => _offerBoundaryAt;
+
+  /// Runs what the offer boundary timer runs; tests call it after moving the
+  /// clock instead of waiting.
+  @visibleForTesting
+  void debugRunOfferBoundaryTimer() {
+    _offerBoundaryTimer?.cancel();
+    _onOfferBoundary();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _offerBoundaryTimer?.cancel();
+    _offerBoundaryTimer = null;
+    _offerBoundaryAt = null;
+    _offerRepository.removeListener(_onOfferCatalogChanged);
+    super.dispose();
+  }
+
+  /// Sets [item]'s price to [standardPrice], or to the active offer price
+  /// when one applies, and records which offer was used. Does not touch the
+  /// tax amount; callers recompute it.
+  ///
+  /// Manual prices never get an offer. Wholesale wins over an offer, and only
+  /// base-unit lines get one (see [resolveProductOfferPrice]).
+  void _applyOfferPricing(
+    LocalCartItem item,
+    double standardPrice, {
+    Stock? selectedStock,
+  }) {
+    final stock = selectedStock ?? item.selectedStock;
+    final wholesalePrice = _resolveWholesalePrice(stock);
+    final usesWholesalePrice = wholesalePrice != null &&
+        (standardPrice - wholesalePrice).abs() < 0.001 &&
+        _qualifiesForWholesalePrice(
+          quantity: item.quantity,
+          selectedStock: stock,
+        );
+    final stockId = stock?.id;
+    // Group ids are allocation candidates. Only the positive reservations
+    // identify the batches used by the order payload (including overselling,
+    // whose remainder is charged to the last reserved batch).
+    final reservedStockIds = item.stockReservations
+        .where((reservation) => reservation.quantity > 0)
+        .map((reservation) => reservation.stockId)
+        .toSet();
+    final offer = item.isManualPriceOverride
+        ? null
+        : resolveProductOfferPrice(
+            catalog: offerRepository.catalog,
+            productId: item.product.productId,
+            standardUnitPrice: standardPrice,
+            at: offerRepository.trustedNow(),
+            stockIds: reservedStockIds.isNotEmpty
+                ? reservedStockIds
+                : [if (stockId != null) stockId],
+            isBaseUnit: item.saleUnitId == null,
+            usesWholesalePrice: usesWholesalePrice,
+          );
+
+    item.standardUnitPrice = standardPrice;
+    if (offer == null) {
+      item.price = standardPrice;
+      item.clearOffer();
+      return;
+    }
+    item.price = offer.price;
+    item.offerId = offer.offerId;
+    item.offerVersion = offer.offerVersion;
+  }
+
+  /// Re-applies [_applyOfferPricing] to a line whose price was just set to
+  /// its standard price, and recomputes its tax amount.
+  void _applyOfferPricingWithTax(LocalCartItem item) {
+    if (item.isManualPriceOverride) {
+      item.clearOffer();
+      return;
+    }
+    final standardPrice = item.price;
+    if (standardPrice == null) return;
+    _applyOfferPricing(item, standardPrice);
+    item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, item.taxRate ?? 0);
+  }
+
+  /// Prices a new non-manual line that was given [explicitPrice]. Callers
+  /// re-add lines at the price they already carry (a kitchen order at its
+  /// offer price, a stock spill), so the offer is applied only when that
+  /// price is the standard price:
+  /// - the offer price is kept, with its offer reference;
+  /// - the standard price gets the normal offer pricing;
+  /// - any other price is kept as given, without an offer.
+  void _applyOfferPricingToExplicitPrice(
+    LocalCartItem item,
+    double explicitPrice,
+  ) {
+    final standardPrice = _resolveUnitPrice(
+      product: item.product,
+      quantity: item.quantity,
+      selectedStock: item.selectedStock,
+      fallbackPrice: explicitPrice,
+      saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
+    );
+    // Sets the price the offer engine would charge (the offer or standard).
+    _applyOfferPricing(item, standardPrice);
+    final enginePrice = item.price ?? standardPrice;
+    if ((explicitPrice - enginePrice).abs() < _samePriceTolerance) {
+      item.price = explicitPrice;
+    } else if (item.hasOffer && explicitPrice == roundMoney(enginePrice)) {
+      // The server echoed the 3-decimal offer price rounded to 2 (9.32 for
+      // 9.315): restore the exact offer price, so 2 units total 18.63 like
+      // the original sale and the price matches the offer the backend checks.
+      item.price = enginePrice;
+    } else if ((explicitPrice - standardPrice).abs() >= _samePriceTolerance) {
+      item.price = explicitPrice;
+      item.clearOffer();
+    }
+    item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, item.taxRate ?? 0);
   }
 
   void _clampManualCartItemToMinimumPrice(LocalCartItem item) {
@@ -1248,6 +1755,9 @@ class LocalProductProvider extends ChangeNotifier {
         hiveCartItem.serializedVariantAttributes?.value,
       ),
       warrantyEnabled: hiveCartItem.warrantyEnabled,
+      offerId: hiveCartItem.offerId,
+      offerVersion: hiveCartItem.offerVersion,
+      standardUnitPrice: hiveCartItem.standardUnitPrice,
     );
   }
 
@@ -1289,6 +1799,9 @@ class LocalProductProvider extends ChangeNotifier {
         item.variantAttributes,
       ),
       warrantyEnabled: item.warrantyEnabled,
+      offerId: item.offerId,
+      offerVersion: item.offerVersion,
+      standardUnitPrice: item.standardUnitPrice,
     );
   }
 
@@ -1315,6 +1828,9 @@ class LocalProductProvider extends ChangeNotifier {
       variantAttributes: item.variantAttributes == null
           ? null
           : Map<String, dynamic>.from(item.variantAttributes!),
+      offerId: item.offerId,
+      offerVersion: item.offerVersion,
+      standardUnitPrice: item.standardUnitPrice,
     );
   }
 
@@ -1442,8 +1958,11 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     List<int>? stockGroupIds,
     int? variantId,
+    bool dryRun = false,
   }) {
-    if (!isStockEnabled || selectedStock == null || quantity <= 0) {
+    if ((!dryRun && !isStockEnabled) ||
+        selectedStock == null ||
+        quantity <= 0) {
       return <StockReservation>[];
     }
 
@@ -1474,11 +1993,10 @@ class LocalProductProvider extends ChangeNotifier {
 
       final requestedQuantity =
           remaining > availableQuantity ? availableQuantity : remaining;
-      final actualChange = _updateStockQuantityInternal(
-        candidate,
-        -requestedQuantity,
-        operation,
-      );
+      final actualChange = dryRun
+          ? -requestedQuantity
+          : _updateStockQuantityInternal(
+              candidate, -requestedQuantity, operation);
       final reservedQuantity = actualChange.abs();
 
       if (reservedQuantity > 0 && candidate.id != null) {
@@ -1492,7 +2010,7 @@ class LocalProductProvider extends ChangeNotifier {
       }
     }
 
-    if (remaining > 0) {
+    if (remaining > 0 && !dryRun) {
       debugPrint(
           '📦 Incomplete stock reservation: $remaining requested units remain.');
     }
@@ -1500,7 +2018,7 @@ class LocalProductProvider extends ChangeNotifier {
     // Mirror the reserved amount onto the cached variant quantity so the picker
     // reflects the offline sale immediately.
     final reserved = quantity - remaining;
-    if (reserved > 0) {
+    if (reserved > 0 && !dryRun) {
       _adjustVariantQuantity(product.productId, variantId, -reserved);
     }
 
@@ -1613,6 +2131,7 @@ class LocalProductProvider extends ChangeNotifier {
     List<int>? stockGroupIds,
     int? saleUnitId,
     int? variantId,
+    Set<String>? groupingFields,
   }) {
     final normalizedIncomingGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
@@ -1635,8 +2154,14 @@ class LocalProductProvider extends ChangeNotifier {
           // group. Matching on the pricing signature (not the exact raw id set)
           // keeps the line intact as FEFO depletion shrinks each add's
           // stockGroupIds. Falls back to id-set equality if a key is missing.
-          final incomingKey = _stockGroupingKeyForStock(selectedStock);
-          final itemKey = _stockGroupingKeyForStock(item.selectedStock);
+          final incomingKey = selectedStock == null
+              ? null
+              : buildStockGroupingKey(
+                  selectedStock, groupingFields ?? _activeStockGroupingFields);
+          final itemKey = item.selectedStock == null
+              ? null
+              : buildStockGroupingKey(item.selectedStock!,
+                  groupingFields ?? _activeStockGroupingFields);
           if (incomingKey != null && itemKey != null) {
             return incomingKey == itemKey;
           }
@@ -1656,6 +2181,38 @@ class LocalProductProvider extends ChangeNotifier {
     });
   }
 
+  /// Per-line snapshot sent with a completed (printed) sale, so the backend
+  /// stores what the receipt showed instead of rebuilding it from current
+  /// data: the price before any offer or manual change, the tax rate, the tax
+  /// inside the line (prices are tax-inclusive) and the line total.
+  ///
+  /// [price] and [quantity] are the values placed in the same payload line, so
+  /// the snapshot always agrees with it.
+  static Map<String, dynamic> _completedSaleLineSnapshot(
+    LocalCartItem item,
+    double? price,
+    num quantity,
+    bool useSaleUnit,
+  ) {
+    final unitPrice = price ?? 0.0;
+    // Only an offer or a manual price differs from the standard price; for
+    // every other line (wholesale included) the price is its own reference.
+    final base = item.standardUnitPrice;
+    final differsFromStandard = item.hasOffer || item.isManualPriceOverride;
+    final reference = !differsFromStandard || base == null || base <= 0
+        ? unitPrice
+        : (useSaleUnit ? item.toDisplayAmount(base) ?? base : base);
+    final taxRate = item.taxRate ?? 0.0;
+    final amounts = CartLineAmounts.calculate(
+        price: unitPrice, quantity: quantity, taxRate: taxRate);
+    return {
+      'standard_unit_price': reference,
+      'tax_rate': taxRate,
+      'tax_amount': amounts.tax,
+      'total_price': amounts.total,
+    };
+  }
+
   List<Map<String, dynamic>> buildOrderItemsPayload() {
     return buildOrderItemsPayloadFrom(_cartItems);
   }
@@ -1665,84 +2222,31 @@ class LocalProductProvider extends ChangeNotifier {
     final items = <Map<String, dynamic>>[];
 
     for (final item in cartItems) {
-      final positiveReservations = item.stockReservations
-          .where((reservation) => reservation.quantity > 0)
-          .toList(growable: false);
-      final reservedQuantity = positiveReservations.fold<num>(
-        0,
-        (sum, reservation) => sum + reservation.quantity,
-      );
-      final unreservedQuantity = item.quantity - reservedQuantity;
-
-      for (var index = 0; index < positiveReservations.length; index++) {
-        final reservation = positiveReservations[index];
-        final isLastReservation = index == positiveReservations.length - 1;
-
-        // When negative stock is supported, charge an oversold remainder to
-        // the final batch used by the allocator instead of emitting a
-        // stock_id:null line. Combining before unit conversion also lets a
-        // partial reservation plus its overflow become a whole PACK/CASE.
-        final baseQuantity = isLastReservation && unreservedQuantity > 0
-            ? reservation.quantity + unreservedQuantity
-            : reservation.quantity;
-
-        final payloadQuantity = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayQuantity(baseQuantity)
-            // Base-unit line: guard against fractional reservations on
-            // non-decimal units (e.g. legacy persisted 1.3 splits).
-            : normalizeQuantityForUnit(baseQuantity, item.product.unit);
-        final payloadPrice = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayAmount(item.price)
-            : item.price;
-        final payloadMrp = item.canUseSaleUnitPayloadFor(baseQuantity)
-            ? item.toDisplayAmount(item.mrp)
-            : item.mrp;
-
+      for (final split in item.orderLineSplits) {
         items.add({
           'product_id': item.product.productId,
-          'quantity': payloadQuantity,
-          'price': payloadPrice,
-          'mrp': payloadMrp,
-          'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(baseQuantity)) ...{
+          'quantity': split.quantity,
+          'price': split.price,
+          'mrp': split.mrp,
+          'stock_id': split.stockId,
+          if (split.saleUnit) ...{
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
           'warranty_enabled': item.warrantyEnabled,
-          if (item.comment != null && item.comment!.trim().isNotEmpty)
-            'comment': item.comment!.trim(),
-        });
-      }
-
-      if (positiveReservations.isEmpty) {
-        final baseQuantity = item.quantity;
-        final canUseSaleUnitPayload =
-            item.canUseSaleUnitPayloadFor(baseQuantity);
-
-        items.add({
-          'product_id': item.product.productId,
-          'quantity': canUseSaleUnitPayload
-              ? item.toDisplayQuantity(baseQuantity)
-              : normalizeQuantityForUnit(baseQuantity, item.product.unit),
-          'price': canUseSaleUnitPayload
-              ? item.toDisplayAmount(item.price)
-              : item.price,
-          'mrp':
-              canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
-          'stock_id': item.selectedStock?.id,
-          if (canUseSaleUnitPayload) ...{
-            'sale_unit_id': item.saleUnitId,
-            'product_sale_unit_id': item.saleUnitId,
+          if (item.offerId != null) ...{
+            'offer_id': item.offerId,
+            'offer_version': item.offerVersion,
           },
-          if (item.variantId != null) 'product_variant_id': item.variantId,
-          'warranty_enabled': item.warrantyEnabled,
+          ..._completedSaleLineSnapshot(
+            item, split.price, split.quantity, split.saleUnit,
+          ),
           if (item.comment != null && item.comment!.trim().isNotEmpty)
             'comment': item.comment!.trim(),
         });
       }
     }
-
     return items.where((item) {
       final quantity = item['quantity'];
       return quantity is num ? quantity > 0 : false;
@@ -2087,6 +2591,8 @@ class LocalProductProvider extends ChangeNotifier {
         debugPrint('$stackTrace');
       }
     }
+    // An offer may have ended or been switched off since the cart was saved.
+    if (_reevaluateCartOfferLines()) _saveCartToHive();
     notifyListeners();
   }
 
@@ -2281,6 +2787,8 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save cart items to Hive
   void _saveCartToHive() {
+    // Every cart change is saved here; keep the offer timer on the new lines.
+    _scheduleOfferBoundaryTimer();
     final sessionId = _cartSessionId;
     final snapshots = <String, HiveLocalCartItem>{
       for (final item in _cartItems) item.lineId: _buildHiveCartItem(item),
@@ -2359,7 +2867,7 @@ class LocalProductProvider extends ChangeNotifier {
   double get subTotalBeforeDiscount {
     double total = 0.0;
     for (var item in _cartItems) {
-      total += (item.price ?? 0) * item.quantity;
+      total += item.amounts.total;
     }
     return total;
   }
@@ -2371,21 +2879,21 @@ class LocalProductProvider extends ChangeNotifier {
     // Calculate subtotal and extract tax from cart items
     // NOTE: Prices are TAX-INCLUSIVE, so tax is extracted for display purposes only
     for (var item in _cartItems) {
-      final itemTotal = (item.price ?? 0) * item.quantity;
+      final itemTotal = item.amounts.total;
       subTotal += itemTotal;
 
       // Extract tax from the tax-inclusive price for display purposes
       // Formula: Tax = Price × TaxRate / (100 + TaxRate)
       final taxRate = item.taxRate ?? 0.0;
       if (taxRate > 0) {
-        final extractedTax = itemTotal * taxRate / (100 + taxRate);
+        final extractedTax = item.amounts.tax;
         totalTax += extractedTax;
       }
     }
 
     // Calculate discount amounts
     double flatDiscountAmount = _flatDiscount;
-    double percentageDiscountAmount = (subTotal * _percentageDiscount / 100);
+    double percentageDiscountAmount = roundMoney(subTotal * _percentageDiscount / 100);
     double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
 
     // Ensure discount doesn't exceed subtotal
@@ -2407,7 +2915,7 @@ class LocalProductProvider extends ChangeNotifier {
     double netPayable = subTotal - totalDiscount;
 
     // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
-    double netTotal = netPayable;
+    double netTotal = roundMoney(netPayable);
 
     // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(
@@ -2797,7 +3305,8 @@ class LocalProductProvider extends ChangeNotifier {
             }
 
             if (throwOnError) {
-              throw HttpException('Product page $pageNum failed (${response.statusCode}).');
+              throw HttpException(
+                  'Product page $pageNum failed (${response.statusCode}).');
             }
 
             emptyPageCount++;
@@ -3464,6 +3973,19 @@ class LocalProductProvider extends ChangeNotifier {
       );
       final double calculatedTax = _calculateTaxAmount(productPrice, taxRate);
 
+      // A cashier price is a manual override; its reference stays the standard
+      // price. Other lines get their reference from _applyOfferPricingWithTax
+      // or _applyOfferPricingToExplicitPrice.
+      final double? manualReference = markPriceAsManualOverride
+          ? _resolveUnitPrice(
+              product: product,
+              quantity: cartQuantity,
+              selectedStock: selectedStock,
+              saleUnitId: saleUnitId,
+              variantId: variantId,
+            )
+          : null;
+
       // Insert at the beginning of the array instead of appending
       _cartItems.insert(
           0,
@@ -3474,6 +3996,7 @@ class LocalProductProvider extends ChangeNotifier {
             mrp: productMrp,
             taxRate: taxRate,
             taxAmount: calculatedTax,
+            standardUnitPrice: manualReference,
             selectedStock: selectedStock,
             stockDeducted: _sumStockReservations(initialStockReservations),
             stockGroupIds: List<int>.from(normalizedStockGroupIds),
@@ -3490,6 +4013,11 @@ class LocalProductProvider extends ChangeNotifier {
                 : Map<String, dynamic>.from(variantAttributes),
           ));
       _clampManualCartItemToMinimumPrice(_cartItems.first);
+      if (price != null && !markPriceAsManualOverride) {
+        _applyOfferPricingToExplicitPrice(_cartItems.first, price);
+      } else {
+        _applyOfferPricingWithTax(_cartItems.first);
+      }
     }
 
     resetSelectedProduct();
@@ -3643,6 +4171,9 @@ class LocalProductProvider extends ChangeNotifier {
         variantAttributes: sourceItem.variantAttributes == null
             ? null
             : Map<String, dynamic>.from(sourceItem.variantAttributes!),
+        offerId: sourceItem.offerId,
+        offerVersion: sourceItem.offerVersion,
+        standardUnitPrice: sourceItem.standardUnitPrice,
       );
       _refreshCartItemPricing(_cartItems[currentIndex]);
       debugPrint('[UNIT_SWITCH] applied productId=$productId '
@@ -3808,8 +4339,21 @@ class LocalProductProvider extends ChangeNotifier {
     );
 
     if (index != -1) {
+      final item = _cartItems[index];
+      final currentPrice = item.price;
+      // The price field also commits on Enter/Tab/blur without a change; an
+      // unchanged price must not turn an offer line into a manual one.
+      if (!item.isManualPriceOverride &&
+          currentPrice != null &&
+          (newPrice - currentPrice).abs() < _samePriceTolerance) {
+        return;
+      }
+      // The reference stays the price before this edit (the offer price is never
+      // the reference).
+      _cartItems[index].standardUnitPrice ??= _cartItems[index].price;
       _cartItems[index].price = newPrice;
       _cartItems[index].isManualPriceOverride = true;
+      _cartItems[index].clearOffer();
 
       final double taxRate = _cartItems[index].taxRate ?? 0.0;
       _cartItems[index].taxAmount = (newPrice * taxRate) / (100 + taxRate);
@@ -3899,6 +4443,7 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations: _cloneStockReservations(item.stockReservations),
             comment: item.comment,
             isManualPriceOverride: item.isManualPriceOverride,
+            standardUnitPrice: item.standardUnitPrice,
             warrantyEnabled: item.warrantyEnabled,
             saleUnitId: item.saleUnitId,
             saleUnitName: item.saleUnitName,
@@ -3917,6 +4462,7 @@ class LocalProductProvider extends ChangeNotifier {
           item.taxAmount =
               _calculateTaxAmount(item.price ?? newPrice, effectiveTax);
         }
+        _applyOfferPricingWithTax(_cartItems[i]);
         cartUpdated = true;
         cartUpdatedCount++;
       }
@@ -3958,6 +4504,7 @@ class LocalProductProvider extends ChangeNotifier {
                   _cloneStockReservations(orderItem.stockReservations),
               comment: orderItem.comment,
               isManualPriceOverride: orderItem.isManualPriceOverride,
+              standardUnitPrice: orderItem.standardUnitPrice,
               warrantyEnabled: orderItem.warrantyEnabled,
               saleUnitId: orderItem.saleUnitId,
               saleUnitName: orderItem.saleUnitName,
@@ -3976,6 +4523,7 @@ class LocalProductProvider extends ChangeNotifier {
             orderItem.taxAmount =
                 _calculateTaxAmount(orderItem.price ?? newPrice, effectiveTax);
           }
+          _applyOfferPricingWithTax(order.items[i]);
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
         }
@@ -4050,6 +4598,7 @@ class LocalProductProvider extends ChangeNotifier {
           stockReservations: _cloneStockReservations(item.stockReservations),
           comment: item.comment,
           isManualPriceOverride: item.isManualPriceOverride,
+          standardUnitPrice: item.standardUnitPrice,
           warrantyEnabled: item.warrantyEnabled,
           saleUnitId: item.saleUnitId,
           saleUnitName: item.saleUnitName,
@@ -4059,6 +4608,7 @@ class LocalProductProvider extends ChangeNotifier {
               ? null
               : Map<String, dynamic>.from(item.variantAttributes!),
         );
+        _applyOfferPricingWithTax(_cartItems[i]);
         cartUpdated = true;
         cartUpdatedCount++;
       }
@@ -4101,6 +4651,7 @@ class LocalProductProvider extends ChangeNotifier {
                 _cloneStockReservations(orderItem.stockReservations),
             comment: orderItem.comment,
             isManualPriceOverride: orderItem.isManualPriceOverride,
+            standardUnitPrice: orderItem.standardUnitPrice,
             warrantyEnabled: orderItem.warrantyEnabled,
             saleUnitId: orderItem.saleUnitId,
             saleUnitName: orderItem.saleUnitName,
@@ -4110,6 +4661,7 @@ class LocalProductProvider extends ChangeNotifier {
                 ? null
                 : Map<String, dynamic>.from(orderItem.variantAttributes!),
           );
+          _applyOfferPricingWithTax(order.items[i]);
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
         }
@@ -4942,6 +5494,10 @@ class LocalProductProvider extends ChangeNotifier {
         _flushDirtyProducts();
       }
 
+      // Held prices are re-checked once the batches are reserved again: the
+      // offer must still be valid when the resumed sale is completed.
+      _reevaluateCartOfferLines();
+
       // Set current order
       _currentOrder = order;
       _cartSessionId = 'draft:${order.id}';
@@ -5473,23 +6029,8 @@ class LocalProductProvider extends ChangeNotifier {
       // Update quantity
       _cartItems[index].quantity = newQuantity;
       final item = _cartItems[index];
-      final effectiveStock = selectedStock ?? item.selectedStock;
-      final wasWholesale = _qualifiesForWholesalePrice(
-        quantity: currentQuantity,
-        selectedStock: effectiveStock,
-      );
-      final isWholesale = _qualifiesForWholesalePrice(
-        quantity: newQuantity,
-        selectedStock: effectiveStock,
-      );
-      if (wasWholesale && !isWholesale && item.isManualPriceOverride) {
-        final wholesalePrice = _resolveWholesalePrice(effectiveStock);
-        if (wholesalePrice != null &&
-            item.price != null &&
-            (item.price! - wholesalePrice).abs() < 0.001) {
-          item.isManualPriceOverride = false;
-        }
-      }
+      // An actual cashier price remains manual across quantity changes,
+      // even when it happens to equal a wholesale or offer price.
       _refreshCartItemPricing(item);
       debugPrint("✅ Quantity updated: $currentQuantity → $newQuantity");
     }

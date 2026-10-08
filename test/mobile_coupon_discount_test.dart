@@ -15,8 +15,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
+import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
+import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -60,6 +63,52 @@ LocalProductProvider _cartWithSubtotal(String price, {int quantity = 1}) {
   provider.initializeProducts([item]);
   provider.addToCart(product: item, quantity: quantity);
   return provider;
+}
+
+class _FakeAppSettingsProvider extends AppSettingsProvider {
+  @override
+  Future<void> fetchAppSettings() async {}
+}
+
+class _SeededDiscountProvider extends _FakeDiscountProvider {
+  _SeededDiscountProvider(this._seeded);
+
+  final List<DiscountData> _seeded;
+
+  @override
+  List<DiscountData> get discounts => _seeded;
+}
+
+Map<String, dynamic> _couponJson({required String type, required int value}) {
+  return {
+    'id': 1,
+    'coupon_code': 'SUNDAYOFFER',
+    'discount_category_id': 1,
+    'coupon_name': 'Sundayoffer',
+    'store_id': 1,
+    'category_id': null,
+    'product_id': null,
+    'discount_type': type,
+    'valid_from_date': '',
+    'valid_to_date': '',
+    'discount_coupon_limit_count': 0,
+    'discount_coupon_limit_amount': null,
+    'discount_coupon_min_amount': null,
+    'discount_coupon_max_amount': null,
+    'discount_value': value,
+    'company_id': 1,
+    'created_at': null,
+    'updated_at': null,
+  };
+}
+
+Finder _percentageDiscountField() {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField &&
+        widget.decoration is InputDecoration &&
+        (widget.decoration as InputDecoration).hintText == '0',
+  );
 }
 
 Finder _flatDiscountField() {
@@ -173,6 +222,76 @@ void main() {
     });
   });
 
+  group('BillingMobileCouponController coupon field sync', () {
+    const controller = BillingMobileCouponController();
+    final coupon =
+        DiscountData.fromJson(_couponJson(type: 'percent', value: 20));
+
+    test('coupon field values drop trailing .0', () {
+      final values = controller.fieldValuesForSelectedDiscount(coupon);
+      expect(values.flat, '');
+      expect(values.percent, '20');
+    });
+
+    test('does not clear coupon while fields still hold its values', () {
+      expect(
+        controller.shouldClearSelectedCouponOnManualInput(
+          flatDiscountText: '',
+          percentageDiscountText: '20',
+          selectedDiscount: coupon,
+        ),
+        isFalse,
+      );
+      expect(
+        controller.shouldClearSelectedCouponOnManualInput(
+          flatDiscountText: '',
+          percentageDiscountText: '20.0',
+          selectedDiscount: coupon,
+        ),
+        isFalse,
+      );
+    });
+
+    test('clears coupon when user edits the values', () {
+      expect(
+        controller.shouldClearSelectedCouponOnManualInput(
+          flatDiscountText: '5',
+          percentageDiscountText: '20',
+          selectedDiscount: coupon,
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not wipe un-applied fields while cart discount is zero', () {
+      expect(
+        controller.shouldSyncClearedDiscountFields(
+          previousFlatDiscount: 0,
+          previousPercentageDiscount: 0,
+          flatDiscount: 0,
+          percentageDiscount: 0,
+          flatFieldText: '',
+          percentageFieldText: '20',
+        ),
+        isFalse,
+      );
+    });
+
+    test('wipes fields when an applied discount is cleared externally', () {
+      expect(
+        controller.shouldSyncClearedDiscountFields(
+          previousFlatDiscount: 0,
+          previousPercentageDiscount: 20,
+          flatDiscount: 0,
+          percentageDiscount: 0,
+          flatFieldText: '',
+          percentageFieldText: '20',
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('BillingMobileCouponController.applyDiscount', () {
     const couponController = BillingMobileCouponController();
     const paymentController = BillingMobilePaymentController();
@@ -189,13 +308,112 @@ void main() {
         flatDiscountText: '20',
         percentageDiscountText: '',
         selectedDiscount: null,
-        applyCouponApi: () async => true,
       );
 
       expect(result.success, isTrue);
       expect(lpp.getCurrentDiscount()['flatDiscount'], 20.0);
       expect(lpp.getCurrentDiscount()['percentageDiscount'], 0.0);
     });
+
+    test('downloaded coupon applies locally and records the code', () async {
+      final lpp = _cartWithSubtotal('100');
+      final bp = BillingProvider();
+      final coupon =
+          DiscountData.fromJson(_couponJson(type: 'percent', value: 20));
+
+      final result = await couponController.applyDiscount(
+        localProductProvider: lpp,
+        billingProvider: bp,
+        discountProvider: _FakeDiscountProvider(),
+        paymentController: paymentController,
+        flatDiscountText: '',
+        percentageDiscountText: '20',
+        selectedDiscount: coupon,
+      );
+
+      expect(result.success, isTrue);
+      expect(lpp.getCurrentDiscount()['percentageDiscount'], 20.0);
+      expect(lpp.priceSummary!.netTotal, 80.0);
+      expect(bp.coupenCodeTextController.text, 'SUNDAYOFFER');
+      expect(bp.couponCode, 'SUNDAYOFFER');
+      expect(bp.isCouponApplied, isTrue);
+    });
+
+    test('flat coupon replaces the previous discount and remaps full payment',
+        () async {
+      final lpp = _cartWithSubtotal('100');
+      final bp = BillingProvider();
+      lpp.applyDiscount(flatDiscount: 5, percentageDiscount: 0);
+      bp.setCouponApplied(true, code: 'SAVE5', discount: 5);
+      bp.setTotalOrderAmount(95);
+      bp.cashAmountController.text = '95';
+      bp.setPaymentMethod('CASH', true);
+      final coupon =
+          DiscountData.fromJson(_couponJson(type: 'fixed', value: 20));
+
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final result = await couponController.applyDiscount(
+          localProductProvider: lpp,
+          billingProvider: bp,
+          discountProvider: _FakeDiscountProvider(),
+          paymentController: paymentController,
+          flatDiscountText: '20',
+          percentageDiscountText: '',
+          selectedDiscount: coupon,
+        );
+
+        expect(result.success, isTrue);
+        expect(lpp.priceSummary!.netTotal, 80);
+        expect(bp.couponCode, 'SUNDAYOFFER');
+        expect(bp.totalOrderAmount, 80);
+        expect(bp.getTotalPaidAmount(), 80);
+      }
+    });
+
+    for (final scenario in <String, Map<String, dynamic>>{
+      'expired': {'valid_to_date': '2001-01-01'},
+      'future': {'valid_from_date': '2999-01-01'},
+      'below minimum': {'discount_coupon_min_amount': 150},
+      'above maximum': {'discount_coupon_max_amount': 50},
+    }.entries) {
+      test('${scenario.key} coupon leaves previous discount and payment intact',
+          () async {
+        final lpp = _cartWithSubtotal('100');
+        final bp = BillingProvider();
+        lpp.applyDiscount(flatDiscount: 5, percentageDiscount: 0);
+        bp.setCouponApplied(true, code: 'SAVE5', discount: 5);
+        bp.setTotalOrderAmount(95);
+        bp.cashAmountController.text = '95';
+        bp.setPaymentMethod('CASH', true);
+        final coupon = DiscountData.fromJson({
+          ..._couponJson(type: 'fixed', value: 20),
+          'valid_from_date': '2000-01-01',
+          'valid_to_date': '3000-01-01',
+          ...scenario.value,
+        });
+
+        final result = await couponController.applyDiscount(
+          localProductProvider: lpp,
+          billingProvider: bp,
+          discountProvider: _FakeDiscountProvider(),
+          paymentController: paymentController,
+          flatDiscountText: '20',
+          percentageDiscountText: '',
+          selectedDiscount: coupon,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage,
+            BillingMobileErrorMessages.couponInvalid('Sundayoffer'));
+        expect(lpp.priceSummary!.netTotal, 95);
+        expect(lpp.getCurrentDiscount()['flatDiscount'], 5);
+        expect(bp.isCouponApplied, isTrue);
+        expect(bp.couponCode, 'SAVE5');
+        expect(bp.coupenCodeTextController.text, 'SAVE5');
+        expect(bp.totalOrderAmount, 95);
+        expect(bp.getTotalPaidAmount(), 95);
+      });
+    }
 
     test('rejects apply when cart is empty', () async {
       final lpp = LocalProductProvider();
@@ -209,7 +427,6 @@ void main() {
         flatDiscountText: '10',
         percentageDiscountText: '',
         selectedDiscount: null,
-        applyCouponApi: () async => true,
       );
 
       expect(result.success, isFalse);
@@ -328,17 +545,30 @@ void main() {
   });
 
   group('CouponSection smoke', () {
-    Widget wrapCouponSection(LocalProductProvider localProductProvider) {
+    Widget wrapCouponSection(
+      LocalProductProvider localProductProvider, {
+      DiscountProvider? discountProvider,
+      BillingProvider? billingProvider,
+      Key? sectionKey,
+    }) {
       return MultiProvider(
         providers: [
           ChangeNotifierProvider<LocalProductProvider>.value(
             value: localProductProvider,
           ),
-          ChangeNotifierProvider<BillingProvider>(
-            create: (_) => BillingProvider(),
-          ),
+          if (billingProvider == null)
+            ChangeNotifierProvider<BillingProvider>(
+              create: (_) => BillingProvider(),
+            )
+          else
+            ChangeNotifierProvider<BillingProvider>.value(
+              value: billingProvider,
+            ),
           ChangeNotifierProvider<DiscountProvider>(
-            create: (_) => _FakeDiscountProvider(),
+            create: (_) => discountProvider ?? _FakeDiscountProvider(),
+          ),
+          ChangeNotifierProvider<AppSettingsProvider>(
+            create: (_) => _FakeAppSettingsProvider(),
           ),
           ChangeNotifierProvider<AuthModel>(
             create: (_) => AuthModel(),
@@ -350,8 +580,8 @@ void main() {
             create: (_) => KeyboardProvider(),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: CouponSection()),
+        child: MaterialApp(
+          home: Scaffold(body: CouponSection(key: sectionKey)),
         ),
       );
     }
@@ -376,6 +606,145 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
 
       // Let Hive flush debounced writes outside FakeAsync.
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+    });
+
+    testWidgets('selecting a coupon keeps its value in the fields',
+        (tester) async {
+      late LocalProductProvider lpp;
+      await tester.runAsync(() async {
+        lpp = _cartWithSubtotal('100');
+      });
+      final coupon =
+          DiscountData.fromJson(_couponJson(type: 'percent', value: 20));
+
+      await tester.pumpWidget(wrapCouponSection(
+        lpp,
+        discountProvider: _SeededDiscountProvider([coupon]),
+      ));
+      await tester.pump();
+
+      final dropdown = tester.widget<CustomDropDownWithSearch<DiscountData>>(
+        find.byType(CustomDropDownWithSearch<DiscountData>),
+      );
+      dropdown.onChanged(coupon);
+      await tester.pump();
+      // A second, unrelated rebuild used to wipe the coupon-filled fields.
+      lpp.notifyListeners();
+      await tester.pump();
+
+      final percentField = tester.widget<TextField>(_percentageDiscountField());
+      expect(percentField.controller!.text, '20');
+      expect(find.text('Sundayoffer'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+    });
+
+    testWidgets(
+        'cached coupon applies without authentication and survives reopen',
+        (tester) async {
+      late LocalProductProvider lpp;
+      await tester.runAsync(() async {
+        lpp = _cartWithSubtotal('100');
+      });
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(100);
+      final coupon =
+          DiscountData.fromJson(_couponJson(type: 'fixed', value: 20));
+      final discounts = _SeededDiscountProvider([coupon]);
+
+      await tester.pumpWidget(wrapCouponSection(
+        lpp,
+        billingProvider: bp,
+        discountProvider: discounts,
+        sectionKey: const ValueKey('first-open'),
+      ));
+      await tester.pump();
+      final dropdown = tester.widget<CustomDropDownWithSearch<DiscountData>>(
+        find.byType(CustomDropDownWithSearch<DiscountData>),
+      );
+      dropdown.onChanged(coupon);
+      await tester.pump();
+      await tester.tap(find.text('Apply Discount'));
+      await tester.pump();
+
+      expect(lpp.priceSummary!.netTotal, 80);
+      expect(bp.isCouponApplied, isTrue);
+      expect(bp.couponCode, 'SUNDAYOFFER');
+      expect(bp.coupenCodeTextController.text, 'SUNDAYOFFER');
+      expect(bp.totalOrderAmount, 80);
+
+      await tester.pumpWidget(wrapCouponSection(
+        lpp,
+        billingProvider: bp,
+        discountProvider: discounts,
+        sectionKey: const ValueKey('second-open'),
+      ));
+      await tester.pump();
+
+      expect(tester.widget<TextField>(_flatDiscountField()).controller!.text,
+          '20');
+      expect(find.text('Sundayoffer'), findsOneWidget);
+      expect(
+        tester
+            .widget<CustomDropDownWithSearch<DiscountData>>(
+                find.byType(CustomDropDownWithSearch<DiscountData>))
+            .value,
+        coupon,
+      );
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+    });
+
+    testWidgets(
+        'expired coupon shows an error and preserves the applied discount',
+        (tester) async {
+      late LocalProductProvider lpp;
+      await tester.runAsync(() async {
+        lpp = _cartWithSubtotal('100');
+        lpp.applyDiscount(flatDiscount: 5, percentageDiscount: 0);
+      });
+      final bp = BillingProvider();
+      bp.setCouponApplied(true, code: 'SAVE5', discount: 5);
+      bp.setTotalOrderAmount(95);
+      bp.cashAmountController.text = '95';
+      bp.setPaymentMethod('CASH', true);
+      final expiredCoupon = DiscountData.fromJson({
+        ..._couponJson(type: 'fixed', value: 20),
+        'valid_from_date': '2000-01-01',
+        'valid_to_date': '2001-01-01',
+      });
+      await tester.pumpWidget(wrapCouponSection(
+        lpp,
+        billingProvider: bp,
+        discountProvider: _SeededDiscountProvider([expiredCoupon]),
+      ));
+      await tester.pump();
+      tester
+          .widget<CustomDropDownWithSearch<DiscountData>>(
+              find.byType(CustomDropDownWithSearch<DiscountData>))
+          .onChanged(expiredCoupon);
+      await tester.pump();
+      expect(find.text('Coupon has expired'), findsOneWidget);
+
+      await tester.tap(find.text('Apply Discount'));
+      await tester.pump();
+
+      expect(find.text(BillingMobileErrorMessages.couponInvalid('Sundayoffer')),
+          findsOneWidget);
+      expect(lpp.priceSummary!.netTotal, 95);
+      expect(bp.couponCode, 'SAVE5');
+      expect(bp.totalOrderAmount, 95);
+      expect(bp.getTotalPaidAmount(), 95);
+
+      await tester.pump(const Duration(seconds: 5));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
       });
