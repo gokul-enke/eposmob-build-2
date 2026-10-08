@@ -1,8 +1,8 @@
 # features/reports
 
 Report screens built on the shared listing kit (`core/ui`). So far:
-**My Sales Report**, **Customer Transactions Report** and
-**Supplier Transactions Report**. The other reports
+**My Sales Report**, **Customer Transactions Report**,
+**Supplier Transactions Report** and **Stock Report**. The other reports
 still live in `lib/screens/reports/` and move here one at a time.
 
 **Supplier Transactions Report listing** uses the same header, filter panel,
@@ -91,12 +91,108 @@ features/reports/
 - Header actions are Filters → Export → Refresh (`HeaderAction`); filters
   start hidden on phones.
 
+## Stock Report public surface
+
+- `domain/models/stock_report.dart`: moved response, rows and summary. Its
+  local `StockReportPagination` retains current/per/last page metadata and
+  additionally reads `total` for export completeness checks. No storage/UI imports.
+- `domain/stock_report_query.dart`: local store/category/product selections,
+  date-only values, stock/expiry enums and the session scope record. The API's
+  product parameter remains a **name**, not an ID.
+- `data/stock_report_api.dart`: injectable GET transport and `TenantSession`;
+  the same stock endpoint, headers, 15-second timeout and active-store fallback.
+- `data/stock_report_snapshot.dart`: all-page export reads, rejecting failed,
+  missing or changing pagination and declared total-count mismatches.
+- `StockReportController`: owns filters, reset revision, serialized loading,
+  requested retry page, visible rows and guarded export snapshots.
+- `ReportsProvider.fetchStockReport`: existing named parameters and shared
+  getter/notifications remain. `fetchStockReportSnapshot` is the new local read
+  used by this page and export. Other reports in this shared provider stay put.
+- `StockReportPage`: caches provider dependencies once; renders shared header,
+  filter panel, metrics, table/cards, error banner and pagination. Directories
+  come from existing store/category/local-product providers, with no new loads.
+- `ReportNavigation.openStockReport`: sole setter of sidebar slot
+  `SideBarController.stockReportScreenIndex` (98), used by desktop/mobile menus.
+
+Purchase-price and stock-cost fields, including the summary and Excel columns,
+use the existing `menu.purchase.orders.access` permission. Export fetches every
+filtered page without changing visible/shared rows and checks query, token,
+tenant, active store and cost permission before/after asynchronous work. No
+period or record cap is introduced. Windows uses the shared Save As flow;
+other platforms use its existing share flow.
+
+Stock export rejects repeated product IDs within or across pages instead of
+deduplicating a possibly incomplete snapshot. Keyboard-opened product menus
+scroll their highlight after layout, with close/disposal guards.
+
+Stock-specific leaf widgets live under `widgets/stock_report/` and receive only
+data and callbacks. Small directories use the shared native searchable picker.
+The large product directory uses a bounded MenuAnchor/ListView.builder adapter
+with the same shared input, text, spacing and white surface tokens; all products
+remain searchable without building the entire catalog as menu buttons. Reset
+keys clear unselected searches. Dates use the existing auto-dismiss date
+picker with explicit placeholders and clear actions. Inner stock workflows are
+outside this report listing migration.
+
 ## Tests
 
 `test/features/reports/` mirrors these folders. The provider HTTP contracts
 are in `test/providers/invoice_provider_customer_report_test.dart` and
 `test/providers/sales_executive_provider_report_test.dart`.
 
+
+## Non-Stock Report listing
+
+`NonStockReportPage` owns only the Non-Stock Report list (sidebar slot 77).
+No product detail, stock-write, purchase, return or billing workflow is moved.
+
+- `domain/models/non_stock_report.dart` and `non_stock_report_pagination.dart`
+  contain the endpoint model and pagination. `domain/non_stock_report_query.dart`
+  records the name filters and session scope without UI/storage dependencies.
+- `data/non_stock_report_api.dart` preserves the URL, bearer/tenant headers,
+  active `store_id`, name-valued `store`/`category`/`product`, barcode and page.
+  Transport and `TenantSession` are injectable; the timeout remains 15 seconds.
+- `data/non_stock_report_snapshot.dart` reads all filtered export pages and
+  rejects overlaps, changing metadata and incomplete results. Row identity is
+  product ID plus store, since a product may occur in several stores. Live-data
+  moves (`NonStockReportSnapshotChanged`) are reread up to 3 times by the
+  controller; malformed data and filter/session/permission changes are not.
+- `presentation/state/non_stock_report_controller.dart` owns inputs, 300 ms
+  barcode debounce, local rows, retry target, pagination and request generations.
+  Errors retain the displayed rows; retry uses the newly requested filter page.
+- `presentation/widgets/non_stock_report/` receives values and callbacks.
+  All three searchable pickers use a bounded native menu and lazy list with the
+  shared input, menu surface and text tokens. This avoids creating thousands of
+  native menu buttons. Searches cover the whole cached directory and make no API
+  requests. Reset clears typed search even without an option selection.
+- `presentation/export/non_stock_report_export.dart` delegates XLSX creation to
+  `ListExcelExportService`; the page uses the shared `ExportController` (Save As
+  on Windows, share on other platforms). Barcodes stay text; quantities and
+  reorder levels are numeric. Applied filters are included in the workbook.
+- `ReportNavigation.openNonStockReport()` owns navigation. Desktop/mobile menu
+  permissions are unchanged. Export additionally rechecks report permission,
+  filters, token, tenant and active store before creating/delivering a snapshot.
+
+**Public compatibility:** `ReportsProvider.fetchNonStockReport` retains its void
+signature, updates `nonStockReport` and notifies once. The listing and export use
+`fetchNonStockReportSnapshot`, which never replaces shared provider rows.
+`ReportsProvider` remains globally registered; other report methods stay there.
+
+The model/page were moved from `models/get_non_stock_report_model.dart` and
+`screens/reports/non_stock_report/non_stock_report.dart`; no compatibility shims
+remain. Architecture and shared listing UI are delivered together following the
+requested report workflow. No shared `lib/core` component is changed.
+
+Run the module regression tests:
+
+```powershell
+flutter test test/features/reports/data/non_stock_report_api_test.dart test/features/reports/data/non_stock_report_snapshot_test.dart test/features/reports/presentation/state/non_stock_report_controller_test.dart test/features/reports/presentation/widgets/non_stock_report_picker_test.dart test/features/reports/presentation/pages/non_stock_report_page_test.dart test/report_filter_screens_test.dart
+```
+
+The populated page tests cover phone (375), tablet (768) and desktop (1280), full
+export, failures/reset, permissions and stock status/quantity display. Picker tests
+cover a 10,000-product catalog, keyboard opening/selection, closing and disposal.
+Native Windows repainting/Save As and live backend data still need device QA.
 
 ## Consumed Stocks Report listing
 

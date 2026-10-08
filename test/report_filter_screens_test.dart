@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/features/suppliers/data/supplier_repository.dart';
@@ -27,8 +29,8 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
-import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
-import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/non_stock_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,7 +133,17 @@ class _FakeSupplierProvider extends SupplierProvider {
 
 class _FakeReportsProvider extends ReportsProvider {
   @override
-  Future<void> fetchStockReport({
+  Future<GetNonStockReportResponse> fetchNonStockReportSnapshot(
+          {required String accessToken,
+          String? store,
+          String? category,
+          String? product,
+          String? barcode,
+          int? page}) async =>
+      GetNonStockReportResponse(status: 'success', message: '', data: []);
+
+  @override
+  Future<GetStockReportResponse> fetchStockReportSnapshot({
     required String accessToken,
     String? product,
     String? sortBy,
@@ -145,7 +157,8 @@ class _FakeReportsProvider extends ReportsProvider {
     String? until,
     int? page,
     int? perPage,
-  }) async {}
+  }) async =>
+      GetStockReportResponse(status: 'success', message: '', data: []);
 
   @override
   Future<void> fetchNonStockReport({
@@ -326,6 +339,13 @@ void main() {
         isTrue);
     expect(find.byKey(panelKey), findsNothing);
 
+    if (screen is NonStockReportPage) {
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNWidgets(4));
+      expect(tester.takeException(), isNull);
+      return;
+    }
     if (screen is ConsumedStocksReportPage) {
       await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
@@ -334,7 +354,12 @@ void main() {
       await tester.pump();
     }
 
-    if (screen is ConsumedStocksReportPage) {
+    if (screen is StockReportPage) {
+      expect(find.byType(CollapsibleFilterTile), findsOneWidget);
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterPanel), findsOneWidget);
+    } else if (screen is ConsumedStocksReportPage) {
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.byType(FilterPanel), findsOneWidget);
     } else {
@@ -376,7 +401,7 @@ void main() {
   testWidgets('Stock Report collapses its desktop filters', (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const StockReportScreen(),
+      screen: const StockReportPage(),
       toggleKey: const ValueKey('stock-report-filter-toggle'),
       panelKey: const ValueKey('stock-report-filters'),
     );
@@ -385,7 +410,7 @@ void main() {
   testWidgets('Non-Stock Report collapses its desktop filters', (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const NonStockReportScreen(),
+      screen: const NonStockReportPage(),
       toggleKey: const ValueKey('non-stock-report-filter-toggle'),
       panelKey: const ValueKey('non-stock-report-filters'),
     );
@@ -420,12 +445,12 @@ void main() {
         const ValueKey('supplier-transactions-report-filters'),
       ),
       (
-        const StockReportScreen(),
+        const StockReportPage(),
         const ValueKey('stock-report-filter-toggle'),
         const ValueKey('stock-report-filters'),
       ),
       (
-        const NonStockReportScreen(),
+        const NonStockReportPage(),
         const ValueKey('non-stock-report-filter-toggle'),
         const ValueKey('non-stock-report-filters'),
       ),

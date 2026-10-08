@@ -1,16 +1,13 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/models/get_stock_report_model.dart';
-import 'package:pos_machine/providers/report_provider.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:get/get.dart';
+import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('GetStockReportResponse parsing tests', () {
     test('Correctly parses stock report JSON with summary and pagination', () {
-      final jsonStr = '''
+      const jsonStr = '''
       {
         "status": "success",
         "message": "Stock report loaded successfully",
@@ -80,7 +77,7 @@ void main() {
     });
 
     test('Gracefully handles empty lists and missing properties', () {
-      final jsonStr = '''
+      const jsonStr = '''
       {
         "status": "success",
         "message": "Empty data test",
@@ -94,16 +91,6 @@ void main() {
       expect(response.data, isEmpty);
       expect(response.summary, isNull);
       expect(response.pagination, isNull);
-    });
-  });
-
-  group('SideBarController index 98 registration check', () {
-    test('Index 98 points to StockReportScreen class type', () {
-      final controller = Get.put(SideBarController());
-      final screenWidget = controller.screens[98];
-      
-      // Verify that the registered screen matches type name
-      expect(screenWidget.runtimeType.toString(), 'StockReportScreen');
     });
   });
 }

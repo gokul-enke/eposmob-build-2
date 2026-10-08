@@ -21,6 +21,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_support/hive_test_teardown.dart';
 import 'test_support/header_actions.dart';
+import 'test_support/app_translations.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 
 class _FakeAppSettingsProvider extends AppSettingsProvider {
   @override
@@ -156,7 +158,9 @@ void main() {
         ChangeNotifierProvider<RoleProvider>(create: (_) => RoleProvider()),
       ],
       child: GetMaterialApp(
-        translations: _ProductTestTranslations(),
+        translations: screen is StockListPage
+            ? EnglishTranslations()
+            : _ProductTestTranslations(),
         locale: const Locale('en', 'US'),
         home: Scaffold(body: content),
       ),
@@ -213,6 +217,11 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(390, 800));
 
+    if (screen is StockListPage) {
+      expect(hasFilterToggle(), isTrue);
+      expect(find.byType(TextFormField), findsNothing);
+      return;
+    }
     expect(find.byKey(toggleKey).evaluate().isNotEmpty || hasFilterToggle(),
         isTrue);
     expect(find.byKey(panelKey), findsNothing);
@@ -233,6 +242,14 @@ void main() {
   }) async {
     await pumpScreen(tester, screen, size: const Size(390, 650));
 
+    if (screen is StockListPage) {
+      await tapFilterToggle(tester, key: toggleKey);
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterPanel), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      return;
+    }
     await tester.tap(find.byKey(toggleKey));
     await tester.pump();
 

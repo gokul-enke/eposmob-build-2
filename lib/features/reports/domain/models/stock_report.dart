@@ -1,10 +1,10 @@
-import 'package:pos_machine/models/pagination.dart';
+import 'stock_report_pagination.dart';
 
 class GetStockReportResponse {
   final String status;
   final String message;
   final List<StockReportData> data;
-  final Pagination? pagination;
+  final StockReportPagination? pagination;
   final StockReportSummary? summary;
 
   GetStockReportResponse({
@@ -17,7 +17,7 @@ class GetStockReportResponse {
 
   factory GetStockReportResponse.fromJson(Map<String, dynamic> json) {
     List<StockReportData> dataList = [];
-    Pagination? paginationInfo;
+    StockReportPagination? paginationInfo;
     StockReportSummary? summaryInfo;
 
     // Parse summary
@@ -33,12 +33,12 @@ class GetStockReportResponse {
             .toList();
       }
       if (dataMap['pagination'] is Map) {
-        paginationInfo = Pagination.fromJson(
+        paginationInfo = StockReportPagination.fromJson(
             dataMap['pagination'] as Map<String, dynamic>);
       } else if (dataMap['current_page'] != null) {
-        paginationInfo = Pagination.fromJson(dataMap);
+        paginationInfo = StockReportPagination.fromJson(dataMap);
       }
-      
+
       // Fallback: check if summary is inside data map
       if (summaryInfo == null && dataMap['summary'] is Map) {
         summaryInfo = StockReportSummary.fromJson(dataMap['summary']);
@@ -118,12 +118,16 @@ class StockReportData {
       id: json['id'] ?? json['product_id'] ?? 0,
       name: json['product'] ?? json['name'] ?? json['product_name'] ?? '',
       barcode: json['barcode']?.toString(),
-      categoryName: json['category']?.toString() ?? json['category_name']?.toString(),
+      categoryName:
+          json['category']?.toString() ?? json['category_name']?.toString(),
       totalQuantity: json['total_quantity'],
-      storeCount: json['store_count'] is num ? (json['store_count'] as num).toInt() : null,
+      storeCount: json['store_count'] is num
+          ? (json['store_count'] as num).toInt()
+          : null,
       stockValue: json['stock_value'],
       retailValue: json['retail_value'],
-      expiryDate: json['earliest_expiry']?.toString() ?? json['expiry_date']?.toString(),
+      expiryDate: json['earliest_expiry']?.toString() ??
+          json['expiry_date']?.toString(),
       unit: json['unit']?.toString(),
       retailPrice: json['retail_price'],
       mrp: json['mrp'],

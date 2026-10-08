@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -833,10 +834,10 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 40;
                     },
                     onTapTitle6: () {
-                      sideBarController.index.value = 98;
+                      ReportNavigation.openStockReport();
                     },
                     onTapTitle7: () {
-                      sideBarController.index.value = 77;
+                      ReportNavigation.openNonStockReport();
                     },
                     onTapTitle8: () {
                       ReportNavigation.openConsumedStocksReport();
@@ -872,11 +873,13 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
-                        sideBarController.index.value == 77 ||
+                        sideBarController.index.value ==
+                            SideBarController.nonStockReportScreenIndex ||
                         sideBarController.index.value ==
                             SideBarController.consumedStocksReportScreenIndex ||
                         sideBarController.index.value == 85 ||
-                        sideBarController.index.value == 98),
+                        sideBarController.index.value ==
+                            SideBarController.stockReportScreenIndex),
               );
             },
           ),
