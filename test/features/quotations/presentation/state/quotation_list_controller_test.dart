@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/quotations/data/quotation_list_repository.dart';
+import 'package:pos_machine/features/quotations/domain/quotation_list_query.dart';
 import 'package:pos_machine/features/quotations/presentation/state/quotation_list_controller.dart';
 import '../../support/fake_quotation_list_source.dart';
 
@@ -97,6 +98,61 @@ void main() {
     expect(source.requests.last.page, 1);
     await tester.pump(const Duration(milliseconds: 350));
     expect(source.requests.last.query.number, 'other');
+  });
+  testWidgets('an undone edit reissues the page request it interrupted',
+      (tester) async {
+    await controller.search();
+    final pending = Completer<QuotationListPageData>();
+    source.handler = (_, __) => pending.future;
+    final request = controller.load(2);
+    controller.number.text = 'x';
+    controller.scheduleSearch();
+    controller.number.text = '';
+    controller.scheduleSearch();
+    source.handler = null;
+    pending.complete(QuotationListPageData(
+        rows: [quotation(9)], current: 2, last: 2, from: 4));
+    await request;
+    expect(controller.current, 1);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(source.requests.last.page, 2);
+    expect(controller.current, 2);
+    expect(controller.loading, isFalse);
+  });
+  test('an empty page past the end falls back to page one', () async {
+    await controller.search();
+    source.handler = (_, page) async => page == 1
+        ? QuotationListPageData(
+            rows: [quotation(1)], current: 1, last: 1, from: 1, total: 1)
+        : QuotationListPageData(
+            rows: const [], current: page, last: page, from: 1, total: 0);
+    await controller.load(2);
+    await Future<void>.delayed(Duration.zero);
+    expect(source.requests.last.page, 1);
+    expect(controller.current, 1);
+    expect(controller.rows.single.id, 1);
+    expect(controller.loading, isFalse);
+  });
+  test('session invalidation clears store-scoped customer filter', () async {
+    controller.customerId = '8';
+    controller.status = 'Pending';
+    await controller.search();
+    controller.invalidateSession();
+    expect(controller.customerId, isNull);
+    expect(controller.status, 'Pending');
+  });
+  test('sameAs matches request parameters, not raw field values', () {
+    const base = QuotationListQuery();
+    expect(base.sameAs(const QuotationListQuery(status: 'all', customerId: '')),
+        isTrue);
+    expect(
+        QuotationListQuery(quotationDate: DateTime(2026, 9, 28, 10))
+            .sameAs(QuotationListQuery(quotationDate: DateTime(2026, 9, 28))),
+        isTrue);
+    expect(base.sameAs(const QuotationListQuery(status: 'Pending')), isFalse);
+    expect(base.sameAs(const QuotationListQuery(storeId: 2)), isFalse);
+    expect(base.sameAs(const QuotationListQuery(number: 'Q')), isFalse);
   });
   test('session invalidation discards rows and pending responses', () async {
     await controller.search();

@@ -130,7 +130,16 @@ class _QuotationsListScreenState extends State<QuotationsListScreen>
     _exportPreparing = true;
     try {
       await _controller.prepareExport();
-      if (!mounted || !_controller.canExport) return;
+      if (!mounted) return;
+      if (!_controller.canExport) {
+        // The refreshed list failed or is empty; say why nothing was exported.
+        if (_controller.error != null) {
+          AppToast.error(context, 'quotations.list_export_error'.tr);
+        } else if (!_controller.loading && _controller.rows.isEmpty) {
+          AppToast.error(context, 'quotations.list_export_empty'.tr);
+        }
+        return;
+      }
       final query = _controller.applied!;
       final token = auth.token ?? '';
       final source = _controller.source;
@@ -261,6 +270,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen>
                 itemsPerPage: _controller.data?.perPage ?? 20,
                 countLabel: 'quotations.list_count'
                     .trParams({'count': '${_controller.rows.length}'}),
-                onPageChanged: _controller.loading ? (_) {} : _controller.load),
+                enabled: !_controller.loading,
+                onPageChanged: _controller.load),
           ));
 }

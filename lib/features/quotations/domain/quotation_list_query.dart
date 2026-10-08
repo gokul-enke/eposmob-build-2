@@ -29,12 +29,21 @@ class QuotationListQuery {
         },
         'page': '$page',
       };
-  bool sameAs(QuotationListQuery other) {
-    final left = parameters(1, null);
-    final right = other.parameters(1, null);
-    return left.length == right.length &&
-        left.entries.every((entry) => right[entry.key] == entry.value);
-  }
+  /// True when both queries send the same request parameters.
+  bool sameAs(QuotationListQuery other) =>
+      number == other.number &&
+      _customer == other._customer &&
+      storeId == other.storeId &&
+      _status == other._status &&
+      _sameDay(quotationDate, other.quotationDate) &&
+      _sameDay(expiryDate, other.expiryDate);
+  String? get _customer => (customerId?.isNotEmpty ?? false) ? customerId : null;
+  String? get _status =>
+      status.isEmpty || status.toLowerCase() == 'all' ? null : status;
+  static bool _sameDay(DateTime? a, DateTime? b) =>
+      a == null || b == null
+          ? a == b
+          : a.year == b.year && a.month == b.month && a.day == b.day;
 
   bool get active =>
       number.isNotEmpty ||
