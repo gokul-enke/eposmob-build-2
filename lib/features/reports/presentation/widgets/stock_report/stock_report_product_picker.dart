@@ -76,8 +76,22 @@ class _StockReportProductPickerState extends State<StockReportProductPicker> {
       _filter();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
+    // Select the shown label so typing replaces it instead of appending.
+    _text.selection =
+        TextSelection(baseOffset: 0, extentOffset: _text.text.length);
     _menu.open();
     _focus.requestFocus();
+  }
+
+  /// Closing without a selection discards the search text, so the field
+  /// always shows the filter that is actually applied.
+  void _closed() {
+    if (!mounted || _query.isEmpty) return;
+    setState(() {
+      _query = '';
+      _filter();
+    });
+    _text.text = _selectedLabel;
   }
 
   void _search(String text) {
@@ -91,6 +105,7 @@ class _StockReportProductPickerState extends State<StockReportProductPicker> {
 
   void _select(String id) {
     if (!mounted) return;
+    _query = '';
     _text.text = _label(id);
     _menu.close();
     widget.onChanged(id.isEmpty ? null : widget.options[id]);
@@ -167,6 +182,7 @@ class _StockReportProductPickerState extends State<StockReportProductPicker> {
               builder: (context, constraints) => MenuAnchor(
                     controller: _menu,
                     childFocusNode: _focus,
+                    onClose: _closed,
                     crossAxisUnconstrained: false,
                     style: MenuStyle(
                       backgroundColor:
@@ -193,22 +209,26 @@ class _StockReportProductPickerState extends State<StockReportProductPicker> {
                                   padding: EdgeInsets.zero,
                                   itemExtent: _rowHeight,
                                   itemCount: _matches.length,
-                                  itemBuilder: (context, index) =>
-                                      MenuItemButton(
-                                    requestFocusOnHover: false,
-                                    style: ButtonStyle(
-                                      textStyle: const WidgetStatePropertyAll(
-                                          AppTextStyles.input),
-                                      backgroundColor: WidgetStatePropertyAll(
-                                          _highlight == index
-                                              ? AppColors.softBlue
-                                              : null),
-                                    ),
-                                    onPressed: () => _select(_matches[index]),
-                                    child: Text(_label(_matches[index]),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis),
-                                  ),
+                                  itemBuilder: (context, index) {
+                                    // Captured now: the button closes the menu
+                                    // (resetting the search) before onPressed.
+                                    final id = _matches[index];
+                                    return MenuItemButton(
+                                      requestFocusOnHover: false,
+                                      style: ButtonStyle(
+                                        textStyle: const WidgetStatePropertyAll(
+                                            AppTextStyles.input),
+                                        backgroundColor: WidgetStatePropertyAll(
+                                            _highlight == index
+                                                ? AppColors.softBlue
+                                                : null),
+                                      ),
+                                      onPressed: () => _select(id),
+                                      child: Text(_label(id),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
+                                    );
+                                  },
                                 )),
                       )
                     ],

@@ -104,10 +104,14 @@ class StockReportController extends ChangeNotifier {
   }
 
   Future<void> retry() => load(requestedPage: _requestedPage);
-  Future<void> goToPage(int value) =>
-      !loading && errorKey == null && value >= 1 && value <= totalPages
-          ? load(requestedPage: value)
-          : Future.value();
+  // After a failed page load the visible pagination still describes the current
+  // filters, so paging stays available; after a failed filter change it doesn't.
+  Future<void> goToPage(int value) => !loading &&
+          (errorKey == null || _loaded?.matches(query) == true) &&
+          value >= 1 &&
+          value <= totalPages
+      ? load(requestedPage: value)
+      : Future.value();
 
   Future<void> load({int requestedPage = 1}) async {
     if (_disposed) return;
@@ -140,6 +144,21 @@ class StockReportController extends ChangeNotifier {
           }
           if (_disposed || request.generation != _generation) continue;
           final pagination = response.pagination;
+          final lastPage = pagination?.lastPage;
+          // The result set shrank below the requested page (e.g. a refresh
+          // after restocking): show its new last page instead of an error.
+          if (response.status.toLowerCase() == 'success' &&
+              lastPage != null &&
+              lastPage >= 1 &&
+              request.page > lastPage) {
+            _requestedPage = lastPage;
+            _pending ??= (
+              query: request.query,
+              page: lastPage,
+              generation: request.generation
+            );
+            continue;
+          }
           if (response.status.toLowerCase() != 'success' ||
               (pagination != null &&
                   (pagination.currentPage != request.page ||

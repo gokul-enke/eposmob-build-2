@@ -146,6 +146,49 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+  testWidgets('opening selects the label so typing replaces it',
+      (tester) async {
+    await mount(tester);
+    await tester.tap(input());
+    await tester.pumpAndSettle();
+    final text = tester.widget<TextField>(input()).controller!;
+    expect(text.text, 'All Products');
+    expect(
+        text.selection,
+        const TextSelection(
+            baseOffset: 0, extentOffset: 'All Products'.length));
+  });
+  for (final close in ['Escape', 'Tab', 'outside tap']) {
+    testWidgets('$close after searching restores the applied product label',
+        (tester) async {
+      await mount(tester);
+      await tester.enterText(input(), '09999');
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(selected, '9999');
+      await tester.enterText(input(), 'mil');
+      await tester.pumpAndSettle();
+      switch (close) {
+        case 'Escape':
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        case 'Tab':
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        default:
+          await tester.tap(find.byKey(const ValueKey('next-field')));
+      }
+      await tester.pumpAndSettle();
+      expect(menu(), findsNothing);
+      expect(
+          tester.widget<TextField>(input()).controller!.text, 'Product 09999');
+      expect(selected, '9999');
+      expect(changes, 1);
+      await tester.tap(input());
+      await tester.pumpAndSettle();
+      expect(menu().evaluate(), isNotEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('search, no match, Escape, outside tap, Tab, reset and disposal',
       (tester) async {
     await mount(tester);

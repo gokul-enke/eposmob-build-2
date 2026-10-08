@@ -250,6 +250,49 @@ void main() {
     expect(c.errorKey, isNull);
     expect(calls, 1);
   });
+  test('refresh past a shrunken last page moves to the new last page',
+      () async {
+    var last = 5;
+    final pages = <int>[];
+    final c = StockReportController(
+        readScope: () async => scope,
+        fetch: (q, p, size) async {
+          pages.add(p);
+          return response(p, last: last);
+        });
+    addTearDown(c.dispose);
+    await c.load(requestedPage: 5);
+    last = 3;
+    await c.retry();
+    expect(pages, [5, 5, 3]);
+    expect(c.errorKey, isNull);
+    expect(c.page, 3);
+    expect(c.totalPages, 3);
+    await c.retry();
+    expect(pages, [5, 5, 3, 3]);
+  });
+  test('failed page load keeps paging available for the same filters',
+      () async {
+    var fail = false;
+    final pages = <int>[];
+    final c = StockReportController(
+        readScope: () async => scope,
+        fetch: (q, p, size) async {
+          pages.add(p);
+          if (fail) throw StateError('offline');
+          return response(p);
+        });
+    addTearDown(c.dispose);
+    await c.load(requestedPage: 2);
+    fail = true;
+    await c.goToPage(3);
+    expect(c.errorKey, 'stock_report.unavailable');
+    fail = false;
+    await c.goToPage(1);
+    expect(pages, [2, 3, 1]);
+    expect(c.errorKey, isNull);
+    expect(c.page, 1);
+  });
   test('rapid filters serialize work and discard the earlier result', () async {
     final pending = Completer<GetStockReportResponse>(),
         entered = Completer<void>();
