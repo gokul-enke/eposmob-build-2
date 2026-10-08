@@ -54,7 +54,7 @@ import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
-import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profile_page.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
@@ -125,6 +125,7 @@ class SideBarController extends GetxController {
 
   /// Report screens in [screens]. Navigate through [ReportNavigation].
   static const int mySalesReportScreenIndex = 58;
+  static const int consumedStocksReportScreenIndex = 80;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
   static const int supplierTransactionsReportScreenIndex = 67;
@@ -267,7 +268,7 @@ class SideBarController extends GetxController {
     NonStockReportScreen(), // 77 Non-Stock Report
     DailySalesCloseListScreen(), // 78 Daily Sales Close List
     DailySalesCloseDetailScreen(), // 79 Daily Sales Close Detail
-    ConsumedStocksReportScreen(), // 80 Consumed Stocks Report
+    ConsumedStocksReportPage(), // 80 Consumed Stocks Report
     PurchaseOrderListPage(), // purchaseOrderListScreenIndex
     CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
     ProductBarcodeScreen(), // 83 Product Barcode Screen

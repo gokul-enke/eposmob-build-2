@@ -12,12 +12,12 @@ import 'package:pos_machine/features/customers/presentation/navigation/customer_
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
-import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import '../controllers/sidebar_controller.dart';
 import '../providers/admin_settings_provider.dart';
 import '../providers/auth_model.dart';
@@ -829,7 +829,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 77;
                     },
                     onTapTitle8: () {
-                      sideBarController.index.value = 80;
+                      ReportNavigation.openConsumedStocksReport();
                     },
                     listTitle1: 'nav.sales_executive_reports'.tr,
                     listTitle2: 'nav.executive_reports'.tr,
@@ -863,7 +863,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
                         sideBarController.index.value == 77 ||
-                        sideBarController.index.value == 80 ||
+                        sideBarController.index.value ==
+                            SideBarController.consumedStocksReportScreenIndex ||
                         sideBarController.index.value == 85 ||
                         sideBarController.index.value == 98),
               );

@@ -1,3 +1,5 @@
+import 'package:pos_machine/features/reports/domain/models/consumed_stocks_report.dart'
+    as consumed;
 import 'dart:io';
 
 import 'package:dropdown_search/dropdown_search.dart';
@@ -24,7 +26,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
-import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
 import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
 import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
@@ -154,6 +156,18 @@ class _FakeReportsProvider extends ReportsProvider {
     String? barcode,
     int? page,
   }) async {}
+
+  @override
+  Future<consumed.GetConsumedStocksReportResponse>
+      fetchConsumedStocksReportSnapshot(
+              {required String accessToken,
+              String? productId,
+              String? storeId,
+              String? from,
+              String? until,
+              int? page}) async =>
+          consumed.GetConsumedStocksReportResponse(
+              status: 'success', data: consumed.Data(data: []));
 
   @override
   Future<void> fetchConsumedStocksReport({
@@ -312,10 +326,20 @@ void main() {
         isTrue);
     expect(find.byKey(panelKey), findsNothing);
 
-    await tapFilterToggle(tester, key: toggleKey);
-    await tester.pump();
+    if (screen is ConsumedStocksReportPage) {
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+    } else {
+      await tapFilterToggle(tester, key: toggleKey);
+      await tester.pump();
+    }
 
-    expect(find.byKey(panelKey), findsOneWidget);
+    if (screen is ConsumedStocksReportPage) {
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.byType(FilterPanel), findsOneWidget);
+    } else {
+      expect(find.byKey(panelKey), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   }
 
@@ -371,7 +395,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const ConsumedStocksReportScreen(),
+      screen: const ConsumedStocksReportPage(),
       toggleKey: const ValueKey('consumed-stocks-report-filter-toggle'),
       panelKey: const ValueKey('consumed-stocks-report-filters'),
     );
@@ -406,7 +430,7 @@ void main() {
         const ValueKey('non-stock-report-filters'),
       ),
       (
-        const ConsumedStocksReportScreen(),
+        const ConsumedStocksReportPage(),
         const ValueKey('consumed-stocks-report-filter-toggle'),
         const ValueKey('consumed-stocks-report-filters'),
       ),
