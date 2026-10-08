@@ -279,6 +279,21 @@ void main() {
     expect(reports.calls.last.page, 1);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+  for (final (width, expanded) in [(375.0, false), (1280.0, true)]) {
+    testWidgets('first frame at $width already has its filter state',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(app(FakeReports(), CapturingExport()));
+      // Only the first frame: no post-frame callback has run yet.
+      expect(find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   for (final width in [375.0, 768.0, 1280.0]) {
     testWidgets('shared report layout and filters at $width', (tester) async {
       tester.view.physicalSize = Size(width, 900);

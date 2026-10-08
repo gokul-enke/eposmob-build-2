@@ -77,11 +77,19 @@ class _ProductSalesReportPageState extends State<ProductSalesReportPage> {
       ],
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _report.setFilters(MediaQuery.sizeOf(context).width >=
-          ListLayoutBreakpoints.mobileBelow);
-      _run(_report.initialize());
+      if (mounted) _run(_report.initialize());
     });
+  }
+
+  bool _layoutInitialized = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Before the first frame, so mobile never flashes the expanded filters.
+    if (_layoutInitialized) return;
+    _layoutInitialized = true;
+    _report.setFilters(
+        MediaQuery.sizeOf(context).width >= ListLayoutBreakpoints.mobileBelow);
   }
 
   Future<void> _run(Future<void> operation) async {

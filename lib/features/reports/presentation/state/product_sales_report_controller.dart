@@ -36,6 +36,7 @@ class ProductSalesReportController extends ChangeNotifier {
   ({ProductSalesQuery query, int page, int generation})? _pending;
   ProductSalesQuery? _loaded;
   ProductSalesScope? _loadedScope;
+  static const exportPageSize = 250;
   static String date(DateTime? value) => value == null
       ? ''
       : '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
@@ -216,10 +217,10 @@ class ProductSalesReportController extends ChangeNotifier {
 
     final entries = await productSalesSnapshot((page) async {
       await check();
-      final result = await fetch(snapshot, page, 250);
+      final result = await fetch(snapshot, page, exportPageSize);
       await check();
       return result;
-    }, progress: progress);
+    }, pageSize: exportPageSize, progress: progress);
     final output = await build(entries);
     await check();
     return output;
