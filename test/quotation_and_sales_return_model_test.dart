@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pos_machine/helpers/sales_return_detail_helper.dart';
-import 'package:pos_machine/models/list_sales_return.dart';
-import 'package:pos_machine/models/list_sales_return_items.dart';
+import 'package:pos_machine/features/sales_returns/presentation/printing/sales_return_print_items.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return.dart';
+import 'package:pos_machine/features/sales_returns/domain/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/quotation_model.dart';
 
 void main() {

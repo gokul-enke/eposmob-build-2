@@ -1,32 +1,31 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
-import 'package:pos_machine/features/categories/presentation/navigation/category_navigation.dart';
-import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
-import 'package:pos_machine/features/product_barcodes/presentation/navigation/barcode_navigation.dart';
-import 'package:pos_machine/features/products/presentation/navigation/product_list_navigation.dart';
-
-import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/navigation/barcode_navigation.dart';
+import 'package:pos_machine/features/categories/presentation/navigation/category_navigation.dart';
+import 'package:pos_machine/features/products/presentation/navigation/product_list_navigation.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
+import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
+import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
+import 'package:pos_machine/features/sales/presentation/navigation/sales_navigation.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
+import 'package:pos_machine/features/sales_returns/presentation/navigation/sales_return_navigation.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
-
 import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
-
 import 'package:websafe_svg/websafe_svg.dart';
+
 import '../controllers/sidebar_controller.dart';
 import '../providers/admin_settings_provider.dart';
 import '../providers/auth_model.dart';
-
 import '../providers/authentication_providers.dart';
 import '../providers/role_provider.dart';
-import '../providers/sales_provider.dart';
 import '../providers/shared_preferences.dart';
 import '../providers/store_session_provider.dart';
 import '../resources/color_manager.dart';
@@ -493,22 +492,22 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                   onTapTitle1: () {
-                    sideBarController.index.value = 2;
+                    SalesNavigation.openOrders();
                   },
                   onTapTitle2: () {
-                    sideBarController.index.value = 54;
+                    SalesNavigation.openConfirmed();
                   },
                   onTapTitle3: () {
-                    sideBarController.index.value = 50;
+                    SalesReturnNavigation.openList();
                   },
                   onTapTitle4: () {
-                    sideBarController.index.value = 78;
+                    SalesNavigation.openDailyCloseList();
                   },
                   onTapTitle5: () {
-                    sideBarController.index.value = 84;
+                    SalesNavigation.openDailyCloseList(admin: true);
                   },
                   onTapTitle6: () {
-                    sideBarController.index.value = 92;
+                    SalesNavigation.openOrders(online: true);
                   },
                   listTitle1: 'nav.sales'.tr,
                   listTitle2: 'nav.confirmed_orders'.tr,
@@ -526,11 +525,11 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'nav.sales'.tr,
                   onTap: () {
-                    final bool alreadyOnSales =
-                        sideBarController.index.value == 2;
-                    sideBarController.index.value = 2;
+                    final bool alreadyOnSales = sideBarController.index.value ==
+                        SideBarController.salesScreenIndex;
+                    SalesNavigation.openOrders();
 
-                    // SalesScreen loads its own data when it mounts. Fetching
+                    // SalesListPage loads its own data when it mounts. Fetching
                     // here as well raced that request into the same shared
                     // order list, so only refresh when we are already on the
                     // screen and there is nothing else loading it.
@@ -553,16 +552,26 @@ class _SideMenuState extends State<SideMenu> {
                               debugPrint('Sales refresh failed: $error'));
                     }
                   },
-                  selected: sideBarController.index.value == 2 ||
-                      sideBarController.index.value == 11 ||
-                      sideBarController.index.value == 49 ||
-                      sideBarController.index.value == 50 ||
+                  selected: sideBarController.index.value ==
+                          SideBarController.salesScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.salesOrderDetailsScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.createSalesReturnScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.salesReturnListScreenIndex ||
                       sideBarController.index.value == 51 ||
-                      sideBarController.index.value == 54 ||
-                      sideBarController.index.value == 78 ||
-                      sideBarController.index.value == 79 ||
-                      sideBarController.index.value == 84 ||
-                      sideBarController.index.value == 92,
+                      sideBarController.index.value ==
+                          SideBarController.confirmedOrdersScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.dailySalesCloseListScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.dailySalesCloseDetailScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController
+                              .adminDailySalesCloseListScreenIndex ||
+                      sideBarController.index.value ==
+                          SideBarController.onlineSalesScreenIndex,
                 ),
               );
             },

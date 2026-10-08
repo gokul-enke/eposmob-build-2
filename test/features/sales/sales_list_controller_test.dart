@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/sales/data/sales_list_repository.dart';
 import 'package:pos_machine/features/sales/domain/sales_list_query.dart';
 import 'package:pos_machine/features/sales/presentation/state/sales_list_controller.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 
 class Source implements SalesListSource {
   final requests =

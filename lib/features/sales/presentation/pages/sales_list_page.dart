@@ -2,15 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/screens/sales/widgets/sales_order_actions.dart';
+import '../sharing/sales_page_services.dart';
+import '../widgets/orders/sales_order_row_actions.dart';
 import '../../data/sales_list_repository.dart';
 import '../state/sales_list_controller.dart';
 import '../widgets/sales_list_filters.dart';
@@ -37,8 +37,8 @@ class SalesListPage extends StatefulWidget {
   State<SalesListPage> createState() => _SalesListPageState();
 }
 
-class _SalesListPageState extends State<SalesListPage>
-    with SalesOrderActions<SalesListPage> {
+class _SalesListPageState extends State<SalesListPage> {
+  late final SalesPageServices _services;
   late final AuthModel _auth;
   late final SalesProvider _sales;
   late final StoreSessionProvider _stores;
@@ -49,11 +49,6 @@ class _SalesListPageState extends State<SalesListPage>
   bool _preparing = false, _wasBootstrapping = false;
   String? _sessionKey;
   int _sessionRevision = 0;
-  @override
-  bool get onlineSales => widget.isOnlineSales;
-  @override
-  Future<void> refreshSalesOrders({bool preserveOnlineFilter = false}) =>
-      _refresh();
   Future<void> _refresh() async {
     if (!mounted || _stores.isBootstrapping) return;
     await _controller.refresh();
@@ -67,10 +62,11 @@ class _SalesListPageState extends State<SalesListPage>
   @override
   void initState() {
     super.initState();
-    _auth = context.read<AuthModel>();
-    _sales = context.read<SalesProvider>();
-    _stores = context.read<StoreSessionProvider>();
-    _settings = context.read<AppSettingsProvider>();
+    _services = SalesPageServices.capture(context);
+    _auth = _services.auth;
+    _sales = _services.sales;
+    _stores = _services.store;
+    _settings = _services.settings;
     _sales.isOnlineSalesNavigation = widget.isOnlineSales;
     _controller = SalesListController(
         widget.source ?? SalesListRepository(), () => _auth.token ?? '',
@@ -204,7 +200,13 @@ class _SalesListPageState extends State<SalesListPage>
   }
 
   Widget _actions(ListOrderModelData row) =>
-      widget.actions?.call(row) ?? buildSalesOrderActions(row, context);
+      widget.actions?.call(row) ??
+      SalesOrderRowActions(
+          pageContext: context,
+          services: _services,
+          order: row,
+          isOnlineSales: widget.isOnlineSales,
+          refresh: _refresh);
   @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: _controller,

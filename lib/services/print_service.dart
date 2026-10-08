@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';

@@ -4,7 +4,7 @@ import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 
 String salesCustomer(ListOrderModelData row) =>
     row.customerName?.isNotEmpty == true

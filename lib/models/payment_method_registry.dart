@@ -1,3 +1,4 @@
+import 'package:pos_machine/features/sales/domain/sales_payment_codes.dart';
 import 'package:pos_machine/models/payment_method.dart';
 
 /// Resolves the payment-method *strings* held across orders and receipts back
@@ -25,6 +26,7 @@ class PaymentMethodRegistry {
 
   /// Replaces the snapshot. Called by [MasterDataProvider].
   static void update(List<PaymentMethod>? methods) {
+    SalesPaymentCodes.resolve = (value) => find(value)?.code;
     _methods =
         methods == null ? const [] : List<PaymentMethod>.unmodifiable(methods);
   }

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/core/network/tenant_session.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import '../domain/sales_list_query.dart';
 

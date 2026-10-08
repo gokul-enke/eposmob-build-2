@@ -17,14 +17,14 @@ import 'package:pos_machine/features/sales/domain/sales_list_query.dart';
 import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
 import 'package:pos_machine/features/sales/presentation/widgets/sales_list_filters.dart';
 import 'package:pos_machine/features/sales/presentation/export/sales_list_excel.dart';
-import 'package:pos_machine/models/list_sales_order.dart';
+import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_translations.dart';
 import 'package:pos_machine/resources/localization_service.dart';
-import 'package:pos_machine/screens/sales/widgets/cancel_order_modal.dart';
+import 'package:pos_machine/features/sales/presentation/widgets/actions/cancel_order_modal.dart';
 
 class ActionSalesProvider extends SalesProvider {
   String? cancelledId;
