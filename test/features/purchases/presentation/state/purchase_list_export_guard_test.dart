@@ -74,4 +74,19 @@ void main() {
       input.dispose();
     });
   }
+
+  test('focus and selection changes keep the export running', () async {
+    final input = TextEditingController(text: '2026-09-01');
+    final guard = PurchaseListExportGuard([input]);
+    final check = await guard.capture(
+        session: _Session(),
+        token: () => 'token',
+        configuration: () => 'endpoint',
+        allowed: () => true);
+    // Tapping a read-only date field moves the cursor without editing text.
+    input.selection = const TextSelection.collapsed(offset: 4);
+    await expectLater(check(), completes);
+    guard.dispose();
+    input.dispose();
+  });
 }

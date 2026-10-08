@@ -29,8 +29,10 @@ class PurchaseReturnListView extends StatelessWidget {
       required this.export,
       required this.onExport,
       required this.onReset,
-      required this.scrollController});
+      required this.scrollController,
+      this.canExport = true});
   final PurchaseReturnListController controller;
+  final bool canExport;
   final String currency;
   final VoidCallback onCreate, onExport, onReset;
   final ValueChanged<PurchaseReturnData> onView;
@@ -76,16 +78,19 @@ class PurchaseReturnListView extends StatelessWidget {
                 badge: controller.hasActiveFilters(),
                 onPressed: () => controller.update(
                     () => controller.showFilters = !controller.showFilters)),
-            HeaderAction(
-                key: const ValueKey('purchase-return-export'),
-                icon: Icons.ios_share_rounded,
-                label: export.stage ?? 'list.export'.tr,
-                busy: export.busy,
-                onPressed: controller.isLoading ||
-                        controller.loadError != null ||
-                        rows.isEmpty
-                    ? null
-                    : onExport),
+            // Exports carry purchase prices, so they follow the same
+            // permission the export guard enforces.
+            if (canExport)
+              HeaderAction(
+                  key: const ValueKey('purchase-return-export'),
+                  icon: Icons.ios_share_rounded,
+                  label: export.stage ?? 'list.export'.tr,
+                  busy: export.busy,
+                  onPressed: controller.isLoading ||
+                          controller.loadError != null ||
+                          rows.isEmpty
+                      ? null
+                      : onExport),
             HeaderAction(
                 icon: Icons.refresh_rounded,
                 label: 'list.refresh'.tr,

@@ -90,6 +90,7 @@ class _PurchaseReturnListPageState extends State<PurchaseReturnListPage> {
             currency: currency,
             export: export,
             onExport: () => _runExport(currency),
+            canExport: canViewPurchasePrice(context, listen: true),
             onReset: _reset,
             scrollController: scrollController,
             onCreate: PurchaseReturnNavigation.openCreate,

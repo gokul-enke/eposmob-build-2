@@ -22,12 +22,14 @@ void main() {
   });
   tearDown(Get.reset);
   Future<PurchaseListFixture> pump(WidgetTester tester, bool returns,
-      {double width = 1280, CapturingExport? export}) async {
+      {double width = 1280,
+      CapturingExport? export,
+      bool canViewPrices = true}) async {
     tester.view.physicalSize = Size(width, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final fixture = PurchaseListFixture();
+    final fixture = PurchaseListFixture()..roles.allowed = canViewPrices;
     await tester.pumpWidget(fixture.wrap(returns
         ? PurchaseReturnListPage(exportController: export)
         : PurchaseOrderListPage(exportController: export)));
@@ -198,6 +200,14 @@ void main() {
       });
     }
   }
+
+  testWidgets('return export is hidden without purchase price permission',
+      (tester) async {
+    await pump(tester, true, canViewPrices: false);
+    expect(find.byType(PurchaseReturnListView), findsOneWidget);
+    expect(find.byKey(const ValueKey('purchase-return-export')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
       'order store menu retains all options and selected ID; Reset clears it',

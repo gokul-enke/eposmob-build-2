@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:get/get.dart';
 import 'package:pos_machine/services/list_excel_export_service.dart';
 import '../../domain/models/purchase_order_model.dart';
+import '../widgets/list/purchase_order_list_view.dart';
 
 Future<File> exportPurchaseOrders(
         List<PurchaseOrderData> rows, String currency) =>
@@ -28,7 +29,5 @@ Future<File> exportPurchaseOrders(
               label: 'purchase_order.currency'.tr, value: (_, __) => currency),
           ListExportColumn(
               label: 'purchase_order.received_items_col'.tr,
-              value: (e, _) =>
-                  e.itemsReceived ??
-                  'purchase_order.items_received_default'.tr),
+              value: (e, _) => PurchaseOrderListView.receivedLabel(e)),
         ]);
