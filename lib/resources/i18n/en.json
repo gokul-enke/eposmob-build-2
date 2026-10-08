@@ -442,6 +442,12 @@
     "btn_pay": "Pay @amount"
   },
   "product_sales_report": {
+    "subtitle": "Review product sales, revenue and quantities.",
+    "find": "Find product sales",
+    "filter_hint": "Filter by category, product, customer and date.",
+    "select_date": "Select Date",
+    "count": "@count products on this page",
+    "export_fetching": "Fetching page @page of @total...",
     "error_unavailable": "Product sales report is currently unavailable.",
     "page_title": "Product Sales Report",
     "col_product_name": "Product Name",

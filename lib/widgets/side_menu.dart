@@ -832,7 +832,7 @@ class _SideMenuState extends State<SideMenu> {
                       ReportNavigation.openSupplierTransactionsReport();
                     },
                     onTapTitle5: () {
-                      sideBarController.index.value = 40;
+                      ReportNavigation.openProductSalesReport();
                     },
                     onTapTitle6: () {
                       ReportNavigation.openStockReport();
@@ -866,7 +866,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = isCompanyAdmin ? 85 : 58;
                     },
                     selected: sideBarController.index.value == 39 ||
-                        sideBarController.index.value == 40 ||
+                        sideBarController.index.value ==
+                            SideBarController.productSalesReportScreenIndex ||
                         sideBarController.index.value == 41 ||
                         sideBarController.index.value == 42 ||
                         sideBarController.index.value == 58 ||

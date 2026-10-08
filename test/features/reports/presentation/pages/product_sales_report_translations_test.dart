@@ -13,6 +13,12 @@ void main() {
 
       for (final key in [
         'page_title',
+        'subtitle',
+        'find',
+        'filter_hint',
+        'select_date',
+        'count',
+        'export_fetching',
         'col_price',
         'filter_category',
         'filter_product',

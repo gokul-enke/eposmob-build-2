@@ -67,6 +67,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
 
     void navigate(int index) {
       switch (index) {
+        case SideBarController.productSalesReportScreenIndex:
+          ReportNavigation.openProductSalesReport();
+          break;
         case SideBarController.salesScreenIndex:
           SalesNavigation.openOrders();
           break;
@@ -606,7 +609,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 title: 'nav.reports'.tr,
                 selected: [
                   39,
-                  40,
+                  SideBarController.productSalesReportScreenIndex,
                   41,
                   42,
                   58,
@@ -644,7 +647,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   if (hasProductSalesPermission)
                     _MobileDrawerSubItem(
                       title: 'nav.product_sales_report'.tr,
-                      onTap: () => navigate(40),
+                      onTap: () => navigate(
+                          SideBarController.productSalesReportScreenIndex),
                     ),
                   if (hasStockReportPermission)
                     _MobileDrawerSubItem(
