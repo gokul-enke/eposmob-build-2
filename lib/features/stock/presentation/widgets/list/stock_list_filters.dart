@@ -1,194 +1,107 @@
-import 'package:get/get.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:pos_machine/components/build_round_button.dart';
-import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/product/widgets/stock_responsive.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 import '../../state/stock_list_controller.dart';
-import 'stock_list_filter_field.dart';
 
-class StockListFilters extends StatelessWidget {
-  final bool isMobile;
-  final bool showFilters;
-  final Size size;
-  final StockListController inputs;
-  final VoidCallback onSearch;
-  final VoidCallback onReset;
-  final VoidCallback onHide;
-  const StockListFilters(
-      {super.key,
-      required this.isMobile,
-      required this.showFilters,
-      required this.size,
-      required this.inputs,
-      required this.onSearch,
-      required this.onReset,
-      required this.onHide});
-  @override
-  Widget build(BuildContext context) =>
-      isMobile ? _buildMobileFiltersSection(size) : _buildDesktopFilters(size);
-  Widget _buildMobileFiltersSection(Size size) {
-    if (!showFilters) {
-      return const SizedBox.shrink();
-    }
-
-    return StockContentCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'stock.filters_title'.tr,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s14,
-                    0.25,
-                    ColorManager.textColor,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  icon: const Icon(Icons.expand_less),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                  ),
-                  onPressed: () => onHide(),
-                  tooltip: 'stock.hide_filters'.tr,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          StockListFilterField(
-              field: StockListField.name,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 10),
-          StockListFilterField(
-              field: StockListField.category,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 10),
-          StockListFilterField(
-              field: StockListField.barcode,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 10),
-          StockListFilterField(
-              field: StockListField.rack,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 10),
-          StockListFilterField(
-              field: StockListField.store,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 10),
-          StockListFilterField(
-              field: StockListField.status,
-              inputs: inputs,
-              onSearch: onSearch,
-              change: inputs.mutate),
-          const SizedBox(height: 12),
-          CustomRoundButton(
-            title: 'general.reset'.tr,
-            boxColor: Colors.white,
-            textColor: ColorManager.kPrimaryColor,
-            borderColor: ColorManager.kPrimaryColor,
-            fct: onReset,
-            height: 44,
-            width: double.infinity,
-            fontSize: FontSize.s12,
-          ),
-        ],
+FilterPanel stockListFilters(StockListController inputs) {
+  CustomFilterField picker(
+      {required String label,
+      required String all,
+      required IconData icon,
+      required List<String> options,
+      required TextEditingController selection,
+      String Function(String)? optionLabel}) {
+    String display(String value) =>
+        value == all ? labelForAll(all) : (optionLabel?.call(value) ?? value);
+    // Search text belongs only to the popup, never to the selected field.
+    return CustomFilterField(
+        child: DropdownSearch<String>(
+      key: ValueKey('stock-picker-$all'),
+      selectedItem: selection.text,
+      items: (_, __) => options.toSet().toList(),
+      itemAsString: display,
+      decoratorProps: DropDownDecoratorProps(
+          baseStyle: AppTextStyles.input,
+          decoration: AppInputDecoration.filter(
+              label: label, hint: display(all), icon: icon)),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        constraints: const BoxConstraints(maxHeight: 320),
+        menuProps: const MenuProps(backgroundColor: AppColors.surface),
+        searchFieldProps: TextFieldProps(
+            decoration: AppInputDecoration.filter(
+                label: label,
+                hint: 'stock.list_search'.tr,
+                icon: Icons.search)),
       ),
-    );
+      onChanged: (value) {
+        selection.text = value ?? all;
+        inputs.search();
+      },
+    ));
   }
 
-  Widget _buildDesktopFilters(Size size) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.name,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-            const SizedBox(width: 15),
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.category,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-            const SizedBox(width: 15),
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.barcode,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-            const SizedBox(width: 15),
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.rack,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.store,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-            const SizedBox(width: 15),
-            Expanded(
-                child: StockListFilterField(
-                    field: StockListField.status,
-                    inputs: inputs,
-                    onSearch: onSearch,
-                    change: inputs.mutate)),
-            const SizedBox(width: 15),
-            const Expanded(child: SizedBox()),
-            const SizedBox(width: 15),
-            Expanded(
-              child: CustomRoundButton(
-                title: 'general.reset'.tr,
-                boxColor: Colors.white,
-                textColor: ColorManager.kPrimaryColor,
-                borderColor: ColorManager.kPrimaryColor,
-                fct: onReset,
-                height: 45,
-                width: double.infinity,
-                fontSize: FontSize.s12,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  return FilterPanel(
+      key: const ValueKey('stock-desktop-filters'),
+      title: 'stock.list_find'.tr,
+      hint: 'stock.list_filter_hint'.tr,
+      resetLabel: 'stock.list_reset'.tr,
+      embeddedResetLabel: 'stock.reset_filters_btn'.tr,
+      onSearch: inputs.scheduleSearch,
+      onSubmit: inputs.search,
+      onReset: inputs.reset,
+      fields: [
+        TextFilterField(
+            controller: inputs.stockNameController,
+            label: 'stock.stock_name'.tr,
+            hint: 'stock.stock_name'.tr,
+            icon: Icons.search),
+        picker(
+            label: 'stock.category'.tr,
+            all: 'All Categories',
+            icon: Icons.category_outlined,
+            options: inputs.categories,
+            selection: inputs.categoryController),
+        TextFilterField(
+            controller: inputs.barcodeController,
+            label: 'stock.barcode'.tr,
+            hint: 'stock.barcode'.tr,
+            icon: Icons.qr_code),
+        TextFilterField(
+            controller: inputs.rackController,
+            label: 'stock.rack_number'.tr,
+            hint: 'stock.rack_number'.tr,
+            icon: Icons.shelves),
+        picker(
+            label: 'stock.label_store'.tr,
+            all: 'All Stores',
+            icon: Icons.store_outlined,
+            options: inputs.stores,
+            selection: inputs.storeController),
+        picker(
+            label: 'stock.stock_status'.tr,
+            all: 'All Statuses',
+            icon: Icons.inventory_2_outlined,
+            options: const [
+              'All Statuses',
+              'Out of Stock',
+              'Low Stock',
+              'At Reorder Level'
+            ],
+            selection: inputs.stockStatusController,
+            optionLabel: (s) => {
+                  'Out of Stock': 'stock.status_out_of_stock',
+                  'Low Stock': 'stock.status_low_stock',
+                  'At Reorder Level': 'stock.status_at_reorder_level'
+                }[s]!
+                    .tr),
+      ]);
 }
+
+String labelForAll(String value) => {
+      'All Categories': 'stock.list_all_categories',
+      'All Stores': 'stock.list_all_stores',
+      'All Statuses': 'stock.list_all_statuses'
+    }[value]!
+        .tr;
