@@ -87,7 +87,9 @@ Named constants live together on `SideBarController`:
 | Online sales | 92 |
 
 The adapter uses the registered controller, creating it only when necessary.
-Daily-close detail returns to the invoking screen through the adapter.
+Daily-close detail returns to the invoking screen through the adapter. The
+operator daily-close list page delegates listing, filters and export to
+`features/day_closes`; the admin list stays here.
 
 ## Preserved contracts and review boundaries
 

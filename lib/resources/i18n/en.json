@@ -2177,6 +2177,20 @@
     "msg_order_deleted": "Order @number deleted"
   },
   "daily_sales_close": {
+    "list_subtitle": "Review daily sales and shift closures.",
+    "list_find": "Find daily closes",
+    "list_filter_hint": "Filter by business date.",
+    "list_export": "Export",
+    "list_export_fetching": "Fetching page @page of @total",
+    "list_export_error": "Unable to export the daily closes. Refresh and try again.",
+    "list_load_error": "Unable to load daily closes.",
+    "list_load_failed": "Unable to reload daily closes. Previous results may be out of date.",
+    "list_shift_failed": "Unable to load shift status. Retry before opening or closing a shift.",
+    "list_count": "@count daily closes on this page",
+    "list_id": "Close ID",
+    "list_currency": "Currency",
+    "status": "Status",
+
     "sent_to_printer": "Daily Close sent to @printer",
     "kot_sent_to_printer": "KOT sent to @printer",
     "title": "Daily Sales Closes",

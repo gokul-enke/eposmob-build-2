@@ -75,6 +75,7 @@ class PageHeader extends StatelessWidget {
     this.addLabel,
     this.addShortLabel,
     this.leading,
+    this.primaryActions = const [],
   });
 
   static const compactBreakpoint = 560.0;
@@ -92,6 +93,11 @@ class PageHeader extends StatelessWidget {
   final VoidCallback? onAdd;
   final String? addLabel;
   final String? addShortLabel;
+
+  /// Labeled workflow buttons built with the shared button components.
+  /// Wide headers keep them beside secondary actions; narrow headers wrap
+  /// them below the title so labels and disabled states remain visible.
+  final List<Widget> primaryActions;
 
   /// Optional widget above the title row (e.g. a back link).
   final Widget? leading;
@@ -203,12 +209,14 @@ class PageHeader extends StatelessWidget {
         final compact = constraints.maxWidth < compactBreakpoint;
         final collapse =
             actions.length > 1 && constraints.maxWidth < collapseActionsBelow;
+        final wrapPrimary = constraints.maxWidth < collapseActionsBelow;
 
         final trailing = <Widget>[
           if (collapse)
             _moreMenu(context)
           else
             for (final action in actions) _actionButton(action),
+          if (!wrapPrimary) ...primaryActions,
           if (onAdd != null)
             AppPrimaryButton(
               label: compact
@@ -232,11 +240,23 @@ class PageHeader extends StatelessWidget {
           ],
         );
 
-        if (leading == null) return row;
+        if (leading == null && (!wrapPrimary || primaryActions.isEmpty)) {
+          return row;
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: [leading!, const SizedBox(height: 10), row],
+          children: [
+            if (leading != null) ...[leading!, const SizedBox(height: 10)],
+            row,
+            if (wrapPrimary && primaryActions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: primaryActions),
+            ],
+          ],
         );
       },
     );

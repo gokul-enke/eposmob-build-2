@@ -165,58 +165,6 @@ void main() {
     );
   }
 
-  Future<void> verifyMobileToggle(
-    WidgetTester tester, {
-    required Widget screen,
-    required Key toggleKey,
-    required Key filtersKey,
-  }) async {
-    tester.view.physicalSize = const Size(375, 812);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(wrapScreen(screen));
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(toggleKey), findsOneWidget);
-    expect(find.byType(FilterToggleButton), findsOneWidget);
-    expect(find.byKey(filtersKey), findsNothing);
-
-    await tester.tap(find.byKey(toggleKey));
-    await tester.pump();
-
-    expect(find.byKey(filtersKey), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  }
-
-  Future<void> verifyDesktopToggle(
-    WidgetTester tester, {
-    required Widget screen,
-    required Key toggleKey,
-    required Key filtersKey,
-  }) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(wrapScreen(screen));
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(toggleKey), findsOneWidget);
-    expect(find.byType(FilterToggleButton), findsOneWidget);
-    expect(find.byKey(filtersKey), findsOneWidget);
-
-    await tester.tap(find.byKey(toggleKey));
-    await tester.pump();
-
-    expect(find.byKey(filtersKey), findsNothing);
-    expect(tester.takeException(), isNull);
-  }
-
   for (final online in [false, true]) {
     for (final width in [390.0, 1600.0]) {
       testWidgets(
@@ -255,27 +203,11 @@ void main() {
     }
   }
 
-  testWidgets('Day Close uses the shared filter toggle on mobile',
-      (tester) async {
-    await verifyMobileToggle(
-      tester,
-      screen: const DailySalesCloseListPage(),
-      toggleKey: const ValueKey('day-close-filter-toggle'),
-      filtersKey: const ValueKey('day-close-filters'),
-    );
-  });
-
-  testWidgets('Day Close uses the shared filter toggle on desktop',
-      (tester) async {
-    await verifyDesktopToggle(
-      tester,
-      screen: const DailySalesCloseListPage(),
-      toggleKey: const ValueKey('day-close-filter-toggle'),
-      filtersKey: const ValueKey('day-close-filters'),
-    );
-  });
+  // The operator Day Close filter toggle is covered by
+  // test/features/day_closes/day_close_page_test.dart.
   for (final width in [375.0, 1440.0]) {
     final screens = <String, Widget Function()>{
+      'operator closing list': () => const DailySalesCloseListPage(),
       'admin closing list': () => const AdminDailySalesCloseListPage(),
       'empty closing detail': () => const DailySalesCloseDetailPage(),
       'failed order detail': () => const SalesOrderDetailsPage(),

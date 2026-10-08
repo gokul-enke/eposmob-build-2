@@ -13,6 +13,7 @@ void main() {
     VisualDensity density = VisualDensity.standard,
     List<HeaderAction>? actions,
     VoidCallback? onAdd,
+    List<Widget> primaryActions = const [],
   }) {
     return tester.pumpWidget(
       MaterialApp(
@@ -29,6 +30,7 @@ void main() {
                 addLabel: 'Add customer',
                 addShortLabel: 'Add',
                 onAdd: onAdd,
+                primaryActions: primaryActions,
               ),
             ),
           ),
@@ -163,4 +165,36 @@ void main() {
     expect(find.byType(FilledButton), findsNothing);
     expect(find.byType(IconButton), findsNothing);
   });
+
+  for (final width in [350.0, 900.0]) {
+    testWidgets(
+        'workflow labels and disabled controls remain visible at $width',
+        (tester) async {
+      var closes = 0;
+      await pumpHeader(tester,
+          width: width,
+          actions: threeActions([]),
+          primaryActions: [
+            const AppOutlinedButton(
+                label: 'Open Shift', icon: Icons.lock_open, onPressed: null),
+            AppPrimaryButton(
+                label: 'Day Close',
+                icon: Icons.access_time,
+                onPressed: () => closes++),
+          ]);
+      expect(find.text('Open Shift'), findsOneWidget);
+      expect(find.text('Day Close'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Day Close'));
+      expect(closes, 1);
+      expect(
+          tester
+              .widget<AppOutlinedButton>(find.byType(AppOutlinedButton))
+              .onPressed,
+          isNull);
+      final buttonY = tester.getTopLeft(find.byType(AppPrimaryButton)).dy;
+      final titleBottom = tester.getBottomLeft(find.text('Customers')).dy;
+      expect(buttonY > titleBottom, width < PageHeader.collapseActionsBelow);
+    });
+  }
 }
