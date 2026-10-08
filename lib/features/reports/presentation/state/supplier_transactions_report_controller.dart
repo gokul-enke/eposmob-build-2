@@ -5,6 +5,12 @@ import '../../domain/supplier_report.dart';
 typedef SupplierReportFetch = Future<Map<String, dynamic>> Function(
     SupplierReportQuery query, int page);
 
+/// Export stopped on purpose because the filters, page, store or session
+/// changed while it ran. Extends [StateError] so existing handlers still match.
+class SupplierReportExportCancelled extends StateError {
+  SupplierReportExportCancelled(super.message);
+}
+
 /// Owns report inputs, directory snapshot, pagination and request generations.
 class SupplierTransactionsReportController extends ChangeNotifier {
   SupplierTransactionsReportController(
@@ -37,6 +43,11 @@ class SupplierTransactionsReportController extends ChangeNotifier {
   Object? error;
   int errorRevision = 0;
   int get loadRevision => _request;
+  static const dateRangeErrorKey =
+      'supplier_transaction_report.from_date_after_to_date';
+
+  /// A From-after-To input error: retrying cannot help until a date changes.
+  bool get hasValidationError => errorKey == dateRangeErrorKey;
   bool get canExport =>
       !_disposed &&
       !loading &&
@@ -106,7 +117,7 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     if (!snapshot.isDateRangeValid) {
       loading = false;
       error = null;
-      errorKey = 'supplier_transaction_report.from_date_after_to_date';
+      errorKey = dateRangeErrorKey;
       ++errorRevision;
       _notify();
       return;
@@ -184,7 +195,8 @@ class SupplierTransactionsReportController extends ChangeNotifier {
     final snapshot = _loaded!, scope = _loadedScope, request = _request;
     void checkLocal() {
       if (_disposed || request != _request || !snapshot.matches(query)) {
-        throw StateError('Supplier report filters changed during export.');
+        throw SupplierReportExportCancelled(
+            'Supplier report filters changed during export.');
       }
     }
 
@@ -193,7 +205,8 @@ class SupplierTransactionsReportController extends ChangeNotifier {
       final currentScope = await readScope();
       checkLocal();
       if (scope == null || scope != currentScope) {
-        throw StateError('Supplier report session changed during export.');
+        throw SupplierReportExportCancelled(
+            'Supplier report session changed during export.');
       }
     }
 

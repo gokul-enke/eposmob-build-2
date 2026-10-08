@@ -202,7 +202,7 @@ void main() {
           await controller.selectSupplier(option);
         }
         return rows;
-      }), throwsStateError);
+      }), throwsA(isA<SupplierReportExportCancelled>()));
       if (!dispose) controller.dispose();
     }
   });

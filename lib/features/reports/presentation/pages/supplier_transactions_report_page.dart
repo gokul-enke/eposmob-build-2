@@ -33,6 +33,7 @@ class SupplierTransactionsReportPage extends StatefulWidget {
 class _SupplierTransactionsReportPageState
     extends State<SupplierTransactionsReportPage> {
   int _shownErrorRevision = 0;
+  String _exportFailureKey = 'export_error';
   late final AuthModel _auth;
   late final SupplierProvider _suppliers;
   late final SupplierTransactionsReportController _report;
@@ -69,8 +70,7 @@ class _SupplierTransactionsReportPageState
       return;
     }
     _shownErrorRevision = _report.errorRevision;
-    if (_report.errorKey ==
-        'supplier_transaction_report.from_date_after_to_date') {
+    if (_report.hasValidationError) {
       AppToast.warning(context, _errorMessage);
     } else {
       AppToast.error(context, _errorMessage);
@@ -85,6 +85,19 @@ class _SupplierTransactionsReportPageState
   }
 
   Future<File> _createExport() async {
+    _exportFailureKey = 'export_error';
+    try {
+      return await _exportFile();
+    } on SupplierReportExportCancelled {
+      _exportFailureKey = 'export_cancelled';
+      rethrow;
+    } on FormatException {
+      _exportFailureKey = 'export_invalid_data';
+      rethrow;
+    }
+  }
+
+  Future<File> _exportFile() {
     return _report.export(build: (rows) async {
       if (!mounted) throw StateError('Supplier report was closed.');
       return SupplierTransactionsReportExport.build(rows);
@@ -100,7 +113,13 @@ class _SupplierTransactionsReportPageState
   Future<void> _runExport() async {
     final exported = await _export.run(context,
         createFile: _createExport, shareText: _tr('title'));
-    if (!exported && mounted) AppToast.error(context, _tr('export_error'));
+    if (exported || !mounted) return;
+    final message = _tr(_exportFailureKey);
+    if (_exportFailureKey == 'export_cancelled') {
+      AppToast.warning(context, message);
+    } else {
+      AppToast.error(context, message);
+    }
   }
 
   Widget? _errors() {
@@ -110,7 +129,9 @@ class _SupplierTransactionsReportPageState
         ReportErrorBar(
             message: _errorMessage,
             retryLabel: _tr('retry'),
-            onRetry: () => _run(_report.retry())),
+            onRetry: _report.hasValidationError
+                ? null
+                : () => _run(_report.retry())),
       if (_report.directoryError != null)
         ReportErrorBar(
             message: _tr('directory_load_error'),

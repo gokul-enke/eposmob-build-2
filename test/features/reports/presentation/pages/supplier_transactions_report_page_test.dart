@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:pos_machine/features/reports/presentation/widgets/report_error_bar.dart';
 import 'package:pos_machine/features/reports/presentation/widgets/supplier_report/supplier_report_filters.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
@@ -151,6 +152,37 @@ class DeferredExportRepository extends ExportSupplierRepository {
         toDate: toDate,
         listAll: listAll,
         page: page);
+  }
+}
+
+/// Page 2 of the export is missing a balance the table would show as 0.00.
+class IncompleteExportRepository extends ExportSupplierRepository {
+  @override
+  Future<Map<String, dynamic>> fetchTransactions(String token,
+      {String? supplierName,
+      String? supplierId,
+      String? transactionType,
+      String? fromDate,
+      String? toDate,
+      bool listAll = true,
+      int? page}) async {
+    final result = await super.fetchTransactions(token,
+        supplierName: supplierName,
+        supplierId: supplierId,
+        transactionType: transactionType,
+        fromDate: fromDate,
+        toDate: toDate,
+        listAll: listAll,
+        page: page);
+    if ((page ?? 1) == 2) {
+      // Copy into loosely typed maps: the fixture literals reject null values.
+      final data = result['data'] as Map;
+      data['data'] = <dynamic>[
+        for (final row in data['data'] as List)
+          <String, dynamic>{...row as Map, 'balance': null},
+      ];
+    }
+    return result;
   }
 }
 
@@ -515,6 +547,14 @@ void main() {
       expect(export.busy, isFalse);
       expect(deliveries, 0);
       expect(repo.calls, hasLength(2));
+      expect(
+          find.text(
+              'Export cancelled because the filters, page or store changed. Try again.'),
+          findsOneWidget);
+      expect(
+          find.text(
+              'Could not export the supplier report. Refresh and try again.'),
+          findsNothing);
       expect(find.text('First supplier'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -575,6 +615,10 @@ void main() {
     expect(export.busy, isFalse);
     expect(deliveries, 0);
     expect(
+        find.text(
+            'Export cancelled because the filters, page or store changed. Try again.'),
+        findsOneWidget);
+    expect(
         tester
             .widget<DropdownSearch<SupplierReportOption>>(
                 find.byType(DropdownSearch<SupplierReportOption>))
@@ -582,6 +626,62 @@ void main() {
             .single
             .id,
         '8');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+  testWidgets('incomplete server totals stop Export with a data message',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var deliveries = 0;
+    final export = ExportController(deliver: (_, __,
+        {required mimeType, shareText, shareOrigin, onStage}) async {
+      deliveries++;
+    });
+    addTearDown(export.dispose);
+    await pumpReport(tester, IncompleteExportRepository(), export: export);
+    await tester.tap(find.byKey(SupplierTransactionsReportPage.exportKey));
+    await tester.pumpAndSettle();
+    expect(deliveries, 0);
+    expect(export.busy, isFalse);
+    expect(
+        find.text('Export stopped: the server returned incomplete supplier '
+            'totals. Refresh and try again.'),
+        findsOneWidget);
+    expect(
+        find.text(
+            'Export cancelled because the filters, page or store changed. Try again.'),
+        findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+  testWidgets('From after To shows the error banner without a Retry button',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = TestSupplierRepository();
+    await pumpReport(tester, repo);
+    tester
+        .widget<SupplierReportDateField>(
+            find.byKey(const ValueKey('supplier-report-from')))
+        .onChanged(DateTime(2026, 5, 10));
+    await tester.pumpAndSettle();
+    tester
+        .widget<SupplierReportDateField>(
+            find.byKey(const ValueKey('supplier-report-to')))
+        .onChanged(DateTime(2026, 5, 1));
+    await tester.pumpAndSettle();
+    expect(find.text('From Date cannot be after To Date.'), findsWidgets);
+    expect(
+        find.descendant(
+            of: find.byType(ReportErrorBar), matching: find.text('Retry')),
+        findsNothing);
+    // The inverted range never reaches the API.
+    expect(repo.calls.where((c) => c.to == '2026-05-01'), isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
