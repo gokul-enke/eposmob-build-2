@@ -87,7 +87,7 @@ class _KioskHomePageState extends State<KioskHomePage> {
   double _cartTotal(List<LocalCartItem> cart) {
     return cart.fold<double>(
       0,
-      (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+      (sum, item) => sum + item.amounts.total,
     );
   }
 

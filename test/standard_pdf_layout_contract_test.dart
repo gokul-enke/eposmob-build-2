@@ -388,9 +388,11 @@ void main() {
       final source = _standardAddressRendererSource(theme);
       // Either the one-line resolver or the shared section helpers, which
       // resolve the address through the same ReceiptLayoutParams contract.
+      // headerColumnFields is the field-aware form of headerColumnLines.
       expect(
           source.contains('params.storeAddressText(') ||
               source.contains('params.headerColumnLines(') ||
+              source.contains('params.headerColumnFields(') ||
               source.contains('params.storeLineParts('),
           isTrue,
           reason: '$theme/shared address resolver');

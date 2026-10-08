@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
+import 'package:pos_machine/features/categories/presentation/navigation/category_navigation.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
+import 'package:pos_machine/features/products/presentation/navigation/product_list_navigation.dart';
 
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -612,13 +614,16 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.tags,
                   title: 'nav.category'.tr,
                   onTap: () {
-                    sideBarController.index.value = 12;
+                    CategoryNavigation.openList();
                   },
-                  selected: sideBarController.index.value == 12 ||
+                  selected: sideBarController.index.value ==
+                          SideBarController.categoryListScreenIndex ||
                       sideBarController.index.value == 13 ||
-                      sideBarController.index.value == 16 ||
+                      sideBarController.index.value ==
+                          SideBarController.addCategoryScreenIndex ||
                       sideBarController.index.value == 27 ||
-                      sideBarController.index.value == 34,
+                      sideBarController.index.value ==
+                          SideBarController.editCategoryScreenIndex,
                 ),
               );
             },
@@ -648,7 +653,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTileExpandableColumn(
                     onTapTitle1: () {
-                      sideBarController.index.value = 14;
+                      ProductListNavigation.openList();
                     },
                     onTapTitle2: () {
                       sideBarController.index.value =
@@ -673,9 +678,10 @@ class _SideMenuState extends State<SideMenu> {
                     icon: fa.FontAwesomeIcons.cube,
                     title: 'nav.product'.tr,
                     onTap: () async {
-                      sideBarController.index.value = 14;
+                      ProductListNavigation.openList();
                     },
-                    selected: sideBarController.index.value == 14 ||
+                    selected: sideBarController.index.value ==
+                            SideBarController.productListScreenIndex ||
                         sideBarController.index.value == 15 ||
                         sideBarController.index.value == 17 ||
                         sideBarController.index.value == 18 ||
@@ -811,7 +817,7 @@ class _SideMenuState extends State<SideMenu> {
                           .customerTransactionsReportScreenIndex;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 67;
+                      ReportNavigation.openSupplierTransactionsReport();
                     },
                     onTapTitle5: () {
                       sideBarController.index.value = 40;

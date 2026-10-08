@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/features/offers/domain/offer_money.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
@@ -483,14 +484,18 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
   }
 
   double _legacyDiscountAmount(SavedOrder order) {
+    // Same rounded line totals and percentage discount as the cart charged.
     final subtotal = order.items.fold<double>(
       0.0,
       (sum, item) =>
           sum +
-          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+          (item.price != null
+              ? item.amounts.total
+              : roundMoney(
+                  (item.product.price?.price ?? 0.0) * item.quantity)),
     );
     final total = (order.flatDiscount ?? 0.0) +
-        subtotal * (order.percentageDiscount ?? 0.0) / 100;
+        roundMoney(subtotal * (order.percentageDiscount ?? 0.0) / 100);
     return total > subtotal ? subtotal : total;
   }
 
