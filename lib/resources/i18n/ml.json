@@ -1,4 +1,10 @@
 {
+  "offers": {
+    "badge": "ഓഫർ",
+    "badge_semantics": "ഓഫർ പ്രയോഗിച്ചു, മുൻ വില @price",
+    "available": "ഓഫർ ലഭ്യമാണ്",
+    "price_pending_selection": "ബാച്ച് അല്ലെങ്കിൽ വേരിയന്റ് തിരഞ്ഞെടുത്ത ശേഷം അന്തിമ വില സ്ഥിരീകരിക്കും."
+  },
   "mobile_order_card": {
     "opt_share": "ഷെയർ",
     "opt_return": "റിട്ടേൺ ഓർഡർ",

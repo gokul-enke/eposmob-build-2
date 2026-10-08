@@ -1,4 +1,10 @@
 {
+  "offers": {
+    "badge": "Offer",
+    "badge_semantics": "Offer applied, was @price",
+    "available": "Offer available",
+    "price_pending_selection": "Final price confirmed after batch or variant selection."
+  },
   "mobile_order_card": {
     "opt_share": "Share",
     "opt_return": "Return Order",
