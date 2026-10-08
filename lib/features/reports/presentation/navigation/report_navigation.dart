@@ -11,6 +11,9 @@ abstract final class ReportNavigation {
   static void openStockReport() =>
       _sidebar.index.value = SideBarController.stockReportScreenIndex;
 
+  static void openConsumedStocksReport() =>
+      _sidebar.index.value = SideBarController.consumedStocksReportScreenIndex;
+
   /// The selected customer's transactions (read from `CustomerProvider`).
   static void openCustomerTransactionDetails() => _sidebar.index.value =
       SideBarController.customerTransactionDetailsScreenIndex;
