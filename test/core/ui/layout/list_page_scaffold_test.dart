@@ -11,6 +11,8 @@ void main() {
     bool showFilters = true,
     List<String> items = const ['Ann', 'Bob'],
     ValueChanged<int>? onPageChanged,
+    double? minTableWidth,
+    ScrollController? tableScrollController,
   }) {
     return MaterialApp(
       home: Scaffold(
@@ -37,6 +39,8 @@ void main() {
           ),
           showFilters: showFilters,
           isLoading: isLoading,
+          minTableWidth: minTableWidth,
+          tableScrollController: tableScrollController,
           items: items,
           columns: [
             TableColumnDef(
@@ -92,6 +96,78 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextFormField), findsOneWidget);
     expect(find.text('Hide'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short tables fit the rows and keep pagination directly below',
+      (tester) async {
+    await setSize(tester, const Size(1280, 900));
+    await tester.pumpWidget(scaffold(showFilters: false));
+    final frame =
+        tester.getRect(find.byKey(const ValueKey('app_data_table_frame')));
+    final lastRowBottom = tester.getBottomLeft(find.text('22 Bob')).dy;
+    final footerTop =
+        tester.getTopLeft(find.byKey(const ValueKey('app_pagination_bar'))).dy;
+    expect(frame.bottom - lastRowBottom, closeTo(13, 1));
+    expect(footerTop - frame.bottom, closeTo(AppSpacing.sm, 1));
+    expect(frame.height, lessThan(200));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide table scrolling retains content height and aligned columns',
+      (tester) async {
+    await setSize(tester, const Size(800, 900));
+    final horizontal = ScrollController();
+    addTearDown(horizontal.dispose);
+    await tester.pumpWidget(scaffold(
+        showFilters: false,
+        minTableWidth: 1100,
+        tableScrollController: horizontal));
+    final frame =
+        tester.getRect(find.byKey(const ValueKey('app_data_table_frame')));
+    expect(frame.height, lessThan(200));
+    expect(horizontal.position.maxScrollExtent, greaterThan(0));
+    horizontal.jumpTo(horizontal.position.maxScrollExtent);
+    await tester.pump();
+    expect(tester.getTopLeft(find.text('NAME')).dx,
+        tester.getTopLeft(find.text('21 Ann')).dx);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long tables stay bounded and the final row is reachable',
+      (tester) async {
+    await setSize(tester, const Size(1280, 800));
+    await tester.pumpWidget(scaffold(
+        showFilters: false, items: List.generate(100, (i) => 'Person $i')));
+    final frame =
+        tester.getRect(find.byKey(const ValueKey('app_data_table_frame')));
+    expect(frame.height, lessThan(800));
+    final scrollable = tester.state<ScrollableState>(find.descendant(
+        of: find.byType(ListView), matching: find.byType(Scrollable)));
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pump();
+    expect(find.text('120 Person 99'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(scaffold(showFilters: false));
+    expect(
+        tester
+            .getSize(find.byKey(const ValueKey('app_data_table_frame')))
+            .height,
+        lessThan(200));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short desktop window scrolls the page with a fitted table',
+      (tester) async {
+    await setSize(tester, const Size(1280, 350));
+    await tester.pumpWidget(scaffold(showFilters: false));
+    expect(
+        tester
+            .getSize(find.byKey(const ValueKey('app_data_table_frame')))
+            .height,
+        lessThan(200));
+    expect(find.text('2 people'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

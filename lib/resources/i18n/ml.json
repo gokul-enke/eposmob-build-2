@@ -2057,6 +2057,17 @@
     "minutes_suffix": "m"
   },
   "sales_return": {
+    "order_or_receipt_number": "ഓർഡർ അല്ലെങ്കിൽ ബിൽ നമ്പർ",
+    "copy_number": "ഓർഡർ അല്ലെങ്കിൽ ബിൽ നമ്പർ പകർത്തുക",
+    "status": "സ്ഥിതി",
+    "date": "തീയതി",
+    "list_return_id": "റിട്ടേൺ ഐഡി",
+    "list_currency": "കറൻസി",
+    "list_count": "ഈ പേജിൽ @count റിട്ടേണുകൾ",
+    "list_export": "Excel-ലേക്ക് എക്സ്പോർട്ട് ചെയ്യുക",
+    "list_export_error": "വിൽപ്പന റിട്ടേണുകൾ എക്സ്പോർട്ട് ചെയ്യാനായില്ല. പുതുക്കി വീണ്ടും ശ്രമിക്കുക.",
+    "list_export_fetching": "@total പേജുകളിൽ @page ലോഡ് ചെയ്യുന്നു…",
+    "list_load_failed": "വിൽപ്പന റിട്ടേണുകൾ ലോഡ് ചെയ്യാനായില്ല. മുൻ ഫലങ്ങൾ പഴയതാകാം.",
     "total_items": "ആകെ ഇനങ്ങൾ",
     "total_mrp": "ആകെ MRP",
     "net_total": "നെറ്റ് ആകെ",

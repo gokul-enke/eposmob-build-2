@@ -42,6 +42,7 @@ class AppDataTable<T> extends StatelessWidget {
     this.onRefresh,
     this.minWidth,
     this.horizontalController,
+    this.fitToContent = false,
   });
 
   final List<T> items;
@@ -60,6 +61,11 @@ class AppDataTable<T> extends StatelessWidget {
 
   /// Shows a horizontal scrollbar when [minWidth] scrolling is active.
   final ScrollController? horizontalController;
+
+  /// Wraps short, populated tables in their contents while keeping taller
+  /// tables scrollable within the available height. The parent must allow
+  /// a loose height constraint for the frame itself to shrink.
+  final bool fitToContent;
 
   Map<int, TableColumnWidth> get _columnWidths => {
         for (var i = 0; i < columns.length; i++)
@@ -133,6 +139,7 @@ class AppDataTable<T> extends StatelessWidget {
             ),
           )
         : ListView.builder(
+            shrinkWrap: fitToContent,
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
@@ -169,8 +176,11 @@ class AppDataTable<T> extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: SizedBox(
             width: minimum,
-            height: constraints.maxHeight,
-            child: _frame(context),
+            height: fitToContent ? null : constraints.maxHeight,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: constraints.maxHeight),
+              child: _frame(context),
+            ),
           ),
         );
         if (horizontalController == null) return scroll;
@@ -201,9 +211,15 @@ class AppDataTable<T> extends StatelessWidget {
         child: ColoredBox(
           color: AppColors.surface,
           child: Column(
+            mainAxisSize: fitToContent && items.isNotEmpty
+                ? MainAxisSize.min
+                : MainAxisSize.max,
             children: [
               _header(),
-              Expanded(child: _body(context)),
+              if (fitToContent && items.isNotEmpty)
+                Flexible(child: _body(context))
+              else
+                Expanded(child: _body(context)),
             ],
           ),
         ),

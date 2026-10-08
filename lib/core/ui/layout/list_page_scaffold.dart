@@ -119,6 +119,7 @@ class ListPageScaffold<T> extends StatelessWidget {
         onRefresh: onRefresh,
         minWidth: minTableWidth,
         horizontalController: tableScrollController,
+        fitToContent: true,
       );
 
   Widget _listWithPagination({required bool forceCards}) {
@@ -126,19 +127,27 @@ class ListPageScaffold<T> extends StatelessWidget {
       builder: (context, constraints) {
         final useCards = forceCards ||
             constraints.maxWidth < ListLayoutBreakpoints.cardsBelow;
-        return Column(
+        final fitTable = !isLoading && !useCards && items.isNotEmpty;
+        final content = Column(
+          mainAxisSize: fitTable ? MainAxisSize.min : MainAxisSize.max,
           children: [
-            Expanded(
-              child: isLoading
-                  ? const AppLoadingView()
-                  : (useCards ? _cards() : _table()),
-            ),
+            if (fitTable)
+              Flexible(child: _table())
+            else
+              Expanded(
+                child: isLoading
+                    ? const AppLoadingView()
+                    : (useCards ? _cards() : _table()),
+              ),
             if (pagination != null) ...[
               const SizedBox(height: AppSpacing.sm),
               AppPaginationBar.fromState(pagination!, enabled: !isLoading),
             ],
           ],
         );
+        return fitTable
+            ? Align(alignment: Alignment.topCenter, child: content)
+            : content;
       },
     );
   }
