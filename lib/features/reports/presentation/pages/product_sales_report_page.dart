@@ -129,9 +129,8 @@ class _ProductSalesReportPageState extends State<ProductSalesReportPage> {
             key: const ValueKey('product-sales-filter-options-error'),
             message: _tr('filter_load_error'),
             retryLabel: _tr('retry'),
-            onRetry: _report.optionsLoading
-                ? null
-                : () => _run(_report.loadOptions())),
+            onRetry: () => _run(_report.loadOptions()),
+            retryEnabled: !_report.optionsLoading),
       if (_report.errorKey != null)
         ReportErrorBar(
             key: const ValueKey('product-sales-report-error'),
