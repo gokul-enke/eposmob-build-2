@@ -52,6 +52,7 @@ class _StockListPageState extends State<StockListPage> {
   late final StockNavigation _navigation;
   late final ExportController _export;
   final _tableScroll = ScrollController();
+  bool _stockWasLoading = false;
   bool _variantFeatureEnabled() =>
       _settings.appSettings?.productVariantEnabled ?? false;
   bool _canViewPurchasePrice() =>
@@ -92,7 +93,8 @@ class _StockListPageState extends State<StockListPage> {
             filterStatus: query.status,
             includeVariants: query.includeVariants,
             page: 1));
-    _stocks.addListener(_rebuild);
+    _stockWasLoading = _stocks.stockIsLoading;
+    _stocks.addListener(_stockChanged);
     _settings.addListener(_rebuild);
     _role.addListener(_rebuild);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -123,9 +125,34 @@ class _StockListPageState extends State<StockListPage> {
     if (mounted) setState(() {});
   }
 
+  void _stockChanged() {
+    if (!mounted) return;
+    final finishedLoading = _stockWasLoading && !_stocks.stockIsLoading;
+    // Consume the loading edge before restoring: filtering also notifies us.
+    _stockWasLoading = _stocks.stockIsLoading;
+    final applied = _controller.appliedQuery;
+    if (finishedLoading &&
+        !_controller.loading &&
+        _controller.initialized &&
+        applied != null) {
+      final providerQuery = StockListQuery(
+          name: _stocks.stockFilterName ?? '',
+          category: _stocks.stockFilterCategory,
+          barcode: _stocks.stockFilterBarcode,
+          rack: _stocks.stockFilterRack,
+          store: _stocks.stockFilterStore,
+          status: _stocks.stockFilterStatus,
+          includeVariants: applied.includeVariants);
+      if (!applied.sameFiltersAs(providerQuery)) {
+        _controller.restoreAppliedFilters();
+      }
+    }
+    _rebuild();
+  }
+
   @override
   void dispose() {
-    _stocks.removeListener(_rebuild);
+    _stocks.removeListener(_stockChanged);
     _settings.removeListener(_rebuild);
     _role.removeListener(_rebuild);
     _controller.dispose();
@@ -168,17 +195,10 @@ class _StockListPageState extends State<StockListPage> {
       AppToast.info(context, 'stock.no_stock_filtered'.tr);
       return;
     }
+    final applied = _controller.appliedQuery;
+    if (applied == null) return;
     final snapshot = stockListSnapshot(
-        _stocks.allStocks ?? const <ListStockModelData>[],
-        StockListQuery(
-            name: _stocks.stockFilterName ?? '',
-            category: _stocks.stockFilterCategory,
-            barcode: _stocks.stockFilterBarcode,
-            rack: _stocks.stockFilterRack,
-            store: _stocks.stockFilterStore,
-            status: _stocks.stockFilterStatus,
-            includeVariants:
-                _controller.appliedQuery?.includeVariants ?? false),
+        _stocks.allStocks ?? const <ListStockModelData>[], applied,
         secondaryName: _stocks.stockFilterNameSecondary);
     final canViewCost = _canViewPurchasePrice();
     final variants = _variantFeatureEnabled();

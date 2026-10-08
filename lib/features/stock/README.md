@@ -34,6 +34,10 @@ filters debounce for 300 ms; Enter and dropdown selections apply immediately.
 Reset cancels pending searches and clears popup queries. Refresh reapplies the
 visible filters after the existing loader completes. Export flushes pending text
 before taking its snapshot; pagination stays at page 1 when it flushes new filters.
+After a mutation reload clears provider filters, the list restores its last
+applied query without committing pending text edits. Realtime updates and failed
+reloads with unchanged filters retain the current page. Export uses the
+controller's applied query rather than reconstructing it from shared cache state.
 
 Add stock, stock details, edit, adjust, move and withdraw implementations are
 unchanged. The list's embedded read-only details dialog also retains its content.
@@ -86,6 +90,7 @@ carrying the original stock object. Snapshot parity checks compare all provider
 pages, including variant/secondary filters. Excel checks cover all loaded rows,
 leading zeroes, numeric precision, missing/invalid values and cost/variant columns.
 Page tests cover pending searches with Export/Next, refresh failure/retry,
+mutation reload followed by paging/export/reset, pending edits during reload,
 abandoned popup searches and phone actions. Populated layouts run at 375×812,
 768×900, 1280×900 and 1440×900.
 

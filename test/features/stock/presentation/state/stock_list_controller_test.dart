@@ -99,6 +99,51 @@ void main() {
     await controller.load('token');
     expect(controller.initialized, isTrue);
   });
+  testWidgets(
+      'reload restoration retains all applied filters and pending edits',
+      (tester) async {
+    await controller.load('token');
+    controller.stockNameController.text = 'apple';
+    controller.categoryController.text = 'Produce';
+    controller.barcodeController.text = '123';
+    controller.rackController.text = 'A';
+    controller.storeController.text = 'Main';
+    controller.stockStatusController.text = 'Low Stock';
+    variants = true;
+    controller.search();
+    final applied = submitted!;
+    controller.stockNameController.text = 'pear';
+    controller.scheduleSearch();
+    submitted = null;
+    controller.restoreAppliedFilters();
+    expect(submitted, same(applied));
+    expect(
+        submitted!.sameFiltersAs(const StockListQuery(
+            name: 'apple',
+            category: 'Produce',
+            barcode: '123',
+            rack: 'A',
+            store: 'Main',
+            status: 'Low Stock',
+            includeVariants: true)),
+        isTrue);
+    expect(controller.stockNameController.text, 'pear');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(submitted!.name, 'pear');
+    expect(submitted!.category, 'Produce');
+    expect(submitted!.includeVariants, isTrue);
+  });
+  test('restore does not filter an uninitialized or loading page', () async {
+    controller.search();
+    submitted = null;
+    controller.restoreAppliedFilters();
+    expect(submitted, isNull);
+    await controller.load('token');
+    submitted = null;
+    controller.loading = true;
+    controller.restoreAppliedFilters();
+    expect(submitted, isNull);
+  });
   test(
       'refresh restores filters before a store failure and retains them on retry',
       () async {

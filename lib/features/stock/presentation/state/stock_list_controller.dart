@@ -101,6 +101,13 @@ class StockListController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Mutation reloads may clear the provider filters. Restore the last applied
+  /// query without committing input edits whose debounce is still pending.
+  void restoreAppliedFilters() {
+    if (_disposed || loading || !initialized || appliedQuery == null) return;
+    applyFilters(appliedQuery!);
+  }
+
   void scheduleSearch() {
     if (_disposed) return;
     _searchTimer?.cancel();

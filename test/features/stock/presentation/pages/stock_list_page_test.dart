@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -25,6 +26,22 @@ import 'package:pos_machine/providers/stock_provider.dart';
 
 class TestStockProvider extends StockProvider {
   bool fails = false;
+  bool reloading = false;
+  @override
+  bool get stockIsLoading => reloading || super.stockIsLoading;
+  Future<void> reloadAfterMutation(List<ListStockModelData> entries,
+      {Future<void>? waitFor}) async {
+    reloading = true;
+    notifyListeners();
+    await waitFor;
+    // Match the shared loader used by Adjust, Move and Withdraw: replace the
+    // directory, then clear local filters before the loading completion event.
+    applyRealtimeStocks(entries);
+    applyStockFiltersLocally(page: 1);
+    reloading = false;
+    notifyListeners();
+  }
+
   @override
   Future<void> loadAllStocks(String token) async {
     if (fails) throw StateError('offline');
@@ -201,6 +218,135 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets(
+      'mutation reload preserves applied filters, paging and all-page export',
+      (tester) async {
+    await useTempExportDirectory(tester, 'stock-mutation-export-');
+    final export = CapturingExport();
+    addTearDown(export.dispose);
+    final provider = await mount(tester, 1440, count: 65, export: export);
+    final catalogue = List.generate(
+        65, (i) => i < 45 ? row(i) : row(i).copyWith(storeName: 'Other'));
+    provider.applyRealtimeStocks(catalogue);
+    await tester.enterText(find.byType(TextField).first, 'Stock item');
+    await tester.pump(const Duration(milliseconds: 350));
+    tester
+        .widget<DropdownSearch<String>>(
+            find.byKey(const ValueKey('stock-picker-All Stores')))
+        .onChanged!('Main');
+    provider.goToStockPage(2);
+    await tester.pump();
+    expect(provider.stockTotalPages, 3);
+    await provider.reloadAfterMutation(catalogue);
+    await tester.pump();
+    expect(provider.stockFilterName, 'Stock item');
+    expect(provider.stockFilterStore, 'Main');
+    expect(provider.stockCurrentPage, 1);
+    expect(provider.stockTotalPages, 3);
+    expect(
+        provider.listStockModelDataList!
+            .every((entry) => entry.productName!.startsWith('Stock item')),
+        isTrue);
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
+    await tester.pump();
+    expect(provider.stockCurrentPage, 2);
+    await tester.tap(find.byKey(StockListPage.exportKey));
+    await tester.pump();
+    final file = await tester.runAsync(export.createFile!);
+    final book =
+        Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single;
+    expect(book.rows, hasLength(46));
+    expect(book.rows.last[1]?.value.toString(), 'Stock item 44');
+    expect(provider.stockCurrentPage, 2);
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+    expect(provider.stockFilterName, isNull);
+    expect(provider.stockFilterStore, isNull);
+    expect(provider.stockTotalPages, 4);
+    await provider.reloadAfterMutation(catalogue);
+    await tester.pump();
+    expect(provider.stockFilterName ?? '', isEmpty);
+    expect(provider.stockTotalPages, 4);
+    await tester.tap(find.byKey(StockListPage.exportKey));
+    await tester.pump();
+    final fullFile = await tester.runAsync(export.createFile!);
+    expect(
+        Excel.decodeBytes(fullFile!.readAsBytesSync())
+            .tables
+            .values
+            .single
+            .rows,
+        hasLength(66));
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+  testWidgets(
+      'mutation reload retains pending edits until their debounce completes',
+      (tester) async {
+    final export = CapturingExport();
+    addTearDown(export.dispose);
+    final provider = await mount(tester, 1440, count: 45, export: export);
+    final catalogue = List.generate(45, row);
+    await tester.enterText(find.byType(TextField).first, 'Stock item');
+    await tester.pump(const Duration(milliseconds: 350));
+    final gate = Completer<void>();
+    final reload =
+        provider.reloadAfterMutation(catalogue, waitFor: gate.future);
+    await tester.pump();
+    await tester.tap(find.byKey(StockListPage.exportKey));
+    expect(export.runs, 0);
+    await tester.enterText(find.byType(TextField).first, 'Stock item 44');
+    gate.complete();
+    await reload;
+    await tester.pump();
+    expect(provider.stockFilterName, 'Stock item');
+    expect(provider.stockTotalPages, 3);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(provider.stockFilterName, 'Stock item 44');
+    expect(provider.listStockModelDataList!.single.stockId, 45);
+    await tester.tap(find.byKey(StockListPage.exportKey));
+    await tester.pump();
+    expect(export.runs, 1);
+    final leavingGate = Completer<void>();
+    final leavingReload =
+        provider.reloadAfterMutation(catalogue, waitFor: leavingGate.future);
+    await tester.pumpWidget(const SizedBox.shrink());
+    // Completing a shared reload after leaving the list does not use its inputs.
+    leavingGate.complete();
+    await leavingReload;
+    expect(tester.takeException(), isNull);
+    provider.dispose();
+  });
+  testWidgets('realtime updates and failed reloads preserve the filtered page',
+      (tester) async {
+    final provider = await mount(tester, 1440, count: 45);
+    final catalogue = List.generate(45, row);
+    await tester.enterText(find.byType(TextField).first, 'Stock item');
+    await tester.pump(const Duration(milliseconds: 350));
+    provider.goToStockPage(2);
+    provider.applyRealtimeStocks(catalogue);
+    await tester.pump();
+    expect(provider.stockCurrentPage, 2);
+    provider.reloading = true;
+    provider.notifyListeners();
+    await tester.pump();
+    // A failed shared request leaves the loaded directory and filters intact.
+    provider.reloading = false;
+    provider.notifyListeners();
+    await tester.pump();
+    expect(provider.stockFilterName, 'Stock item');
+    expect(provider.stockCurrentPage, 2);
+    await provider.reloadAfterMutation([]);
+    await tester.pump();
+    expect(provider.listStockModelDataList, isEmpty);
+    await provider.reloadAfterMutation(catalogue);
+    await tester.pump();
+    expect(provider.stockFilterName, 'Stock item');
+    expect(provider.stockCurrentPage, 1);
+    expect(provider.stockTotalPages, 3);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
   testWidgets(
       'pending text is flushed before Export, not before an old Next page',
       (tester) async {
