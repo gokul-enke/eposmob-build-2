@@ -605,7 +605,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   if (hasSupplierTransactionsPermission)
                     _MobileDrawerSubItem(
                       title: 'nav.supplier_transaction_reports'.tr,
-                      onTap: () => navigate(67),
+                      onTap: () => navigate(SideBarController
+                          .supplierTransactionsReportScreenIndex),
                     ),
                   if (hasProductSalesPermission)
                     _MobileDrawerSubItem(

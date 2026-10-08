@@ -1,20 +1,27 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/core/export/file_export_service.dart';
+import 'package:pos_machine/core/ui/feedback/app_toast.dart';
+import 'package:pos_machine/core/ui/layout/list_page_scaffold.dart';
 import 'package:pos_machine/features/purchases/domain/models/list_purchase.dart';
-import 'package:pos_machine/features/purchases/presentation/widgets/purchase_orders_responsive.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
-
+import '../../data/purchase_list_export_snapshot.dart';
 import '../../domain/models/purchase_order_model.dart';
+import '../export/purchase_order_excel_export.dart';
 import '../navigation/purchase_navigation.dart';
+import '../state/purchase_list_export_guard.dart';
 import '../state/purchase_order_list_controller.dart';
 import '../state/purchase_provider.dart';
 import '../widgets/list/purchase_order_list_view.dart';
 
 class PurchaseOrderListPage extends StatefulWidget {
-  const PurchaseOrderListPage({super.key});
+  const PurchaseOrderListPage({super.key, this.exportController});
+  final ExportController? exportController;
   @override
   State<PurchaseOrderListPage> createState() => _PurchaseOrderListPageState();
 }
@@ -23,6 +30,9 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   late final PurchaseProvider purchases;
   late final AuthModel auth;
   late final PurchaseOrderListController controller;
+  late final ExportController export;
+  late final PurchaseListExportGuard exportGuard;
+  final scrollController = ScrollController();
   @override
   void initState() {
     super.initState();
@@ -48,10 +58,18 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
         return List.of(purchases.supplierList);
       },
     );
+    export = widget.exportController ?? ExportController();
+    exportGuard = PurchaseListExportGuard([
+      controller.supplierController,
+      controller.storeController,
+      controller.fromDateController,
+      controller.toDateController
+    ]);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        controller.update(
-            () => controller.showFilters = !purchaseOrdersIsPhone(context));
+        controller.update(() => controller.showFilters =
+            MediaQuery.sizeOf(context).width >=
+                ListLayoutBreakpoints.mobileBelow);
       }
     });
     controller.initialize(canLoad: auth.token?.isNotEmpty ?? false);
@@ -67,13 +85,16 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
 
   @override
   void dispose() {
+    exportGuard.dispose();
+    scrollController.dispose();
+    if (widget.exportController == null) export.dispose();
     controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!canViewPurchasePrice(context)) {
+    if (!canViewPurchasePrice(context, listen: true)) {
       return SafeArea(
           child: Center(
               child: Text('purchase_order.permission_required_view'.tr)));
@@ -83,19 +104,73 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
         ? settings!.currency.trim()
         : 'SAR';
     return ListenableBuilder(
-        listenable: controller,
+        listenable: Listenable.merge([controller, export]),
         builder: (context, _) => PurchaseOrderListView(
-                context: context,
-                controller: controller,
-                currency: currency,
-                onCreate: () {
-                  purchases.activePurchaseOrderDetails = null;
-                  purchases.voucherDetails = null;
-                  purchases.listPurchaseItemView = [];
-                  PurchaseNavigation.openCreate();
-                },
-                onOpen: _handleOrderAction)
-            .build());
+            controller: controller,
+            currency: currency,
+            onCreate: () {
+              purchases.activePurchaseOrderDetails = null;
+              purchases.voucherDetails = null;
+              purchases.listPurchaseItemView = [];
+              PurchaseNavigation.openCreate();
+            },
+            onOpen: _handleOrderAction,
+            export: export,
+            onExport: () => _runExport(currency),
+            onReset: _reset,
+            scrollController: scrollController));
+  }
+
+  Future<void> _reset() async {
+    exportGuard.invalidate();
+    await controller.resetSearch();
+  }
+
+  Future<void> _runExport(String currency) async {
+    final ok =
+        await export.run(context, createFile: () => _createExport(currency));
+    if (!ok && mounted) {
+      AppToast.error(context, 'purchase_order.export_error'.tr);
+    }
+  }
+
+  Future<File> _createExport(String currency) async {
+    if (!mounted) throw StateError('Purchase list has been removed');
+    final filter = controller.filter;
+    final token = _requireToken();
+    final check = await exportGuard.capture(
+        session: purchases.repository.api.session,
+        token: () => auth.token,
+        allowed: () => mounted && canViewPurchasePrice(context),
+        configuration: () => (
+              APPUrl.listPurchaseOrder,
+              controller.filter.storeId,
+              controller.filter.supplierId,
+              controller.filter.dateFrom,
+              controller.filter.dateTo,
+              context.read<AppSettingsProvider>().appSettings?.currency
+            ));
+    final rows = await collectPurchaseExport<PurchaseOrderData>(
+        checkScope: check,
+        idOf: (e) => e.id,
+        onProgress: (page, total) => export.setStage(
+            'purchase_order.export_fetching'
+                .trParams({'page': '$page', 'total': '$total'})),
+        fetch: (page) async {
+          final model = await purchases.repository.fetchOrdersPage(
+              accessToken: token,
+              storeId: filter.storeId,
+              supplierId: filter.supplierId,
+              dateFrom: filter.dateFrom,
+              dateTo: filter.dateTo,
+              page: page);
+          return PurchaseExportPage(
+              model.data?.currentPage, model.data?.lastPage, model.data?.data);
+        });
+    await check();
+    final file = await exportPurchaseOrders(rows, currency);
+    await check();
+    return file;
   }
 
   Future<void> _handleOrderAction(

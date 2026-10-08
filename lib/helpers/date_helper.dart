@@ -29,10 +29,13 @@ class DateHelper {
     }
   }
 
-  static void setServerTime(DateTime serverTime) {
+  /// [deviceTime] is the device time when [serverTime] was received; it
+  /// defaults to now. Pass it when the server time was read earlier, so the
+  /// time spent since then is not counted as clock offset.
+  static void setServerTime(DateTime serverTime, {DateTime? deviceTime}) {
     // Calculate difference: Server Time - Local Time
     // If server is ahead, offset is positive. If behind, negative.
-    final now = DateTime.now();
+    final now = deviceTime ?? DateTime.now();
     _serverTimeOffset = serverTime.difference(now).inMilliseconds;
     SharedPreferenceProvider().saveServerTimeOffset(_serverTimeOffset);
     debugPrint("DateHelper: Server time synced. Offset: $_serverTimeOffset ms");

@@ -1,4 +1,10 @@
 {
+  "offers": {
+    "badge": "Offer",
+    "badge_semantics": "Offer applied, was @price",
+    "available": "Offer available",
+    "price_pending_selection": "Final price confirmed after batch or variant selection."
+  },
   "mobile_order_card": {
     "opt_share": "Share",
     "opt_return": "Return Order",
@@ -897,11 +903,13 @@
     "version_unavailable": "Not available"
   },
   "pagination": {
+    "current_page": "Page @current",
     "previous": "Previous",
     "next": "Next",
     "page": "Page",
     "of": "of",
     "page_of": "Page @current of @total",
+    "current_page": "Page @current",
     "previous_page": "Previous page",
     "next_page": "Next page"
   },
@@ -1878,6 +1886,22 @@
     "view_order_items": "View @count items"
   },
   "sales": {
+    "list_copy": "Copy order or receipt number",
+    "list_subtitle": "Review and manage sales orders.",
+    "list_filter_title": "Find sales orders",
+    "list_filter_hint": "Filter by order, customer, phone, price, status and dates.",
+    "list_count": "@count orders on this page",
+    "email": "Email",
+    "list_export_empty": "No orders to export.",
+    "list_receipt_number": "Receipt number",
+    "list_load_error": "Unable to load orders. Previous results may be out of date.",
+    "list_export_error": "Unable to export the orders. Refresh and try again.",
+    "list_export_page_error": "Unable to export orders: page @page could not be loaded. Try again or contact support.",
+    "list_export_progress": "Fetching page @page…",
+    "view_order": "View order",
+    "print_order": "Print order",
+    "more_actions": "More actions",
+
     "orders_list": "Orders List",
     "online_orders_list": "Online Orders List",
     "order_number_short": "Order #",
@@ -1911,6 +1935,7 @@
     "status_new": "NEW",
     "status_pending": "PENDING",
     "status_confirmed": "CONFIRMED",
+    "status_delivered": "DELIVERED",
     "status_cancelled": "CANCELLED",
     "invoice_downloaded": "Invoice downloaded successfully to @path",
     "invoice_not_found": "Invoice not found. The order may not have a generated invoice.",
@@ -2365,9 +2390,33 @@
     "status_pending": "Pending",
     "status_confirmed": "Confirmed",
     "status_cancelled": "Cancelled",
-    "status_order_created": "Order created"
+    "status_order_created": "Order created",
+    "list_find": "Find quotations",
+    "list_new_short": "New",
+    "list_filter_hint": "Filter by quotation number, customer, store, status and dates.",
+    "list_search": "Type to search...",
+    "list_select_date": "Select Date",
+    "list_copy": "Copy quotation number",
+    "list_count": "@count quotations on this page",
+    "list_retry": "Retry",
+    "list_load_error": "Unable to load quotations. Previous results may be out of date.",
+    "list_export_error": "Unable to export quotations. Refresh and try again.",
+    "list_export_empty": "No quotations to export.",
+    "list_export_progress": "Loading page @page"
   },
   "category": {
+    "add_short": "Add",
+    "export": "Export",
+    "export_failed": "Unable to export categories. Please try again.",
+    "filters": "Filters",
+    "filters_hint": "Search category names in any available language.",
+    "filters_title": "Find categories",
+    "list_subtitle": "Review and manage your product categories.",
+    "load_failed": "Unable to load categories. Please try again.",
+    "open_failed": "Unable to open this category. Please try again.",
+    "page_count": "@count categories on this page",
+    "refresh": "Refresh",
+    "retry": "Retry",
     "title": "Category List",
     "add": "Add Category",
     "search_label": "Search Category",
@@ -2429,6 +2478,20 @@
     "file": "File",
     "is_primary": "Is Primary",
     "attachment": "Attachment"
+  },
+  "product_list": {
+    "manufacturer": "Manufacturer",
+    "color": "Color",
+    "shirt_size": "Shirt size",
+    "shoe_size": "Shoe size",
+    "subtitle": "Review and manage your product catalog.",
+    "find": "Find products",
+    "filter_hint": "Filter by name, category, price, barcode, HSN or item code.",
+    "empty_hint": "Try adjusting or resetting the filters.",
+    "count": "@count products on this page",
+    "load_error": "Unable to load product categories. Your local products remain available.",
+    "retry": "Retry",
+    "export_error": "Unable to export products. Refresh and try again."
   },
   "product": {
     "sku_prefix": "SKU: ",
@@ -3038,6 +3101,15 @@
     "heading_show_product": "Show Product"
   },
   "purchase_order": {
+    "find_orders": "Find purchase orders",
+    "filter_hint": "Filter by supplier, store and purchase date.",
+    "page_total": "Total price on this page",
+    "page_count": "@count orders on this page",
+    "export_error": "Unable to export purchase orders. Refresh and try again.",
+    "export_fetching": "Fetching page @page of @total…",
+    "add_short": "New",
+    "clear_filter": "Clear filter",
+    "currency": "Currency",
     "supplier": "Supplier",
     "manufacturing_date": "Manufacturing Date",
     "store": "Store",
@@ -3317,6 +3389,18 @@
     "customer_id": "Customer ID"
   },
   "supplier_transaction_report": {
+    "directory_load_error": "Could not load supplier filter options. Use Retry to load them.",
+    "retry": "Retry",
+    "subtitle": "Manage supplier transaction totals and balances.",
+    "find": "Find supplier transactions",
+    "filter_hint": "Filter suppliers and transaction dates.",
+    "all_suppliers": "All suppliers",
+    "count": "@count suppliers on this page",
+    "supplier_id": "Supplier ID",
+    "export_fetching": "Fetching page @page of @total…",
+    "export_error": "Could not export the supplier report. Refresh and try again.",
+    "export_cancelled": "Export cancelled because the filters, page or store changed. Try again.",
+    "export_invalid_data": "Export stopped: the server returned incomplete supplier totals. Refresh and try again.",
     "hide": "Hide",
     "filters": "Filters",
     "from_date": "From Date",
@@ -5957,6 +6041,11 @@
     "btn_add_to_order": "Add to Order"
   },
   "purchase_return": {
+    "find_returns": "Find purchase returns",
+    "filter_hint": "Filter by supplier and return date.",
+    "page_count": "@count returns on this page",
+    "export_error": "Unable to export purchase returns. Refresh and try again.",
+    "copy_reference": "Copy reference",
     "title": "Purchase Returns",
     "subtitle": "View and manage purchase returns",
     "create_btn": "Create Purchase Return",

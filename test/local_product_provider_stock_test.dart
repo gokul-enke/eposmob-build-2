@@ -6,8 +6,22 @@ import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'test_support/hive_test_teardown.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// The order lines without the completed-sale snapshot (standard price, tax,
+/// line total), which these tests do not cover. See the offers tests.
+List<Map<String, dynamic>> _orderLines(LocalProductProvider provider) {
+  return [
+    for (final line in provider.buildOrderItemsPayload())
+      Map<String, dynamic>.of(line)
+        ..removeWhere(
+          (key, _) =>
+              OrderSubmissionPayload.completedSaleLineKeys.contains(key),
+        ),
+  ];
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -251,7 +265,7 @@ void main() {
         updatedProduct.stock!.firstWhere((stock) => stock.id == 2).quantity, 0);
 
     expect(
-      provider.buildOrderItemsPayload(),
+      _orderLines(provider),
       <Map<String, dynamic>>[
         {
           'product_id': 1,
@@ -339,7 +353,7 @@ void main() {
 
     // Order send body is unchanged: still one payload line per stock_id.
     expect(
-      provider.buildOrderItemsPayload(),
+      _orderLines(provider),
       <Map<String, dynamic>>[
         {
           'product_id': 1,
@@ -542,7 +556,7 @@ void main() {
     expect(provider.cartItems.first.stockDeducted, 0);
     expect(provider.cartItems.first.stockReservations, isEmpty);
     expect(
-      provider.buildOrderItemsPayload(),
+      _orderLines(provider),
       <Map<String, dynamic>>[
         {
           'product_id': 1,
@@ -756,7 +770,7 @@ void main() {
 
     // Payload carries only integer quantities — no 1.3 / 0.7 lines.
     expect(
-      provider.buildOrderItemsPayload(),
+      _orderLines(provider),
       <Map<String, dynamic>>[
         {
           'product_id': 1,
@@ -910,7 +924,7 @@ void main() {
     expect(added, isTrue);
     expect(provider.cartItems.single.variantId, redVariant.id);
     expect(provider.cartItems.single.stockReservations, isEmpty);
-    expect(provider.buildOrderItemsPayload(), <Map<String, dynamic>>[
+    expect(_orderLines(provider), <Map<String, dynamic>>[
       {
         'product_id': 1,
         'quantity': 1,

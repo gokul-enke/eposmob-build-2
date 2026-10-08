@@ -9,6 +9,8 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/offers/data/product_offer_cache.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/components/virtual_keyboard_widget.dart';
 import 'package:pos_machine/components/startup_gate.dart';
 import 'package:pos_machine/services/order_submission_coordinator.dart';
@@ -151,6 +153,7 @@ const List<String> _optionalBoxNames = <String>[
   'categories_all',
   'categories_purchasable',
   'document_configs',
+  ProductOfferCache.boxName,
 ];
 
 /// Where Hive keeps its files on this machine. Set by [_initializeHiveStorage].
@@ -211,6 +214,7 @@ Future<Widget> _bootstrap(ValueChanged<String> reportStage) async {
     await _startupWork.run(_initializeApp).timeout(_startupBudget);
     await _startupWork.run(OrderSubmissionCoordinator.instance.hydrate);
     await _startupWork.run(LocalSaleSyncService.instance.hydrate);
+    await _startupWork.run(ProductOfferRepository.instance.loadCached);
     reportStage('Loading products and saved orders…');
     _startupWork.checkRunning();
     final localProducts = _startupProducts = LocalProductProvider();
@@ -734,6 +738,7 @@ Future<void> _openTypedBox(String boxName) async {
   switch (boxName) {
     case 'order_submissions':
     case localSaleOutboxName:
+    case ProductOfferCache.boxName:
       await Hive.openBox(boxName);
       break;
     case 'products':

@@ -1,4 +1,10 @@
 {
+  "offers": {
+    "badge": "عرض",
+    "badge_semantics": "تم تطبيق العرض، السعر السابق @price",
+    "available": "عرض متاح",
+    "price_pending_selection": "يتم تأكيد السعر النهائي بعد اختيار الدفعة أو النوع."
+  },
   "mobile_order_card": {
     "opt_share": "مشاركة",
     "opt_return": "إرجاع الطلب",
@@ -897,11 +903,13 @@
     "version_unavailable": "غير متاح"
   },
   "pagination": {
+    "current_page": "الصفحة @current",
     "previous": "السابق",
     "next": "التالي",
     "page": "صفحة",
     "of": "من",
     "page_of": "صفحة @current من @total",
+    "current_page": "صفحة @current",
     "previous_page": "الصفحة السابقة",
     "next_page": "الصفحة التالية"
   },
@@ -1878,6 +1886,22 @@
     "view_order_items": "عرض @count عناصر"
   },
   "sales": {
+    "list_copy": "نسخ رقم الطلب أو الإيصال",
+    "list_subtitle": "مراجعة وإدارة طلبات المبيعات.",
+    "list_filter_title": "البحث عن طلبات المبيعات",
+    "list_filter_hint": "التصفية حسب الطلب والعميل والهاتف والسعر والحالة والتواريخ.",
+    "list_count": "@count طلبات في هذه الصفحة",
+    "email": "البريد الإلكتروني",
+    "list_export_empty": "لا توجد طلبات للتصدير.",
+    "list_receipt_number": "رقم الإيصال",
+    "list_load_error": "تعذر تحميل الطلبات. قد تكون النتائج السابقة قديمة.",
+    "list_export_error": "تعذر تصدير الطلبات. حدّث وحاول مرة أخرى.",
+    "list_export_page_error": "تعذر تصدير الطلبات: تعذر تحميل الصفحة @page. حاول مرة أخرى أو تواصل مع الدعم.",
+    "list_export_progress": "جلب الصفحة @page…",
+    "view_order": "عرض الطلب",
+    "print_order": "طباعة الطلب",
+    "more_actions": "المزيد من الإجراءات",
+
     "orders_list": "قائمة الطلبات",
     "online_orders_list": "قائمة الطلبات الإلكترونية",
     "order_number_short": "رقم الطلب",
@@ -1910,6 +1934,7 @@
     "status_new": "جديد",
     "status_pending": "معلق",
     "status_confirmed": "مؤكد",
+    "status_delivered": "تم التسليم",
     "status_cancelled": "ملغى",
     "invoice_downloaded": "تم تنزيل الفاتورة بنجاح إلى @path",
     "invoice_not_found": "لم يتم العثور على الفاتورة. قد لا يحتوي الطلب على فاتورة تم إنشاؤها.",
@@ -2365,9 +2390,33 @@
     "status_pending": "معلق",
     "status_confirmed": "مؤكد",
     "status_cancelled": "ملغى",
-    "status_order_created": "تم إنشاء الطلب"
+    "status_order_created": "تم إنشاء الطلب",
+    "list_find": "البحث عن عروض الأسعار",
+    "list_new_short": "جديد",
+    "list_filter_hint": "التصفية حسب رقم العرض والعميل والمتجر والحالة والتواريخ.",
+    "list_search": "اكتب للبحث...",
+    "list_select_date": "اختر التاريخ",
+    "list_copy": "نسخ رقم عرض السعر",
+    "list_count": "@count عروض أسعار في هذه الصفحة",
+    "list_retry": "إعادة المحاولة",
+    "list_load_error": "تعذر تحميل عروض الأسعار. قد تكون النتائج السابقة قديمة.",
+    "list_export_error": "تعذر تصدير عروض الأسعار. حدّث وحاول مرة أخرى.",
+    "list_export_empty": "لا توجد عروض أسعار للتصدير.",
+    "list_export_progress": "تحميل الصفحة @page"
   },
   "category": {
+    "add_short": "إضافة",
+    "export": "تصدير",
+    "export_failed": "تعذر تصدير الفئات. يرجى المحاولة مرة أخرى.",
+    "filters": "الفلاتر",
+    "filters_hint": "ابحث عن أسماء الفئات بأي لغة متاحة.",
+    "filters_title": "البحث عن الفئات",
+    "list_subtitle": "راجع وأدر فئات المنتجات.",
+    "load_failed": "تعذر تحميل الفئات. يرجى المحاولة مرة أخرى.",
+    "open_failed": "تعذر فتح هذه الفئة. يرجى المحاولة مرة أخرى.",
+    "page_count": "@count فئات في هذه الصفحة",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
     "title": "قائمة الفئات",
     "add": "إضافة فئة",
     "search_label": "بحث عن الفئة",
@@ -2422,6 +2471,20 @@
     "parent_category": "الفئة الأصلية",
     "product_property_number": "يجب أن تكون خاصية المنتج رقمًا.",
     "select_parent_optional": "اختر الفئة الأصلية (اختياري)"
+  },
+  "product_list": {
+    "manufacturer": "الشركة المصنعة",
+    "color": "اللون",
+    "shirt_size": "مقاس القميص",
+    "shoe_size": "مقاس الحذاء",
+    "subtitle": "مراجعة وإدارة كتالوج المنتجات.",
+    "find": "البحث عن المنتجات",
+    "filter_hint": "تصفية حسب الاسم والفئة والسعر والباركود ورمز HSN أو رمز الصنف.",
+    "empty_hint": "حاول تعديل عوامل التصفية أو إعادة تعيينها.",
+    "count": "@count منتجات في هذه الصفحة",
+    "load_error": "تعذر تحميل فئات المنتجات. المنتجات المحلية لا تزال متاحة.",
+    "retry": "إعادة المحاولة",
+    "export_error": "تعذر تصدير المنتجات. حدّث الصفحة وحاول مرة أخرى."
   },
   "product": {
     "title": "قائمة المنتجات",
@@ -3031,6 +3094,15 @@
     "heading_show_product": "عرض المنتج"
   },
   "purchase_order": {
+    "find_orders": "البحث عن أوامر الشراء",
+    "filter_hint": "التصفية حسب المورد والمتجر وتاريخ الشراء.",
+    "page_total": "إجمالي السعر في هذه الصفحة",
+    "page_count": "@count أوامر في هذه الصفحة",
+    "export_error": "تعذر تصدير أوامر الشراء. حدّث وحاول مرة أخرى.",
+    "export_fetching": "جارٍ جلب الصفحة @page من @total…",
+    "add_short": "جديد",
+    "clear_filter": "مسح التصفية",
+    "currency": "العملة",
     "supplier": "المورد",
     "manufacturing_date": "تاريخ التصنيع",
     "store": "المتجر",
@@ -3310,6 +3382,18 @@
     "customer_id": "معرف العميل"
   },
   "supplier_transaction_report": {
+    "directory_load_error": "تعذر تحميل خيارات تصفية الموردين. اضغط على إعادة المحاولة لتحميلها.",
+    "retry": "إعادة المحاولة",
+    "subtitle": "إدارة إجماليات معاملات الموردين وأرصدتهم.",
+    "find": "البحث عن معاملات الموردين",
+    "filter_hint": "تصفية الموردين وتواريخ المعاملات.",
+    "all_suppliers": "كل الموردين",
+    "count": "@count موردين في هذه الصفحة",
+    "supplier_id": "معرّف المورد",
+    "export_fetching": "جلب الصفحة @page من @total…",
+    "export_error": "تعذر تصدير تقرير الموردين. حدّث البيانات وحاول مجددًا.",
+    "export_cancelled": "تم إلغاء التصدير لأن عوامل التصفية أو الصفحة أو المتجر تغيرت. حاول مجددًا.",
+    "export_invalid_data": "توقف التصدير: أعاد الخادم إجماليات موردين غير مكتملة. حدّث البيانات وحاول مجددًا.",
     "hide": "إخفاء",
     "filters": "الفلاتر",
     "from_date": "من تاريخ",
@@ -5778,6 +5862,11 @@
     "btn_add_to_order": "إضافة للطلب"
   },
   "purchase_return": {
+    "find_returns": "البحث عن مرتجعات الشراء",
+    "filter_hint": "التصفية حسب المورد وتاريخ الإرجاع.",
+    "page_count": "@count مرتجعات في هذه الصفحة",
+    "export_error": "تعذر تصدير مرتجعات الشراء. حدّث وحاول مرة أخرى.",
+    "copy_reference": "نسخ المرجع",
     "title": "مرتجعات المشتريات",
     "subtitle": "عرض وإدارة مرتجعات المشتريات",
     "create_btn": "إنشاء مرتجع مشتريات",

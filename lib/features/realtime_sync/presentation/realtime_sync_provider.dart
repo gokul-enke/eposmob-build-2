@@ -45,6 +45,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
   StreamSubscription<void>? _subscribedSubscription;
   StreamSubscription<Object>? _errorSubscription;
   Timer? _eventDebounce;
+  Timer? _pendingCatchUpTimer;
   Timer? _reconnectTimer;
 
   RealtimeSyncSession? _session;
@@ -98,6 +99,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     _generation++;
     SyncOperationGate.instance.release(_syncGateOwner);
     _eventDebounce?.cancel();
+    _pendingCatchUpTimer?.cancel();
     _reconnectTimer?.cancel();
     _pullPending = false;
     _reconnectAttempt = 0;
@@ -114,6 +116,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
 
   Future<void> pause() async {
     _paused = true;
+    _pendingCatchUpTimer?.cancel();
     _reconnectTimer?.cancel();
     await _client.disconnect();
     if (_session != null) _setStatus(RealtimeSyncStatus.stopped);
@@ -130,6 +133,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     if (_online == online) return;
     _online = online;
     if (!online) {
+      _pendingCatchUpTimer?.cancel();
       _reconnectTimer?.cancel();
       await _client.disconnect();
       if (_session != null) _setStatus(RealtimeSyncStatus.offline);
@@ -161,6 +165,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     }
 
     final generation = _generation;
+    var deferredForCart = false;
     _pulling = true;
     _pullPending = false;
     _lastError = null;
@@ -195,6 +200,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
             : RealtimeSyncStatus.stopped,
       );
     } on RealtimeSyncDeferredException catch (error) {
+      deferredForCart = true;
       _lastError = error.message;
       _pullPending = true;
       _setStatus(RealtimeSyncStatus.waitingForCart);
@@ -214,7 +220,10 @@ class RealtimeSyncProvider extends ChangeNotifier {
     } finally {
       _pulling = false;
       SyncOperationGate.instance.release(_syncGateOwner);
-      if (_pullPending &&
+      // A pull deferred for the open cart waits for the scheduled pending
+      // catch-up; pulling again at once would loop until the cart closes.
+      if (!deferredForCart &&
+          _pullPending &&
           _session != null &&
           !_manualSync.isSyncing &&
           _online &&
@@ -250,6 +259,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     final session = _session;
     if (session == null || event.companyId != session.companyId) return;
     if (event.storeId != null && event.storeId != session.storeId) return;
+    _repository.noteRemoteChange();
     _eventDebounce?.cancel();
     _eventDebounce = Timer(
       _config.eventDebounce,
@@ -259,6 +269,8 @@ class RealtimeSyncProvider extends ChangeNotifier {
 
   void _handleSubscribed() {
     _reconnectAttempt = 0;
+    // Events sent while the socket was down are not replayed.
+    _repository.noteRemoteChange();
     _setStatus(RealtimeSyncStatus.subscribed);
     unawaited(catchUp());
   }
@@ -281,9 +293,13 @@ class RealtimeSyncProvider extends ChangeNotifier {
   }
 
   void _schedulePendingCatchUp() {
-    if (_reconnectTimer?.isActive == true || _disposed) return;
+    if (_pendingCatchUpTimer?.isActive == true || _disposed) return;
     final waitingForCart = _status == RealtimeSyncStatus.waitingForCart;
-    _reconnectTimer = Timer(Duration(seconds: waitingForCart ? 5 : 1), () {
+    // Waiting for the cashier does not need frequent network pulls. Keep this
+    // timer separate so an open cart cannot delay socket/error recovery.
+    final delay =
+        waitingForCart ? const Duration(hours: 1) : const Duration(seconds: 1);
+    _pendingCatchUpTimer = Timer(delay, () {
       if (_pullPending && _session != null && !_manualSync.isSyncing) {
         unawaited(catchUp());
       }
@@ -340,6 +356,7 @@ class RealtimeSyncProvider extends ChangeNotifier {
     _generation++;
     SyncOperationGate.instance.release(_syncGateOwner);
     _eventDebounce?.cancel();
+    _pendingCatchUpTimer?.cancel();
     _reconnectTimer?.cancel();
     _manualSync.removeListener(_handleManualSyncChanged);
     unawaited(_eventSubscription?.cancel());

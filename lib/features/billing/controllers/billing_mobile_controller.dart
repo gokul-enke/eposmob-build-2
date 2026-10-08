@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -61,6 +62,33 @@ class BillingMobileController {
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
   static const _paymentController = BillingMobilePaymentController();
+  List<Object?>? _paymentCartState;
+
+  // Store scalar values so item edits are detected without treating catalogue
+  // searches and other product-provider notifications as cart changes.
+  List<Object?> _capturePaymentCartState(LocalProductProvider provider) => [
+        provider.cartSessionId,
+        provider.currentOrder?.id,
+        for (final item in provider.cartItems)
+          (
+            item.lineId,
+            item.product.productId,
+            item.quantity,
+            item.price ?? double.tryParse(item.product.price?.price ?? ''),
+            item.taxRate,
+            item.taxAmount,
+            item.selectedStock?.id,
+            item.saleUnitId,
+            item.saleUnitConversionRate,
+            item.variantId,
+          ),
+      ];
+
+  void startTrackingCartPayments(BuildContext context) {
+    _paymentCartState = _capturePaymentCartState(
+      context.read<LocalProductProvider>(),
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Order rehydration / restore
@@ -1156,9 +1184,12 @@ class BillingMobileController {
         billingProvider.toCustomerCreditEnabled;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final nextState = _capturePaymentCartState(localProductProvider);
+    final cartChanged = !listEquals(_paymentCartState, nextState);
+    _paymentCartState = nextState;
     _refreshOrderTotals(context, localProductProvider, billingProvider);
 
-    if (!hadPaymentState) {
+    if (!cartChanged || !hadPaymentState) {
       return;
     }
 
