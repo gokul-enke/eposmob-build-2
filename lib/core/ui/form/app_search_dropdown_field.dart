@@ -1,3 +1,4 @@
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/app_colors.dart';
@@ -5,6 +6,59 @@ import '../tokens/app_spacing.dart';
 import '../tokens/app_text_styles.dart';
 import 'app_form_fields.dart';
 import 'app_input_decoration.dart';
+
+/// Shared popup styling for searchable listing filters. The package retains
+/// ownership of selection and popup dismissal; this only supplies the UI tokens.
+abstract final class AppSearchDropdownPopup {
+  static PopupProps<T> menu<T>({
+    required String searchHint,
+    required String Function(T) itemLabel,
+  }) =>
+      PopupProps<T>.menu(
+        showSearchBox: true,
+        showSelectedItems: true,
+        menuProps: const MenuProps(
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: AppColors.surface,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(AppRadius.control)),
+            side: BorderSide(color: AppColors.border),
+          ),
+        ),
+        searchFieldProps: TextFieldProps(
+          decoration:
+              AppInputDecoration.of(hint: searchHint, icon: Icons.search),
+          style: AppTextStyles.input,
+          cursorColor: AppColors.primary,
+        ),
+        itemClickProps: const ClickProps(
+          containedInkWell: true,
+          highlightShape: BoxShape.rectangle,
+          hoverColor: AppColors.softBlue,
+          focusColor: AppColors.softBlue,
+          highlightColor: AppColors.softBlue,
+          splashColor: AppColors.softBlue,
+        ),
+        itemBuilder: (context, item, disabled, selected) => Ink(
+          color: selected ? AppColors.softBlue : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            child: Text(
+              itemLabel(item),
+              style:
+                  AppTextStyles.themed(context, AppTextStyles.input).copyWith(
+                      color: disabled
+                          ? AppColors.muted
+                          : selected
+                              ? AppColors.primary
+                              : AppColors.heading),
+            ),
+          ),
+        ),
+      );
+}
 
 /// Dropdown whose text box filters the options as the user types, in the
 /// shared form style. Use instead of [AppDropdownField] for long lists.

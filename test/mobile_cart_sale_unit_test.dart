@@ -7,6 +7,7 @@ import 'package:hive/hive.dart';
 import 'test_support/hive_test_teardown.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_item_card.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
@@ -547,6 +548,47 @@ void main() {
 
       expect(find.text('CASE'), findsOneWidget);
       expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    });
+
+    testWidgets('offer badge clears after a mobile manual price edit',
+        (tester) async {
+      late LocalProductProvider provider;
+      await tester.runAsync(() async {
+        provider = LocalProductProvider()..setStockEnabled(false);
+        final product = buildProduct(price: '100', saleUnits: const []);
+        provider.initializeProducts([product]);
+        provider.addToCart(product: product, price: 90);
+        provider.cartItems.single
+          ..offerId = 9
+          ..offerVersion = 1
+          ..standardUnitPrice = 100;
+        await provider.flushPersistence();
+      });
+      await pumpCard(tester, provider: provider);
+      expect(find.byType(CartOfferBadge), findsOneWidget);
+      expect(
+          find.byWidgetPredicate((widget) =>
+              widget is Text &&
+              widget.style?.decoration == TextDecoration.lineThrough),
+          findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.runAsync(() async {
+        controller.commitDisplayPrice(
+            provider: provider,
+            item: provider.cartItems.single,
+            displayPrice: 95);
+        await provider.flushPersistence();
+      });
+      await pumpCard(tester, provider: provider);
+      expect(
+          find.byWidgetPredicate((widget) =>
+              widget is Text &&
+              widget.style?.decoration == TextDecoration.lineThrough),
+          findsNothing);
+      expect(provider.cartItems.single.hasOffer, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(provider.flushPersistence);
     });
   });
 }

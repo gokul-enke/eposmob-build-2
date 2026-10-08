@@ -237,6 +237,7 @@ class APPUrl {
       '$baseURL/api/v1/reports/supplier-sales-report';
   static String get applyCoupon => '$baseURL/api/v1/discount/apply-coupon';
   static String get listDiscounts => '$baseURL/api/v1/discount/list-discounts';
+  static String get posOfferSync => '$baseURL/api/v1/offers/pos-sync';
   static String get listFaqs => '$baseURL/api/v1/faq/faqs/company/1';
   static String get getGeneralSettings => '$baseURL/api/v1/general';
   static String get getAppSettings => '$baseURL/api/v1/website-settings';

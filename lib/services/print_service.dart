@@ -16,6 +16,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/receipt_print_request.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
 import 'package:pos_machine/helpers/return_print_identity.dart';
+import 'package:pos_machine/features/offers/domain/offer_money.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -35,14 +36,12 @@ class PrintService {
   double _calculateSavedOrderDiscountAmount(SavedOrder savedOrder) {
     final subtotal = savedOrder.items.fold<double>(
       0.0,
-      (sum, item) =>
-          sum +
-          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+      (sum, item) => sum + item.amounts.total,
     );
 
     final flatDiscount = savedOrder.flatDiscount ?? 0.0;
     final percentageValue = savedOrder.percentageDiscount ?? 0.0;
-    final percentageDiscount = subtotal * percentageValue / 100;
+    final percentageDiscount = roundMoney(subtotal * percentageValue / 100);
     final totalDiscount = flatDiscount + percentageDiscount;
 
     if (totalDiscount > subtotal) {
@@ -557,8 +556,8 @@ class PrintService {
       'quantity': item.quantity.toString(),
       'product_unit': item.product.unit ?? '',
       'unitPrice': itemPrice.toString(),
-      'totalPrice': (itemPrice * item.quantity).toString(),
-      'tax_amount': ((item.taxAmount ?? 0.0) * item.quantity).toString(),
+      'totalPrice': item.amounts.total.toStringAsFixed(2),
+      'tax_amount': item.amounts.tax.toStringAsFixed(2),
     };
   }
 
@@ -577,12 +576,11 @@ class PrintService {
     double totalTax = 0.0;
 
     for (var item in savedOrder.items) {
-      final double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
       totalMRP += (item.mrp ?? item.product.mrp ?? 0.0) * item.quantity;
-      netTotal += itemPrice * item.quantity;
+      netTotal += item.amounts.total;
       // Each line's tax rounded as the line prints it, so the VAT total
       // equals the sum of the printed lines, as on the server's order.
-      totalTax += _roundToCents((item.taxAmount ?? 0.0) * item.quantity);
+      totalTax += item.amounts.tax;
       cartItems.add(savedOrderReceiptItem(item));
     }
 

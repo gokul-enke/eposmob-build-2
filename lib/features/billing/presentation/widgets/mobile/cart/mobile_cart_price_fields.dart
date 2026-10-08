@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +15,13 @@ double? _parseAmountText(String text) {
   return double.tryParse(cleaned);
 }
 
-String _formatAmountForDisplay(double value) => AmountHelper.formatAmount(value);
+String _formatAmountForDisplay(double value) =>
+    AmountHelper.formatAmount(value);
+
+/// Like [_formatAmountForDisplay], but keeps a third decimal when the price
+/// has one (offer prices such as 29.997), as the desktop price field does.
+String _formatPriceForDisplay(double value) =>
+    NumberFormat('#,##0.00#').format(value);
 
 String _formatAmountForEditing(double value) {
   final roundedValue = value.roundToDouble();
@@ -156,6 +163,13 @@ class MobileCartPriceField extends StatefulWidget {
 class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
   late TextEditingController _textController;
   late FocusNode _focusNode;
+  bool _priceEdited = false;
+  double? _automaticPriceAtFocus;
+
+  /// Display price last written to the field. The cart re-prices lines in
+  /// place (offer gained or lost, wholesale), so the parent widget's old and
+  /// new `item` are the same object and cannot be compared.
+  double? _shownPrice;
 
   double _displayPrice() {
     return BillingCrashGuards.safePrice(
@@ -163,19 +177,37 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
     );
   }
 
+  void _showDisplayPrice([double? price]) {
+    final shown = price ?? _displayPrice();
+    _shownPrice = shown;
+    _textController.text = _focusNode.hasFocus
+        ? _formatAmountForEditing(shown)
+        : _formatPriceForDisplay(shown);
+  }
+
+  void _syncWithItemPrice() {
+    if ((!_focusNode.hasFocus || !_priceEdited) &&
+        _shownPrice != _displayPrice()) {
+      _showDisplayPrice();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(
-      text: _formatAmountForDisplay(_displayPrice()),
-    );
+    _textController = TextEditingController();
     _focusNode = FocusNode();
+    _showDisplayPrice();
     _focusNode.addListener(_handleFocusChange);
     _attachSelectAllOnFocus(_focusNode, _textController);
   }
 
   void _handleFocusChange() {
     if (_focusNode.hasFocus) {
+      _priceEdited = false;
+      _automaticPriceAtFocus = widget.item.isManualPriceOverride
+          ? null
+          : _displayPrice();
       _textController.text = _formatAmountForEditing(_displayPrice());
       _selectAllText(_textController);
       return;
@@ -184,40 +216,46 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
   }
 
   void _commitPrice() {
+    // Offer changes can re-price the line while the field is focused. An
+    // untouched field follows that price rather than committing stale text.
     final parsed = _parseAmountText(_textController.text);
-    if (parsed == null) {
-      _textController.text = _formatAmountForDisplay(_displayPrice());
+    if (!_priceEdited || parsed == null ||
+        (_automaticPriceAtFocus != null &&
+            BillingMobileCartController.isSameDisplayPrice(
+                parsed, _automaticPriceAtFocus!))) {
+      _showDisplayPrice();
+      _priceEdited = false;
       return;
     }
 
+    // An unchanged standard or offer price is not committed (see
+    // BillingMobileCartController.isUnchangedAutomaticPrice), so focusing
+    // and leaving the field keeps the offer.
     final provider = context.read<LocalProductProvider>();
     final result = widget.controller.commitDisplayPrice(
       provider: provider,
       item: widget.item,
       displayPrice: parsed,
     );
+    _priceEdited = false;
 
     if (result.clampedToDisplayPrice != null) {
-      final clampedText =
-          _formatAmountForDisplay(result.clampedToDisplayPrice!);
-      _textController.text = clampedText;
+      _showDisplayPrice(result.clampedToDisplayPrice!);
       showScaffoldError(
         context: context,
-        message:
-            'Price can\'t go below the minimum sale price of $clampedText.',
+        message: 'Price can\'t go below the minimum sale price of '
+            '${_textController.text}.',
       );
       return;
     }
 
-    _textController.text = _formatAmountForDisplay(_displayPrice());
+    _showDisplayPrice();
   }
 
   @override
   void didUpdateWidget(MobileCartPriceField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
-      _textController.text = _formatAmountForDisplay(_displayPrice());
-    }
+    _syncWithItemPrice();
   }
 
   @override
@@ -231,6 +269,13 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
   @override
   Widget build(BuildContext context) {
     context.watch<LocalProductProvider>();
+    if ((!_focusNode.hasFocus || !_priceEdited) &&
+        _shownPrice != _displayPrice()) {
+      // Follow cart changes unless the cashier is editing the price.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _syncWithItemPrice();
+      });
+    }
 
     return TextField(
       controller: _textController,
@@ -252,11 +297,7 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
       ),
       decoration: _cartFieldDecoration(label: 'product_detail.price'.tr),
       onChanged: (value) {
-        widget.controller.updateDisplayPriceWhileEditing(
-          provider: context.read<LocalProductProvider>(),
-          item: widget.item,
-          text: value,
-        );
+        _priceEdited = true;
       },
       onSubmitted: (_) => _commitPrice(),
     );
@@ -389,11 +430,7 @@ class MobileCartTaxDisplay extends StatelessWidget {
     }
 
     final taxRate = BillingCrashGuards.safeTaxRate(item.taxRate);
-    final taxAmount = controller.inclusiveTaxAmount(
-      unitPrice: BillingCrashGuards.safePrice(item.price),
-      quantity: item.quantity,
-      taxRate: taxRate,
-    );
+    final taxAmount = item.amounts.tax;
 
     return Row(
       children: [

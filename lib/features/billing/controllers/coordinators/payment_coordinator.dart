@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -147,7 +145,7 @@ class PaymentCoordinator {
 
     showDialog(
       context: context,
-      builder: (context) => CouponModal(
+      builder: (dialogContext) => CouponModal(
         subTotal: localProductProvider.subTotalBeforeDiscount,
         initialFlatDiscount: currentDiscounts['flatDiscount'],
         initialPercentageDiscount: currentDiscounts['percentageDiscount'],
@@ -158,27 +156,19 @@ class PaymentCoordinator {
           shouldApply, {
           double? flatDiscount,
           double? percentageDiscount,
-        }) async {
+        }) {
           if (shouldApply) {
-            Provider.of<BillingProvider>(context, listen: false)
-                .coupenCodeTextController
-                .text = couponCode;
-
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
+            // CouponModal validates the downloaded coupon details before
+            // calling this action, just like Finalize Order.
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
             );
 
-            if (couponCode.isNotEmpty) {
-              await applyCoupon(context);
-            }
-
-            Provider.of<BillingProvider>(context, listen: false)
-                .setCouponApplied(true,
-                    code: couponCode,
-                    discount: flatDiscount ?? percentageDiscount ?? 0.0);
+            final flat = flatDiscount ?? 0.0;
+            bp.setCouponApplied(true,
+                code: couponCode,
+                discount: flat > 0 ? flat : (percentageDiscount ?? 0.0));
           } else {
             final localProductProvider =
                 Provider.of<LocalProductProvider>(context, listen: false);
@@ -203,62 +193,5 @@ class PaymentCoordinator {
         },
       ),
     );
-  }
-
-  static Future<void> applyCoupon(BuildContext context) async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    double? totalAmount =
-        Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary
-            ?.netTotal;
-    String couponCode = Provider.of<BillingProvider>(context, listen: false)
-        .coupenCodeTextController
-        .text;
-
-    if (accessToken != null && totalAmount != null) {
-      final result =
-          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount,
-        couponCode: couponCode,
-        accessToken: accessToken,
-      );
-
-      if (result != null) {
-        if (result['success'] == true) {
-          final couponData = result['data']['data'];
-          double discountAmount =
-              double.parse(couponData['discount_amount'].replaceAll(',', ''));
-          double discountedTotal = totalAmount - discountAmount;
-
-          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-            discountAmount: discountAmount,
-            discountedTotal: discountedTotal,
-          );
-
-          Provider.of<BillingProvider>(context, listen: false)
-              .setCouponApplied(true);
-
-          showScaffold(
-            context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
-          );
-        } else {
-          showScaffoldError(
-            context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
-          );
-        }
-      } else {
-        showScaffoldError(
-          context: context,
-          message: 'billing.error_occurred_try_again'.tr,
-        );
-      }
-    } else {
-      showScaffoldError(
-        context: context,
-        message: 'general.not_authenticated'.tr,
-      );
-    }
   }
 }

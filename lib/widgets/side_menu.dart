@@ -16,6 +16,7 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import '../controllers/sidebar_controller.dart';
 import '../providers/admin_settings_provider.dart';
 import '../providers/auth_model.dart';
@@ -811,7 +812,7 @@ class _SideMenuState extends State<SideMenu> {
                           .customerTransactionsReportScreenIndex;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 67;
+                      ReportNavigation.openSupplierTransactionsReport();
                     },
                     onTapTitle5: () {
                       ReportNavigation.openProductSalesReport();

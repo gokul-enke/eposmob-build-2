@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
@@ -1238,6 +1239,9 @@ class BillingPageState extends State<BillingPage>
     }
     debugPrint(
         "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
+    // A shortcut does not move focus, so a price still being typed would only
+    // be committed after checkout or payment has read the cart.
+    PriceTextField.commitPendingEdits();
     _handleKeyPress(event);
     return true;
   }
@@ -3721,6 +3725,17 @@ class BillingPageState extends State<BillingPage>
                                                               overflow:
                                                                   TextOverflow
                                                                       .ellipsis,
+                                                            ),
+                                                          if (item.hasOffer)
+                                                            CartOfferBadge(
+                                                              item: item,
+                                                              fontSize:
+                                                                  (fontProvider
+                                                                              .billingTableItemSize -
+                                                                          2)
+                                                                      .clamp(
+                                                                          9.0,
+                                                                          12.0),
                                                             ),
                                                         ],
                                                       ),
@@ -8659,29 +8674,23 @@ class BillingPageState extends State<BillingPage>
 
     showDialog(
       context: context,
-      builder: (context) => CouponModal(
+      builder: (dialogContext) => CouponModal(
         subTotal: localProductProvider.subTotalBeforeDiscount,
         initialFlatDiscount: currentDiscounts['flatDiscount'],
         initialPercentageDiscount: currentDiscounts['percentageDiscount'],
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) async {
+            {double? flatDiscount, double? percentageDiscount}) {
           if (shouldApply) {
-            // Apply coupon to API first if provided
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
+            // CouponModal validates the downloaded coupon details before
+            // calling this action, just like Finalize Order.
+            coupenCodeTextController.text = couponCode;
 
-            // Then apply manual discounts to local product provider
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
             );
-
-            coupenCodeTextController.text = couponCode;
 
             setState(() {
               isCouponApplied = true;
@@ -8712,73 +8721,6 @@ class BillingPageState extends State<BillingPage>
         },
       ),
     );
-  }
-
-  Future<void> _applyCoupon() async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-
-    if (localProductProvider.priceSummary == null) {
-      showScaffoldError(
-        context: context,
-        message: 'billing.cart_empty_or_data_unavailable'.tr,
-      );
-      return;
-    }
-
-    double? totalAmount = localProductProvider.priceSummary!.netTotal;
-    String couponCode = coupenCodeTextController.text;
-
-    if (accessToken != null && totalAmount != null) {
-      final result =
-          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount,
-        couponCode: couponCode,
-        accessToken: accessToken,
-      );
-
-      if (result != null) {
-        // Check if the response indicates success
-        if (result['success'] == true) {
-          final couponData = result['data']['data'];
-          double discountAmount = double.parse(couponData['discount_amount']
-              .replaceAll(',', '')); // Convert discount amount to double
-          double discountedTotal = totalAmount - discountAmount;
-
-          // Update the price summary with the new values
-          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-            discountAmount: discountAmount,
-            discountedTotal: discountedTotal,
-          );
-
-          setState(() {
-            isCouponApplied = true;
-          });
-
-          showScaffold(
-            context: context,
-            message: result['message'] ?? 'Coupon Applied Successfully',
-          );
-        } else {
-          // Handle failure to apply coupon
-          showScaffoldError(
-            context: context,
-            message: result['message'] ?? 'Failed to Apply Coupon',
-          );
-        }
-      } else {
-        // Handle case where result is null
-        showScaffoldError(
-          context: context,
-          message: 'billing.error_occurred'.tr,
-        );
-      }
-    } else {
-      // Handle unauthenticated state
-      showScaffoldError(
-          context: context, message: 'billing.not_authenticated'.tr);
-    }
   }
 
   void resetAutocomplete({bool shouldFetchCustomers = false}) {
@@ -8994,8 +8936,8 @@ class BillingPageState extends State<BillingPage>
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        double itemTotalPrice = itemPrice * item.quantity;
-        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+        double itemTotalPrice = item.amounts.total;
+        double itemTax = item.amounts.tax;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;

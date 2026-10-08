@@ -44,7 +44,7 @@ import 'package:pos_machine/features/reports/presentation/pages/customer_transac
 // Adding import for the new simple transaction details screen
 import 'package:pos_machine/screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart';
 // Adding imports for supplier transaction report screens
-import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_details_screen.dart';
 import 'package:pos_machine/features/reports/presentation/pages/product_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
@@ -127,6 +127,8 @@ class SideBarController extends GetxController {
   static const int mySalesReportScreenIndex = 58;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
+  static const int supplierTransactionsReportScreenIndex = 67;
+  static const int supplierTransactionDetailsScreenIndex = 68;
 
   /// Expense screens in [screens]. Navigate through [ExpenseNavigation].
   static const int expenseListScreenIndex = 93;
@@ -247,7 +249,7 @@ class SideBarController extends GetxController {
     CompanyInfoScreen(), // 64 Company Info
     CustomerTransactionsReportPage(), // 65 customerTransactionsReportScreenIndex
     SimpleTransactionDetailsScreen(), // 66 Simple Transaction Details Screen
-    SupplierTransactionReportScreen(), // 67 Supplier Transaction Report
+    SupplierTransactionsReportPage(), // 67 supplierTransactionsReportScreenIndex
     SupplierTransactionDetailsScreen(), // 68 Supplier Transaction Details Screen
     SupplierProfilePage(), // 69 Supplier Profile
     CustomerVoucherListPage(), // 70 Customer Voucher List

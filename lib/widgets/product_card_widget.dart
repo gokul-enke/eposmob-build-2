@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:provider/provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 
 class ProductCardWidget extends StatelessWidget {
   final GetProduct product;
@@ -95,29 +94,11 @@ class ProductCardWidget extends StatelessWidget {
                   // Price indicator
                   Positioned(
                     bottom: 0,
+                    left: 0,
                     right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: ColorManager.kPrimaryColor.withOpacity(0.8),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                        ),
-                      ),
-                      child: Consumer<AppSettingsProvider>(
-                        builder: (context, appSettingsProvider, _) {
-                          final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-                          final amount = (product.price?.price ?? 0).toString();
-                          return Text(
-                            '$currency $amount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                          );
-                        },
-                      ),
+                    child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: BillingProductPriceTag(product: product),
                     ),
                   ),
                   // Selection indicator
@@ -162,4 +143,4 @@ class ProductCardWidget extends StatelessWidget {
       ),
     );
   }
-} 
+}

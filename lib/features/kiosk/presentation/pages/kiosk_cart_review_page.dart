@@ -3,6 +3,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/ma
 import 'package:pos_machine/features/kiosk/presentation/models/kiosk_order_draft.dart';
 import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_order_details_page.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_flow_scaffold.dart';
+import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -250,6 +251,10 @@ class _ReviewItem extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (item.hasOffer) ...[
+                    const SizedBox(height: 4),
+                    CartOfferBadge(item: item, fontSize: 13),
+                  ],
                   if (item.saleUnitName?.trim().isNotEmpty == true) ...[
                     const SizedBox(height: 3),
                     Text(
