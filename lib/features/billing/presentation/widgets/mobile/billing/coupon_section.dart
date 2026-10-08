@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/discount_provider.dart';
@@ -10,7 +12,6 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
-import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -30,6 +31,11 @@ class _CouponSectionState extends State<CouponSection> {
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
 
+  /// Cart discount seen on the previous build, so the fields are only reset
+  /// when an applied discount gets cleared externally.
+  double _lastSeenFlatDiscount = 0.0;
+  double _lastSeenPercentageDiscount = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +46,8 @@ class _CouponSectionState extends State<CouponSection> {
 
     final initialFlat = currentDiscounts['flatDiscount'] ?? 0.0;
     final initialPercentage = currentDiscounts['percentageDiscount'] ?? 0.0;
+    _lastSeenFlatDiscount = initialFlat;
+    _lastSeenPercentageDiscount = initialPercentage;
 
     flatDiscountController = TextEditingController(
       text: _couponController.initialDiscountFieldText(initialFlat),
@@ -102,13 +110,23 @@ class _CouponSectionState extends State<CouponSection> {
   }
 
   void _onDiscountSelected(DiscountData? discount) {
-    if (discount == null) return;
+    if (discount == null) {
+      // Dropdown "x": drop the coupon and the values it filled in.
+      if (_selectedDiscount == null) return;
+      _selectedDiscount = null;
+      setState(() {
+        flatDiscountController.clear();
+        percentageDiscountController.clear();
+      });
+      return;
+    }
     final values = _couponController.fieldValuesForSelectedDiscount(discount);
 
+    // Select first so the field listeners see values matching the coupon.
+    _selectedDiscount = discount;
     setState(() {
       flatDiscountController.text = values.flat;
       percentageDiscountController.text = values.percent;
-      _selectedDiscount = discount;
     });
   }
 
@@ -127,10 +145,6 @@ class _CouponSectionState extends State<CouponSection> {
       flatDiscountText: flatDiscountController.text,
       percentageDiscountText: percentageDiscountController.text,
       selectedDiscount: _selectedDiscount,
-      applyCouponApi: () async {
-        await PaymentCoordinator.applyCoupon(context);
-        return bp.isCouponApplied;
-      },
     );
 
     if (!mounted) return;
@@ -178,6 +192,99 @@ class _CouponSectionState extends State<CouponSection> {
     showScaffold(context: context, message: 'billing.discount_cleared'.tr);
   }
 
+  /// Compact validity card for the selected coupon (mirrors the desktop
+  /// CouponModal details card) so the cashier sees why Apply would fail.
+  Widget _buildSelectedCouponStatus(
+    DiscountData discount,
+    DiscountProvider discountProvider,
+    LocalProductProvider localProductProvider,
+  ) {
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        '';
+    final validity = discountProvider.getValidityForDiscount(
+      discount,
+      _couponController.originalSubTotal(localProductProvider),
+    );
+    final isValid = validity == DiscountValidity.valid;
+    final isPercentage = discount.discountType.toLowerCase() == 'percent';
+    final valueText = isPercentage
+        ? '${discount.discountValue}%'
+        : '$currency ${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
+
+    final String? problem = switch (validity) {
+      DiscountValidity.valid => null,
+      DiscountValidity.belowMin =>
+        'Cart amount is below minimum (Min: $currency ${AmountHelper.formatAmount(discount.discountCouponMinAmount?.toDouble() ?? 0.0)})',
+      DiscountValidity.aboveMax =>
+        'Cart amount exceeds maximum (Max: $currency ${AmountHelper.formatAmount(discount.discountCouponMaxAmount?.toDouble() ?? 0.0)})',
+      DiscountValidity.expired => 'Coupon has expired',
+      DiscountValidity.notStarted => 'Coupon not yet active',
+    };
+
+    final accent = isValid ? Colors.green.shade600 : Colors.red.shade600;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isValid ? Colors.green.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isValid ? Colors.green.shade300 : Colors.red.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isValid ? Icons.check_circle : Icons.error_outline,
+                size: 18,
+                color: accent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  discount.couponName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  valueText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (problem != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              problem,
+              style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final discountProvider = Provider.of<DiscountProvider>(context);
@@ -187,6 +294,8 @@ class _CouponSectionState extends State<CouponSection> {
     final flat = currentDiscounts['flatDiscount'] ?? 0.0;
     final pct = currentDiscounts['percentageDiscount'] ?? 0.0;
     if (_couponController.shouldSyncClearedDiscountFields(
+      previousFlatDiscount: _lastSeenFlatDiscount,
+      previousPercentageDiscount: _lastSeenPercentageDiscount,
       flatDiscount: flat,
       percentageDiscount: pct,
       flatFieldText: flatDiscountController.text,
@@ -196,6 +305,8 @@ class _CouponSectionState extends State<CouponSection> {
       percentageDiscountController.clear();
       _selectedDiscount = null;
     }
+    _lastSeenFlatDiscount = flat;
+    _lastSeenPercentageDiscount = pct;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +413,6 @@ class _CouponSectionState extends State<CouponSection> {
           ],
         ),
         const SizedBox(height: 16),
-
         Text(
           'coupon.select_coupon'.tr,
           style: TextStyle(
@@ -320,8 +430,15 @@ class _CouponSectionState extends State<CouponSection> {
           isRequired: false,
           width: double.infinity,
         ),
+        if (_selectedDiscount != null) ...[
+          const SizedBox(height: 10),
+          _buildSelectedCouponStatus(
+            _selectedDiscount!,
+            discountProvider,
+            localProductProvider,
+          ),
+        ],
         const SizedBox(height: 16),
-
         Row(
           children: [
             Expanded(

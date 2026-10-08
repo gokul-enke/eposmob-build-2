@@ -28,6 +28,8 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing
 /// own widget under `mobile/billing/`, and the action bar is
 /// [BillingActionButtons]. Business logic lives in `BillingMobileController`.
 class MobileBillingTab extends StatefulWidget {
+  /// TabBarView may build this tab while another tab is selected.
+  final bool isActive;
   final bool isQuotationMode;
   final GlobalKey autocompletePhoneKey;
   final VoidCallback onConfirmOrder;
@@ -51,6 +53,7 @@ class MobileBillingTab extends StatefulWidget {
 
   const MobileBillingTab({
     super.key,
+    this.isActive = true,
     this.isQuotationMode = false,
     required this.autocompletePhoneKey,
     required this.onConfirmOrder,
@@ -78,6 +81,7 @@ class MobileBillingTab extends StatefulWidget {
 }
 
 class _MobileBillingTabState extends State<MobileBillingTab> {
+  VoidCallback? _releaseOfferPrices;
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
   static const _deliveryController = BillingMobileDeliveryController();
@@ -85,6 +89,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   @override
   void initState() {
     super.initState();
+    _syncOfferPriceHold();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncPaymentValidationContext();
@@ -95,6 +100,28 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         // Ignore; UI will still allow manual binding on first attempt.
       }
     });
+  }
+
+  void _syncOfferPriceHold() {
+    if (widget.isActive) {
+      _releaseOfferPrices ??=
+          context.read<LocalProductProvider>().holdOfferPricesForCheckout();
+    } else {
+      _releaseOfferPrices?.call();
+      _releaseOfferPrices = null;
+    }
+  }
+
+  @override
+  void didUpdateWidget(MobileBillingTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) _syncOfferPriceHold();
+  }
+
+  @override
+  void dispose() {
+    _releaseOfferPrices?.call();
+    super.dispose();
   }
 
   void _syncPaymentValidationContext() {
@@ -109,10 +136,6 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       customerSelectionProvider: customerSelection,
       appSettings: appSettings,
     );
-  }
-
-  void _markPaymentStepVisited() {
-    Provider.of<BillingProvider>(context, listen: false).markPaymentStepVisited();
   }
 
   /// Summary text for the delivery row value, e.g. "Door Delivery · SAR 5.00"
@@ -428,10 +451,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         appSettings?.currency ?? '',
                       ),
                       isHighlighted: billingProvider.totalPaidAmount > 0,
-                      onTap: () async {
-                        _markPaymentStepVisited();
-                        await showPaymentMethodsSheet(context);
-                      },
+                      onTap: () => showPaymentMethodsSheet(context),
                     ),
                     const SizedBox(height: 12),
                   ],

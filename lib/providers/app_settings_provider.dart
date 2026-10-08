@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/subscription/domain/company_subscription.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'dart:convert';
@@ -104,6 +107,13 @@ class AppSettingsProvider extends ChangeNotifier {
         final Map<String, dynamic> data = json.decode(response.body);
         _appSettings = AppSettings.fromJson(data);
         _lastFetchSucceeded = true;
+        if (prefs.getInt('active_store_id') == activeStoreId &&
+            prefs.getString('api_key') == apiKey) {
+          unawaited(ProductOfferRepository.instance.applySetting(
+            enabled: _appSettings!.posOffers,
+            storeId: activeStoreId,
+          ));
+        }
       } else {
         throw Exception('Failed to load app settings');
       }

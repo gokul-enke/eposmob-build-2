@@ -3392,7 +3392,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         width: 70,
                                         child: Text(
                                           AmountHelper.formatAmount(
-                                              (item.price! * item.quantity)),
+                                              item.amounts.total),
                                           style: TextStyle(
                                               fontSize: fontProvider
                                                   .billingTableItemSize),
@@ -4459,7 +4459,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
-        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'totalPrice': item.amounts.total.toStringAsFixed(2),
         'mrp': item.mrp?.toStringAsFixed(2) ??
             item.price?.toStringAsFixed(2) ??
             '0.00',
@@ -6741,7 +6741,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     showDialog(
       context: context,
-      builder: (context) => CouponModal(
+      // Named `dialogContext` so the async callback keeps using the page
+      // context: CouponModal pops itself right after invoking it.
+      builder: (dialogContext) => CouponModal(
         subTotal: localProductProvider.subTotalBeforeDiscount,
         initialFlatDiscount: currentDiscounts['flatDiscount'],
         initialPercentageDiscount: currentDiscounts['percentageDiscount'],
@@ -6752,18 +6754,17 @@ class BillingPageState extends State<BillingPageRestaurant>
           if (shouldApply) {
             coupenCodeTextController.text = couponCode;
 
+            // Validate the coupon against the pre-discount total first.
+            if (couponCode.isNotEmpty) {
+              await _applyCoupon();
+            }
+            if (!mounted) return;
+
             // Apply manual discounts to local product provider
-            final localProductProvider =
-                Provider.of<LocalProductProvider>(context, listen: false);
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
             );
-
-            // Apply coupon if provided
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
 
             setState(() {
               isCouponApplied = true;
@@ -7074,10 +7075,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        double itemTotalPrice = itemPrice * item.quantity;
+        double itemTotalPrice = item.amounts.total;
 
         // Calculate tax
-        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+        double itemTax = item.amounts.tax;
         totalTax += itemTax;
 
         // Add to totals for "You Saved" calculation
@@ -8458,7 +8459,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                             'billing.table_tax_amount'
                                                                 .tr,
                                                         value:
-                                                            '$currency ${((item.taxAmount ?? 0.0) * item.quantity).toStringAsFixed(2)}',
+                                                            '$currency ${(item.amounts.tax).toStringAsFixed(2)}',
                                                         crossAxisAlignment:
                                                             CrossAxisAlignment
                                                                 .end,

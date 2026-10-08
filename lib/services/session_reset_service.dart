@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
+import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -250,6 +251,11 @@ class SessionResetService {
         }
       }
     }
+
+    // After the preferences reset: an app-settings response that lands
+    // before this is wiped here, and one that lands after it no longer
+    // matches the cleared active store.
+    await ProductOfferRepository.instance.clear();
 
     context.read<AuthModel>().logout();
   }

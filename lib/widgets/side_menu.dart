@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart' as fa;
 import 'package:get/get.dart';
+import 'package:pos_machine/features/categories/presentation/navigation/category_navigation.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:pos_machine/features/products/presentation/navigation/product_list_navigation.dart';
 
@@ -16,6 +17,7 @@ import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:provider/provider.dart';
 
 import 'package:websafe_svg/websafe_svg.dart';
+import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import '../controllers/sidebar_controller.dart';
 import '../providers/admin_settings_provider.dart';
 import '../providers/auth_model.dart';
@@ -612,13 +614,16 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.tags,
                   title: 'nav.category'.tr,
                   onTap: () {
-                    sideBarController.index.value = 12;
+                    CategoryNavigation.openList();
                   },
-                  selected: sideBarController.index.value == 12 ||
+                  selected: sideBarController.index.value ==
+                          SideBarController.categoryListScreenIndex ||
                       sideBarController.index.value == 13 ||
-                      sideBarController.index.value == 16 ||
+                      sideBarController.index.value ==
+                          SideBarController.addCategoryScreenIndex ||
                       sideBarController.index.value == 27 ||
-                      sideBarController.index.value == 34,
+                      sideBarController.index.value ==
+                          SideBarController.editCategoryScreenIndex,
                 ),
               );
             },
@@ -812,7 +817,7 @@ class _SideMenuState extends State<SideMenu> {
                           .customerTransactionsReportScreenIndex;
                     },
                     onTapTitle4: () {
-                      sideBarController.index.value = 67;
+                      ReportNavigation.openSupplierTransactionsReport();
                     },
                     onTapTitle5: () {
                       sideBarController.index.value = 40;
