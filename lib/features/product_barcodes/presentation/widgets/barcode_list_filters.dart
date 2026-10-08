@@ -36,7 +36,11 @@ FilterPanel barcodeListFilters({
           ],
           itemAsString: (id) => id == 0
               ? 'product_barcode.all_categories'.tr
-              : categories.firstWhere((category) => category.id == id).name,
+              : categories
+                  .firstWhere((category) => category.id == id,
+                      orElse: () => BarcodeCategory(
+                          id, 'product_barcode.all_categories'.tr))
+                  .name,
           decoratorProps: DropDownDecoratorProps(
               decoration: AppInputDecoration.filter(
                   label: 'product_barcode.category'.tr,

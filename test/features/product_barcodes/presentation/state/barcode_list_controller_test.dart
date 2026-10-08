@@ -184,6 +184,34 @@ void main() {
     controller.selectPage(true);
     expect(controller.selected.length, selected.length + 1);
   });
+  test('stock update or edit keeps the page; a new filter returns to page 1',
+      () async {
+    await controller.initialize();
+    controller.goToPage(3);
+    // Same filter, replaced product objects (stock update / edit / delta sync).
+    source.filtered = [
+      for (final p in source.filtered) p.copyWith(productName: p.productName)
+    ];
+    source.version++;
+    source.signalUnchanged();
+    expect(controller.page, 3);
+    // The catalogue shrinks below page 3 with the same filter: clamp.
+    source.filtered = source.filtered.take(25).toList();
+    source.version++;
+    source.signalUnchanged();
+    expect(controller.page, 2);
+    controller.selectCategory(2);
+    expect(controller.page, 1);
+  });
+  test('retry drops a selected category that no longer exists', () async {
+    await controller.initialize();
+    controller.selectCategory(2);
+    source.load = () async => [const BarcodeCategory(1, 'Food')];
+    await controller.initialize();
+    expect(controller.categoryId, isNull);
+    expect(controller.applied.categoryId, isNull);
+    expect(controller.rows.length, 45);
+  });
   test('sync failure with no replacement restores the retained page and rows',
       () async {
     await controller.initialize();

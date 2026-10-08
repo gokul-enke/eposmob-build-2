@@ -21,6 +21,7 @@ class BarcodeListController extends ChangeNotifier {
   static const pageSize = 20;
   int page = 1;
   int _version = -1;
+  BarcodeListQuery? _rowsQuery; // the applied filter [rows] were built for
   bool initializing = true;
   bool get loading => initializing || source.isLoading;
   Object? error;
@@ -49,6 +50,11 @@ class BarcodeListController extends ChangeNotifier {
       final options = await source.categories();
       if (_disposed) return;
       categories = options;
+      // A retry can drop the selected category; fall back to all categories.
+      if (categoryId != null &&
+          !options.any((category) => category.id == categoryId)) {
+        categoryId = null;
+      }
       refresh();
     } catch (e) {
       if (!_disposed) error = e;
@@ -108,7 +114,11 @@ class BarcodeListController extends ChangeNotifier {
     _version = version;
     rows = List.unmodifiable(
         expandProductsToBarcodeRows(source.products, barcode: applied.barcode));
-    page = 1;
+    // New filters start on page 1. Stock updates, edits and syncs replace
+    // product objects without a filter change, so keep the user's page.
+    final filtersChanged = !identical(_rowsQuery, applied);
+    _rowsQuery = applied;
+    page = filtersChanged ? 1 : page.clamp(1, totalPages);
     _notify();
   }
 
