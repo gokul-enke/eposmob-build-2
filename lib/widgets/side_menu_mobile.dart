@@ -80,6 +80,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         case SideBarController.transactionSupplierVoucherListScreenIndex:
           VoucherNavigation.openSupplierList(transactions: true);
           break;
+        case SideBarController.nonStockReportScreenIndex:
+          ReportNavigation.openNonStockReport();
+          break;
         case SideBarController.consumedStocksReportScreenIndex:
           ReportNavigation.openConsumedStocksReport();
           break;
@@ -585,7 +588,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   66,
                   67,
                   68,
-                  77,
+                  SideBarController.nonStockReportScreenIndex,
                   SideBarController.consumedStocksReportScreenIndex,
                   85,
                   SideBarController.stockReportScreenIndex,
@@ -626,7 +629,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   if (hasNonStockPermission)
                     _MobileDrawerSubItem(
                       title: 'nav.non_stock_report'.tr,
-                      onTap: () => navigate(77),
+                      onTap: () =>
+                          navigate(SideBarController.nonStockReportScreenIndex),
                     ),
                   if (hasConsumedStockPermission)
                     _MobileDrawerSubItem(

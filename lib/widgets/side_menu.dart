@@ -827,7 +827,7 @@ class _SideMenuState extends State<SideMenu> {
                       ReportNavigation.openStockReport();
                     },
                     onTapTitle7: () {
-                      sideBarController.index.value = 77;
+                      ReportNavigation.openNonStockReport();
                     },
                     onTapTitle8: () {
                       ReportNavigation.openConsumedStocksReport();
@@ -863,7 +863,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 66 ||
                         sideBarController.index.value == 67 ||
                         sideBarController.index.value == 68 ||
-                        sideBarController.index.value == 77 ||
+                        sideBarController.index.value ==
+                            SideBarController.nonStockReportScreenIndex ||
                         sideBarController.index.value ==
                             SideBarController.consumedStocksReportScreenIndex ||
                         sideBarController.index.value == 85 ||

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 import 'package:pos_machine/models/local_models.dart';
@@ -28,7 +29,7 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
-import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/non_stock_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
 import 'package:provider/provider.dart';
@@ -131,6 +132,16 @@ class _FakeSupplierProvider extends SupplierProvider {
 }
 
 class _FakeReportsProvider extends ReportsProvider {
+  @override
+  Future<GetNonStockReportResponse> fetchNonStockReportSnapshot(
+          {required String accessToken,
+          String? store,
+          String? category,
+          String? product,
+          String? barcode,
+          int? page}) async =>
+      GetNonStockReportResponse(status: 'success', message: '', data: []);
+
   @override
   Future<GetStockReportResponse> fetchStockReportSnapshot({
     required String accessToken,
@@ -328,6 +339,13 @@ void main() {
         isTrue);
     expect(find.byKey(panelKey), findsNothing);
 
+    if (screen is NonStockReportPage) {
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNWidgets(4));
+      expect(tester.takeException(), isNull);
+      return;
+    }
     if (screen is ConsumedStocksReportPage) {
       await tester.tap(find.byType(ExpansionTile));
       await tester.pumpAndSettle();
@@ -392,7 +410,7 @@ void main() {
   testWidgets('Non-Stock Report collapses its desktop filters', (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const NonStockReportScreen(),
+      screen: const NonStockReportPage(),
       toggleKey: const ValueKey('non-stock-report-filter-toggle'),
       panelKey: const ValueKey('non-stock-report-filters'),
     );
@@ -432,7 +450,7 @@ void main() {
         const ValueKey('stock-report-filters'),
       ),
       (
-        const NonStockReportScreen(),
+        const NonStockReportPage(),
         const ValueKey('non-stock-report-filter-toggle'),
         const ValueKey('non-stock-report-filters'),
       ),

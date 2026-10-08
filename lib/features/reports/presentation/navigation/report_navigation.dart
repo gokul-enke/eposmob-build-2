@@ -8,6 +8,9 @@ abstract final class ReportNavigation {
       ? Get.find<SideBarController>()
       : Get.put(SideBarController());
 
+  static void openNonStockReport() =>
+      _sidebar.index.value = SideBarController.nonStockReportScreenIndex;
+
   static void openStockReport() =>
       _sidebar.index.value = SideBarController.stockReportScreenIndex;
 

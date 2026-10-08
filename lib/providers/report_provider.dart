@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/get_product_sales_report_model.dart';
 import 'package:pos_machine/models/get_sales_report_model.dart';
 import 'package:pos_machine/models/get_supplier_sales_report_model.dart';
-import 'package:pos_machine/models/get_non_stock_report_model.dart';
+import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
+import 'package:pos_machine/features/reports/data/non_stock_report_api.dart';
+import 'package:pos_machine/features/reports/domain/non_stock_report_query.dart';
 import 'package:pos_machine/features/reports/domain/models/consumed_stocks_report.dart';
 import 'package:pos_machine/features/reports/domain/consumed_stocks_report_query.dart';
 import 'package:pos_machine/features/reports/data/consumed_stocks_report_api.dart';
@@ -21,11 +23,32 @@ import '../resources/app_url.dart';
 class ReportsProvider with ChangeNotifier {
   ReportsProvider(
       {StockReportApi? stockReportApi,
-      ConsumedStocksReportApi? consumedStocksApi})
+      ConsumedStocksReportApi? consumedStocksApi,
+      NonStockReportApi? nonStockApi})
       : stockReportApi = stockReportApi ?? StockReportApi(),
-        _consumedStocksApi = consumedStocksApi ?? ConsumedStocksReportApi();
+        _consumedStocksApi = consumedStocksApi ?? ConsumedStocksReportApi(),
+        _nonStockApi = nonStockApi ?? NonStockReportApi();
   final StockReportApi stockReportApi;
   final ConsumedStocksReportApi _consumedStocksApi;
+  final NonStockReportApi _nonStockApi;
+  Future<NonStockReportScope> nonStockReportScope(String token) =>
+      _nonStockApi.scope(token);
+
+  Future<GetNonStockReportResponse> fetchNonStockReportSnapshot(
+          {required String accessToken,
+          String? store,
+          String? category,
+          String? product,
+          String? barcode,
+          int? page}) =>
+      _nonStockApi.fetch(
+          accessToken: accessToken,
+          store: store,
+          category: category,
+          product: product,
+          barcode: barcode,
+          page: page);
+
   Future<ConsumedStocksReportScope> consumedStocksReportScope(String token) =>
       _consumedStocksApi.scope(token);
   Future<GetConsumedStocksReportResponse> fetchConsumedStocksReportSnapshot(
@@ -351,64 +374,14 @@ class ReportsProvider with ChangeNotifier {
     String? barcode,
     int? page,
   }) async {
-    final queryParameters = <String, String>{};
-
-    if (store != null && store.isNotEmpty) {
-      queryParameters['store'] = store;
-    }
-    if (category != null && category.isNotEmpty) {
-      queryParameters['category'] = category;
-    }
-    if (product != null && product.isNotEmpty) {
-      queryParameters['product'] = product;
-    }
-    if (barcode != null && barcode.isNotEmpty) {
-      queryParameters['barcode'] = barcode;
-    }
-    if (page != null) {
-      queryParameters['page'] = page.toString();
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    if (activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    final uri = Uri.parse(APPUrl.nonStockReportUrl)
-        .replace(queryParameters: queryParameters);
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          final jsonData = json.decode(response.body);
-          _nonStockReport = GetNonStockReportResponse.fromJson(jsonData);
-          notifyListeners();
-        } else {
-          throw Exception('Received empty response');
-        }
-      } else {
-        debugPrint(
-            'Failed to load non-stock report: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load non-stock report');
-      }
-    } catch (error) {
-      rethrow;
-    }
+    _nonStockReport = await fetchNonStockReportSnapshot(
+        accessToken: accessToken,
+        store: store,
+        category: category,
+        product: product,
+        barcode: barcode,
+        page: page);
+    notifyListeners();
   }
 
   Future<void> fetchConsumedStocksReport(
