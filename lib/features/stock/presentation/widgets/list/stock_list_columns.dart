@@ -34,7 +34,8 @@ List<TableColumnDef<ListStockModelData>> stockListColumns(
               TableCells.widget(stockBarcode(s, () => onCopy(s)))),
       TableColumnDef(
           label: 'stock.retail_price'.tr,
-          cellBuilder: (s, _) => TableCells.text('${s.retailPrice}')),
+          cellBuilder: (s, _) =>
+              TableCells.text(s.retailPrice ?? 'stock.na'.tr)),
       TableColumnDef(
           label: 'stock.mrp'.tr,
           cellBuilder: (s, _) => TableCells.text(s.mrp ?? 'stock.na'.tr)),
@@ -50,7 +51,7 @@ List<TableColumnDef<ListStockModelData>> stockListColumns(
       TableColumnDef(
           label: 'stock.unit'.tr,
           flex: .6,
-          cellBuilder: (s, _) => TableCells.text('${s.unit}')),
+          cellBuilder: (s, _) => TableCells.text(s.unit ?? 'stock.na'.tr)),
       TableColumnDef(
           label: 'stock.rack'.tr,
           flex: .7,
