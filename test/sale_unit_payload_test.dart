@@ -1,6 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+
+/// The order lines without the completed-sale snapshot (standard price, tax,
+/// line total), which the snapshot test below covers on its own.
+List<Map<String, dynamic>> _orderLines(List<LocalCartItem> items) {
+  return [
+    for (final line in LocalProductProvider.buildOrderItemsPayloadFrom(items))
+      Map<String, dynamic>.of(line)
+        ..removeWhere(
+          (key, _) =>
+              OrderSubmissionPayload.completedSaleLineKeys.contains(key),
+        ),
+  ];
+}
 
 void main() {
   group('LocalCartItem Sale Unit Math', () {
@@ -161,13 +175,40 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 1);
       expect(payload.first['quantity'], 2); // display
       expect(payload.first['price'], 120.0); // display
       expect(payload.first['mrp'], 144.0); // display
       expect(payload.first['stock_id'], 1);
       expect(payload.first['sale_unit_id'], 10);
+    });
+
+    test('the snapshot is in the same unit as the line price', () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 24,
+        price: 10,
+        mrp: 12,
+        taxRate: 18,
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 24),
+        ],
+      );
+
+      final line =
+          LocalProductProvider.buildOrderItemsPayloadFrom([item]).first;
+      expect(line['price'], 120.0);
+      expect(line['quantity'], 2);
+      // No offer and no manual price: the price is its own reference.
+      expect(line['standard_unit_price'], 120.0);
+      expect(line['total_price'], 240.0);
+      expect(line['tax_rate'], 18);
+      // 240 inclusive of 18% tax = 36.61
+      expect(line['tax_amount'], 36.61);
     });
 
     test('splits payload across multiple grouped stock reservations', () {
@@ -185,7 +226,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 2);
       expect(payload[0]['quantity'], 2); // 24/12
       expect(payload[0]['stock_id'], 1);
@@ -207,7 +248,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 1);
       expect(payload.first['quantity'], 5);
       expect(payload.first.containsKey('sale_unit_id'), isFalse);
@@ -221,7 +262,7 @@ void main() {
         mrp: 12,
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload, isEmpty);
     });
 
@@ -236,7 +277,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 1);
       expect(payload.single['stock_id'], 1);
       expect(payload.single['quantity'], 10);
@@ -254,7 +295,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {
@@ -286,7 +327,7 @@ void main() {
         mrp: 12,
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 1);
       expect(payload.first['stock_id'], isNull);
       expect(payload.first['quantity'], 3);
@@ -307,7 +348,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
       expect(payload.length, 1);
       expect(payload.first['quantity'], 13);
       expect(payload.first['price'], 10.0);
@@ -330,7 +371,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {
@@ -361,7 +402,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {
@@ -392,7 +433,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {
@@ -425,7 +466,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {
@@ -447,7 +488,7 @@ void main() {
 
     test('current payload for blocked stock case is empty only if item absent',
         () {
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([]);
+      final payload = _orderLines([]);
 
       expect(payload, isEmpty);
     });
@@ -467,7 +508,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       // 1.3 -> 1 (line kept), 0.7 -> 0 (line dropped by the > 0 filter).
       expect(payload, [
@@ -493,7 +534,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       // 0.5 reserved + 1.5 overflow becomes 2 on the reserved stock.
       expect(payload, [
@@ -527,7 +568,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload.map((line) => line['quantity']).toList(), [1.3, 0.7]);
     });
@@ -547,7 +588,7 @@ void main() {
         ],
       );
 
-      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+      final payload = _orderLines([item]);
 
       expect(payload, [
         {

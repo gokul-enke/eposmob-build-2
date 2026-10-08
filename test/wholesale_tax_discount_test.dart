@@ -184,7 +184,8 @@ void main() {
       expect(provider.cartItems.first.price, 10.0);
     });
 
-    test('recalculates to wholesale on quantity increase crossing threshold', () {
+    test('recalculates to wholesale on quantity increase crossing threshold',
+        () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
       final stock = buildStock(
@@ -247,9 +248,7 @@ void main() {
       expect(provider.cartItems.first.price, 9.5);
     });
 
-    test(
-        'reverts wholesale price after spurious manual override on quantity decrease',
-        () {
+    test('unchanged wholesale price stays automatic on quantity decrease', () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
       final stock = buildStock(
@@ -265,9 +264,9 @@ void main() {
       provider.addToCart(product: product, quantity: 8, selectedStock: stock);
       expect(provider.cartItems.first.price, 8.0);
 
-      // Simulates PriceTextField syncing wholesale price and marking manual override.
+      // Submitting the displayed wholesale price is not a manual edit.
       provider.updateItemPrice(1, stock, 8.0);
-      expect(provider.cartItems.first.isManualPriceOverride, isTrue);
+      expect(provider.cartItems.first.isManualPriceOverride, isFalse);
 
       provider.setCartItemQuantity(1, stock, 3);
       expect(provider.cartItems.first.price, 10.0);
@@ -310,7 +309,8 @@ void main() {
       expect(breakdown.length, 2);
     });
 
-    test('falls back to product tax name when cart tax rate mismatches product', () {
+    test('falls back to product tax name when cart tax rate mismatches product',
+        () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct(
@@ -339,7 +339,8 @@ void main() {
       expect(totalTax, closeTo(10.714, 0.01));
     });
 
-    test('uses single tax name when exactly one tax exists and rate matches', () {
+    test('uses single tax name when exactly one tax exists and rate matches',
+        () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct(

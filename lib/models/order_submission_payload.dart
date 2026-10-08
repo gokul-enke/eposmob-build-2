@@ -102,6 +102,33 @@ class OrderSubmissionPayload {
   double get _normalizedCreditSaleAmount =>
       creditSaleAmount != null && creditSaleAmount! > 0 ? creditSaleAmount! : 0;
 
+  static const completedSalePricingMode = 'completed_sale';
+
+  /// Per-line fields that only make sense for a completed sale: the receipt
+  /// snapshot (standard price, tax and line total). Other orders are priced
+  /// by the backend, so they never carry these.
+  static const completedSaleLineKeys = <String>[
+    'standard_unit_price',
+    'tax_rate',
+    'tax_amount',
+    'total_price',
+  ];
+
+  /// Whether this is a frozen, printed sale being uploaded as a new order:
+  /// no existing draft (`order_id`), an executive source, a store, and the
+  /// full receipt identity. Only then does the backend keep the submitted
+  /// prices instead of pricing the order itself with today's offers.
+  bool isCompletedSale({int? fallbackStoreId}) {
+    bool has(String? value) => value != null && value.trim().isNotEmpty;
+    return orderId == null &&
+        sourceType == 'executive' &&
+        (storeId ?? fallbackStoreId) != null &&
+        has(clientSaleId) &&
+        has(receiptNumber) &&
+        has(issuedAt) &&
+        has(posDeviceId);
+  }
+
   bool get usesMultiPayment =>
       paymentMethods != null && paidMethods != null && paidMethods!.isNotEmpty;
 
@@ -116,8 +143,19 @@ class OrderSubmissionPayload {
   Map<String, dynamic> toApiJson({int? fallbackStoreId}) {
     final resolvedStoreId = storeId ?? fallbackStoreId;
     final normalizedPincode = pincode?.trim();
+    final completedSale = isCompletedSale(fallbackStoreId: fallbackStoreId);
     final body = <String, dynamic>{
-      'items': items.reversed.map(Map<String, dynamic>.from).toList(),
+      'items': items.reversed.map((item) {
+        final line = Map<String, dynamic>.from(item);
+        if (!completedSale) {
+          line.removeWhere((key, _) => completedSaleLineKeys.contains(key));
+        }
+        return line;
+      }).toList(),
+      // A printed sale keeps its submitted prices, whether or not an offer
+      // applied. The app never prints delivery tax, so the snapshot is zero.
+      if (completedSale) 'pricing_mode': completedSalePricingMode,
+      if (completedSale) 'delivery_tax_amount': 0,
       if (clientSaleId != null) 'client_sale_id': clientSaleId,
       if (receiptNumber != null) 'receipt_number': receiptNumber,
       if (issuedAt != null) 'issued_at': issuedAt,

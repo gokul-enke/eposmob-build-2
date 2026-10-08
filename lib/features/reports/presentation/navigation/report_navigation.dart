@@ -11,7 +11,17 @@ abstract final class ReportNavigation {
   static void openNonStockReport() =>
       _sidebar.index.value = SideBarController.nonStockReportScreenIndex;
 
+  static void openStockReport() =>
+      _sidebar.index.value = SideBarController.stockReportScreenIndex;
+
+  static void openConsumedStocksReport() =>
+      _sidebar.index.value = SideBarController.consumedStocksReportScreenIndex;
+
   /// The selected customer's transactions (read from `CustomerProvider`).
   static void openCustomerTransactionDetails() => _sidebar.index.value =
       SideBarController.customerTransactionDetailsScreenIndex;
+  static void openSupplierTransactionsReport() => _sidebar.index.value =
+      SideBarController.supplierTransactionsReportScreenIndex;
+  static void openSupplierTransactionDetails() => _sidebar.index.value =
+      SideBarController.supplierTransactionDetailsScreenIndex;
 }

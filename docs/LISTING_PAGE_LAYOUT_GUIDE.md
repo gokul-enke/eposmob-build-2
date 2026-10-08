@@ -70,12 +70,12 @@ ListPageScaffold<Supplier>(
     title: 'suppliers.title'.tr,
     subtitle: 'suppliers.subtitle'.tr,
     actions: [
-      HeaderAction(
+      HeaderAction.filters(
         key: SuppliersListPage.filterToggleKey,
-        icon: _showFilters ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
-        label: _showFilters ? 'list.hide_filters'.tr : 'list.filters'.tr,
+        showFilters: _showFilters,
+        showLabel: 'list.filters'.tr,
+        hideLabel: 'list.hide_filters'.tr,
         onPressed: () => setState(() => _showFilters = !_showFilters),
-        active: _showFilters,
         badge: !_showFilters && _hasActiveFilters,
       ),
       HeaderAction(

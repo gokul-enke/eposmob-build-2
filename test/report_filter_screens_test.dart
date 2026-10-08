@@ -1,3 +1,5 @@
+import 'package:pos_machine/features/reports/domain/models/consumed_stocks_report.dart'
+    as consumed;
 import 'dart:io';
 
 import 'package:dropdown_search/dropdown_search.dart';
@@ -7,8 +9,10 @@ import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/features/reports/domain/models/non_stock_report.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/features/reports/domain/models/stock_report.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/data/supplier_repository.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -24,10 +28,10 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
-import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/non_stock_report_page.dart';
-import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
-import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/supplier_transactions_report_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -80,7 +84,26 @@ class _FakeCustomerProvider extends CustomerProvider {
   }) async {}
 }
 
+class _FakeSupplierRepository extends SupplierRepository {
+  @override
+  Future<List<Supplier>?> fetchAll(String token, {String? name}) async =>
+      <Supplier>[];
+  @override
+  Future<Map<String, dynamic>> fetchTransactions(String token,
+          {String? supplierName,
+          String? supplierId,
+          String? transactionType,
+          String? fromDate,
+          String? toDate,
+          bool listAll = true,
+          int? page}) async =>
+      {
+        'data': {'data': <dynamic>[], 'current_page': 1, 'last_page': 1}
+      };
+}
+
 class _FakeSupplierProvider extends SupplierProvider {
+  _FakeSupplierProvider() : super(repository: _FakeSupplierRepository());
   @override
   Future<List<Supplier>?> fetchSuppliers({
     required String accessToken,
@@ -120,7 +143,7 @@ class _FakeReportsProvider extends ReportsProvider {
       GetNonStockReportResponse(status: 'success', message: '', data: []);
 
   @override
-  Future<void> fetchStockReport({
+  Future<GetStockReportResponse> fetchStockReportSnapshot({
     required String accessToken,
     String? product,
     String? sortBy,
@@ -134,7 +157,8 @@ class _FakeReportsProvider extends ReportsProvider {
     String? until,
     int? page,
     int? perPage,
-  }) async {}
+  }) async =>
+      GetStockReportResponse(status: 'success', message: '', data: []);
 
   @override
   Future<void> fetchNonStockReport({
@@ -145,6 +169,18 @@ class _FakeReportsProvider extends ReportsProvider {
     String? barcode,
     int? page,
   }) async {}
+
+  @override
+  Future<consumed.GetConsumedStocksReportResponse>
+      fetchConsumedStocksReportSnapshot(
+              {required String accessToken,
+              String? productId,
+              String? storeId,
+              String? from,
+              String? until,
+              int? page}) async =>
+          consumed.GetConsumedStocksReportResponse(
+              status: 'success', data: consumed.Data(data: []));
 
   @override
   Future<void> fetchConsumedStocksReport({
@@ -310,10 +346,25 @@ void main() {
       expect(tester.takeException(), isNull);
       return;
     }
-    await tapFilterToggle(tester, key: toggleKey);
-    await tester.pump();
+    if (screen is ConsumedStocksReportPage) {
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+    } else {
+      await tapFilterToggle(tester, key: toggleKey);
+      await tester.pump();
+    }
 
-    expect(find.byKey(panelKey), findsOneWidget);
+    if (screen is StockReportPage) {
+      expect(find.byType(CollapsibleFilterTile), findsOneWidget);
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      expect(find.byType(FilterPanel), findsOneWidget);
+    } else if (screen is ConsumedStocksReportPage) {
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.byType(FilterPanel), findsOneWidget);
+    } else {
+      expect(find.byKey(panelKey), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
   }
 
@@ -341,7 +392,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const SupplierTransactionReportScreen(),
+      screen: const SupplierTransactionsReportPage(),
       toggleKey: const ValueKey('supplier-transactions-report-filter-toggle'),
       panelKey: const ValueKey('supplier-transactions-report-filters'),
     );
@@ -350,7 +401,7 @@ void main() {
   testWidgets('Stock Report collapses its desktop filters', (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const StockReportScreen(),
+      screen: const StockReportPage(),
       toggleKey: const ValueKey('stock-report-filter-toggle'),
       panelKey: const ValueKey('stock-report-filters'),
     );
@@ -369,7 +420,7 @@ void main() {
       (tester) async {
     await verifyDesktopCollapse(
       tester,
-      screen: const ConsumedStocksReportScreen(),
+      screen: const ConsumedStocksReportPage(),
       toggleKey: const ValueKey('consumed-stocks-report-filter-toggle'),
       panelKey: const ValueKey('consumed-stocks-report-filters'),
     );
@@ -389,12 +440,12 @@ void main() {
         const ValueKey('customer-transactions-report-filters'),
       ),
       (
-        const SupplierTransactionReportScreen(),
+        const SupplierTransactionsReportPage(),
         const ValueKey('supplier-transactions-report-filter-toggle'),
         const ValueKey('supplier-transactions-report-filters'),
       ),
       (
-        const StockReportScreen(),
+        const StockReportPage(),
         const ValueKey('stock-report-filter-toggle'),
         const ValueKey('stock-report-filters'),
       ),
@@ -404,7 +455,7 @@ void main() {
         const ValueKey('non-stock-report-filters'),
       ),
       (
-        const ConsumedStocksReportScreen(),
+        const ConsumedStocksReportPage(),
         const ValueKey('consumed-stocks-report-filter-toggle'),
         const ValueKey('consumed-stocks-report-filters'),
       ),
