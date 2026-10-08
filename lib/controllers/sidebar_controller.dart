@@ -1,3 +1,4 @@
+import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
@@ -59,7 +60,6 @@ import 'package:pos_machine/features/suppliers/presentation/pages/supplier_profi
 import 'package:pos_machine/screens/transactions/company_accounts/company_accounts.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/add_company_account.dart';
 import 'package:pos_machine/screens/transactions/company_accounts/account_details_screen.dart';
-import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:pos_machine/screens/sales_return/sales_return.dart';
 import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
@@ -178,7 +178,7 @@ class SideBarController extends GetxController {
   var screens = const [
     BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
-    SalesScreen(), //2
+    SalesListPage(), //2
     CartScreen(), //3
     TransactionScreen(), //4
     CustomersListPage(), //5
@@ -275,7 +275,7 @@ class SideBarController extends GetxController {
     ), // 89 Restaurant Billing Page
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
-    SalesScreen(isOnlineSales: true), // 92 Online Sales
+    SalesListPage(isOnlineSales: true), // 92 Online Sales
     ExpenseListPage(), // expenseListScreenIndex (93)
     CreateExpensePage(), // createExpenseScreenIndex (94)
     ViewExpensePage(), // viewExpenseScreenIndex (95)

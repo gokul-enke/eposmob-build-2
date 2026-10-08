@@ -903,6 +903,7 @@
     "version_unavailable": "Not available"
   },
   "pagination": {
+    "current_page": "Page @current",
     "previous": "Previous",
     "next": "Next",
     "page": "Page",
@@ -1884,6 +1885,20 @@
     "view_order_items": "View @count items"
   },
   "sales": {
+    "list_copy": "Copy order or receipt number",
+    "list_subtitle": "Review and manage sales orders.",
+    "list_filter_title": "Find sales orders",
+    "list_filter_hint": "Filter by order, customer, phone, price, status and dates.",
+    "list_count": "@count orders on this page",
+    "list_receipt_number": "Receipt number",
+    "list_load_error": "Unable to load orders. Previous results may be out of date.",
+    "list_export_error": "Unable to export the orders. Refresh and try again.",
+    "list_export_page_error": "Unable to export orders: page @page could not be loaded. Try again or contact support.",
+    "list_export_progress": "Fetching page @page…",
+    "view_order": "View order",
+    "print_order": "Print order",
+    "more_actions": "More actions",
+
     "orders_list": "Orders List",
     "online_orders_list": "Online Orders List",
     "order_number_short": "Order #",
@@ -1917,6 +1932,7 @@
     "status_new": "NEW",
     "status_pending": "PENDING",
     "status_confirmed": "CONFIRMED",
+    "status_delivered": "DELIVERED",
     "status_cancelled": "CANCELLED",
     "invoice_downloaded": "Invoice downloaded successfully to @path",
     "invoice_not_found": "Invoice not found. The order may not have a generated invoice.",
