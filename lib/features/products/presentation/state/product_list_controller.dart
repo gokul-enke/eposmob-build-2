@@ -44,8 +44,9 @@ class ProductListController extends ChangeNotifier {
       categoryId: categoryId,
       property: property);
   bool get hasFilters => !query.isEmpty;
-  bool get canExport =>
-      !loading && !deleting && error == null && _all.isNotEmpty;
+  // [error] only reports a category directory outage; the local rows on
+  // screen remain exportable.
+  bool get canExport => !loading && !deleting && _all.isNotEmpty;
   void _notify() {
     if (!_disposed) notifyListeners();
   }

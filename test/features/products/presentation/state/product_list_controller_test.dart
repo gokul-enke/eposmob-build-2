@@ -128,7 +128,8 @@ void main() {
     expect(list.property, isNull);
     expect(list.all, hasLength(45));
   });
-  test('directory outage retains local rows and can be retried', () async {
+  test('directory outage retains exportable local rows and can be retried',
+      () async {
     var failed = true;
     final controller = ProductListController(
         source: list.source,
@@ -139,7 +140,8 @@ void main() {
     await controller.initialize();
     expect(controller.rows, hasLength(20));
     expect(controller.error, isNotNull);
-    expect(controller.canExport, isFalse);
+    expect(controller.canExport, isTrue);
+    expect(controller.exportSnapshot(), hasLength(45));
     failed = false;
     await controller.initialize();
     expect(controller.error, isNull);
