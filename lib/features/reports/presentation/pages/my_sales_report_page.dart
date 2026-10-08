@@ -184,8 +184,7 @@ class _MySalesReportPageState extends State<MySalesReportPage> {
         null => null,
         ReportLoadError.invertedRange => ReportErrorBar(
             message: _tr('from_date_after_to_date'),
-            retryLabel: _tr('retry'),
-            onRetry: _report.load),
+            retryLabel: _tr('retry')),
         ReportLoadError.failed => ReportErrorBar(
             message: _tr('load_error'),
             retryLabel: _tr('retry'),

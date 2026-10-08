@@ -26,12 +26,27 @@ class PriceTextField extends StatefulWidget {
 
   @override
   State<PriceTextField> createState() => _PriceTextFieldState();
+
+  static final Set<_PriceTextFieldState> _mounted = {};
+
+  /// Commits a price the cashier typed but has not confirmed yet with blur,
+  /// Enter or Tab. Keyboard shortcuts (checkout, discount, pay) do not move
+  /// focus, so they call this before acting on the cart; otherwise checkout
+  /// would open with the old price and the typed one would land afterwards.
+  static void commitPendingEdits() {
+    for (final state in List.of(_mounted)) {
+      state._commitPendingEdit();
+    }
+  }
 }
 
 class _PriceTextFieldState extends State<PriceTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
   bool _suppressPriceListener = false;
+  bool _priceEdited = false;
+  double? _automaticPriceAtFocus;
+  late String _lastControllerText;
 
   double _displayPrice() {
     return (widget.item.displayPrice ?? widget.item.price ?? 0.0) as double;
@@ -49,14 +64,26 @@ class _PriceTextFieldState extends State<PriceTextField> {
     return value.toString();
   }
 
+  /// Whether [displayPrice] is the current price of a line whose price is
+  /// still automatic (standard, wholesale or offer). Committing it is not an
+  /// edit: the line must not become manual, lose its offer, or be clamped to
+  /// the minimum margin (which never applies to offer prices). Offer prices
+  /// carry up to 3 decimals, so values within half a thousandth match.
+  bool _isUnchangedAutomaticPrice(double displayPrice) {
+    if (widget.item.isManualPriceOverride == true) return false;
+    return (displayPrice - _displayPrice()).abs() < 0.0005;
+  }
+
   void _setControllerText(String text) {
     _suppressPriceListener = true;
+    _lastControllerText = text;
     controller.text = text;
     _suppressPriceListener = false;
   }
 
   void _setControllerValue(TextEditingValue value) {
     _suppressPriceListener = true;
+    _lastControllerText = value.text;
     controller.value = value;
     _suppressPriceListener = false;
   }
@@ -64,28 +91,20 @@ class _PriceTextFieldState extends State<PriceTextField> {
   // Listener to sync controller changes (including on-screen keyboard input) with provider
   void _handleTextChanged() {
     if (_suppressPriceListener) return;
+    // Selection changes also notify the controller. They are not price edits.
+    if (controller.text == _lastControllerText) return;
+    _lastControllerText = controller.text;
 
-    final parsedPrice = double.tryParse(controller.text);
-    if (parsedPrice != null && parsedPrice >= 0) {
-      final basePrice = _toBasePrice(parsedPrice);
-      final currentBase = (widget.item.price ?? 0.0) as double;
-      if ((basePrice - currentBase).abs() < 0.001) return;
-
-      widget.localProductProvider.updateItemPrice(
-        widget.item.product.productId!,
-        widget.item.selectedStock,
-        basePrice,
-        stockGroupIds: widget.item.stockGroupIds,
-        saleUnitId: widget.item.saleUnitId,
-        variantId: widget.item.variantId,
-      );
-    }
+    // Keep input local until blur/Enter/Tab, including virtual-keyboard input.
+    _priceEdited = true;
   }
 
   @override
   void initState() {
     super.initState();
+    PriceTextField._mounted.add(this);
     controller = TextEditingController(text: _displayPrice().toString());
+    _lastControllerText = controller.text;
     focusNode = FocusNode(onKeyEvent: (node, event) => _handleFieldKey(event));
 
     // Listen for any text changes from either physical or virtual keyboards
@@ -96,10 +115,21 @@ class _PriceTextFieldState extends State<PriceTextField> {
   }
 
   void _handleFocusChange() {
-    if (!focusNode.hasFocus) {
-      _enforceMinSalePrice();
+    if (focusNode.hasFocus) {
+      _priceEdited = false;
+      _automaticPriceAtFocus = widget.item.isManualPriceOverride == true
+          ? null
+          : _displayPrice();
+      _setControllerText(_displayPrice().toString());
+    } else {
+      _commitPrice();
     }
   }
+
+  bool _isPriceEditing(KeyboardProvider keyboardProvider) =>
+      focusNode.hasFocus ||
+          (keyboardProvider.showKeyboard &&
+              identical(keyboardProvider.controller, controller));
 
   /// Clamps the entered price up to the product's minimum sale price when it
   /// would otherwise drop below the configured discount floor.
@@ -107,6 +137,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
   bool _enforceMinSalePrice() {
     final parsedPrice = double.tryParse(controller.text);
     if (parsedPrice == null) return false;
+    if (_isUnchangedAutomaticPrice(parsedPrice)) return false;
 
     final double? minBase =
         widget.localProductProvider.minimumSalePriceForCartItem(widget.item);
@@ -172,9 +203,16 @@ class _PriceTextFieldState extends State<PriceTextField> {
     );
   }
 
-  void _commitAndEndEditing() {
+  void _commitPrice() {
     final parsedPrice = double.tryParse(controller.text);
-    if (parsedPrice != null && parsedPrice >= 0) {
+    if (!_priceEdited ||
+        (parsedPrice != null &&
+            (_isUnchangedAutomaticPrice(parsedPrice) ||
+                (_automaticPriceAtFocus != null &&
+                    (parsedPrice - _automaticPriceAtFocus!).abs() < 0.0005)))) {
+      // Retyping the original automatic value follows any newer offer too.
+      _setControllerText(_displayPrice().toString());
+    } else if (parsedPrice != null && parsedPrice >= 0) {
       // Clamp to the minimum sale price; only set the entered price when it is
       // at or above the floor.
       if (!_enforceMinSalePrice()) {
@@ -190,7 +228,11 @@ class _PriceTextFieldState extends State<PriceTextField> {
     } else {
       _setControllerText(_displayPrice().toString());
     }
+    _priceEdited = false;
+  }
 
+  void _commitAndEndEditing() {
+    _commitPrice();
     Provider.of<KeyboardProvider>(context, listen: false).hide();
     focusNode.unfocus();
     widget.onEditingComplete?.call();
@@ -246,8 +288,13 @@ class _PriceTextFieldState extends State<PriceTextField> {
     }
   }
 
+  void _commitPendingEdit() {
+    if (mounted && _priceEdited) _commitPrice();
+  }
+
   @override
   void dispose() {
+    PriceTextField._mounted.remove(this);
     controller.removeListener(_handleTextChanged);
     focusNode.removeListener(_handleFocusChange);
     controller.dispose();
@@ -262,19 +309,16 @@ class _PriceTextFieldState extends State<PriceTextField> {
         // Check if the price has changed and update the controller if needed
         final currentPrice = _displayPrice().toString();
 
-        // Consider the field to be in-edit if it has focus OR a virtual keyboard is currently
-        // shown for this controller. In that case we must NOT overwrite the text.
+        // Preserve actual cashier edits while the field or its virtual
+        // keyboard is active. An untouched field follows automatic prices.
         final keyboardProvider =
             Provider.of<KeyboardProvider>(context, listen: false);
-        final bool isEditing = focusNode.hasFocus ||
-            (keyboardProvider.showKeyboard &&
-                identical(keyboardProvider.controller, controller));
 
-        if (!isEditing && controller.text != currentPrice) {
-          // Only update if user is not currently editing the field
+        if (!_isPriceEditing(keyboardProvider) &&
+            controller.text != currentPrice) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _setControllerText(currentPrice);
+            if (mounted && !_isPriceEditing(keyboardProvider)) {
+              _setControllerText(_displayPrice().toString());
             }
           });
         }
@@ -303,28 +347,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             _beginEditing();
           },
           onChanged: (newPrice) {
-            // Validate and update immediately on change
-            final parsedPrice = double.tryParse(newPrice);
-            if (parsedPrice != null && parsedPrice >= 0) {
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                _toBasePrice(parsedPrice),
-                stockGroupIds: widget.item.stockGroupIds,
-                saleUnitId: widget.item.saleUnitId,
-                variantId: widget.item.variantId,
-              );
-            } else if (newPrice.isEmpty) {
-              // Allow empty field for editing
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                0.0,
-                stockGroupIds: widget.item.stockGroupIds,
-                saleUnitId: widget.item.saleUnitId,
-                variantId: widget.item.variantId,
-              );
-            }
+            _priceEdited = true;
           },
           onSubmitted: (newPrice) {
             _commitAndEndEditing();

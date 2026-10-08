@@ -3,6 +3,7 @@ enum RealtimeSyncEntity {
   products,
   stocks,
   orders,
+  offers,
 }
 
 class EntityChangeSet {
@@ -40,6 +41,7 @@ class RealtimeChangeSet {
     this.products = const EntityChangeSet(),
     this.stocks = const EntityChangeSet(),
     this.orders = const EntityChangeSet(),
+    this.offers = const EntityChangeSet(),
   });
 
   final EntityChangeSet customers;
@@ -47,11 +49,16 @@ class RealtimeChangeSet {
   final EntityChangeSet stocks;
   final EntityChangeSet orders;
 
+  /// Product offers changed; the offer catalog is pulled separately and is
+  /// never deferred by an open cart.
+  final EntityChangeSet offers;
+
   bool get hasChanges =>
       customers.hasChanges ||
       products.hasChanges ||
       stocks.hasChanges ||
-      orders.hasChanges;
+      orders.hasChanges ||
+      offers.hasChanges;
 
   bool get hasCatalogChanges => products.hasChanges || stocks.hasChanges;
 
@@ -62,6 +69,7 @@ class RealtimeChangeSet {
       products: EntityChangeSet.fromJson(value['products']),
       stocks: EntityChangeSet.fromJson(value['stocks']),
       orders: EntityChangeSet.fromJson(value['orders']),
+      offers: EntityChangeSet.fromJson(value['offers']),
     );
   }
 }

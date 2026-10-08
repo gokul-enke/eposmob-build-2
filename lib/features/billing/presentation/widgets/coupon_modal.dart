@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -53,6 +54,8 @@ class CouponModal extends StatefulWidget {
 }
 
 class _CouponModalState extends State<CouponModal> {
+  static const _couponController = BillingMobileCouponController();
+
   DiscountData? _selectedDiscount;
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
@@ -78,9 +81,9 @@ class _CouponModalState extends State<CouponModal> {
         0.0;
 
     flatDiscountController = TextEditingController(
-        text: initialFlat == 0.0 ? '' : initialFlat.toString());
+        text: _couponController.initialDiscountFieldText(initialFlat));
     percentageDiscountController = TextEditingController(
-        text: initialPercentage == 0.0 ? '' : initialPercentage.toString());
+        text: _couponController.initialDiscountFieldText(initialPercentage));
 
     isCouponApplied = widget.isCouponApplied;
 
@@ -95,12 +98,16 @@ class _CouponModalState extends State<CouponModal> {
 
     _discountProvider = Provider.of<DiscountProvider>(context, listen: false);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchDiscountsIfNeeded();
-      _findDiscountByCode(widget.initialCouponCode);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         _flatDiscountFocusNode.requestFocus();
       }
+      // The list must be loaded before the applied coupon can be re-selected.
+      await _fetchDiscountsIfNeeded();
+      if (!mounted) return;
+      setState(() {
+        _findDiscountByCode(widget.initialCouponCode);
+      });
     });
   }
 
@@ -144,15 +151,16 @@ class _CouponModalState extends State<CouponModal> {
   }
 
   void _onManualDiscountChanged() {
-    final hasFlat = flatDiscountController.text.isNotEmpty;
-    final hasPercentage = percentageDiscountController.text.isNotEmpty;
-
-    if (hasFlat || hasPercentage) {
-      if (_selectedDiscount != null) {
-        setState(() {
-          _selectedDiscount = null;
-        });
-      }
+    // Only an actual edit away from the coupon's values drops the coupon;
+    // focus/selection changes also notify these controllers.
+    if (_couponController.shouldClearSelectedCouponOnManualInput(
+      flatDiscountText: flatDiscountController.text,
+      percentageDiscountText: percentageDiscountController.text,
+      selectedDiscount: _selectedDiscount,
+    )) {
+      setState(() {
+        _selectedDiscount = null;
+      });
     }
   }
 
@@ -166,18 +174,13 @@ class _CouponModalState extends State<CouponModal> {
     debugPrint('  - Valid From: ${discount.validFromDate}');
     debugPrint('  - Valid To: ${discount.validToDate}');
 
-    final isPercentage = discount.discountType.toLowerCase() == 'percent';
-    final finalValue = discount.discountValue.toDouble();
+    final values = _couponController.fieldValuesForSelectedDiscount(discount);
 
+    // Select first so the field listeners see values matching the coupon.
+    _selectedDiscount = discount;
     setState(() {
-      if (isPercentage) {
-        flatDiscountController.clear();
-        percentageDiscountController.text = finalValue.toString();
-      } else {
-        flatDiscountController.text = finalValue.toString();
-        percentageDiscountController.clear();
-      }
-      _selectedDiscount = discount;
+      flatDiscountController.text = values.flat;
+      percentageDiscountController.text = values.percent;
       isCouponApplied = false;
     });
 
@@ -269,8 +272,10 @@ class _CouponModalState extends State<CouponModal> {
     double percentageDiscount =
         double.tryParse(percentageDiscountController.text) ?? 0.0;
 
+    // Pass the coupon code through so it is kept on the order (coupon_id) and
+    // the coupon is re-selected when the discount step is reopened.
     widget.onCouponAction(
-      '', // Send empty code to treat as simple discount
+      _selectedDiscount?.couponCode ?? '',
       flatDiscount > 0 || percentageDiscount > 0,
       flatDiscount: flatDiscount,
       percentageDiscount: percentageDiscount,
@@ -510,6 +515,13 @@ class _CouponModalState extends State<CouponModal> {
                   onChanged: (val) {
                     if (val != null) {
                       _onDiscountSelected(val);
+                    } else if (_selectedDiscount != null) {
+                      // Dropdown "x": drop the coupon and the values it set.
+                      _selectedDiscount = null;
+                      setState(() {
+                        flatDiscountController.clear();
+                        percentageDiscountController.clear();
+                      });
                     }
                   },
                   displayText: (discount) =>
@@ -892,7 +904,7 @@ class _CouponModalState extends State<CouponModal> {
     final isPercentage = discount.discountType.toLowerCase() == 'percent';
     final discountText = isPercentage
         ? '${discount.discountValue}%'
-        : '$currency${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
+        : '$currency ${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
 
     Color badgeColor;
     // ignore: unused_local_variable

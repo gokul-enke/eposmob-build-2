@@ -47,8 +47,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
     double totalMRP = _calculateTotalMRP();
     double netTotal = 0.0;
     for (var item in order.items) {
-      final price = item.price ?? item.product.price?.price ?? 0.0;
-      netTotal += price * item.quantity;
+      netTotal += item.amounts.total;
     }
     double youSaved = totalMRP - netTotal;
     return youSaved > 0 ? youSaved : 0.0;
@@ -59,7 +58,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
       0.0,
       (sum, item) =>
           sum +
-          ((item.price ?? item.product.price?.price ?? 0.0) * item.quantity),
+          item.amounts.total,
     );
 
     final flatDiscount = order.flatDiscount ?? 0.0;
@@ -386,7 +385,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
                                 double unitPrice = item.price ??
                                     item.product.price?.price ??
                                     0.0;
-                                double totalPrice = unitPrice * item.quantity;
+                                double totalPrice = item.amounts.total;
 
                                 return DataRow(cells: [
                                   DataCell(Text(
@@ -575,8 +574,8 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         // Calculate individual item values
         double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
         double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-        double itemTotalPrice = itemPrice * item.quantity;
-        double itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+        double itemTotalPrice = item.amounts.total;
+        double itemTax = item.amounts.tax;
 
         // Add to totals for "You Saved" calculation
         totalMRP += itemMrp * item.quantity;
