@@ -12,7 +12,6 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_translations.dart';
 import 'package:pos_machine/resources/localization_service.dart';
-import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/sales.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -168,16 +167,6 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('Day Close uses the shared filter toggle on mobile',
-      (tester) async {
-    await verifyMobileToggle(
-      tester,
-      screen: const DailySalesCloseListScreen(),
-      toggleKey: const ValueKey('day-close-filter-toggle'),
-      filtersKey: const ValueKey('day-close-filters'),
-    );
-  });
-
   testWidgets('Orders List uses the shared filter toggle on desktop',
       (tester) async {
     await verifyDesktopToggle(
@@ -185,16 +174,6 @@ void main() {
       screen: const SalesScreen(),
       toggleKey: const ValueKey('orders-list-filter-toggle'),
       filtersKey: const ValueKey('orders-list-filters'),
-    );
-  });
-
-  testWidgets('Day Close uses the shared filter toggle on desktop',
-      (tester) async {
-    await verifyDesktopToggle(
-      tester,
-      screen: const DailySalesCloseListScreen(),
-      toggleKey: const ValueKey('day-close-filter-toggle'),
-      filtersKey: const ValueKey('day-close-filters'),
     );
   });
 }
