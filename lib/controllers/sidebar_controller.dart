@@ -24,7 +24,7 @@ import 'package:pos_machine/screens/loyality_card/loyality.dart';
 import 'package:pos_machine/screens/notifications/notifications.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/features/products/presentation/pages/product_list_page.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/pages/barcode_list_page.dart';
 import 'package:pos_machine/screens/product/tabbar_for_edit_product.dart';
 import 'package:pos_machine/screens/product/widgets/add_product_stock.dart';
 import 'package:pos_machine/screens/product/widgets/view_product.dart';
@@ -175,6 +175,9 @@ class SideBarController extends GetxController {
   static const int createSalesReturnScreenIndex = 49;
   static const int salesReturnListScreenIndex = 50;
 
+  /// Barcode listing in [screens]. Navigate through [BarcodeNavigation].
+  static const int productBarcodeListScreenIndex = 83;
+
   /// Catalog listing only. Inner product screen slots remain unchanged.
   static const int productListScreenIndex = 14;
 
@@ -288,7 +291,7 @@ class SideBarController extends GetxController {
     ConsumedStocksReportPage(), // 80 Consumed Stocks Report
     PurchaseOrderListPage(), // purchaseOrderListScreenIndex
     CreatePurchaseOrderPage(), // createPurchaseOrderScreenIndex
-    ProductBarcodeScreen(), // 83 Product Barcode Screen
+    BarcodeListPage(), // productBarcodeListScreenIndex
     AdminDailySalesCloseListPage(), // adminDailySalesCloseListScreenIndex
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
     BillingQuotationPageResponsive(), // 86 Quotations

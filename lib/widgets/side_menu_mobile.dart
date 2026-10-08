@@ -8,7 +8,6 @@ import 'package:pos_machine/features/purchase_returns/presentation/navigation/pu
 import 'package:pos_machine/features/sales/presentation/navigation/sales_navigation.dart';
 import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
-import 'package:pos_machine/features/reports/presentation/navigation/report_navigation.dart';
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';

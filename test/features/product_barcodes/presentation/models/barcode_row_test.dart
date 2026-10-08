@@ -1,46 +1,17 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/screens/product/product_barcode.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/models/barcode_row.dart';
+import 'package:pos_machine/features/product_barcodes/presentation/models/barcode_rows.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'test_support/hive_test_teardown.dart';
+import '../../../../test_support/hive_test_teardown.dart';
 
-List<BarcodeRow> testExpandProductsToBarcodeRows(List<GetProduct> products) {
-  final rows = <BarcodeRow>[];
-  for (final product in products) {
-    final subRows = <BarcodeRow>[];
-
-    final variants = product.variants;
-    if (variants != null && variants.isNotEmpty) {
-      for (final v in variants) {
-        if (!v.active) continue;
-        final bc = v.barcode?.trim() ?? '';
-        if (bc.isNotEmpty) {
-          subRows.add(BarcodeRow(product: product, variant: v));
-        }
-      }
-    }
-
-    final units = product.saleUnits;
-    if (units != null && units.isNotEmpty) {
-      final baseBarcode = (product.barcode ?? '').trim();
-      for (final u in units) {
-        final bc = u.barcode?.trim() ?? '';
-        if (bc.isNotEmpty && bc != baseBarcode) {
-          subRows.add(BarcodeRow(product: product, saleUnit: u));
-        }
-      }
-    }
-
-    rows.add(BarcodeRow(product: product));
-    rows.addAll(subRows);
-  }
-  return rows;
-}
+List<BarcodeRow> testExpandProductsToBarcodeRows(List<GetProduct> products) =>
+    expandProductsToBarcodeRows(products);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -50,10 +21,14 @@ void main() {
   setUpAll(() async {
     hiveDir = await Directory.systemTemp.createTemp('epos_barcode_row_test_');
     Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(HiveStringValueAdapter());
-    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(HiveLocalCartItemAdapter());
-    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HiveSavedOrderAdapter());
-    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(HiveProductAdapter());
+    if (!Hive.isAdapterRegistered(0))
+      Hive.registerAdapter(HiveStringValueAdapter());
+    if (!Hive.isAdapterRegistered(1))
+      Hive.registerAdapter(HiveLocalCartItemAdapter());
+    if (!Hive.isAdapterRegistered(2))
+      Hive.registerAdapter(HiveSavedOrderAdapter());
+    if (!Hive.isAdapterRegistered(3))
+      Hive.registerAdapter(HiveProductAdapter());
     await Hive.openBox<HiveProduct>('products');
     await Hive.openBox<HiveLocalCartItem>('cart_items');
     await Hive.openBox<HiveSavedOrder>('saved_orders');
@@ -95,15 +70,18 @@ void main() {
       );
 
   BarcodeRow _baseRow(GetProduct p) => BarcodeRow(product: p);
-  BarcodeRow _vRow(GetProduct p, ProductVariant v) => BarcodeRow(product: p, variant: v);
-  BarcodeRow _uRow(GetProduct p, SaleUnit u) => BarcodeRow(product: p, saleUnit: u);
+  BarcodeRow _vRow(GetProduct p, ProductVariant v) =>
+      BarcodeRow(product: p, variant: v);
+  BarcodeRow _uRow(GetProduct p, SaleUnit u) =>
+      BarcodeRow(product: p, saleUnit: u);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Issue 1 — Base-row stock filtering
   // ─────────────────────────────────────────────────────────────────────────
   group('Issue 1 — base row stock filter', () {
     test('only variant-owned stock → base row has empty stock', () {
-      final p = _mkProduct(stock: [Stock(id: 1, productVariantId: 42, quantity: 5)]);
+      final p =
+          _mkProduct(stock: [Stock(id: 1, productVariantId: 42, quantity: 5)]);
       expect(_baseRow(p).toProductForPrint().stock, isEmpty);
     });
 
@@ -129,7 +107,8 @@ void main() {
     });
 
     test('no stock → empty, not null', () {
-      expect(_baseRow(_mkProduct(stock: null)).toProductForPrint().stock, isEmpty);
+      expect(
+          _baseRow(_mkProduct(stock: null)).toProductForPrint().stock, isEmpty);
     });
   });
 
@@ -152,21 +131,29 @@ void main() {
     test('both null → base × rate', () {
       final p = _mkProduct(price: '10.0');
       final u = SaleUnit(id: 1, conversionRate: '12');
-      expect(SaleUnit.resolveDisplayPrice(product: p, saleUnit: u), closeTo(120.0, 0.001));
+      expect(SaleUnit.resolveDisplayPrice(product: p, saleUnit: u),
+          closeTo(120.0, 0.001));
     });
 
     test('batch override wins over price and resolvedPrice', () {
       final p = _mkProduct(price: '10.0');
-      final u = SaleUnit(id: 5, conversionRate: '12', price: 130.0, resolvedPrice: 140.0);
+      final u = SaleUnit(
+          id: 5, conversionRate: '12', price: 130.0, resolvedPrice: 140.0);
       final stock = Stock(id: 99, unitPriceOverrides: {5: 200.0});
-      expect(SaleUnit.resolveDisplayPrice(product: p, saleUnit: u, selectedStock: stock), 200.0);
+      expect(
+          SaleUnit.resolveDisplayPrice(
+              product: p, saleUnit: u, selectedStock: stock),
+          200.0);
     });
 
     test('batch override zero → falls through to master price', () {
       final p = _mkProduct(price: '10.0');
       final u = SaleUnit(id: 5, conversionRate: '12', price: 130.0);
       final stock = Stock(id: 99, unitPriceOverrides: {5: 0.0});
-      expect(SaleUnit.resolveDisplayPrice(product: p, saleUnit: u, selectedStock: stock), 130.0);
+      expect(
+          SaleUnit.resolveDisplayPrice(
+              product: p, saleUnit: u, selectedStock: stock),
+          130.0);
     });
 
     test('priceDisplay auto-fallback base×rate when no price on unit', () {
@@ -241,22 +228,29 @@ void main() {
   group('Issue 4 — selection key uniqueness', () {
     test('two null-id units on same product → distinct keys', () {
       final p = _mkProduct();
-      final uA = SaleUnit(id: null, unitId: 1, unitName: 'DOZEN', conversionRate: '12');
-      final uB = SaleUnit(id: null, unitId: 2, unitName: 'HALF', conversionRate: '6');
-      expect(_uRow(p, uA).selectionKey, isNot(equals(_uRow(p, uB).selectionKey)));
+      final uA = SaleUnit(
+          id: null, unitId: 1, unitName: 'DOZEN', conversionRate: '12');
+      final uB =
+          SaleUnit(id: null, unitId: 2, unitName: 'HALF', conversionRate: '6');
+      expect(
+          _uRow(p, uA).selectionKey, isNot(equals(_uRow(p, uB).selectionKey)));
     });
 
     test('same unit → same key (stable)', () {
       final p = _mkProduct();
-      final u = SaleUnit(id: null, unitId: 7, unitName: 'BOX', conversionRate: '24');
+      final u =
+          SaleUnit(id: null, unitId: 7, unitName: 'BOX', conversionRate: '24');
       expect(_uRow(p, u).selectionKey, equals(_uRow(p, u).selectionKey));
     });
 
     test('units differing only by barcode → distinct keys', () {
       final p = _mkProduct();
-      final uA = SaleUnit(id: null, unitId: 1, conversionRate: '12', barcode: 'A');
-      final uB = SaleUnit(id: null, unitId: 1, conversionRate: '12', barcode: 'B');
-      expect(_uRow(p, uA).selectionKey, isNot(equals(_uRow(p, uB).selectionKey)));
+      final uA =
+          SaleUnit(id: null, unitId: 1, conversionRate: '12', barcode: 'A');
+      final uB =
+          SaleUnit(id: null, unitId: 1, conversionRate: '12', barcode: 'B');
+      expect(
+          _uRow(p, uA).selectionKey, isNot(equals(_uRow(p, uB).selectionKey)));
     });
 
     test('unit with real id → key includes id', () {
@@ -319,12 +313,22 @@ void main() {
           ProductVariant(id: 31, active: true, barcode: 'V1'),
           ProductVariant(id: 32, active: true, barcode: 'V2'),
         ]),
-        GetProduct(productId: 4, productName: 'PU1', barcode: 'BASE4', saleUnits: [
-          SaleUnit(id: 41, barcode: 'U1'), SaleUnit(id: 42, barcode: 'U2')
-        ]),
-        GetProduct(productId: 5, productName: 'PU2', barcode: 'BASE5', saleUnits: [
-          SaleUnit(id: 51, barcode: 'U3'), SaleUnit(id: 52, barcode: 'U4')
-        ]),
+        GetProduct(
+            productId: 4,
+            productName: 'PU1',
+            barcode: 'BASE4',
+            saleUnits: [
+              SaleUnit(id: 41, barcode: 'U1'),
+              SaleUnit(id: 42, barcode: 'U2')
+            ]),
+        GetProduct(
+            productId: 5,
+            productName: 'PU2',
+            barcode: 'BASE5',
+            saleUnits: [
+              SaleUnit(id: 51, barcode: 'U3'),
+              SaleUnit(id: 52, barcode: 'U4')
+            ]),
       ]);
       expect(rows.length, 11);
     });
@@ -336,7 +340,9 @@ void main() {
         final e = (s + size).clamp(0, all.length);
         return all.sublist(s, e);
       }
-      final all = List.generate(11, (i) => BarcodeRow(product: _mkProduct(id: i + 1)));
+
+      final all =
+          List.generate(11, (i) => BarcodeRow(product: _mkProduct(id: i + 1)));
       expect(page(all, 1).length, 5);
       expect(page(all, 2).length, 5);
       expect(page(all, 3).length, 1);
@@ -372,7 +378,8 @@ void main() {
         variants: [ProductVariant(id: 11, active: true, barcode: 'ACTIVE-BAR')],
       );
       provider.initializeProducts([p]);
-      expect(provider.filterProductByBarcode(barCode: 'ACTIVE-BAR'), hasLength(1));
+      expect(
+          provider.filterProductByBarcode(barCode: 'ACTIVE-BAR'), hasLength(1));
     });
 
     test('inactive variant barcode → filterProductByBarcode returns empty', () {
@@ -380,7 +387,9 @@ void main() {
       final p = GetProduct(
         productId: 2,
         productName: 'P2',
-        variants: [ProductVariant(id: 21, active: false, barcode: 'INACTIVE-BAR')],
+        variants: [
+          ProductVariant(id: 21, active: false, barcode: 'INACTIVE-BAR')
+        ],
       );
       provider.initializeProducts([p]);
       expect(provider.filterProductByBarcode(barCode: 'INACTIVE-BAR'), isEmpty);
@@ -389,7 +398,8 @@ void main() {
     test('active variant SKU → listAllProducts returns product', () {
       final provider = LocalProductProvider();
       final p = GetProduct(
-        productId: 3, productName: 'P3',
+        productId: 3,
+        productName: 'P3',
         variants: [ProductVariant(id: 31, active: true, sku: 'ACTIVE-SKU')],
       );
       provider.initializeProducts([p]);
@@ -400,7 +410,8 @@ void main() {
     test('inactive variant SKU only → listAllProducts returns empty', () {
       final provider = LocalProductProvider();
       final p = GetProduct(
-        productId: 4, productName: 'P4',
+        productId: 4,
+        productName: 'P4',
         variants: [ProductVariant(id: 41, active: false, sku: 'INACTIVE-SKU')],
       );
       provider.initializeProducts([p]);
@@ -410,7 +421,8 @@ void main() {
 
     test('inactive variant not included in expanded rows', () {
       final p = GetProduct(
-        productId: 5, productName: 'P5',
+        productId: 5,
+        productName: 'P5',
         variants: [
           ProductVariant(id: 51, active: false, barcode: 'INACT'),
           ProductVariant(id: 52, active: true, barcode: 'ACT'),
