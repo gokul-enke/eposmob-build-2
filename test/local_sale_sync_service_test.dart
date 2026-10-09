@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -42,6 +43,179 @@ Future<LocalSaleSyncRecord> _enqueue(LocalSaleSyncService service) {
 }
 
 void main() {
+  test('overlapping batches are blocked until the active batch finishes',
+      () async {
+    final started = Completer<void>();
+    final response = Completer<http.Response>();
+    final service = LocalSaleSyncService(
+        store: _MemoryOutbox(),
+        sender: (_, __, ___) {
+          started.complete();
+          return response.future;
+        });
+    await _enqueue(service);
+    final first = service.syncAfterVerification(
+        localOrderIds: ['local-1'],
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint));
+    await started.future;
+    expect(service.isBatchSyncing, isTrue);
+    await expectLater(
+        service.syncAfterVerification(
+            localOrderIds: ['local-1'], accessToken: 'token'),
+        throwsStateError);
+    response.complete(http.Response('{"order_id":91}', 201));
+    expect((await first).synced, 1);
+    expect(service.isBatchSyncing, isFalse);
+  });
+
+  test('edited request survives restart and preserves previous attempt bodies',
+      () async {
+    final store = _MemoryOutbox();
+    final sent = <String>[];
+    final service = LocalSaleSyncService(
+        store: store,
+        sender: (_, __, body) async {
+          sent.add(body);
+          return http.Response('{"message":"Invalid shipped ID"}', 422);
+        });
+    await _enqueue(service);
+    await service.submitOnce(
+        localOrderId: 'local-1',
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint));
+    final edited = {
+      ...service.recordFor('local-1')!.payload,
+      'order_id': 81,
+      'shipped_id': 12,
+      'issued_at': '2026-10-08T10:00:00Z'
+    };
+    await service.updateRequestPayload('local-1', edited);
+    edited['items'] = [];
+    expect(service.recordFor('local-1')!.state, LocalSaleSyncState.rejected);
+    expect(service.recordFor('local-1')!.payload['items'], isNotEmpty);
+    final restarted = LocalSaleSyncService(
+        store: store,
+        sender: (_, __, body) async {
+          sent.add(body);
+          return http.Response('{"order_id":81,"order_number":"INV-81"}', 201);
+        });
+    await restarted.hydrate();
+    await restarted.authorizeRetryAfterVerification('local-1');
+    final result = await restarted.submitOnce(
+        localOrderId: 'local-1',
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint));
+    expect(jsonDecode(sent.last)['shipped_id'], 12);
+    expect(jsonDecode(sent.last)['issued_at'], '2026-10-08T10:00:00Z');
+    expect(result.attempts.first.requestBody, sent.first);
+    expect(result.attempts.last.requestBody, sent.last);
+    expect(result.attempts.length, 2);
+    expect(() => restarted.updateRequestPayload('local-1', {'order_id': 99}),
+        throwsStateError);
+  });
+
+  test('cannot edit a sending request or an empty or dismissed request',
+      () async {
+    final response = Completer<http.Response>();
+    final started = Completer<void>();
+    final service = LocalSaleSyncService(
+        store: _MemoryOutbox(),
+        sender: (_, __, ___) {
+          started.complete();
+          return response.future;
+        });
+    await _enqueue(service);
+    await expectLater(
+        service.updateRequestPayload('local-1', {}), throwsStateError);
+    final pending = service.submitOnce(
+        localOrderId: 'local-1',
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint));
+    await started.future;
+    await expectLater(service.updateRequestPayload('local-1', {'order_id': 9}),
+        throwsStateError);
+    response.complete(http.Response('{"message":"Invalid"}', 422));
+    await pending;
+    await service.dismiss('local-1', note: 'Resolved externally');
+    await expectLater(service.updateRequestPayload('local-1', {'order_id': 9}),
+        throwsStateError);
+  });
+
+  test(
+      'bulk sync attempts unique eligible sales once and continues through failures',
+      () async {
+    final store = _MemoryOutbox();
+    final sentIds = <String>[];
+    var active = 0;
+    var maxActive = 0;
+    final service = LocalSaleSyncService(
+        store: store,
+        sender: (_, __, body) async {
+          final id = jsonDecode(body)['test_id'] as String;
+          sentIds.add(id);
+          active++;
+          if (active > maxActive) maxActive = active;
+          await Future<void>.delayed(Duration.zero);
+          active--;
+          if (id == 'rejected') {
+            return http.Response('{"message":"Invalid date"}', 422);
+          }
+          if (id == 'review') throw StateError('Connection lost');
+          return http.Response('{"order_id":91}', 201);
+        });
+    for (final id in ['synced', 'rejected', 'review', 'dismissed', 'success']) {
+      await service.enqueue(
+          localOrderId: id,
+          localOrderNumber: id,
+          sourceCartSessionId: id,
+          surface: LocalSaleSurface.mobileBilling,
+          payload: {'test_id': id});
+    }
+    await service.submitOnce(
+        localOrderId: 'synced',
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint));
+    await service.markNeedsReviewBeforeSend('dismissed',
+        message: 'Needs review');
+    await service.dismiss('dismissed', note: 'Resolved');
+    sentIds.clear();
+    final progress = <int>[];
+    final result = await service.syncAfterVerification(
+        localOrderIds: [
+          'synced',
+          'rejected',
+          'review',
+          'missing',
+          'dismissed',
+          'success',
+          'success'
+        ],
+        accessToken: 'token',
+        tenantKey: 'tenant',
+        endpoint: Uri.parse(_endpoint),
+        prepareSale: (id) async {
+          throw StateError('Preparation failed');
+        },
+        onProgress: (done, total) {
+          expect(total, 6);
+          progress.add(done);
+        });
+    expect(sentIds, ['rejected', 'review', 'success']);
+    expect(maxActive, 1);
+    expect(result.synced, 1);
+    expect(result.rejected, 1);
+    expect(result.needsReview, 1);
+    expect(result.skipped, 2);
+    expect(result.failed, 1);
+    expect(progress, [1, 2, 3, 4, 5, 6]);
+  });
+
   test('persists the exact payload and records a successful first attempt',
       () async {
     final store = _MemoryOutbox();
@@ -140,12 +314,12 @@ void main() {
       sender: (_, __, ___) async => http.Response('{}', 500),
     );
 
-    expect(await restarted.discardRejectedForCartSession('another-cart'),
-        isEmpty);
+    expect(
+        await restarted.discardRejectedForCartSession('another-cart'), isEmpty);
     expect(restarted.hasRecordedCartSession('cart-1'), isTrue);
 
-    expect(await restarted.discardRejectedForCartSession('cart-1'),
-        ['local-1']);
+    expect(
+        await restarted.discardRejectedForCartSession('cart-1'), ['local-1']);
     expect(restarted.hasRecordedCartSession('cart-1'), isFalse);
     expect(store.rows, isEmpty);
   });
@@ -353,6 +527,36 @@ void main() {
     expect(service.recordFor('local-1'), isNotNull);
   });
 
+  test('a never-sent legacy request can be deleted, a sent one cannot',
+      () async {
+    final store = _MemoryOutbox();
+    final service = LocalSaleSyncService(
+      store: store,
+      sender: (_, __, ___) async => http.Response('{}', 500),
+    );
+    Future<void> enqueueLegacy(String id) => service.enqueue(
+          localOrderId: id,
+          localOrderNumber: id,
+          sourceCartSessionId: id,
+          surface: LocalSaleSurface.legacy,
+          payload: {'order_id': 1},
+        );
+    await enqueueLegacy('legacy-unsent');
+    await service.remove('legacy-unsent');
+    expect(service.recordFor('legacy-unsent'), isNull);
+    expect(store.rows.containsKey('legacy-unsent'), isFalse);
+
+    await enqueueLegacy('legacy-sent');
+    await service.submitOnce(
+      localOrderId: 'legacy-sent',
+      accessToken: 'token',
+      tenantKey: 'tenant',
+      endpoint: Uri.parse(_endpoint),
+    );
+    expect(service.recordFor('legacy-sent')!.isUnsentLegacy, isFalse);
+    expect(() => service.remove('legacy-sent'), throwsStateError);
+  });
+
   test('links a durable sale to its source cart for crash recovery', () async {
     final service = LocalSaleSyncService(
       store: _MemoryOutbox(),
@@ -540,8 +744,10 @@ void main() {
           if (dismissed) 'dismissed_at': updatedAt,
         };
     final store = _MemoryOutbox();
-    store.rows['old-synced'] = row('old-synced', 'synced', '2026-08-01T00:00:00Z');
-    store.rows['new-synced'] = row('new-synced', 'synced', '2026-09-20T00:00:00Z');
+    store.rows['old-synced'] =
+        row('old-synced', 'synced', '2026-08-01T00:00:00Z');
+    store.rows['new-synced'] =
+        row('new-synced', 'synced', '2026-09-20T00:00:00Z');
     store.rows['old-rejected'] =
         row('old-rejected', 'rejected', '2026-08-01T00:00:00Z');
     store.rows['old-review'] =

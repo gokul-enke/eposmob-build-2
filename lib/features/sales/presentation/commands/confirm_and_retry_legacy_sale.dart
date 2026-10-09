@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/features/offers/domain/offer_money.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
-import 'package:pos_machine/models/order_submission_payload.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 
+import 'build_legacy_sale_request.dart';
 import 'local_sales_services.dart';
 
 Future<void> confirmAndRetryLegacySale(
@@ -63,49 +61,15 @@ Future<void> confirmAndRetryLegacySale(
   }
 
   final saleSync = services.sync;
-  final storeId = services.store.activeStore?.storeId;
+
   try {
-    final pay = PaymentHelper.buildApiPaymentPayloadFromLocal(
-      context: context,
-      storedPaymentMethod: order.paymentMethod,
-      storedPaidAmount: order.paidAmount,
-      storedBalanceAmount: order.balanceAmount,
-    );
-    final payload = OrderSubmissionPayload(
-      items: LocalProductProvider.buildOrderItemsPayloadFrom(order.items),
-      transactionNumber: order.transactionId ?? '',
-      customerId: order.customerId,
-      customerPhone: order.customerPhone ?? '',
-      paymentMethod: pay.paymentMethod,
-      paidAmount: pay.paidAmount,
-      paymentMethods: pay.paymentMethods,
-      paidMethods: pay.paidMethods,
-      balanceAmount: order.balanceAmount ?? '0.0',
-      couponId: order.couponId,
-      comment: order.comment,
-      deliveryMethodId: order.deliveryMethodId,
-      carNumber: order.carNumber,
-      status: 'confirmed',
-      deliveryDate: order.deliveryDate,
-      deliveryTime: order.deliveryTime,
-      tableId: order.tableId,
-      flatDiscount: order.flatDiscount,
-      percentageDiscount: order.percentageDiscount,
-      discountAmount: _legacyDiscountAmount(order),
-      toCustomerCredit: order.toCustomerCredit,
-      address: order.address,
-      addressId: order.addressId,
-      pincode: order.pincode,
-      quotationId: order.quotationId,
-      deliveryCharge: order.deliveryCharge ?? 0,
-      storeId: storeId,
-    );
+    final payload = buildLegacySaleRequest(context, order, services);
     await saleSync.enqueue(
       localOrderId: order.id,
       localOrderNumber: order.orderNumber,
       sourceCartSessionId: order.id,
       surface: LocalSaleSurface.legacy,
-      payload: payload.toApiJson(),
+      payload: payload,
     );
     unawaited(
       saleSync.submitOnce(localOrderId: order.id, accessToken: accessToken),
@@ -123,19 +87,4 @@ Future<void> confirmAndRetryLegacySale(
       message: 'Could not start the send. The sale remains saved locally.',
     );
   }
-}
-
-double _legacyDiscountAmount(SavedOrder order) {
-  // Same rounded line totals and percentage discount as the cart charged.
-  final subtotal = order.items.fold<double>(
-    0.0,
-    (sum, item) =>
-        sum +
-        (item.price != null
-            ? item.amounts.total
-            : roundMoney((item.product.price?.price ?? 0.0) * item.quantity)),
-  );
-  final total = (order.flatDiscount ?? 0.0) +
-      roundMoney(subtotal * (order.percentageDiscount ?? 0.0) / 100);
-  return total > subtotal ? subtotal : total;
 }
