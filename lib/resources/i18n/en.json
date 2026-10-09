@@ -2188,6 +2188,13 @@
     "msg_order_deleted": "Order @number deleted"
   },
   "daily_sales_close": {
+    "admin_list_subtitle": "Review daily sales records across sales executives.",
+    "admin_list_find": "Find daily sales records",
+    "admin_list_filter_hint": "Filter by date and sales executive.",
+    "admin_all_executives": "All sales executives",
+    "admin_executives_failed": "Unable to load sales executives. Retry to update the choices.",
+    "admin_list_count": "@count records on this page",
+    "admin_executive_id": "Sales Executive ID",
     "list_subtitle": "Review daily sales and shift closures.",
     "list_find": "Find daily closes",
     "list_filter_hint": "Filter by business date.",
