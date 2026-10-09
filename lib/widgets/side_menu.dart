@@ -35,107 +35,10 @@ import '../screens/login/login.dart';
 import '../services/session_reset_service.dart';
 import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
+import 'collapsible_sidebar.dart';
 import 'drawer_list_tile_expandable.dart';
 
-class CollapsibleSidebar extends StatefulWidget {
-  final Widget child;
-  final Widget sidebarContent;
-
-  const CollapsibleSidebar({
-    super.key,
-    required this.child,
-    required this.sidebarContent,
-  });
-
-  @override
-  CollapsibleSidebarState createState() => CollapsibleSidebarState();
-}
-
-class CollapsibleSidebarState extends State<CollapsibleSidebar> {
-  bool _isExpanded = true;
-  final double _expandedWidth = 200;
-  final double _collapsedWidth = 60;
-
-  // Public getter for child widgets to access expanded state
-  bool get isExpanded => _isExpanded;
-
-  void _toggleSidebar() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              width: _isExpanded ? _expandedWidth : _collapsedWidth,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
-              ),
-              // ExcludeFocus keeps the side menu out of Tab traversal so that
-              // an accidental click on a side-menu item never traps the user
-              // inside the menu's focus tree (which previously broke the
-              // billing-page Tab order). Gestures (clicks, taps) still work
-              // normally because ExcludeFocus only blocks focus, not pointer
-              // input.
-              child: ExcludeFocus(
-                excluding: true,
-                child: KeyedSubtree(
-                  key: ValueKey(_isExpanded),
-                  child: widget.sidebarContent,
-                ),
-              ),
-            ),
-            // Wrap child in a stateful widget to preserve its state
-            Expanded(
-              child: _PreservedChild(
-                child: widget.child,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// Helper widget to preserve child state during parent rebuilds
-class _PreservedChild extends StatefulWidget {
-  final Widget child;
-
-  const _PreservedChild({
-    required this.child,
-  });
-
-  @override
-  _PreservedChildState createState() => _PreservedChildState();
-}
-
-class _PreservedChildState extends State<_PreservedChild>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
-  }
-}
+export 'collapsible_sidebar.dart';
 
 class SideMenu extends StatefulWidget {
   const SideMenu({super.key});
@@ -166,6 +69,7 @@ class _SideMenuState extends State<SideMenu> {
 
   void _loadUserRole() async {
     String role = await SharedPreferenceProvider().getUserRole();
+    if (!mounted) return;
     debugPrint("🟡 [SideMenu] _loadUserRole: loaded role = '$role'");
     setState(() {
       userRole = role;
@@ -173,8 +77,7 @@ class _SideMenuState extends State<SideMenu> {
   }
 
   bool get _isExpanded {
-    final sidebarState =
-        context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState = CollapsibleSidebar.of(context);
     return sidebarState?.isExpanded ?? true;
   }
 
@@ -183,6 +86,8 @@ class _SideMenuState extends State<SideMenu> {
     SideBarController sideBarController = Get.find<SideBarController>();
     final authModel = Provider.of<AuthModel>(context);
     final isExpanded = _isExpanded;
+    final sidebarState = CollapsibleSidebar.of(context);
+    final isPinnedExpanded = sidebarState?.isPinnedExpanded ?? true;
 
     final roleProvider = Provider.of<RoleProvider>(context, listen: false);
     debugPrint(
@@ -214,20 +119,19 @@ class _SideMenuState extends State<SideMenu> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: IconButton(
+                key: const ValueKey('navigation-sidebar-toggle'),
                 icon: Icon(
-                  isExpanded ? Icons.menu_open : Icons.menu,
+                  isPinnedExpanded ? Icons.menu_open : Icons.menu,
                   color: ColorManager.kPrimaryColor,
                   size: isExpanded ? 24 : 16,
                 ),
-                tooltip: isExpanded
+                tooltip: isPinnedExpanded
                     ? 'general.collapse_sidebar'.tr
                     : 'general.expand_sidebar'.tr,
                 padding: EdgeInsets.all(isExpanded ? 8 : 8),
                 constraints: const BoxConstraints(),
                 onPressed: () {
-                  final CollapsibleSidebarState? sidebarState = context
-                      .findAncestorStateOfType<CollapsibleSidebarState>();
-                  sidebarState?._toggleSidebar();
+                  sidebarState?.toggleSidebar();
                 },
               ),
             ),
@@ -260,8 +164,13 @@ class _SideMenuState extends State<SideMenu> {
           //     ),
           //   ),
           // ),
-          if (isExpanded)
-            Consumer<RoleProvider>(
+          // Keep the switcher's controllers alive while a dialog is open
+          // outside the hover panel, and avoid fetching users on every preview.
+          Visibility(
+            key: const ValueKey('sidebar-user-switcher'),
+            visible: isExpanded,
+            maintainState: true,
+            child: Consumer<RoleProvider>(
               builder: (context, roleProvider, child) {
                 final hasPermission = roleProvider.currentUserHasPermissionSync(
                     'menu.utility.user_switcher.access');
@@ -286,6 +195,7 @@ class _SideMenuState extends State<SideMenu> {
                 );
               },
             ),
+          ),
           SizedBox(height: isExpanded ? 12 : 8),
           // Menu section divider
           if (isExpanded)
@@ -301,6 +211,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 1. HOME (Index: 0)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-home'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.home.main.access');
@@ -324,6 +235,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 1.5. SUPERMARKET (Index: 90)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-billing'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
                 'menu.supermarket.main.access',
@@ -348,6 +260,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 2. DASHBOARD (Index: 1)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-dashboard'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.dashboard.main.access');
@@ -371,6 +284,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 3. RESTAURANT (Index: 89)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-restaurant'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.restaurant.main.access');
@@ -394,6 +308,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 3.5. STORE (Index: 97) - Restaurant billing with summary-only order panel
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-store'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('billing.store.access');
@@ -417,6 +332,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 3. RESTAURANT (Index: 55) - Only for attender role
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-attender'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
                   'menu.restaurant.attender.access');
@@ -438,6 +354,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 4. KITCHEN MASTER (Index: 56) - Only for kitchen_master role
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-kitchen-master'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
                   'menu.restaurant.kitchen_master.access');
@@ -458,6 +375,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // 5. SALES (Index: 2) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-sales'),
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasSalesMenuPermission = roleProvider
@@ -579,6 +497,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 5.5. QUOTATIONS (Index: 86)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-quotations'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.quotation.main.access');
@@ -612,6 +531,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 6. CATEGORY (Index: 12)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-category'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.catalog.category.access');
@@ -642,6 +562,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 7. PRODUCT (Index: 14) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-product'),
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasProductPermission =
@@ -708,6 +629,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
 
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-purchase'),
             builder: (context, roleProvider, child) {
               if (!roleProvider.currentUserHasPermissionSync(
                   'menu.purchase.orders.access')) {
@@ -755,6 +677,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // 8. REPORTS (Index: 58) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-reports'),
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               // final hasSalesExecutiveReportsPermission = roleProvider
@@ -888,6 +811,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 9. TRANSACTIONS (Index: 21) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-transactions'),
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasInvoicePermission =
@@ -995,6 +919,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // 10. PARTY ACCOUNTS (Index: 4) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-party-accounts'),
             builder: (context, roleProvider, child) {
               if (!roleProvider.currentUserHasPermissionSync(
                       'menu.party_accounts.customer_transactions.access') &&
@@ -1043,6 +968,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // 11. CUSTOMERS (Index: 5)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-customers'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.customers.main.access');
@@ -1101,6 +1027,7 @@ class _SideMenuState extends State<SideMenu> {
           // ),
           // 13. SUPPLIERS (Index: 52) [EXPANDABLE]
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-suppliers'),
             builder: (context, roleProvider, child) {
               // Check permissions for each sub-item
               final hasSuppliersPermission = roleProvider
@@ -1167,6 +1094,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // 14. PRINTER (Index: 53)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-printer'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.settings.printer.access');
@@ -1206,6 +1134,7 @@ class _SideMenuState extends State<SideMenu> {
 
           // 15. SETTINGS (Index: 62)
           Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-settings'),
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.settings.main.access');
@@ -1229,6 +1158,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           // LOGOUT (always visible)
           DrawerListTile(
+            key: const ValueKey('sidebar-logout'),
             icon: fa.FontAwesomeIcons.signOutAlt,
             title: 'nav.logout'.tr,
             onTap: () async {
@@ -1464,8 +1394,7 @@ class DrawerListTile extends StatelessWidget {
     final double resolvedIconSize = iconSize ?? 18.0;
     final double leadingBox = resolvedIconSize + 4.0;
     final double gap = horizontalGap ?? 12.0;
-    final sidebarState =
-        context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState = CollapsibleSidebar.of(context);
     final isExpanded = sidebarState?.isExpanded ?? true;
 
     // Collapsed state - icon only with tooltip

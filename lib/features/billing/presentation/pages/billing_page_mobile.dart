@@ -75,6 +75,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
 
+  bool get _skipCheckoutOnConfirm =>
+      !_isQuotationPage &&
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
+
   bool get _skipCheckoutOnConfirmAndPrint {
     if (_isQuotationPage) return false;
     return Provider.of<AppSettingsProvider>(context, listen: false)
@@ -895,6 +900,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
                     ?.showConfirmWhatsappButton ??
                 false)
             : _showConfirmOrderButton)) return;
+
+    if (!whatsappReceipt && _skipCheckoutOnConfirm) {
+      billingDebugLog(
+        'SKIP_CHECKOUT_ON_CONFIRM enabled -> direct confirm',
+      );
+      await _controller.prepareDirectConfirmAndPrint(context);
+      if (!mounted) return;
+      setState(() {});
+    }
 
     if (!_isCustomerSatisfiedForCheckout()) {
       showScaffoldError(

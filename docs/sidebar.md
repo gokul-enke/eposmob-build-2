@@ -80,6 +80,22 @@
 17. Logout
 - `menu.session.logout.access`
 
+## Desktop and tablet layout behavior
+
+- The explicit expand/collapse choice is saved locally as
+  `navigation_sidebar_expanded` by `SharedPreferenceProvider`. New installations
+  default to expanded. The choice survives page navigation, app restarts, user
+  and store switches, ordinary logout, and clearing cached local data. A full
+  API key reset clears it along with other layout settings.
+- Expanded mode reserves 200 logical pixels; collapsed mode reserves 60.
+  Hovering anywhere on the collapsed rail reveals the same full sidebar over
+  the page, without changing the page width or recreating its state. Leaving
+  the sidebar closes the preview immediately. Hovering never writes preferences.
+- The toggle controls the saved choice. During a hover preview it expands and
+  pins the sidebar; collapsing keeps it closed until the pointer leaves and
+  re-enters the rail. Sidebar controls remain outside the billing Tab order.
+- Touch input still uses the explicit toggle. Mobile retains its existing drawer.
+
 ## Utility controls present in sidebar
 
 1. User Switcher widget

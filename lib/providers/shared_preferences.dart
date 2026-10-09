@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceProvider extends ChangeNotifier {
+  /// Local layout preference shared by sessions on this device.
+  static const String navigationSidebarExpandedKey =
+      'navigation_sidebar_expanded';
   static const String _notificationPositionKey = 'notification_position';
   static const String _orientationModeKey = 'screen_orientation_mode';
   static const String _billingSidebarWidthKey =
@@ -349,6 +352,19 @@ class SharedPreferenceProvider extends ChangeNotifier {
       _billingSidebarWidthPrefKey(userId: userId),
       fraction,
     );
+  }
+
+  Future<void> saveNavigationSidebarExpanded(bool isExpanded) async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = await prefs.setBool(navigationSidebarExpandedKey, isExpanded);
+    if (!saved) {
+      throw StateError('Could not save the navigation sidebar preference');
+    }
+  }
+
+  Future<bool> getNavigationSidebarExpanded() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(navigationSidebarExpandedKey) ?? true;
   }
 
   Future<double?> getBillingSidebarWidthFraction({int? userId}) async {

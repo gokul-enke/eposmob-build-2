@@ -6,6 +6,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
@@ -75,6 +76,7 @@ class SessionResetService {
   ];
 
   static const List<String> _deviceScopedKeys = [
+    SharedPreferenceProvider.navigationSidebarExpandedKey,
     'default_printer',
     'default_printer_open_pdf_output',
     'default_printer_b2b_open_pdf_output',

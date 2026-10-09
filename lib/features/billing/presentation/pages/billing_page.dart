@@ -1344,12 +1344,8 @@ class BillingPageState extends State<BillingPage>
         debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
         _clearCartManually();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
-        if (!_isQuotationPage && !_showConfirmOrderButton) return;
-        debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
-        _showCheckoutModal(
-            actionMode: _isQuotationPage
-                ? CheckoutActionMode.quotation
-                : CheckoutActionMode.confirm);
+        debugPrint("⌨️ [BillingPage] Handling F2 -> confirm order");
+        _handleConfirmOrder();
       } else if (event.logicalKey == LogicalKeyboardKey.f3) {
         debugPrint(
             "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
@@ -6007,8 +6003,7 @@ class BillingPageState extends State<BillingPage>
                   child: _buildActionButton(
                     text: 'billing.confirm_order'.tr,
                     color: ColorManager.kButtonGreen,
-                    onPressed: () => _showCheckoutModal(
-                        actionMode: CheckoutActionMode.confirm),
+                    onPressed: _handleConfirmOrder,
                     isLoading: isLoadingConfirmOrder,
                     isDisabled: disableActions && !isLoadingConfirmOrder,
                     shortcutLabel: 'F2',
@@ -6946,6 +6941,11 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  bool get _skipCheckoutOnConfirm =>
+      !_isQuotationPage &&
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
+
   bool get _skipCheckoutOnConfirmAndPrint {
     if (_isQuotationPage) return false;
     return Provider.of<AppSettingsProvider>(context, listen: false)
@@ -6973,6 +6973,20 @@ class BillingPageState extends State<BillingPage>
           .appSettings
           ?.showConfirmWhatsappButton ??
       false;
+
+  Future<void> _handleConfirmOrder() async {
+    if (_isOrderActionBusy) return;
+    if (_isQuotationPage) {
+      _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
+      return;
+    }
+    if (!_showConfirmOrderButton) return;
+    if (_skipCheckoutOnConfirm) {
+      await _confirmAndPrintWithoutCheckoutModal(printReceipt: false);
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+  }
 
   Future<void> _handleConfirmAndWhatsapp() async {
     if (!_showConfirmAndWhatsappButton || _isOrderActionBusy) return;
@@ -7121,8 +7135,10 @@ class BillingPageState extends State<BillingPage>
     _applyDefaultDeliveryMethodIfNeeded();
   }
 
-  Future<void> _confirmAndPrintWithoutCheckoutModal(
-      {bool whatsappReceipt = false}) async {
+  Future<void> _confirmAndPrintWithoutCheckoutModal({
+    bool printReceipt = true,
+    bool whatsappReceipt = false,
+  }) async {
     if (_isOrderActionBusy) {
       debugPrint(
           "⌨️ [BillingPage] Direct confirm & print ignored because order action is busy");
@@ -7130,7 +7146,10 @@ class BillingPageState extends State<BillingPage>
     }
 
     debugPrint(
-        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & print");
+      printReceipt || whatsappReceipt
+          ? '⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & ${whatsappReceipt ? "WhatsApp" : "print"}'
+          : '⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM enabled -> direct confirm',
+    );
 
     await _prepareCheckoutDefaults(
       applyDefaultCustomer: true,
@@ -7167,8 +7186,10 @@ class BillingPageState extends State<BillingPage>
 
     if (whatsappReceipt) {
       await _confirmOrder(whatsappReceipt: true);
-    } else {
+    } else if (printReceipt) {
       await _createOrderAndPrint();
+    } else {
+      await _confirmOrder();
     }
   }
 

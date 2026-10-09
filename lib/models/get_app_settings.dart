@@ -60,6 +60,7 @@ class AppSettings {
   final bool kotBillAutoMarkServed;
   final bool kotBillAllowedForDineIn;
   final bool pineLabPayment;
+  final bool skipCheckoutOnConfirm;
   final bool skipCheckoutOnConfirmAndPrint;
   final bool compulsoryDayCloseRegister;
   final bool productVariantEnabled;
@@ -129,6 +130,7 @@ class AppSettings {
     required this.kotBillAutoMarkServed,
     required this.kotBillAllowedForDineIn,
     this.pineLabPayment = false,
+    this.skipCheckoutOnConfirm = false,
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
@@ -267,6 +269,10 @@ class AppSettings {
       kotBillAllowedForDineIn:
           settingsMap['KOT_BILL_ALLOWED_FOR_DINE_IN']?['status'] ?? false,
       pineLabPayment: _readSettingStatus(settingsMap, 'PINELAB_PAYMENT'),
+      skipCheckoutOnConfirm: _readSettingStatus(
+        settingsMap,
+        'SKIP_CHECKOUT_ON_CONFIRM',
+      ),
       skipCheckoutOnConfirmAndPrint: _readSettingStatus(
         settingsMap,
         'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT',
@@ -567,6 +573,12 @@ class AppSettings {
           "code": "PINELAB_PAYMENT",
           "value": "",
           "status": pineLabPayment.toString(),
+        },
+        {
+          "name": "Skip Checkout On Confirm",
+          "code": "SKIP_CHECKOUT_ON_CONFIRM",
+          "value": "",
+          "status": skipCheckoutOnConfirm.toString(),
         },
         {
           "name": "Skip Checkout On Confirm And Print",

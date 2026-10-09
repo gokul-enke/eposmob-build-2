@@ -195,6 +195,10 @@ class OrderPanelState extends State<OrderPanel> {
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
+  bool get _skipCheckoutOnConfirm =>
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
+
   bool get _skipCheckoutOnConfirmAndPrint {
     return Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings
@@ -8067,6 +8071,7 @@ class OrderPanelState extends State<OrderPanel> {
   /// With [whatsappReceipt] the sale is confirmed without printing and the
   /// backend sends the invoice on WhatsApp instead.
   Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal({
+    bool printBill = true,
     bool whatsappReceipt = false,
   }) async {
     if (_isLoadingConfirm) return;
@@ -8074,7 +8079,9 @@ class OrderPanelState extends State<OrderPanel> {
     debugPrint(
       whatsappReceipt
           ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & WhatsApp'
-          : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
+          : printBill
+              ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print'
+              : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM enabled -> direct counter confirm',
     );
 
     _hydrateCustomerListFromProviderCache();
@@ -8114,18 +8121,18 @@ class OrderPanelState extends State<OrderPanel> {
 
     widget.onCheckoutActionLoadingChanged?.call(
       isLoading: true,
-      printBill: !whatsappReceipt,
+      printBill: printBill && !whatsappReceipt,
       whatsappReceipt: whatsappReceipt,
     );
     try {
       await _confirmCurrentCart(
-        printBill: !whatsappReceipt,
+        printBill: printBill && !whatsappReceipt,
         whatsappReceipt: whatsappReceipt,
       );
     } finally {
       widget.onCheckoutActionLoadingChanged?.call(
         isLoading: false,
-        printBill: !whatsappReceipt,
+        printBill: printBill && !whatsappReceipt,
         whatsappReceipt: whatsappReceipt,
       );
       if (mounted) {
@@ -8167,22 +8174,32 @@ class OrderPanelState extends State<OrderPanel> {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!(appSettings?.showConfirmOrderButton ?? true)) return;
-    showCheckoutFromParent(forCurrentCart: true);
+    showCheckoutFromParent(
+      forCurrentCart: true,
+      allowSkipCheckoutOnConfirm: true,
+    );
   }
 
   /// Offline confirm entry point. Offline sales use the same offline-first
   /// confirmation as online ones, so they get a bill number and can be sent
   /// later from Confirmed Orders.
   ///
-  /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
-  /// checkout modal and confirms+prints with defaults. Step shortcuts (F5/F10)
+  /// When [allowSkipCheckout] is true and the corresponding confirm setting is
+  /// enabled, confirms with defaults and prints only when [printBill] is true.
+  /// Step shortcuts (F5/F10)
   /// should pass [allowSkipCheckout]: false so the modal still opens.
   void showOfflineConfirmCheckoutFromParent({
     int? initialStep,
     bool allowSkipCheckout = true,
+    bool printBill = true,
   }) {
-    if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
-      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
+    final skipCheckout = printBill
+        ? _skipCheckoutOnConfirmAndPrint
+        : _skipCheckoutOnConfirm;
+    if (allowSkipCheckout && skipCheckout) {
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal(
+        printBill: printBill,
+      ));
       return;
     }
     _showCheckoutModal(
@@ -8194,8 +8211,17 @@ class OrderPanelState extends State<OrderPanel> {
   void showCheckoutFromParent({
     bool? forCurrentCart,
     int? initialStep,
+    bool allowSkipCheckoutOnConfirm = false,
   }) {
     final useCurrentCart = forCurrentCart ?? _selectedOrder == null;
+    if (useCurrentCart &&
+        allowSkipCheckoutOnConfirm &&
+        _skipCheckoutOnConfirm) {
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal(
+        printBill: false,
+      ));
+      return;
+    }
     _showCheckoutModal(
       forCurrentCart: useCurrentCart,
       initialStep: initialStep ??
