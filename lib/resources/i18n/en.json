@@ -763,6 +763,16 @@
     "no_transactions": "No transactions found"
   },
   "exec_report": {
+    "list_subtitle": "Review sales totals across sales executives.",
+    "list_find": "Find executive reports",
+    "list_filter_hint": "Filter by date and time, or search an executive name.",
+    "list_load_error": "Unable to load executive reports. Previous results may be out of date.",
+    "list_export_error": "Unable to export the report. Refresh and try again.",
+    "list_incomplete": "Some financial values are missing. Export is unavailable for these results.",
+    "list_date_mode": "Date Filter",
+    "list_today": "Today",
+    "list_custom": "Custom",
+    "list_loaded_at": "Loaded At",
     "title": "Sales Executive Reports",
     "btn_hide": "Hide",
     "btn_filters": "Filters",
