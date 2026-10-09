@@ -11,7 +11,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
-import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
@@ -56,17 +56,6 @@ class CartItemCard extends StatelessWidget {
   final bool showItemCode;
   final bool isLowStock;
   final bool isOutOfStock;
-
-  String? get _imageUrl {
-    final attachments = item.product.attachment ?? const <Attachment>[];
-    if (attachments.isEmpty) return null;
-    final raw = attachments.first.file?.toString().trim().isNotEmpty == true
-        ? attachments.first.file.toString().trim()
-        : attachments.first.filePath?.trim();
-    if (raw == null || raw.isEmpty) return null;
-    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-    return null;
-  }
 
   String get _lineTotal {
     final total = item.amounts.total;
@@ -133,15 +122,10 @@ class CartItemCard extends StatelessWidget {
                 child: SizedBox(
                   width: 56,
                   height: 56,
-                  child: _imageUrl == null
-                      ? _fallbackImage()
-                      : Image.network(
-                          _imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _fallbackImage();
-                          },
-                        ),
+                  child: ProductImage(
+                    product: item.product,
+                    placeholder: _fallbackImage(),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),

@@ -19,6 +19,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/pr
 import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 
 import 'package:pos_machine/providers/app_settings_provider.dart';
 
@@ -239,8 +240,6 @@ class ProductListRow extends StatelessWidget {
       stockEnabled: stockEnabled,
     );
 
-    final imageUrl = resolveMarketProductImageUrl(product);
-
     final category = resolveMarketProductCategory(product);
 
     return Container(
@@ -272,14 +271,10 @@ class ProductListRow extends StatelessWidget {
                     child: SizedBox(
                       width: 52,
                       height: 52,
-                      child: imageUrl != null
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  _fallbackImage(),
-                            )
-                          : _fallbackImage(),
+                      child: ProductImage(
+                        product: product,
+                        placeholder: _fallbackImage(),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),

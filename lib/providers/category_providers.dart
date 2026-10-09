@@ -115,6 +115,23 @@ class CategoryProvider extends ChangeNotifier {
   List<Category> get purchasableCategories =>
       List<Category>.from(_scopeCaches[CategoryListScope.purchasable]!.items);
 
+  /// Looks up category metadata independently of the current search/filter.
+  Category? findCategoryById(int? id) {
+    if (id == null || id <= 0) return null;
+    for (final categories in [
+      _scopeCaches[CategoryListScope.sellable]!.items,
+      _scopeCaches[CategoryListScope.all]!.items,
+      _originalCategoryList,
+      categoryListWithoutQuery,
+      categoryList,
+    ]) {
+      for (final category in categories ?? const <Category>[]) {
+        if (category.categoryId == id) return category;
+      }
+    }
+    return null;
+  }
+
   List<Category> categoriesFor(CategoryListScope scope) {
     return List<Category>.from(_scopeCaches[scope]!.items);
   }

@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -795,20 +796,6 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                       _productGridFocusNode.hasFocus &&
                                           index == focusedIndex;
 
-                                  String? primaryImage;
-                                  if (product.attachment != null &&
-                                      product.attachment!.isNotEmpty) {
-                                    for (final attachment
-                                        in product.attachment!) {
-                                      if (attachment.isPrimary == 1) {
-                                        primaryImage = attachment.filePath;
-                                        break;
-                                      }
-                                    }
-                                    primaryImage ??=
-                                        product.attachment!.first.filePath;
-                                  }
-
                                   return GestureDetector(
                                     behavior: HitTestBehavior.opaque,
                                     onTap: () =>
@@ -848,25 +835,15 @@ class _SideBarProductListState extends State<SideBarProductList> {
                                                   ),
                                                   child: Container(
                                                     color: Colors.grey.shade50,
-                                                    child: primaryImage != null
-                                                        ? Image.network(
-                                                            primaryImage,
-                                                            fit: BoxFit.cover,
-                                                            errorBuilder: (context,
-                                                                    error,
-                                                                    stackTrace) =>
-                                                                const Icon(
-                                                                    Icons
-                                                                        .image_not_supported,
-                                                                    size: 24,
-                                                                    color: Colors
-                                                                        .grey),
-                                                          )
-                                                        : const Icon(
-                                                            Icons
-                                                                .inventory_2_outlined,
-                                                            size: 24,
-                                                            color: Colors.grey),
+                                                    child: ProductImage(
+                                                      product: product,
+                                                      placeholder: const Icon(
+                                                        Icons
+                                                            .inventory_2_outlined,
+                                                        size: 24,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                                 Positioned(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
@@ -233,7 +234,6 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
     final double mrp = widget.mrp ?? 0;
     final num? stockQuantity = widget.stockQuantity;
     final bool hasError = _errorText != null;
-    final String? imageUrl = _resolvePrimaryImage(product);
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -304,7 +304,8 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, color: Colors.grey.shade500, size: 22),
+                    icon: Icon(Icons.close,
+                        color: Colors.grey.shade500, size: 22),
                     splashRadius: 20,
                     onPressed: _cancel,
                   ),
@@ -330,10 +331,8 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (imageUrl != null) ...[
-                          _ProductImage(url: imageUrl),
-                          const SizedBox(width: 12),
-                        ],
+                        _ProductImage(product: product),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,7 +399,8 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
 
                   // Price field – listed after quantity in the tree, but is the
                   // intended initial focus target (see _focusPriceField).
-                  _sectionLabel('${'product_detail.price'.tr} (${widget.currency})'),
+                  _sectionLabel(
+                      '${'product_detail.price'.tr} (${widget.currency})'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _priceController,
@@ -551,17 +551,6 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
         stockQuantity != null;
   }
 
-  String? _resolvePrimaryImage(GetProduct product) {
-    if (product.attachment == null || product.attachment!.isEmpty) return null;
-    for (final attachment in product.attachment!) {
-      if (attachment.isPrimary == 1 && (attachment.filePath ?? '').isNotEmpty) {
-        return attachment.filePath;
-      }
-    }
-    final fallback = product.attachment!.first.filePath;
-    return (fallback != null && fallback.isNotEmpty) ? fallback : null;
-  }
-
   Widget _sectionLabel(String text) {
     return Text(
       text,
@@ -603,9 +592,9 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
 }
 
 class _ProductImage extends StatelessWidget {
-  final String url;
+  final GetProduct product;
 
-  const _ProductImage({required this.url});
+  const _ProductImage({required this.product});
 
   @override
   Widget build(BuildContext context) {
@@ -615,17 +604,8 @@ class _ProductImage extends StatelessWidget {
         width: 56,
         height: 56,
         color: Colors.white,
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFF1F5F9),
-            child: Icon(
-              Icons.image_not_supported_outlined,
-              size: 24,
-              color: Colors.grey.shade400,
-            ),
-          ),
+        child: ProductImage(
+          product: product,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
@@ -639,6 +619,14 @@ class _ProductImage extends StatelessWidget {
               ),
             );
           },
+          placeholder: Container(
+            color: const Color(0xFFF1F5F9),
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: 24,
+              color: Colors.grey.shade400,
+            ),
+          ),
         ),
       ),
     );

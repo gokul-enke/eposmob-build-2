@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'product_list_actions.dart';
 import 'product_list_copy.dart';
 import 'product_list_labels.dart';
@@ -24,9 +25,24 @@ class ProductListCard extends StatelessWidget {
   Widget build(BuildContext context) => AppListCard(
         title: ProductListLabels.name(product),
         subtitle: ProductListLabels.category(product),
-        leading: AppAvatar(
-            name: ProductListLabels.name(product),
-            semanticLabel: ProductListLabels.name(product)),
+        leading: Semantics(
+          label: ProductListLabels.name(product),
+          excludeSemantics: true,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: ProductImage(
+                product: product,
+                placeholder: AppAvatar(
+                  name: ProductListLabels.name(product),
+                  semanticLabel: ProductListLabels.name(product),
+                ),
+              ),
+            ),
+          ),
+        ),
         trailing: Text('$number', style: AppTextStyles.label),
         onTap: onView,
         body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

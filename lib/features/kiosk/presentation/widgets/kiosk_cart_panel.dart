@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/offers/presentation/widgets/cart_offer_badge.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -287,18 +287,10 @@ class _CartProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
-    if (imageUrl == null) {
-      return const Icon(
+    return ProductImage(
+      product: product,
+      placeholder: const Icon(
         Icons.inventory_2_outlined,
-        color: ColorManager.kGreyColor,
-      );
-    }
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const Icon(
-        Icons.broken_image_outlined,
         color: ColorManager.kGreyColor,
       ),
     );

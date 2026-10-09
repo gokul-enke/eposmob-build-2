@@ -6,6 +6,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/ma
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/stock_badge.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -42,7 +43,6 @@ class ProductCard extends StatelessWidget {
       product,
       stockEnabled: stockEnabled,
     );
-    final imageUrl = resolveMarketProductImageUrl(product);
     final category = resolveMarketProductCategory(product);
 
     return Container(
@@ -73,9 +73,9 @@ class ProductCard extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        _ProductImage(
-                          imageUrl: imageUrl,
-                          compact: isDense,
+                        ProductImage(
+                          product: product,
+                          placeholder: _ProductImageFallback(compact: isDense),
                         ),
                         Positioned(
                           top: isDense ? 4 : 6,
@@ -190,30 +190,6 @@ class _CardBodyTapTarget extends StatelessWidget {
           child: child,
         ),
       ),
-    );
-  }
-}
-
-class _ProductImage extends StatelessWidget {
-  const _ProductImage({
-    this.imageUrl,
-    this.compact = false,
-  });
-
-  final String? imageUrl;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    if (imageUrl == null) {
-      return _ProductImageFallback(compact: compact);
-    }
-
-    return Image.network(
-      imageUrl!,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) =>
-          _ProductImageFallback(compact: compact),
     );
   }
 }

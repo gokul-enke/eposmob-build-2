@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -158,16 +159,12 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
     return ColoredBox(
       color: const Color(0xFFF3F6FA),
-      child: imageUrl == null
-          ? const _ImageFallback()
-          : Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _ImageFallback(),
-            ),
+      child: ProductImage(
+        product: product,
+        placeholder: const _ImageFallback(),
+      ),
     );
   }
 }

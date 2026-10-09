@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -8472,47 +8473,24 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       ),
                                       // Product Image (Right End)
                                       Builder(builder: (context) {
-                                        String? primaryImage;
-                                        if (item.product.attachment != null &&
-                                            item.product.attachment!
-                                                .isNotEmpty) {
-                                          for (final attachment
-                                              in item.product.attachment!) {
-                                            if (attachment.isPrimary == 1) {
-                                              primaryImage =
-                                                  attachment.filePath;
-                                              break;
-                                            }
-                                          }
-                                          primaryImage ??= item.product
-                                              .attachment!.first.filePath;
-                                        }
-
-                                        if (primaryImage == null) {
-                                          return const SizedBox.shrink();
-                                        }
-
                                         return Padding(
                                           padding:
                                               const EdgeInsets.only(left: 8.0),
                                           child: ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(6),
-                                            child: Image.network(
-                                              primaryImage,
+                                            child: SizedBox(
                                               width: 45,
                                               height: 45,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error,
-                                                      stackTrace) =>
-                                                  Container(
-                                                width: 45,
-                                                height: 45,
-                                                color: Colors.grey.shade100,
-                                                child: const Icon(
-                                                    Icons.image_not_supported,
-                                                    size: 16,
-                                                    color: Colors.grey),
+                                              child: ProductImage(
+                                                product: item.product,
+                                                placeholder: Container(
+                                                  color: Colors.grey.shade100,
+                                                  child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      size: 16,
+                                                      color: Colors.grey),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -8966,24 +8944,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                       focusedProductIndex ==
                                                           index;
 
-                                              String? primaryImage;
-                                              if (showImage &&
-                                                  product.attachment != null &&
-                                                  product
-                                                      .attachment!.isNotEmpty) {
-                                                for (final attachment
-                                                    in product.attachment!) {
-                                                  if (attachment.isPrimary ==
-                                                      1) {
-                                                    primaryImage =
-                                                        attachment.filePath;
-                                                    break;
-                                                  }
-                                                }
-                                                primaryImage ??= product
-                                                    .attachment!.first.filePath;
-                                              }
-
                                               return GestureDetector(
                                                 onTap: () async {
                                                   setState(() {
@@ -9032,7 +8992,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                       ? _buildProductCardWithImage(
                                                           context,
                                                           product,
-                                                          primaryImage,
                                                           fontProvider)
                                                       : _buildCompactProductCard(
                                                           context,
@@ -9109,7 +9068,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Widget _buildProductCardWithImage(BuildContext context, GetProduct product,
-      String? primaryImage, AppFontProvider fontProvider) {
+      AppFontProvider fontProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -9126,22 +9085,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                 ),
                 child: Container(
                   color: Colors.grey.shade50,
-                  child: primaryImage != null
-                      ? Image.network(
-                          primaryImage,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.image_not_supported,
-                            size: 32,
-                            color: Colors.grey,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.inventory_2_outlined,
-                          size: 32,
-                          color: Colors.grey,
-                        ),
+                  child: ProductImage(
+                    product: product,
+                    placeholder: const Icon(
+                      Icons.inventory_2_outlined,
+                      size: 32,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
               // Info button (top-right corner)
