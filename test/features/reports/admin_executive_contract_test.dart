@@ -48,6 +48,72 @@ class Source implements AdminExecutiveSource {
 }
 
 void main() {
+  for (final field in ['name', 'phone']) {
+    for (final kind in ['omitted', 'null', 'empty', 'whitespace']) {
+      test('incomplete $field ($kind) stays null and cannot export', () async {
+        final rawRow = raw('Alice');
+        if (kind == 'omitted') {
+          rawRow.remove(field);
+        } else {
+          rawRow[field] = kind == 'null'
+              ? null
+              : kind == 'empty'
+                  ? ''
+                  : ' \t ';
+        }
+        final parsed = parseAdminExecutiveReport({
+          'status': 'success',
+          'data': [rawRow]
+        });
+        expect(
+            field == 'name' ? parsed.single.name : parsed.single.phone, isNull);
+        expect(completeAdminExecutiveRow(parsed.single), false);
+        final controller = AdminExecutiveController(
+            () async => Source(scope, (_) async => parsed));
+        addTearDown(controller.dispose);
+        await controller.load();
+        expect(controller.rows, hasLength(1));
+        expect(controller.canExport, false);
+        expect(
+            () => exportAdminExecutives(controller.rows,
+                currency: 'SAR',
+                range: controller.loadedRange!,
+                loadedAt: controller.loadedAt!),
+            throwsStateError);
+        await controller.reset();
+        expect(controller.canExport, false);
+      });
+    }
+  }
+  test('valid identities and local filter recover export from mixed results',
+      () async {
+    final broken = raw('Broken')..remove('phone');
+    final parsed = parseAdminExecutiveReport({
+      'status': 'success',
+      'data': [raw('Alice'), broken]
+    });
+    final controller = AdminExecutiveController(
+        () async => Source(scope, (_) async => parsed));
+    addTearDown(controller.dispose);
+    await controller.load();
+    expect(controller.canExport, false);
+    controller.setName('alice');
+    expect(controller.canExport, true);
+    expect(controller.rows.single.name, 'Alice');
+    expect(controller.rows.single.phone, '001234');
+    controller.setName('');
+    expect(controller.canExport, false);
+    final whitespace = SalesExecutiveReportData(
+        name: ' ',
+        phone: '0',
+        orderCount: 2,
+        totalSales: '1',
+        onlineSales: '1',
+        cashSales: '0',
+        creditSales: '0',
+        collectedSales: '1');
+    expect(completeAdminExecutiveRow(whitespace), false);
+  });
   test('sales executive and unavailable session never call API', () async {
     var calls = 0;
     for (final denied in [

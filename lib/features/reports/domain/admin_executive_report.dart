@@ -54,9 +54,14 @@ List<SalesExecutiveReportData> parseAdminExecutiveReport(dynamic json) {
           : value(fallbacks);
     }
 
+    String? identity(String key) {
+      final text = raw[key]?.toString();
+      return text == null || text.trim().isEmpty ? null : text;
+    }
+
     return SalesExecutiveReportData(
-        name: row.name,
-        phone: row.phone,
+        name: identity('name'),
+        phone: identity('phone'),
         orderCount: raw['order_count'] == null && raw['orderCount'] == null
             ? null
             : row.orderCount,
@@ -83,8 +88,8 @@ List<SalesExecutiveReportData> parseAdminExecutiveReport(dynamic json) {
 }
 
 bool completeAdminExecutiveRow(SalesExecutiveReportData row) =>
-    row.name != null &&
-    row.phone != null &&
+    row.name?.trim().isNotEmpty == true &&
+    row.phone?.trim().isNotEmpty == true &&
     (row.orderCount ?? -1) >= 0 &&
     [
       row.totalSales,

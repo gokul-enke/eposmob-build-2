@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +13,9 @@ import 'package:pos_machine/features/reports/domain/report_date_range.dart';
 import '../../test_support/export_capture.dart' show useTempExportDirectory;
 import '../day_closes/day_close_page_test.dart'
     show CloseSettings, CloseTranslations, CaptureExport;
-import 'admin_executive_contract_test.dart' show Source, scope, rows;
+import 'admin_executive_contract_test.dart' show Source, scope, rows, raw;
+import 'package:pos_machine/features/reports/domain/admin_executive_report.dart'
+    show parseAdminExecutiveReport;
 
 void main() {
   setUpAll(() async {
@@ -86,6 +89,32 @@ void main() {
       });
     }
   }
+  testWidgets('missing identity shows incomplete state and refresh recovers',
+      (t) async {
+    var missing = true;
+    await mount(
+        t,
+        Source(
+            scope,
+            (_) async => parseAdminExecutiveReport({
+                  'status': 'success',
+                  'data': [
+                    missing ? (raw('Alice')..remove('phone')) : raw('Alice')
+                  ]
+                })));
+    expect(find.text('No Phone'), findsNothing);
+    expect(
+        find.text(
+            'Some required report values are missing. Export is unavailable for these results.'),
+        findsOneWidget);
+    expect(exportAction(t).onPressed, isNull);
+    missing = false;
+    t.widget<PageHeader>(find.byType(PageHeader)).actions.last.onPressed!();
+    await t.pumpAndSettle();
+    expect(exportAction(t).onPressed, isNotNull);
+    expect(find.text('001234'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
   testWidgets('name filter is local, Reset reloads and restores all results',
       (t) async {
     var calls = 0;
@@ -150,6 +179,7 @@ void main() {
     expect(exportAction(t).onPressed, isNotNull);
   });
   testWidgets('view keeps loaded date label and shared blue action', (t) async {
+    final before = DateTime.now();
     String? label;
     await mount(t, Source(scope, (_) async => rows()),
         view: (_, l) => label = l);
@@ -158,7 +188,11 @@ void main() {
     expect(t.widget<AppSquareIconButton>(button).foreground, AppColors.primary);
     t.widget<AppSquareIconButton>(button).onPressed!();
     expect(label, isNotNull);
-    expect(label, contains('2026'));
+    final after = DateTime.now();
+    expect(
+        label,
+        anyOf(DateFormat('MMMM dd, yyyy').format(before),
+            DateFormat('MMMM dd, yyyy').format(after)));
   });
   testWidgets(
       'export factory cancels after name changes and exports all matching rows',
@@ -180,6 +214,7 @@ void main() {
   });
   testWidgets('selected date needs time confirmation and clear restores today',
       (t) async {
+    final selected = DateTime(DateTime.now().year, 10, 1);
     final queries = <ReportDateRange>[];
     await mount(
         t,
@@ -191,7 +226,7 @@ void main() {
     await t.pumpAndSettle();
     t
         .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
-        .onDateChanged(DateTime(2026, 10, 1));
+        .onDateChanged(selected);
     await t.pumpAndSettle();
     expect(find.byType(TimePickerDialog), findsOneWidget);
     await t.tap(find.text('Cancel').last);
@@ -201,12 +236,12 @@ void main() {
     await t.pumpAndSettle();
     t
         .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
-        .onDateChanged(DateTime(2026, 10, 1));
+        .onDateChanged(selected);
     await t.pumpAndSettle();
     await t.tap(find.text('OK').last);
     await t.pumpAndSettle();
     expect(queries.last.from!.day, 1);
-    expect(queries.last.apiFrom, startsWith('2026-10-01 '));
+    expect(queries.last.apiFrom, startsWith('${selected.year}-10-01 '));
     await t.tap(find.widgetWithIcon(IconButton, Icons.close));
     await t.pumpAndSettle();
     expect(queries.last.isEmpty, true);
