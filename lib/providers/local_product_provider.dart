@@ -139,6 +139,26 @@ class LocalCartItem {
 
   bool get hasOffer => offerId != null;
 
+  /// Saving already included in this row's selling prices. Match the rounded
+  /// upload lines, including batch splits and sale-unit conversion.
+  double get itemDiscountAmount {
+    final reference = standardUnitPrice;
+    if ((!hasOffer && !isManualPriceOverride) ||
+        reference == null ||
+        !reference.isFinite ||
+        reference <= 0) {
+      return 0;
+    }
+    return roundMoney(orderLineSplits.fold<double>(0, (sum, split) {
+      final rate =
+          split.saleUnit ? toDisplayAmount(reference) ?? reference : reference;
+      return sum +
+          (roundMoney(rate * split.quantity) -
+                  roundMoney(split.price * split.quantity))
+              .clamp(0, double.infinity);
+    }));
+  }
+
   LocalCartItem({
     String? lineId,
     required this.product,

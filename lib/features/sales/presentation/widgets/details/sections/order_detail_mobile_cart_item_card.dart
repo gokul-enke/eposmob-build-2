@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/screens/print/receipt_line_discount.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -17,6 +18,7 @@ class OrderDetailMobileCartItemCard extends StatelessWidget {
   final String currency;
   @override
   Widget build(BuildContext context) {
+    final amounts = ReceiptLineDiscount.fromItem(item);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -84,7 +86,7 @@ class OrderDetailMobileCartItemCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '$currency ${inputs.data.fmt(item.totalPrice)}',
+                '$currency ${inputs.data.fmt(amounts.discountedTotal)}',
                 style: buildCustomStyle(
                   FontWeightManager.bold,
                   FontSize.s12,
@@ -115,15 +117,21 @@ class OrderDetailMobileCartItemCard extends StatelessWidget {
               Expanded(
                 child: OrderDetailMobileDetailChip(
                     'sales_order_details.th_rate'.tr,
-                    '$currency ${inputs.data.fmt(item.unitPrice)}',
+                    '$currency ${inputs.data.fmt(amounts.originalRate)}',
                     inputs: inputs),
               ),
             ],
           ),
           const SizedBox(height: 6),
           OrderDetailMobileDetailChip('sales_order_details.th_tax'.tr,
-              '$currency ${inputs.data.fmt(item.taxAmount)}',
+              '$currency ${inputs.data.fmt(item.discountedTaxAmount ?? item.taxAmount)}',
               inputs: inputs),
+          if (amounts.totalDiscount > 0) ...[
+            const SizedBox(height: 6),
+            OrderDetailMobileDetailChip('billing.discount_label'.tr,
+                '$currency ${inputs.data.fmt(amounts.totalDiscount)}',
+                inputs: inputs),
+          ],
         ],
       ),
     );

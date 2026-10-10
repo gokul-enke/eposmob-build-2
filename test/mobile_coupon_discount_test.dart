@@ -8,12 +8,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/services/print_service.dart';
@@ -619,6 +621,61 @@ void main() {
       expect(cart.getCurrentDiscount()['flatDiscount'], 0);
     });
   });
+
+  for (final offered in [false, true]) {
+    testWidgets(
+        'checkout coupon preview uses eligible capped money (offered=$offered)',
+        (tester) async {
+      Get.addTranslations({
+        'en_US': {
+          'coupon.net_total': 'Net total',
+          'coupon.discount_amount': 'Discount amount',
+          'coupon.total_after_discount': 'After discount',
+        }
+      });
+      Get.updateLocale(const Locale('en', 'US'));
+      late LocalProductProvider cart;
+      await tester.runAsync(() async {
+        cart = _cartWithSubtotal('17');
+      });
+      if (offered) cart.getCartItems().single.offerId = 28;
+      final coupon = DiscountData.fromJson({
+        ..._couponJson(type: 'fixed', value: 20),
+        'valid_from_date': '2000-01-01',
+        'valid_to_date': '3000-01-01',
+      });
+      await tester.pumpWidget(MultiProvider(
+          providers: [
+            ChangeNotifierProvider<LocalProductProvider>.value(value: cart),
+            ChangeNotifierProvider<DiscountProvider>(
+                create: (_) => _SeededDiscountProvider([coupon])),
+            ChangeNotifierProvider<AppSettingsProvider>(
+                create: (_) => _FakeAppSettingsProvider()),
+            ChangeNotifierProvider<KeyboardProvider>(
+                create: (_) => KeyboardProvider()),
+          ],
+          child: MaterialApp(
+              home: Scaffold(
+                  body: CouponModal(
+            subTotal: 17,
+            fullWidth: true,
+            initialCouponCode: 'SUNDAYOFFER',
+            isCouponApplied: false,
+            showAsDialog: false,
+            closeOnApply: false,
+            onCouponAction: (_, __,
+                {flatDiscount, percentageDiscount, coupon}) {},
+          )))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('-INR ${offered ? '0.00' : '17.00'}'), findsOneWidget);
+      expect(find.text('INR ${offered ? '17.00' : '0.00'}'), findsWidgets);
+      expect(find.text('INR -3.00'), findsNothing);
+      expect(find.text('117.6%'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    });
+  }
 
   group('CouponSection smoke', () {
     Widget wrapCouponSection(

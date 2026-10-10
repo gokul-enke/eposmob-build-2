@@ -327,6 +327,12 @@ class BillingPageState extends State<BillingPage>
   VoidCallback? _generalSettingsListener;
   VoidCallback? _deliveryMethodListener;
   VoidCallback? _paymentMethodListener;
+  SalesExecutiveProvider? _listenedSalesExecutiveProvider;
+  AuthModel? _listenedAuthModel;
+  LocalProductProvider? _listenedLocalProductProvider;
+  AppSettingsProvider? _listenedAppSettingsProvider;
+  GeneralSettingsProvider? _listenedGeneralSettingsProvider;
+  DeliveryMethodsProvider? _listenedDeliveryMethodsProvider;
 
   void _syncStockEnabledSetting() {
     if (!mounted) return;
@@ -450,10 +456,12 @@ class BillingPageState extends State<BillingPage>
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
+      _listenedSalesExecutiveProvider = salesExecutiveProvider;
 
       // Also listen for auth changes (more direct indicator of user switch)
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
+      _listenedAuthModel = authModel;
 
       // Listen for app settings changes
       final appSettingsProvider =
@@ -469,17 +477,20 @@ class BillingPageState extends State<BillingPage>
         _refreshTotalsAfterSettingsChange(appSettingsProvider);
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
+      _listenedAppSettingsProvider = appSettingsProvider;
 
       final generalSettingsProvider =
           Provider.of<GeneralSettingsProvider>(context, listen: false);
       _generalSettingsListener = _syncStockEnabledSetting;
       generalSettingsProvider.addListener(_generalSettingsListener!);
+      _listenedGeneralSettingsProvider = generalSettingsProvider;
       _syncStockEnabledSetting();
 
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       localProductProvider.addListener(_onCartChanged);
+      _listenedLocalProductProvider = localProductProvider;
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -529,41 +540,24 @@ class BillingPageState extends State<BillingPage>
     _cartTableFocusNode.dispose();
     _customerScrollController.dispose();
 
-    // Remove sales executive listener
-    try {
-      final salesExecutiveProvider =
-          Provider.of<SalesExecutiveProvider>(context, listen: false);
-      salesExecutiveProvider.removeListener(_onSalesExecutiveChanged);
-
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.removeListener(_onUserSwitched);
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      localProductProvider.removeListener(_onCartChanged);
-
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final generalSettingsProvider =
-          Provider.of<GeneralSettingsProvider>(context, listen: false);
-      if (_appSettingsDebugListener != null) {
-        appSettingsProvider.removeListener(_appSettingsDebugListener!);
-      }
-      if (_generalSettingsListener != null) {
-        generalSettingsProvider.removeListener(_generalSettingsListener!);
-      }
-      if (_paymentMethodListener != null) {
-        appSettingsProvider.removeListener(_paymentMethodListener!);
-      }
-
-      final deliveryMethodsProvider =
-          Provider.of<DeliveryMethodsProvider>(context, listen: false);
-      if (_deliveryMethodListener != null) {
-        deliveryMethodsProvider.removeListener(_deliveryMethodListener!);
-        appSettingsProvider.removeListener(_deliveryMethodListener!);
-      }
-    } catch (e) {
-      debugPrint("Error removing listeners: $e");
+    // The context is deactivated here; remove listeners from their owners.
+    _listenedSalesExecutiveProvider?.removeListener(_onSalesExecutiveChanged);
+    _listenedAuthModel?.removeListener(_onUserSwitched);
+    _listenedLocalProductProvider?.removeListener(_onCartChanged);
+    if (_appSettingsDebugListener != null) {
+      _listenedAppSettingsProvider?.removeListener(_appSettingsDebugListener!);
+    }
+    if (_generalSettingsListener != null) {
+      _listenedGeneralSettingsProvider
+          ?.removeListener(_generalSettingsListener!);
+    }
+    if (_paymentMethodListener != null) {
+      _listenedAppSettingsProvider?.removeListener(_paymentMethodListener!);
+    }
+    if (_deliveryMethodListener != null) {
+      _listenedDeliveryMethodsProvider
+          ?.removeListener(_deliveryMethodListener!);
+      _listenedAppSettingsProvider?.removeListener(_deliveryMethodListener!);
     }
 
     super.dispose();
@@ -3495,6 +3489,8 @@ class BillingPageState extends State<BillingPage>
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<LocalCartItem> cartItems = localProductProvider.getCartItems();
+        final showItemDiscount =
+            cartItems.any((item) => item.itemDiscountAmount > 0);
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: true);
         final appSettings = appSettingsProvider.appSettings;
@@ -3556,6 +3552,11 @@ class BillingPageState extends State<BillingPage>
                               flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
+                        if (showItemDiscount)
+                          _buildHeaderCell('billing.discount_label'.tr,
+                              flex: 1,
+                              alignment: Alignment.centerRight,
+                              fitText: true),
                         if (appSettings?.showTaxPos == true)
                           _buildHeaderCell('billing.table_tax_amount'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
@@ -3990,6 +3991,22 @@ class BillingPageState extends State<BillingPage>
                                           flex: 1,
                                           alignment: Alignment.centerLeft,
                                         ),
+
+                                        if (showItemDiscount)
+                                          _buildContentCell(
+                                            Text(
+                                              AmountHelper.formatAmount(
+                                                  item.itemDiscountAmount),
+                                              key: ValueKey(
+                                                  'item-discount-${item.lineId}'),
+                                              style: TextStyle(
+                                                  fontSize: fontProvider
+                                                      .billingTableItemSize),
+                                              textAlign: TextAlign.right,
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerRight,
+                                          ),
 
                                         // Tax Amount
                                         if (appSettings?.showTaxPos == true)
@@ -4458,24 +4475,21 @@ class BillingPageState extends State<BillingPage>
   }
 
   Widget _buildHeaderCell(String text,
-      {required int flex, required Alignment alignment}) {
+      {required int flex, required Alignment alignment, bool fitText = false}) {
     final fontProvider = Provider.of<AppFontProvider>(context, listen: true);
+    final label = Text(
+      text,
+      textAlign:
+          alignment == Alignment.center ? TextAlign.center : TextAlign.left,
+      style: buildCustomStyle(FontWeightManager.bold,
+          fontProvider.billingTableHeaderSize, 0.21, ColorManager.textColor),
+    );
     return Expanded(
       flex: flex,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         alignment: alignment,
-        child: Text(
-          text,
-          textAlign:
-              alignment == Alignment.center ? TextAlign.center : TextAlign.left,
-          style: buildCustomStyle(
-            FontWeightManager.bold,
-            fontProvider.billingTableHeaderSize,
-            0.21,
-            ColorManager.textColor,
-          ),
-        ),
+        child: fitText ? FittedBox(fit: BoxFit.scaleDown, child: label) : label,
       ),
     );
   }
@@ -9374,6 +9388,8 @@ class BillingPageState extends State<BillingPage>
       // Add listeners
       deliveryMethodsProvider.addListener(_deliveryMethodListener!);
       appSettingsProvider.addListener(_deliveryMethodListener!);
+      _listenedDeliveryMethodsProvider = deliveryMethodsProvider;
+      _listenedAppSettingsProvider = appSettingsProvider;
 
       // Initial check
       updateDeliveryMethod();
@@ -9402,6 +9418,7 @@ class BillingPageState extends State<BillingPage>
       _paymentMethodListener = updatePaymentMethod;
 
       appSettingsProvider.addListener(_paymentMethodListener!);
+      _listenedAppSettingsProvider = appSettingsProvider;
       updatePaymentMethod();
     });
   }

@@ -152,6 +152,22 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             ],
           ),
 
+          if (cartItem.itemDiscountAmount > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              key: ValueKey('item-discount-${cartItem.lineId}'),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('billing.discount_label'.tr,
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(AmountHelper.formatAmount(cartItem.itemDiscountAmount),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+
           const SizedBox(height: 12),
 
           // Quantity controls with modern styling (for current cart, these will use local provider)

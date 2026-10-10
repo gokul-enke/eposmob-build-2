@@ -313,6 +313,21 @@ class CartItemCard extends StatelessWidget {
             showTaxRate: showTaxRate,
             showTaxAmount: showTaxAmount,
           ),
+          if (item.itemDiscountAmount > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              key: ValueKey('item-discount-${item.lineId}'),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('billing.discount_label'.tr,
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(AmountHelper.formatAmount(item.itemDiscountAmount),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
         ],
       ),
     );

@@ -336,7 +336,17 @@ class _CouponModalState extends State<CouponModal> {
 
         final percentageDiscountValue =
             originalSubTotal * (currentPercentageDiscount / 100);
-        final totalDiscount = currentFlatDiscount + percentageDiscountValue;
+        final rawDiscount = currentFlatDiscount + percentageDiscountValue;
+        final couponPreview = _selectedDiscount == null
+            ? null
+            : localProductProvider.evaluateCoupon(_selectedDiscount!,
+                subtotal: originalSubTotal, lines: widget.couponLines);
+        final previewDiscount = couponPreview?.amount ?? rawDiscount;
+        final totalDiscount = previewDiscount.isFinite
+            ? previewDiscount
+                .clamp(0.0, originalSubTotal.clamp(0.0, double.infinity))
+                .toDouble()
+            : 0.0;
         final newTotal = originalSubTotal - totalDiscount;
         final isCartEmpty = originalSubTotal == 0;
 
@@ -649,7 +659,8 @@ class _CouponModalState extends State<CouponModal> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
+                        Expanded(
+                            child: Text(
                           'coupon.total_after_discount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
@@ -657,7 +668,7 @@ class _CouponModalState extends State<CouponModal> {
                             0.21,
                             Colors.grey.shade800,
                           ),
-                        ),
+                        )),
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: isDenseEmbedded ? 8 : 12,
