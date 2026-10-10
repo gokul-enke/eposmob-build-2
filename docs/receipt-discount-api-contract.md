@@ -1,3 +1,5 @@
+> Update, 10 October 2026: backend changes are implemented locally; see [the implementation notes](backend-coupon-offer-implementation.md) and [current handoff](backend-coupon-offer-handoff.md). Deployment and version 2 app integration remain pending.
+
 # Expected receipt discount API contract
 
 The requested display is one numeric Discount column in each cart-item row, controlled by the current API's `showDiscountColumn` (`showItemDiscount` remains supported for older configurations). The richer source metadata below is optional accounting/audit data, not a requirement for this display. The app accepts this additive pricing contract. Backend PHP and admin settings have not been changed. Existing responses remain supported. These are receipt snapshots, not instructions to apply discounts again.

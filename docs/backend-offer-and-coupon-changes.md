@@ -1,3 +1,5 @@
+> Update, 10 October 2026: backend changes are implemented locally; see [the implementation notes](backend-coupon-offer-implementation.md) and [current handoff](backend-coupon-offer-handoff.md). Deployment and version 2 app integration remain pending.
+
 # Backend offer and coupon changes
 
 For the current developer handoff, send [backend-coupon-offer-handoff.md](backend-coupon-offer-handoff.md). The document below retains the earlier audit and verification history; the handoff supersedes its rollout guidance.

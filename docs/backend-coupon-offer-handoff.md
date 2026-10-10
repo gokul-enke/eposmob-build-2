@@ -1,6 +1,6 @@
 # Backend handoff: coupons, offers and receipt discounts
 
-Updated: 10 October 2026. This is the current document to send to the backend developer. It is self-contained. Backend implementation and deployment remain pending; the app and printing changes are already in the working tree.
+Updated: 10 October 2026. This is the current document to send to the backend developer. It is self-contained. The backend changes are now implemented locally in `enkepos`; deployment and staging verification remain pending. Existing app/printing support remains available; the optional version 2 coupon workflow still needs app integration. See [the implementation and deployment notes](backend-coupon-offer-implementation.md) for the exact implemented API contract.
 
 ## 1. Compatibility and rollout boundary
 
@@ -33,6 +33,8 @@ The pre-update app source available in this workspace (`636de3fa`, 9 October 202
 - Keep existing totals, enum values, endpoint envelopes and response status meanings. Adding metadata or a new optional endpoint does not enable quote reservations, usage-counter checks or new eligibility/return policies in an old app. Version or capability-gate mandatory behavior and coordinate the required app release.
 
 These rules prevent identified contract breaks. They do not establish that all previously shipped versions or future backend implementations are issue-free.
+
+Eleven temporary compatibility checks passed using unmodified parsers/request models from `636de3fa`: additive receipt fields, object-shaped column configuration, additive coupon counters, the legacy coupon-code request and both full/delta offer responses. The same checks reproduced the failures caused by numeric quantities, decimal coupon values, null coupon store IDs, string numeric coupon IDs and bare boolean display options. This verifies that baseline source and those sample contracts, not every release binary or the future deployed backend.
 
 ## 2. Preserve these discount meanings
 
@@ -178,7 +180,7 @@ Keep the existing top-level `offers`, `removed_offer_ids`, `server_time`, `full_
 - Keep disabled/deleted/moved offers out of the eligible full feed. Continue removal IDs for clients that still use deltas. Preserve `changes.offers` notifications in `/api/v1/sync/changes`; the app responds by fetching the full offer feed.
 - Preserve the `POS_OFFERS` setting in `/api/v1/website-settings`; its status controls whether cached rules are used.
 
-Align `CompletedSalePricing.line` with the POS resolver: product rule before category, store-specific before company-wide, batch before product-wide, highest product line ID, nearest category then highest offer ID, base-unit eligibility and wholesale precedence. One offer wins; offers do not stack. Offer prices use half-up rounding to three decimals and do not impose minimum-margin floors. Current historical review still applies a minimum-margin floor and searches product lines directly, which can falsely flag valid category/offer prices.
+Align `CompletedSalePricing.line` with the POS resolver: product rule before category, store-specific before company-wide, batch before product-wide, highest product line ID, nearest category then highest offer ID, base-unit eligibility and wholesale precedence. One offer wins; offers do not stack. Offer prices use half-up rounding to three decimals and do not impose minimum-margin floors. Before this backend update, historical review applied a minimum-margin floor and insufficient rule precedence. The local implementation now matches the POS floor policy, expanded categories and known sale-time rule precedence.
 
 Version the resolved category scope and effective product override sufficiently to validate sale-time rules later. Offer 28's product override is fixed 3: standard rate 20 gives 17, regardless of the offer's general 3% value. Reviewing or reprinting this sale must retain that historical result after the live offer is edited or removed.
 
@@ -190,11 +192,11 @@ Keep `/api/v1/discount/list-discounts`, its existing `data` list, and all existi
 
 Add optional integer `usage_count` and `remaining_uses`. The app already checks them when present. Use null/absence for unavailable counts; do not report zero remaining for unknown/unlimited usage. Return usable tenant/store coupon definitions and preserve the existing discount types (`percent`/`percentage`, `fixed`). Changing these to a new enum requires app integration. Cached counts cannot guarantee global usage under concurrency or offline operation.
 
-### Proposed authoritative quote workflow: app integration required
+### Implemented optional quote workflow: app integration required
 
 The current `/api/v1/discount/apply-coupon` requires a server `cart_id`, or a single `product_id` plus `price`. It cannot quote the complete local POS cart through the current price/code/store-only caller. Desktop, mobile and restaurant coupon checkout currently calculate from downloaded definitions; they do not use an authoritative cart quote/reservation token.
 
-Add a non-mutating local-cart quote operation, through a new endpoint or a backward-compatible extension of the existing operation. Agree its final URL/schema before the app integration. It must accept store, coupon identity, sale time and all cart lines, including stable `client_line_id`, product/variant, stock/batch, sale unit, quantity, standard/current rate and applied offer ID/version. Example proposed request:
+The local backend now provides optional `POST /api/v1/discount/quote-coupon`, `reserve-coupon`, and `release-coupon` operations. Their exact schema and version 2 confirmation fields are documented in [the implementation notes](backend-coupon-offer-implementation.md). It must accept store, coupon identity, sale time and all cart lines, including stable `client_line_id`, product/variant, stock/batch, sale unit, quantity, standard/current rate and applied offer ID/version. Example proposed request:
 
 ```json
 {
@@ -233,7 +235,7 @@ Preserve `POST /api/v1/order/add-to-order` compatibility. Current checkout sends
 
 A new frozen local sale carries `pricing_mode: completed_sale`, receipt identity (`client_sale_id`, `pos_device_id`, `receipt_number`, UTC `issued_at`), store and item snapshots. The app submits original rate, tax, selling total, offer identity/version and optional item-discount/origin/name/rule metadata. It also submits final `grand_total`, `round_off` and discounted `tax_total` when available, and `delivery_tax_amount: 0` under its current delivery snapshot contract. Accept and persist these fields, but do not trust client metadata as proof of eligibility. Existing older snapshots without the newer optional metadata must remain accepted under the existing review policy. Draft/restaurant server orders retain server-authoritative pricing and do not become completed-sale snapshots merely because they contain a coupon.
 
-The current `OrderController.addToOrder` completed-sale branch trusts submitted `discount_amount` and bypasses `handleCouponDiscount`, leaving authoritative coupon validation/redemption incomplete. Implement validation and usage accounting without silently changing a printed bill:
+Before this update the completed-sale branch bypassed coupon validation/redemption. The local implementation now records recognized coupon usage transactionally, reviews unverified legacy coupons without repricing printed sales, and binds optional version 2 reservations to saved eligible-line allocations. Implement validation and usage accounting without silently changing a printed bill:
 
 - Bind coupon identity/version, agreed quote/reservation token and eligible-line/source allocations to the sale. New mandatory quote fields need a coordinated app release.
 - Online: validate/reserve/redeem atomically before confirmation under the agreed workflow. Count redemption once per `client_sale_id`, including retries and duplicate uploads.
@@ -263,7 +265,26 @@ Verify these cases against original prints, stored data and reprints:
 7. Full offer refresh with an empty cache, a nonempty cache missing an unchanged offer, pagination and a failed later page; successful full snapshots remove absent rules, failed downloads keep the old catalog.
 8. A4/A5 and 58mm/80mm thermal output: custom Discount title, visible/hidden column, zero-discount lines, English/Arabic/bilingual mode, and independent footer/Particulars switches.
 9. Existing app requests without future quote tokens and old receipts without optional source metadata; preserve the documented compatibility behavior.
+10. Each supported older release against staging: string quantities, unchanged coupon integer/nullability fields, object-shaped display options, coupon codes carried in legacy `coupon_id`, and delta offer requests. Check browsing, checkout, offline replay and printing with the actual binary.
 
-Current app evidence: 98 offer/API-pagination/realtime/document-label/thermal regression tests passed, targeted static analysis was clean, 38 one-page PDF samples and six thermal previews were generated and reviewed, and the running app hot-reloaded successfully. A fresh 60-test receipt-contract, order-submission, completed-sale and coupon-calculation compatibility subset also passed; these suites overlap. The three JSON examples in this handoff were parsed and the pricing example reconciled. These checks cover the app's current response contract and fallbacks; they do not prove a future backend deployment or the proposed quote/reservation workflow. Physical printer hardware and the backend test suite were not exercised for this handoff.
+Current app evidence: 98 offer/API-pagination/realtime/document-label/thermal regression tests passed, targeted static analysis was clean, 38 one-page PDF samples and six thermal previews were generated and reviewed, and the running app hot-reloaded successfully. A fresh 60-test receipt-contract, order-submission, completed-sale and coupon-calculation compatibility subset also passed; these suites overlap. The three JSON examples in this handoff were parsed and the pricing example reconciled. These checks cover the app's current response contract and fallbacks; they do not prove a future backend deployment or the proposed quote/reservation workflow. Physical printer hardware and the deployed backend were not exercised. Local backend PHPUnit results and staging limits are recorded below.
 
 Backend implementation locations: `app/Http/Controllers/Api/V1/OrderController.php`, `DiscountController.php`, `DocumentPrintConfigurationController.php`, `PosOfferController.php`, `app/Helper/OrderHelper.php`, `TaxDiscountHelper.php`, and `app/Services/CompletedSalePricing.php`.
+
+## 10. Local backend implementation status
+
+See [backend-coupon-offer-implementation.md](backend-coupon-offer-implementation.md) for all implemented response changes, the exact optional quote/reserve/release contract, confirmation requirements, return snapshots, migrations and deployment checks. New tokens are required only when a client explicitly requests `coupon_pricing_version: 2`; current/older apps keep their existing requests and proportional pricing policy.
+
+The backend is changed locally and has not been deployed. Two new migrations must be included in deployment. Quote/reservation, eligible-line local VAT/printing and exact return snapshot consumption remain app integration work. Simultaneous MySQL transactions, actual supported release binaries and physical printers require staging/device validation.
+
+Implemented contract summary for forwarding this file alone:
+
+- `POST /api/v1/discount/quote-coupon`: accepts `store_id`, numeric `coupon_id` and/or `coupon_code`, `issued_at`, and `items` with unique `client_line_id`, product/stock/variant/sale-unit identity, quantity, inclusive `unit_price`, optional original rate, offer identity and tax rate. Returns `data.coupon_pricing_version: 2`, coupon identity/fingerprint, eligible subtotal, exact discount, per-line allocations and final base/VAT, item totals, `quote_token` and `expires_at`. It is non-mutating, resolves tax server-side, and does not reserve usage. Sale time must be within two minutes of server time; expiry is ten minutes, bounded by coupon validity.
+- `POST /api/v1/discount/reserve-coupon`: accepts `quote_token`, `client_sale_id` and `pos_device_id`. Returns `data.coupon_reservation_token`, sale ID, version and expiry. A coupon row lock protects capacity and identical active retries reuse the reservation. Changed coupon/tax/eligibility or conflicting active reservations require a fresh quote/release.
+- `POST /api/v1/discount/release-coupon`: accepts reservation token plus the same sale/device UUIDs. Releases matching unredeemed capacity idempotently; released tokens cannot confirm a sale.
+- Existing `add-to-order` requests need no new fields. Opt-in version 2 completed POS sales send `coupon_pricing_version: 2`, coupon identity, reservation token and matching `items.*.client_line_id` alongside existing frozen identity/price/tax/total fields. The reserved coupon amount must match `discount_amount`; it cannot include an extra manual order discount. Manual item reductions can stack; offered lines cannot.
+- Quote totals exclude separately saved inclusive delivery and round-off. Per-line allocations are stored once and used for VAT/reprints/reports. Version 2 return rows add immutable original/current rates, item/order discount, final amounts/base/VAT and quantity-slice metadata. Existing gross return `price` remains available.
+- Offline policy: delayed printed version 2 uploads after reservation expiry/coupon change/capacity exhaustion retain quoted amounts and are accepted with review. Expired capacity is released, so late uploads can exceed the global cap; no guaranteed offline allowance is claimed. Legacy printed uploads without tokens retain their amounts and proportional allocation, with review reasons when coupon eligibility/capacity cannot be verified.
+- Deployment migrations: `2026_10_10_000001_create_pos_coupon_reservations_table.php` and `2026_10_10_000002_add_pricing_metadata_to_order_return_items.php`. No working/production database migration or deployment was performed locally.
+
+Local backend validation: **115 PHPUnit tests, 445 assertions passed** on PHP 8.4.24 using isolated in-memory SQLite. Coverage includes document language/title/fallback and tenant filtering; coupon scope, caps, limits, quotes/reservation retries/release and authentication; saved allocations, mixed VAT/tiny amounts/large partial returns; legacy coupon normalization and request-hash preservation; idempotent usage logging; offer history/manual override metadata; tax reports/exports; admin return previews and credit-note amounts. All **27 changed PHP files** passed syntax checks; new PHP files were formatted with Pint and `git diff --check` was clean. Full seeded HTTP checkout/return flows, simultaneous MySQL transactions and deployed app/device printing remain staging checks.
