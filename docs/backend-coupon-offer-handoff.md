@@ -21,6 +21,19 @@ Adding the fields below is compatible with the current app **when existing endpo
 
 Do not remove old fields, replace existing envelopes, make new snapshot/quote fields mandatory for current clients, or silently reprice an already printed completed sale. New total aliases must supplement the existing `price_summary` fields rather than replace them.
 
+### Older installed apps: additional compatibility requirements
+
+The pre-update app source available in this workspace (`636de3fa`, 9 October 2026) was also inspected. Supporting the updated app alone does not prove support for every older installed release. Before production rollout, run the actual supported release binaries against staging and replay their captured requests, including pending offline sales.
+
+- Older order-detail parsing calls `num.tryParse(json["quantity"])`: keep existing line `quantity` as a decimal **string**. Changing it to a JSON number can throw in the older app, even though the updated parser accepts both.
+- Older coupon models directly assign numeric IDs, `discount_value` and usage-limit counts to Dart `int`, and `store_id` to a nonnullable `int`. Preserve the existing integer types and nullability for legacy clients. Do not change an integer `discount_value` to a decimal/string or introduce null store IDs in their existing response shape without a versioned contract. New nullable counters are additional fields, not replacements.
+- Every entry in `display_configuration`, including new `showDiscountColumn`, must keep the `{visible, value, default}` object shape. A bare boolean/string entry can make the older parser discard the whole options map. An older renderer can safely ignore an added object option; it will not acquire the new Discount column automatically.
+- Older requests can carry a coupon **code string in `coupon_id`**, with no `coupon_code`. Preserve that legacy alias: normalize numeric IDs/numeric strings as IDs and nonnumeric strings as coupon codes before integer validation, then resolve and validate tenant ownership/eligibility. The updated app sends proper numeric identity and separate code. Do not require the corrected request format from an unupgraded app.
+- Preserve legacy `since` requests on the offer endpoint, including removal IDs. A full response to an older delta request is compatible with the inspected offer parser only when it is correctly marked `full_snapshot: true`; never send a partial changes list with that flag.
+- Keep existing totals, enum values, endpoint envelopes and response status meanings. Adding metadata or a new optional endpoint does not enable quote reservations, usage-counter checks or new eligibility/return policies in an old app. Version or capability-gate mandatory behavior and coordinate the required app release.
+
+These rules prevent identified contract breaks. They do not establish that all previously shipped versions or future backend implementations are issue-free.
+
 ## 2. Preserve these discount meanings
 
 All line rates and quantities must use the same sale unit. Prices below are tax-inclusive.
@@ -109,7 +122,7 @@ Source fields are optional accounting/audit metadata, not additional display req
 
 Expose existing CartItem pricing metadata in controller projections and persist any missing snapshots. Do not resolve historical names, prices, categories or offers against today's records. When an offer is manually overridden, use origin `manual` and clear offer identity/rule fields. A separate audit of the superseded offer versus manual portion needs explicit stored data; it cannot be inferred from the final rate.
 
-For unknown historical original prices, return null/omit the reference rather than inventing one from MRP. Valid explicit `item_discount_amount: 0` is authoritative. Monetary values may be numbers or plain decimal strings; do not include currency symbols or thousands separators. Original Rate Ex Tax uses saved `tax_rate`; the app prints `-` when a discounted historical line lacks a reliable rate.
+For unknown historical original prices, return null/omit the reference rather than inventing one from MRP. Valid explicit `item_discount_amount: 0` is authoritative. Monetary values may be numbers or plain decimal strings where the existing field contract permits them; do not include currency symbols or thousands separators. Preserve legacy quantities and coupon integer fields as specified above. Original Rate Ex Tax uses saved `tax_rate`; the app prints `-` when a discounted historical line lacks a reliable rate.
 
 ## 4. Document configuration: only one table discount option
 
