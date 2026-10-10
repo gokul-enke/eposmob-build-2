@@ -173,12 +173,19 @@ class ContractStandardPdfRenderer {
     // returns -> footer.  Keep these calls explicit for reviewability.
     body.addAll(_buildHeaderSection(params, fonts, accent, logo, scale));
     body.addAll(_buildCustomerSection(params, fonts, accent, scale));
+    // The totals summary (or, on a return-only document, the footer) is
+    // pinned to the bottom of the last page together with the signatures:
+    // start a fresh page when too little room remains, then let the spacer
+    // absorb the free space above.
     if (!params.isReturnOnly) {
       body.addAll(
           _buildCartItemsSection(params, fonts, accent, currency, scale));
+      body.add(pw.NewPage(freeSpace: 220 * scale));
+      body.add(pw.Spacer());
       body.addAll(_buildTotalsSection(params, fonts, accent, currency, scale));
     }
     body.addAll(_buildReturnSection(params, fonts, accent, currency, scale));
+    if (params.isReturnOnly) body.add(pw.Spacer());
     body.addAll(_buildFooterSection(params, fonts, accent, scale));
 
     document.addPage(
@@ -469,15 +476,42 @@ class ContractStandardPdfRenderer {
       rows.add(_labelValue(row.$1, _money(row.$2, currency),
           row.$3 ? fonts.bodyBold : fonts.body));
     }
-    if (rows.isEmpty) return const <pw.Widget>[];
+    // Bank details sit beside the summary instead of in the footer.
+    final bankRows = params.bankDetailRows;
+    if (rows.isEmpty && bankRows.isEmpty) return const <pw.Widget>[];
+    final summary = rows.isEmpty
+        ? null
+        : _sectionBox(
+            rows,
+            accent,
+            scale,
+            heading: params.rendererText(english: 'Summary', arabic: 'الملخص'),
+            fonts: fonts,
+          );
+    final bank = bankRows.isEmpty
+        ? null
+        : _sectionBox(
+            [
+              for (final row in bankRows)
+                _labelValue(row.$1, row.$2, fonts.small),
+            ],
+            accent,
+            scale,
+            heading: params.bankDetailsHeading,
+            fonts: fonts,
+          );
     return <pw.Widget>[
-      _sectionBox(
-        rows,
-        accent,
-        scale,
-        heading: params.rendererText(english: 'Summary', arabic: 'الملخص'),
-        fonts: fonts,
-      ),
+      if (bank != null && summary != null)
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(flex: 5, child: bank),
+            pw.SizedBox(width: 8 * scale),
+            pw.Expanded(flex: 4, child: summary),
+          ],
+        )
+      else
+        (summary ?? bank)!,
       pw.SizedBox(height: 8 * scale),
     ];
   }
@@ -614,7 +648,10 @@ class ContractStandardPdfRenderer {
   ) {
     final compact = params.selectedPaperSize == 'A5';
     final children = <pw.Widget>[];
-    final bankRows = params.bankDetailRows;
+    // A sale prints its bank details beside the totals summary; only a
+    // return-only document, which has no summary, prints them here.
+    final bankRows =
+        params.isReturnOnly ? params.bankDetailRows : const <(String, String)>[];
     if (bankRows.isNotEmpty) {
       children.add(_sectionTitle(
           params.bankDetailsHeading, fonts.bodyBold, accent, scale));

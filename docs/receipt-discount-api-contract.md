@@ -47,7 +47,7 @@ New local completed-sale line snapshots now also submit `item_discount_amount`, 
 
 The app captures the winning offer's name and effective rule when applying it, persists them in backward-compatible Hive field 23, and clears them on manual override. Saved-order printing uses this snapshot, not the refreshed catalogue. Draft submissions strip the new completed-sale snapshot fields; keep draft pricing authoritative on the server.
 
-Existing locally applied coupons have no authoritative quote/source-allocation snapshot. Their allocated order-discount share contributes to the Discount column. `order_discount_allocations` remains optional source/audit metadata; implementing the authoritative coupon quote/reservation workflow is still required separately in [backend requirements](backend-offer-and-coupon-changes.md).
+Existing locally applied coupons have no authoritative quote/source-allocation snapshot. Their allocated order-discount share contributes to the Discount column. `order_discount_allocations` remains optional source/audit metadata; implementing the authoritative coupon quote/reservation workflow is still required separately in [the current backend handoff](backend-coupon-offer-handoff.md).
 
 ## Document configuration
 

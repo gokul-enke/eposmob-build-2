@@ -1,5 +1,7 @@
 # Offline offers: what the POS app does (final contract)
 
+For the current coupon/offer/receipt backend rollout, use [backend-coupon-offer-handoff.md](backend-coupon-offer-handoff.md).
+
 This is what the app sends and expects, after the backend developer's contract and reply. If the backend behaves differently, the app breaks or the sale is flagged, so tell us before changing it.
 
 ## 1. Switch
@@ -78,7 +80,7 @@ Every line of a completed sale carries:
 
 A cart line that spans several batches becomes one order line per batch, each with the same price and the same offer reference.
 
-Not sent: `discount_origin`, `tax_total`, `round_off`, `grand_total`. `discount_amount` is the overall (coupon / order) discount only; the offer reduction is already in the line prices.
+New completed-sale snapshots also carry optional item-discount/origin/name/rule metadata, including `item_discount_amount` and `discount_origin`. They submit final `grand_total`, `round_off` and discounted `tax_total` when available; older payloads can omit them. `discount_amount` is the overall (coupon / order) discount only; the offer reduction is already in the line prices. Keep the new fields optional for existing clients.
 
 ## 5. Responses
 

@@ -32,10 +32,10 @@ import 'standard_pdf_layout.dart';
 ///     (centre) | store VAT + FSSAI (right).
 ///   • Info band: customer box (left) + invoice box (middle) + QR (right).
 ///   • Items table with Arabic-over-English column headers.
-///   • Totals: amount in words / comment / payment / balance (left) +
-///     bilingual totals box (right).
+///   • Totals: amount in words / comment / payment / balance / bank details
+///     (left) + bilingual totals box (right), pinned to the page bottom.
 ///   • Signature band + accent rule.
-///   • Footer band: bank details, VAT and order-number footers.
+///   • Footer band: VAT and order-number footers.
 ///
 /// Every text comes from the shared [ReceiptLayoutParams] / [ReceiptSections]
 /// helpers, so a configuration prints the same labels, values and language
@@ -321,6 +321,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       );
     }
 
+    // Room the totals band + signatures need at the bottom of a page before
+    // they move to a fresh page instead of splitting from each other.
+    final bottomBlockReserve = isA5 ? 160.0 : 220.0;
+
     final pdfMargins = await CommonPrintSettings.resolvePdfMargins(
       pw.EdgeInsets.only(
         left: isA5 ? 14 : 22,
@@ -504,9 +508,14 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ],
 
             // ═══════════════════════════════════════════════════════
-            // SECTION 5: LEFT INFO + TOTALS BOX
+            // SECTION 5: LEFT INFO + BANK DETAILS | TOTALS BOX
+            // Pinned to the bottom of the last page together with the
+            // signatures: start a fresh page when too little room remains,
+            // then let the spacer absorb the free space above.
             // ═══════════════════════════════════════════════════════
             if (!params.isReturnOnly) ...[
+              pw.NewPage(freeSpace: bottomBlockReserve),
+              pw.Spacer(),
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
@@ -538,6 +547,15 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                               _formatMoney(currency, params.savedAmountValue),
                               wordsBold,
                               wordsBold),
+                        // Bank details fill the room beside the totals box.
+                        if (bankRows.isNotEmpty) ...[
+                          pw.SizedBox(height: 8),
+                          pdfText(params.bankDetailsHeading, style: footerBold),
+                          pw.SizedBox(height: 2),
+                          for (final row in bankRows)
+                            _labelValueLine(
+                                row.$1, row.$2, footerStyle, footerStyle),
+                        ],
                       ],
                     ),
                   ),
@@ -596,6 +614,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             // TERMS & CONDITIONS / THANK YOU
             // ═══════════════════════════════════════════════════════
+            // A return-only document has no totals box; pin its signatures
+            // to the bottom instead.
+            if (params.isReturnOnly) pw.Spacer(),
             if (params.termsText.isNotEmpty) ...[
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -632,11 +653,12 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.SizedBox(height: 4),
 
             // ═══════════════════════════════════════════════════════
-            // SECTION 7: FOOTER BAND — bank details + VAT / order number
+            // SECTION 7: FOOTER BAND — VAT / order number (plus bank details
+            // on a return-only document, which has no totals band for them).
             // Store name / address / tax info / extra headings are rendered
             // in the header and title bands instead of here.
             // ═══════════════════════════════════════════════════════
-            if (bankRows.isNotEmpty)
+            if (params.isReturnOnly && bankRows.isNotEmpty)
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
