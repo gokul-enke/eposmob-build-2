@@ -4,8 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 
 class DiscountProvider with ChangeNotifier {
+  DiscountProvider({http.Client? client}) : _client = client;
+  http.Client? _client;
+  String? _cacheScope;
+  int? activeStoreId;
+  int _requestVersion = 0;
   List<DiscountData> _discounts = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -18,6 +24,16 @@ class DiscountProvider with ChangeNotifier {
   bool get hasError => _errorMessage != null;
 
   Future<void> fetchDiscounts({bool forceRefresh = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    final accessToken = prefs.getString('access_token');
+    activeStoreId = prefs.getInt('active_store_id');
+    final scope = '${APPUrl.listDiscounts}|$apiKey|$accessToken|$activeStoreId';
+    if (_cacheScope != scope) {
+      _discounts = [];
+      _lastFetchTime = null;
+      _cacheScope = scope;
+    }
     if (_discounts.isNotEmpty && !forceRefresh && _lastFetchTime != null) {
       final age = DateTime.now().difference(_lastFetchTime!);
       if (age < _cacheValidityDuration) {
@@ -26,6 +42,7 @@ class DiscountProvider with ChangeNotifier {
       }
     }
 
+    final version = ++_requestVersion;
     debugPrint('🎫 ===============================================');
     debugPrint('🎫 FETCHING DISCOUNTS FROM API');
     debugPrint('🎫 ===============================================');
@@ -36,11 +53,6 @@ class DiscountProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? apiKey = prefs.getString('api_key');
-      String? accessToken = prefs.getString('access_token');
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint('🎫 ⚠️ No API key found, skipping fetch.');
         _isLoading = false;
@@ -63,17 +75,15 @@ class DiscountProvider with ChangeNotifier {
         'X-Tenant': apiKey,
       };
 
-      debugPrint('🎫 Request Headers: $headers');
       debugPrint('🎫 Request URL: $url');
       debugPrint('🎫 Request Method: GET');
       debugPrint('🎫 Access token present: ${accessToken?.isNotEmpty == true}');
 
-      final response = await http.get(url, headers: headers);
+      final response = await (_client ??= http.Client()).get(url, headers: headers);
+      if (version != _requestVersion) return;
 
       debugPrint('🎫 Response Status Code: ${response.statusCode}');
       debugPrint('🎫 Response Body Length: ${response.body.length} chars');
-      debugPrint(
-          '🎫 Response Body Preview: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}...');
       debugPrint('🎫 ===============================================');
 
       if (response.statusCode == 200) {
@@ -89,22 +99,27 @@ class DiscountProvider with ChangeNotifier {
           _discounts = [];
         }
       } else {
+        // Keep the last downloaded coupons; _lastFetchTime is unchanged, so
+        // the next open retries.
         _errorMessage = 'Failed to load discounts: ${response.statusCode}';
-        _discounts = [];
       }
     } catch (error) {
+      if (version != _requestVersion) return;
       debugPrint('❌ Error fetching discounts: $error');
+      // Offline: keep the last downloaded coupons usable.
       _errorMessage = 'An error occurred: $error';
-      _discounts = [];
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (version == _requestVersion) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   DiscountValidity getValidityForDiscount(
       DiscountData discount, double cartTotal) {
-    return discount.checkValidity(cartTotal, DateTime.now());
+    return discount.checkValidity(
+        cartTotal, DateHelper.nowInConfiguredTimeZone());
   }
 
   Future<void> refresh() async {
@@ -114,6 +129,9 @@ class DiscountProvider with ChangeNotifier {
   void clearCache() {
     debugPrint('🧹 Clearing discount cache');
     _discounts = [];
+    _requestVersion++;
+    _isLoading = false;
+    _cacheScope = null;
     _lastFetchTime = null;
     _errorMessage = null;
     notifyListeners();
@@ -122,10 +140,19 @@ class DiscountProvider with ChangeNotifier {
   DiscountData? findDiscountByCode(String couponCode) {
     try {
       return _discounts.firstWhere(
-        (d) => d.couponCode.toLowerCase() == couponCode.toLowerCase(),
+        (d) =>
+            d.couponCode.trim().toLowerCase() ==
+            couponCode.trim().toLowerCase(),
       );
     } catch (e) {
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    _requestVersion++;
+    _client?.close();
+    super.dispose();
   }
 }

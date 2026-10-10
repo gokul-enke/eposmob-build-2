@@ -18,6 +18,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
+import '../receipt_line_discount.dart';
 import 'receipt_layout_params.dart';
 import 'receipt_configuration_contract.dart';
 import 'receipt_pdf_builder.dart';
@@ -731,6 +732,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    displayConfig = {
+      ...?displayConfig,
+      'showItemDiscount': DisplayOption(visible: params.showItemDiscountColumn),
+    };
+
     final isBilingual = params.isBilingual;
 
     // Column headers: the shared per-key label every template prints.
@@ -741,6 +747,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     final String rateExcTaxLabel = params.fieldLabel('showRateExcTax');
     final String unitLabel = params.fieldLabel('showUnit');
     final String totalLabel = params.fieldLabel('showTotal');
+    final String discountLabel = params.fieldLabel('showItemDiscount');
     final String taxHeaderLabel = params.fieldLabel('showTaxHeader');
     final String slLabel = params.fieldLabel('showSLNumber');
 
@@ -762,6 +769,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
         rateExcTaxLabel,
         unitLabel,
         totalLabel,
+        discountLabel,
         taxHeaderLabel,
         slLabel,
         tableWeights,
@@ -829,6 +837,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     String rateExcTaxLabel,
     String unitLabel,
     String totalLabel,
+    String discountLabel,
     String taxHeaderLabel,
     String slLabel,
     Map<String, double> tableWeights,
@@ -912,6 +921,15 @@ class PremiumReceiptLayout implements ReceiptLayout {
             minScale: tableMinScale,
             horizontalPadding: tableCellPadding));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(discountLabel,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (show('showTotal')) {
         headerCols.add(ReceiptTableColumn(totalLabel,
             weight: tableWeights['showTotal'] ?? 0,
@@ -927,6 +945,15 @@ class PremiumReceiptLayout implements ReceiptLayout {
         headerCols.add(ReceiptTableColumn(totalLabel,
             weight: tableWeights['showTotal'] ?? 0,
             align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(discountLabel,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.center,
             isBold: true,
             scale: tableScale,
             minScale: tableMinScale,
@@ -1093,6 +1120,11 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     String slNumber = (index + 1).toString();
+    final amounts = ReceiptLineDiscount.fromItem(item);
+    final discount = amounts.totalDiscount.toStringAsFixed(2);
+    unitPrice = amounts.originalRate.toStringAsFixed(2);
+    totalPrice = amounts.discountedTotal.toStringAsFixed(2);
+    unitPriceExTax = amounts.formattedRateExcTax;
     bool show(String key) => _isVisible(displayConfig, key);
 
     if (isEnglish) {
@@ -1161,6 +1193,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
             minScale: tableMinScale,
             horizontalPadding: tableCellPadding));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(discount,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (show('showTotal')) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: tableWeights['showTotal'] ?? 0,
@@ -1216,6 +1256,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
       if (show('showTotal')) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(discount,
+            weight: tableWeights['showItemDiscount'] ?? 0,
             align: TextAlign.right,
             scale: tableScale,
             minScale: tableMinScale,
@@ -1315,6 +1363,8 @@ class PremiumReceiptLayout implements ReceiptLayout {
       if (_isVisible(displayConfig, 'showRateExcTax')) 'showRateExcTax': 0.15,
       if (_isVisible(displayConfig, 'showUnit')) 'showUnit': 0.12,
       if (_isVisible(displayConfig, 'showTaxHeader')) 'showTaxHeader': 0.15,
+      if (displayConfig?['showItemDiscount']?.visible == true)
+        'showItemDiscount': 0.20,
       if (_isVisible(displayConfig, 'showTotal')) 'showTotal': 0.15,
     };
 

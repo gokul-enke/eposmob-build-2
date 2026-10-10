@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
@@ -23,6 +24,8 @@ import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/item_discount_details.dart';
+import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/order_submission_payload.dart';
@@ -2010,6 +2013,7 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   void _showCouponModal() {
+    if (_selectedOrder != null) _syncOrderItemsWithLocalCart();
     // Calculate current order total for the modal
     double orderSubTotal = 0.0;
     if (_selectedOrder != null) {
@@ -2043,7 +2047,13 @@ class OrderPanelState extends State<OrderPanel> {
         initialPercentageDiscount: _percentageDiscount,
         isCouponApplied: _isCouponApplied,
         onCouponAction: (couponCode, isApplied,
-            {double? flatDiscount, double? percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount, coupon}) {
+          final localProducts = context.read<LocalProductProvider>();
+          localProducts.applyDiscount(
+            flatDiscount: flatDiscount ?? 0,
+            percentageDiscount: percentageDiscount ?? 0,
+            coupon: coupon,
+          );
           setState(() {
             _couponCode = couponCode;
             _isCouponApplied = isApplied;
@@ -2541,7 +2551,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
-      final couponCode = order['coupon_id'] ?? order['coupon_code'] ?? '';
+      final couponCode = (order['coupon_code'] ?? order['coupon_id'] ?? '').toString();
 
       setState(() {
         _flatDiscount = double.tryParse(flatDiscount?.toString() ?? '0') ?? 0.0;
@@ -6196,7 +6206,7 @@ class OrderPanelState extends State<OrderPanel> {
             }
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               _couponCode = code;
               _isCouponApplied = isApplied;
@@ -6216,6 +6226,7 @@ class OrderPanelState extends State<OrderPanel> {
             localProductProvider.applyDiscount(
               flatDiscount: _flatDiscount,
               percentageDiscount: _percentageDiscount,
+              coupon: coupon,
             );
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
@@ -6408,6 +6419,12 @@ class OrderPanelState extends State<OrderPanel> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
+      final currentCoupon = localProductProvider.appliedCoupon;
+      final coupon = _isCouponApplied && _couponCode.isNotEmpty
+          ? (currentCoupon?.couponCode == _couponCode
+              ? currentCoupon
+              : context.read<DiscountProvider>().findDiscountByCode(_couponCode))
+          : null;
 
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Syncing order items with LocalProductProvider cart...');
@@ -6501,6 +6518,27 @@ class OrderPanelState extends State<OrderPanel> {
           variantAttributes: variantAttributes,
         );
 
+        // Keep the server's sale-time offer/manual reference when available.
+        // Eligibility and receipt notes must agree about this line's origin.
+        if (item['offer_id'] != null || item['discount_origin'] != null) {
+          final matching = localProductProvider.cartItems.where((line) =>
+              line.product.productId == productId &&
+              line.variantId == variantId && line.saleUnitId == saleUnitId &&
+              line.selectedStock?.id == selectedStock?.id);
+          if (matching.isNotEmpty) {
+            final line = matching.first;
+            line.offerId = item['discount_origin'] == 'manual'
+                ? null : int.tryParse(item['offer_id']?.toString() ?? '');
+            line.offerVersion = int.tryParse(item['offer_version']?.toString() ?? '');
+            line.offerDetails = ItemDiscountDetails.fromJson(item);
+            final standard = double.tryParse(item['standard_unit_price']?.toString() ?? '');
+            if (standard != null && standard.isFinite && standard >= 0) {
+              line.standardUnitPrice = standard / conversionRate;
+            }
+            line.isManualPriceOverride = item['discount_origin'] == 'manual';
+          }
+        }
+
         debugPrint(
             '   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
@@ -6509,7 +6547,11 @@ class OrderPanelState extends State<OrderPanel> {
       localProductProvider.applyDiscount(
         flatDiscount: _flatDiscount,
         percentageDiscount: _percentageDiscount,
+        coupon: coupon,
       );
+      final discounts = localProductProvider.getCurrentDiscount();
+      _flatDiscount = discounts['flatDiscount'] ?? 0;
+      _percentageDiscount = discounts['percentageDiscount'] ?? 0;
 
       debugPrint(
           'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order items synced with LocalProductProvider cart');
@@ -6922,7 +6964,10 @@ class OrderPanelState extends State<OrderPanel> {
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
 
-    if (order['cart_items'] != null) {
+    if (order['cart_items'] is List) {
+      return order['cart_items'];
+    }
+    if (order['cart_items'] is Map) {
       debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
         final items = order['cart_items']['cart_items'];
@@ -7317,93 +7362,15 @@ class OrderPanelState extends State<OrderPanel> {
     double? customerOldBalance,
     double? customerCurrentBalance,
   }) async {
-    final cartItems = <Map<String, dynamic>>[];
-    double totalMrp = 0.0;
-    double netTotal = 0.0;
-    double totalTax = 0.0;
-
-    for (final item in savedOrder.items) {
-      final itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-      final itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-      final itemTotalPrice = item.amounts.total;
-      final itemTax = item.amounts.tax;
-
-      totalMrp += itemMrp * item.quantity;
-      netTotal += itemTotalPrice;
-      totalTax += itemTax;
-
-      cartItems.add({
-        'productName': item.displayName,
-        'product_name': item.displayName,
-        'product_variant_id': item.variantId,
-        'variant_attributes': item.variantAttributes,
-        'mrp': itemMrp.toString(),
-        'quantity': item.quantity.toString(),
-        'product_unit': item.product.unit ?? '',
-        'unitPrice': itemPrice.toString(),
-        'totalPrice': itemTotalPrice.toString(),
-        'tax_amount': itemTax.toString(),
-      });
-    }
-
-    final youSaved = math.max(0.0, totalMrp - netTotal);
-    final netExcTax = netTotal - totalTax;
-    final storeSession =
-        Provider.of<StoreSessionProvider>(context, listen: false);
-    final storeName = storeSession.activeStore?.storeName ?? 'Store';
-    final parsedPayment =
-        PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
-    final paidAmount = double.tryParse(savedOrder.paidAmount ?? '0') ?? 0.0;
-    final savedAddress = savedOrder.address?.trim() ?? '';
-    final savedPincode = savedOrder.pincode?.trim() ?? '';
-    final printableAddress =
-        savedPincode.isEmpty || savedAddress.contains(savedPincode)
-            ? (savedAddress.isEmpty ? null : savedAddress)
-            : (savedAddress.isEmpty
-                ? savedPincode
-                : '$savedAddress, $savedPincode');
-
-    Future<bool> printOnce() {
-      return _printOrderDetailsWithFallback(
-        storeName: storeName,
-        cartItems: cartItems,
-        formattedTotal: savedOrder.total.toString(),
-        savedTotal: youSaved.toString(),
-        discountAmount: ((savedOrder.flatDiscount ?? 0.0) +
-                ((savedOrder.percentageDiscount ?? 0.0) > 0
-                    ? (savedOrder.total *
-                        (savedOrder.percentageDiscount ?? 0.0) /
-                        100)
-                    : 0.0))
-            .toString(),
-        orderDate: savedOrder.createdAt,
-        orderNumber: savedOrder.orderNumber,
-        isFromLocalStorage: true,
-        customerName: savedOrder.customerName,
-        customerPhone: savedOrder.customerPhone,
-        customerAddress: printableAddress,
-        customerOldBalance: customerOldBalance,
-        customerCurrentBalance: customerCurrentBalance,
-        paymentMethod:
-            parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
-        paymentBreakdown: parsedPayment?.paymentBreakdown,
-        paidAmount: paidAmount > 0 ? paidAmount : null,
-        customerAlternatePhone: savedOrder.alternatePhone,
-        customerVatNumber: savedOrder.customerVatNumber,
-        customerCrNumber: savedOrder.customerCrNumber,
-        customerType: savedOrder.customerType,
-        orderComment: savedOrder.comment,
-        deliveryMethod: savedOrder.deliveryMethod ?? _deliveryMethod,
-        isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
-        netExcTax: netExcTax.toString(),
-      );
-    }
-
-    final autoPrintSuccess = await printOnce();
-    await _maybePrintCustomerCopy(
-      canPrompt: autoPrintSuccess,
-      printAction: printOnce,
+    Future<bool> printOnce() => const PrintService().printSavedOrder(
+      context,
+      savedOrder,
+      customerOldBalance: customerOldBalance,
+      customerCurrentBalance: customerCurrentBalance,
+      fallbackDeliveryMethod: _deliveryMethod,
     );
+    final success = await printOnce();
+    await _maybePrintCustomerCopy(canPrompt: success, printAction: printOnce);
   }
 
   Future<void> _printOfflineSavedOrderKot(SavedOrder savedOrder) async {
@@ -7539,7 +7506,8 @@ class OrderPanelState extends State<OrderPanel> {
       paymentMethods: _getSelectedPaymentMethodsForApi(),
       paidMethods: _getPaidMethodsForApi(),
       balanceAmount: _balanceAmount.toString(),
-      couponId: _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
+      couponId: localProducts.appliedCoupon?.id.toString(),
+      couponCode: _isCouponApplied ? _couponCode : null,
       orderId: existingOrderId,
       comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
       deliveryMethodId: widget.tableId == null ? resolvedDeliveryMethodId : '',
@@ -7549,8 +7517,7 @@ class OrderPanelState extends State<OrderPanel> {
       deliveryDate: _deliveryDate,
       deliveryTime: _deliveryTime,
       flatDiscount: priceSummary?.flatDiscount ?? _flatDiscount,
-      percentageDiscount:
-          priceSummary?.percentageDiscount ?? _percentageDiscount,
+      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary?.discount,
       toCustomerCredit: _toCustomerCreditEnabled,
       creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
@@ -7636,6 +7603,7 @@ class OrderPanelState extends State<OrderPanel> {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
+    if (!ensureCouponValidForCheckout(context, localProductProvider)) return false;
     if (cartItems.isEmpty) {
       showScaffoldError(
           context: context, message: 'restaurant.no_items_cart'.tr);
@@ -7830,6 +7798,7 @@ class OrderPanelState extends State<OrderPanel> {
       );
       return false;
     }
+    if (!ensureCouponValidForCheckout(context, localProducts)) return false;
     final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&

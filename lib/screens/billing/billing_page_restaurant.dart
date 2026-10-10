@@ -2022,7 +2022,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             }
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               isCouponApplied = isApplied;
               coupenCodeTextController.text = code;
@@ -2032,6 +2032,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 localProductProvider.applyDiscount(
                   flatDiscount: flat,
                   percentageDiscount: percent,
+                  coupon: coupon,
                 );
               } else {
                 localProductProvider.clearDiscount();
@@ -6750,20 +6751,15 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) async {
+            {double? flatDiscount, double? percentageDiscount, coupon}) async {
           if (shouldApply) {
             coupenCodeTextController.text = couponCode;
-
-            // Validate the coupon against the pre-discount total first.
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
-            if (!mounted) return;
 
             // Apply manual discounts to local product provider
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
+              coupon: coupon,
             );
 
             setState(() {
@@ -6795,65 +6791,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         },
       ),
     );
-  }
-
-  Future<void> _applyCoupon() async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    double? totalAmount =
-        Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal;
-    String couponCode = coupenCodeTextController.text;
-
-    if (accessToken != null) {
-      final result =
-          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount!,
-        couponCode: couponCode,
-        accessToken: accessToken,
-      );
-
-      if (result != null) {
-        // Check if the response indicates success
-        if (result['success'] == true) {
-          final couponData = result['data']['data'];
-          double discountAmount = double.parse(couponData['discount_amount']
-              .replaceAll(',', '')); // Convert discount amount to double
-          double discountedTotal = totalAmount - discountAmount;
-
-          // Update the price summary with the new values
-          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-            discountAmount: discountAmount,
-            discountedTotal: discountedTotal,
-          );
-
-          setState(() {
-            isCouponApplied = true;
-          });
-
-          showScaffold(
-            context: context,
-            message: result['message'] ?? 'billing.coupon_applied'.tr,
-          );
-        } else {
-          // Handle failure to apply coupon
-          showScaffoldError(
-            context: context,
-            message: result['message'] ?? 'billing.coupon_apply_failed'.tr,
-          );
-        }
-      } else {
-        // Handle case where result is null
-        showScaffoldError(
-          context: context,
-          message: 'billing.error_occurred'.tr,
-        );
-      }
-    } else {
-      // Handle unauthenticated state
-      showScaffoldError(
-          context: context, message: 'billing.not_authenticated'.tr);
-    }
   }
 
   void resetAutocomplete({bool shouldFetchCustomers = false}) {

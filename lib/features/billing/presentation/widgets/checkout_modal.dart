@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -106,7 +107,7 @@ class CheckoutModal extends StatefulWidget {
     String? initialPhone,
   }) onAddNewCustomer;
   final Function(String couponCode, bool isApplied, double flatDiscount,
-      double percentageDiscount) onDiscountApplied;
+      double percentageDiscount, {DiscountData? coupon}) onDiscountApplied;
 
   final Function(String method, String methodId, String carNo, String comment,
       String? date, String? time, String address)? onDeliveryUpdated;
@@ -1200,7 +1201,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _quoteOnlyCustomerForCreation != null;
 
   void _handleDiscountUpdate(
-      String code, bool applied, double flat, double percent) {
+      String code, bool applied, double flat, double percent, {DiscountData? coupon}) {
     // Unfocus to prevent "FocusNode used after disposed" errors
     FocusScope.of(context).unfocus();
 
@@ -1210,7 +1211,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _localFlatDiscount = flat;
       _localPercentageDiscount = percent;
     });
-    widget.onDiscountApplied(code, applied, flat, percent);
+    widget.onDiscountApplied(code, applied, flat, percent, coupon: coupon);
   }
 
   void _handlePaymentUpdate(
@@ -3052,7 +3053,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             showShadow: false,
                             fullWidth: true,
                             onCouponAction: (code, applied,
-                                {flatDiscount, percentageDiscount}) {
+                                {flatDiscount, percentageDiscount, coupon}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
                               final newPercentageDiscount =
                                   percentageDiscount ?? 0.0;
@@ -3084,7 +3085,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               );
 
                               _handleDiscountUpdate(code, applied,
-                                  newFlatDiscount, newPercentageDiscount);
+                                  newFlatDiscount, newPercentageDiscount, coupon: coupon);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -3148,7 +3149,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             showShadow: false,
                             fullWidth: true,
                             onCouponAction: (code, applied,
-                                {flatDiscount, percentageDiscount}) {
+                                {flatDiscount, percentageDiscount, coupon}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
                               final newPercentageDiscount =
                                   percentageDiscount ?? 0.0;
@@ -3180,7 +3181,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               );
 
                               _handleDiscountUpdate(code, applied,
-                                  newFlatDiscount, newPercentageDiscount);
+                                  newFlatDiscount, newPercentageDiscount, coupon: coupon);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -4788,7 +4789,7 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
   final double initialPercentageDiscount;
   final bool isCouponApplied;
   final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+      {double? flatDiscount, double? percentageDiscount, DiscountData? coupon}) onCouponAction;
   final bool showAsDialog;
   final bool showSkipButton;
   final VoidCallback? onSkip;
@@ -4817,119 +4818,19 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
 
 class _RestaurantCouponModalWrapperState
     extends State<RestaurantCouponModalWrapper> {
-  late MockLocalProductProvider _mockProvider;
-
   @override
-  void initState() {
-    super.initState();
-    _mockProvider = MockLocalProductProvider(
-      orderSubTotal: widget.orderSubTotal,
-      initialFlatDiscount: widget.initialFlatDiscount,
-      initialPercentageDiscount: widget.initialPercentageDiscount,
-      initialCouponCode: widget.initialCouponCode,
-    );
-  }
-
-  @override
-  void didUpdateWidget(RestaurantCouponModalWrapper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialFlatDiscount != oldWidget.initialFlatDiscount ||
-        widget.initialPercentageDiscount !=
-            oldWidget.initialPercentageDiscount ||
-        widget.initialCouponCode != oldWidget.initialCouponCode ||
-        widget.orderSubTotal != oldWidget.orderSubTotal) {
-      // Update mock provider when props change (handling local state updates from parent)
-      _mockProvider.updateValues(
-        orderSubTotal: widget.orderSubTotal,
-        flatDiscount: widget.initialFlatDiscount,
-        percentageDiscount: widget.initialPercentageDiscount,
-        couponCode: widget.initialCouponCode,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LocalProductProvider>.value(
-      value: _mockProvider,
-      child: CouponModal(
-        subTotal: widget.orderSubTotal,
-        initialCouponCode: widget.initialCouponCode,
-        initialFlatDiscount: widget.initialFlatDiscount,
-        initialPercentageDiscount: widget.initialPercentageDiscount,
-        isCouponApplied: widget.isCouponApplied,
-        onCouponAction: widget.onCouponAction,
-        closeOnApply: false,
-        showAsDialog: widget.showAsDialog,
-        showSkipButton: widget.showSkipButton,
-        onSkip: widget.onSkip,
-        showShadow: widget.showShadow,
-        fullWidth: widget.fullWidth,
-      ),
-    );
-  }
-}
-
-// Mock LocalProductProvider that provides the interface needed by CouponModal
-class MockLocalProductProvider extends LocalProductProvider {
-  double _orderSubTotal; // Changed from final to mutable
-  double _flatDiscount;
-  double _percentageDiscount;
-  // ignore: unused_field
-  String _couponCode;
-
-  MockLocalProductProvider({
-    required double orderSubTotal,
-    required double initialFlatDiscount,
-    required double initialPercentageDiscount,
-    required String initialCouponCode,
-  })  : _orderSubTotal = orderSubTotal,
-        _flatDiscount = initialFlatDiscount,
-        _percentageDiscount = initialPercentageDiscount,
-        _couponCode = initialCouponCode;
-
-  void updateValues({
-    required double orderSubTotal,
-    required double flatDiscount,
-    required double percentageDiscount,
-    required String couponCode,
-  }) {
-    _orderSubTotal = orderSubTotal;
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    _couponCode = couponCode;
-    notifyListeners();
-  }
-
-  @override
-  Map<String, double> getCurrentDiscount() {
-    return {
-      'flatDiscount': _flatDiscount,
-      'percentageDiscount': _percentageDiscount,
-    };
-  }
-
-  @override
-  PriceSummary? get priceSummary {
-    final discount =
-        (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
-    return PriceSummary(
-      originalSubTotal: _orderSubTotal,
-      subTotal: _orderSubTotal,
-      discount: discount,
-      totalTax: 0.0,
-      netPayable: _orderSubTotal - discount,
-      netTotal: _orderSubTotal - discount,
-    );
-  }
-
-  @override
-  void applyDiscount({
-    required double flatDiscount,
-    required double percentageDiscount,
-  }) {
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    notifyListeners();
-  }
+  Widget build(BuildContext context) => CouponModal(
+    subTotal: widget.orderSubTotal,
+    initialCouponCode: widget.initialCouponCode,
+    initialFlatDiscount: widget.initialFlatDiscount,
+    initialPercentageDiscount: widget.initialPercentageDiscount,
+    isCouponApplied: widget.isCouponApplied,
+    onCouponAction: widget.onCouponAction,
+    closeOnApply: false,
+    showAsDialog: widget.showAsDialog,
+    showSkipButton: widget.showSkipButton,
+    onSkip: widget.onSkip,
+    showShadow: widget.showShadow,
+    fullWidth: widget.fullWidth,
+  );
 }

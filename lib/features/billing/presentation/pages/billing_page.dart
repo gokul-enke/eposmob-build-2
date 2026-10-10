@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -6539,10 +6540,8 @@ class BillingPageState extends State<BillingPage>
       paymentMethods: paymentMethods,
       paidMethods: paidMethods,
       balanceAmount: _balanceAmount.toString(),
-      couponId:
-          isCouponApplied && coupenCodeTextController.text.trim().isNotEmpty
-              ? coupenCodeTextController.text.trim()
-              : null,
+      couponId: localProducts.appliedCoupon?.id.toString(),
+      couponCode: isCouponApplied ? coupenCodeTextController.text.trim() : null,
       comment:
           _commentController.text.isNotEmpty ? _commentController.text : null,
       deliveryMethodId: deliveryMethodId.isNotEmpty ? deliveryMethodId : null,
@@ -6553,8 +6552,11 @@ class BillingPageState extends State<BillingPage>
       deliveryDate: deliveryDate,
       deliveryTime: deliveryTime,
       flatDiscount: priceSummary.flatDiscount,
-      percentageDiscount: priceSummary.percentageDiscount,
+      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary.discount,
+      grandTotal: _getEffectiveOrderTotal(),
+      roundOff: _getEffectiveOrderTotal() -
+          priceSummary.netTotal - _getDeliveryChargeForOrder(),
       toCustomerCredit: _toCustomerCreditEnabled,
       creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
           ? double.tryParse(_debitAmountController.text) ?? 0.0
@@ -6632,6 +6634,8 @@ class BillingPageState extends State<BillingPage>
   Future<void> _confirmLocalFirst(
       {required bool printReceipt, bool whatsappReceipt = false}) async {
     if (!_ensureAuthoritativeAppSettings()) return;
+    if (!ensureCouponValidForCheckout(
+        context, context.read<LocalProductProvider>())) return;
     if (!_ensurePaymentReadyForConfirm(
       printReceipt
           ? _createOrderAndPrint
@@ -7496,7 +7500,7 @@ class BillingPageState extends State<BillingPage>
                 "⚠️ [CheckoutCustomer] Add customer finished without selectable customer");
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               isCouponApplied = isApplied;
               coupenCodeTextController.text = code;
@@ -7506,6 +7510,7 @@ class BillingPageState extends State<BillingPage>
                 localProductProvider.applyDiscount(
                   flatDiscount: flat,
                   percentageDiscount: percent,
+                  coupon: coupon,
                 );
               } else {
                 localProductProvider.clearDiscount();
@@ -8702,7 +8707,7 @@ class BillingPageState extends State<BillingPage>
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount, coupon}) {
           if (shouldApply) {
             // CouponModal validates the downloaded coupon details before
             // calling this action, just like Finalize Order.
@@ -8711,6 +8716,7 @@ class BillingPageState extends State<BillingPage>
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
+              coupon: coupon,
             );
 
             setState(() {

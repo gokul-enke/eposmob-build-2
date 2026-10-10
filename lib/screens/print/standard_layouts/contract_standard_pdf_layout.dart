@@ -612,6 +612,7 @@ class ContractStandardPdfRenderer {
     PdfColor accent,
     double scale,
   ) {
+    final compact = params.selectedPaperSize == 'A5';
     final children = <pw.Widget>[];
     final bankRows = params.bankDetailRows;
     if (bankRows.isNotEmpty) {
@@ -662,7 +663,9 @@ class ContractStandardPdfRenderer {
 
     // Signatures: `Caption: ____` on English documents; otherwise the caption
     // sits on the right of the line.
-    children.add(pw.SizedBox(height: 14 * scale));
+    // Rich bilingual discount notes can fill a small sheet. Use less blank
+    // footer space on A5 so signatures need not occupy a page by themselves.
+    children.add(pw.SizedBox(height: (compact ? 4 : 14) * scale));
     children.add(
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -678,10 +681,10 @@ class ContractStandardPdfRenderer {
     // The divider and each footer line are separate page widgets so long
     // terms can break across pages.
     return <pw.Widget>[
-      pw.SizedBox(height: 4 * scale),
+      pw.SizedBox(height: (compact ? 2 : 4) * scale),
       pw.Container(
         width: double.infinity,
-        height: 7 * scale,
+        height: (compact ? 4 : 7) * scale,
         decoration: pw.BoxDecoration(
           border: pw.Border(top: pw.BorderSide(color: accent, width: 1)),
         ),

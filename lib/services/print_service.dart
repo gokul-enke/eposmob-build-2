@@ -17,6 +17,7 @@ import 'package:pos_machine/services/receipt_print_request.dart';
 import 'package:pos_machine/services/sales_only_print_helper.dart';
 import 'package:pos_machine/helpers/return_print_identity.dart';
 import 'package:pos_machine/features/offers/domain/offer_money.dart';
+import 'package:pos_machine/features/billing/domain/cart_discount_breakdown.dart';
 
 enum PrintMode { salesOnly, returnOnly, combined }
 
@@ -376,7 +377,8 @@ class PrintService {
         ? buildSalesOnlyCartItems(
             cart.cartItems!,
             orderReturns!.returnItems!,
-            completedReturnCartItems: orderDetails.data?.completedReturnCartItems,
+            completedReturnCartItems:
+                orderDetails.data?.completedReturnCartItems,
           )
         : cart.cartItems!;
 
@@ -523,6 +525,7 @@ class PrintService {
     SavedOrder savedOrder, {
     double? customerOldBalance,
     double? customerCurrentBalance,
+    String? fallbackDeliveryMethod,
   }) async {
     try {
       return await receiptRequestFromSavedOrder(
@@ -530,6 +533,7 @@ class PrintService {
         savedOrder,
         customerOldBalance: customerOldBalance,
         customerCurrentBalance: customerCurrentBalance,
+        fallbackDeliveryMethod: fallbackDeliveryMethod,
       ).send(context);
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
@@ -542,8 +546,19 @@ class PrintService {
 
   /// One local cart line in the item shape the receipt templates read.
   static Map<String, dynamic> savedOrderReceiptItem(LocalCartItem item) {
-    final double itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-    final double itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+    final double itemMrp = item.displayMrp ?? item.product.mrp ?? 0.0;
+    final double itemPrice =
+        item.displayPrice ?? item.product.price?.price ?? 0.0;
+    final snapshots = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+    final standardTotal = snapshots.fold<double>(
+        0,
+        (sum, line) =>
+            sum +
+            roundMoney((line['standard_unit_price'] as num).toDouble() *
+                (line['quantity'] as num)));
+    final standardRate = item.hasOffer || item.isManualPriceOverride
+        ? item.toDisplayAmount(item.standardUnitPrice) ?? itemPrice
+        : itemPrice;
     return {
       'productName': item.displayName,
       'product_name': item.displayName,
@@ -553,12 +568,70 @@ class PrintService {
       'product_variant_id': item.variantId,
       'variant_attributes': item.variantAttributes,
       'mrp': itemMrp.toString(),
-      'quantity': item.quantity.toString(),
-      'product_unit': item.product.unit ?? '',
+      'quantity': item.displayQuantity.toString(),
+      'product_unit': item.displayUnitName,
+      'product_sale_unit_id': item.saleUnitId,
+      'sale_unit_name': item.saleUnitName,
       'unitPrice': itemPrice.toString(),
       'totalPrice': item.amounts.total.toStringAsFixed(2),
       'tax_amount': item.amounts.tax.toStringAsFixed(2),
+      'tax_rate': item.taxRate,
+      'standard_unit_price': standardRate.toString(),
+      'standard_line_total': roundMoney(standardTotal).toStringAsFixed(2),
+      'offer_id': item.offerId,
+      'offer_version': item.offerVersion,
+      if (item.hasOffer) ...?item.offerDetails?.toJson(),
+      if (item.isManualPriceOverride)
+        'discount_origin': 'manual'
+      else if (item.hasOffer)
+        'discount_origin': 'offer',
+      'item_discount_amount': roundMoney(
+              (standardTotal - item.amounts.total).clamp(0, double.infinity))
+          .toStringAsFixed(2),
     };
+  }
+
+  /// Saved order rows are already in submission/receipt order. Preserve each
+  /// batch's reversed submission order, then aggregate allocations back into
+  /// these rows. Uses the backend's current
+  /// proportional accounting rule; coupon eligibility still needs server
+  /// validation (see the backend requirements document).
+  static List<Map<String, dynamic>> savedOrderReceiptItems(
+      List<LocalCartItem> items, double discount,
+      {String? couponCode, String? couponName}) {
+    final rows = [for (final item in items) savedOrderReceiptItem(item)];
+    final sources = <({int index, double total, double taxRate})>[
+      for (var i = 0; i < items.length; i++)
+        for (final split in items[i].orderLineSplits.toList().reversed)
+          (
+            index: i,
+            total: roundMoney(split.price * split.quantity),
+            taxRate: items[i].taxRate ?? 0
+          ),
+    ];
+    final breakdown =
+        CartDiscountBreakdown.grouped(sources, items.length, discount);
+    for (var i = 0; i < rows.length; i++) {
+      final line = breakdown[i];
+      rows[i].addAll({
+        'line_discount': line.discount.toStringAsFixed(2),
+        'discounted_total': line.total.toStringAsFixed(2),
+        'discounted_tax_amount': line.tax.toStringAsFixed(2),
+        'discounted_base_amount':
+            roundMoney(line.total - line.tax).toStringAsFixed(2),
+        'tax_amount': line.tax.toStringAsFixed(2),
+        if (line.discount > 0)
+          'order_discount_allocations': [
+            {
+              'source': couponCode?.isNotEmpty == true ? 'coupon' : 'manual',
+              'amount': line.discount.toStringAsFixed(2),
+              if (couponCode?.isNotEmpty == true) 'code': couponCode,
+              if (couponName?.isNotEmpty == true) 'name': couponName,
+            }
+          ],
+      });
+    }
+    return rows;
   }
 
   /// The receipt of a locally saved order, carrying the same fields a server
@@ -569,8 +642,14 @@ class PrintService {
     SavedOrder savedOrder, {
     double? customerOldBalance,
     double? customerCurrentBalance,
+    String? fallbackDeliveryMethod,
   }) {
-    final cartItems = <Map<String, dynamic>>[];
+    final double discountAmount =
+        _calculateSavedOrderDiscountAmount(savedOrder);
+    final coupon = savedOrder.couponDetails?['coupon'];
+    final cartItems = savedOrderReceiptItems(savedOrder.items, discountAmount,
+        couponCode: savedOrder.couponId,
+        couponName: coupon is Map ? coupon['coupon_name']?.toString() : null);
     double totalMRP = 0.0;
     double netTotal = 0.0;
     double totalTax = 0.0;
@@ -578,19 +657,18 @@ class PrintService {
     for (var item in savedOrder.items) {
       totalMRP += (item.mrp ?? item.product.mrp ?? 0.0) * item.quantity;
       netTotal += item.amounts.total;
-      // Each line's tax rounded as the line prints it, so the VAT total
-      // equals the sum of the printed lines, as on the server's order.
-      totalTax += item.amounts.tax;
-      cartItems.add(savedOrderReceiptItem(item));
     }
+    // Each discounted line's VAT is rounded as it prints.
+    totalTax = cartItems.fold<double>(
+        0, (sum, item) => sum + double.parse(item['tax_amount'] as String));
 
-    // Not clamped at zero: the server's saved_total is negative when an item
-    // sells above its MRP, and the MRP total (net + saved) relies on it.
-    final double youSaved = totalMRP - netTotal;
+    // MRP savings can be negative when a selling rate is above MRP.
+    final double youSaved = totalMRP - (netTotal - discountAmount);
     final double displayedTotalTax = _roundToCents(totalTax);
-    final double netExcTax = netTotal - displayedTotalTax;
-    final double discountAmount =
-        _calculateSavedOrderDiscountAmount(savedOrder);
+    final double netExcTax = netTotal -
+        discountAmount +
+        (savedOrder.deliveryCharge ?? 0) -
+        displayedTotalTax;
 
     debugPrint("LOCAL PRINT CALCULATION:");
     debugPrint("  - Total MRP: $totalMRP");
@@ -635,9 +713,9 @@ class PrintService {
       isDefaultCustomer:
           _isDefaultCustomerPhone(context, savedOrder.customerPhone),
       orderComment: savedOrder.comment,
-      deliveryMethod: savedOrder.deliveryMethod,
+      deliveryMethod: savedOrder.deliveryMethod ?? fallbackDeliveryMethod,
       netExcTax: netExcTax.toString(),
-      apiTotalTax: displayedTotalTax > 0 ? displayedTotalTax : null,
+      apiTotalTax: displayedTotalTax,
     );
   }
 }

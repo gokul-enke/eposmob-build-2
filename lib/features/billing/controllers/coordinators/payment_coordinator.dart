@@ -156,6 +156,7 @@ class PaymentCoordinator {
           shouldApply, {
           double? flatDiscount,
           double? percentageDiscount,
+          coupon,
         }) {
           if (shouldApply) {
             // CouponModal validates the downloaded coupon details before
@@ -163,6 +164,7 @@ class PaymentCoordinator {
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
+              coupon: coupon,
             );
 
             final flat = flatDiscount ?? 0.0;

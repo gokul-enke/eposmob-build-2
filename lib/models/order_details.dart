@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/item_discount_details.dart';
 
 OrderDetailsModel orderDetailsModelFromJson(String str) =>
     OrderDetailsModel.fromJson(json.decode(str));
@@ -555,6 +556,17 @@ class OrderDetailsModelDataCartItem {
       variantAttributes; // Snapshot map e.g. {"COLOR":"Red","SIZE":"L"}
   final bool warrantyEnabled;
 
+  /// Frozen sale-time reference and the API's order discount allocation.
+  final String? standardUnitPrice;
+  final String? lineDiscount;
+  final String? discountedTotal;
+  final String? discountedBaseAmount;
+  final String? discountedTaxAmount;
+  final String? taxRate;
+
+  /// Optional sale-time offer/source metadata from the extended receipt API.
+  final ItemDiscountDetails discountDetails;
+
   OrderDetailsModelDataCartItem({
     this.id,
     this.productId,
@@ -578,6 +590,13 @@ class OrderDetailsModelDataCartItem {
     this.productVariantId,
     this.variantAttributes,
     this.warrantyEnabled = false,
+    this.standardUnitPrice,
+    this.lineDiscount,
+    this.discountedTotal,
+    this.discountedBaseAmount,
+    this.discountedTaxAmount,
+    this.taxRate,
+    this.discountDetails = const ItemDiscountDetails(),
   });
 
   /// Formatted variant attribute line (values joined with " | "), matching
@@ -610,13 +629,20 @@ class OrderDetailsModelDataCartItem {
                     (x) => OrderDetailsModelDataProductAttachment.fromJson(x))),
         categoryId: json["category_id"],
         categoryName: json["category_name"], // Added category name
-        quantity: num.tryParse(json["quantity"]),
+        quantity: num.tryParse(json["quantity"]?.toString() ?? ''),
         productUnit: json["product_unit"],
         unitPrice: json["unit_price"].toString(),
         mrp: json["mrp"].toString(),
         totalPrice: json["total_price"].toString(),
         currency: json["currency"],
         taxAmount: json["tax_amount"]?.toString(), // Added tax_amount parsing
+        standardUnitPrice: json['standard_unit_price']?.toString(),
+        lineDiscount: json['line_discount']?.toString(),
+        discountedTotal: json['discounted_total']?.toString(),
+        discountedBaseAmount: json['discounted_base_amount']?.toString(),
+        discountedTaxAmount: json['discounted_tax_amount']?.toString(),
+        taxRate: json['tax_rate']?.toString(),
+        discountDetails: ItemDiscountDetails.fromJson(json),
         saleUnitId: _parseNullableInt(json["sale_unit_id"]),
         productSaleUnitId: _parseNullableInt(json["product_sale_unit_id"]),
         saleUnitName: (json["sale_unit_name"] ??
@@ -702,7 +728,27 @@ class OrderDetailsModelDataCartItem {
         productVariantId: productVariantId,
         variantAttributes: variantAttributes,
         warrantyEnabled: warrantyEnabled,
+        standardUnitPrice: standardUnitPrice,
+        lineDiscount: _scaledMoney(lineDiscount, quantity),
+        discountedTotal: _scaledMoney(discountedTotal, quantity),
+        discountedBaseAmount: _scaledMoney(discountedBaseAmount, quantity),
+        discountedTaxAmount: _scaledMoney(discountedTaxAmount, quantity),
+        taxRate: taxRate,
+        discountDetails:
+            quantity != null && this.quantity != null && this.quantity! > 0
+                ? discountDetails.scaled(quantity / this.quantity!)
+                : discountDetails,
       );
+
+  String? _scaledMoney(String? amount, num? newQuantity) {
+    if (newQuantity == null || quantity == null || quantity! <= 0) {
+      return amount;
+    }
+    final value = double.tryParse(amount?.replaceAll(',', '') ?? '');
+    return value == null
+        ? amount
+        : (value * newQuantity / quantity!).toStringAsFixed(2);
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,
@@ -729,6 +775,13 @@ class OrderDetailsModelDataCartItem {
         "product_variant_id": productVariantId,
         "variant_attributes": variantAttributes,
         "warranty_enabled": warrantyEnabled,
+        'standard_unit_price': standardUnitPrice,
+        'line_discount': lineDiscount,
+        'discounted_total': discountedTotal,
+        'discounted_base_amount': discountedBaseAmount,
+        'discounted_tax_amount': discountedTaxAmount,
+        'tax_rate': taxRate,
+        ...discountDetails.toJson(),
       };
 
   static int? _parseNullableInt(dynamic value) {

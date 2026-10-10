@@ -63,6 +63,7 @@ LocalCartItem copyKioskCartItem(LocalCartItem item) {
     offerId: item.offerId,
     offerVersion: item.offerVersion,
     standardUnitPrice: item.standardUnitPrice,
+    offerDetails: item.offerDetails,
   );
 }
 

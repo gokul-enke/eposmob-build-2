@@ -6,6 +6,8 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
+import 'package:pos_machine/features/billing/domain/coupon_calculation.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -20,12 +22,15 @@ import 'package:provider/provider.dart';
 
 class CouponModal extends StatefulWidget {
   final double? subTotal;
+  final List<CouponCartLine>? couponLines;
   final double? initialFlatDiscount;
   final double? initialPercentageDiscount;
   final String initialCouponCode;
   final bool isCouponApplied;
   final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+      {double? flatDiscount,
+      double? percentageDiscount,
+      DiscountData? coupon}) onCouponAction;
   final bool closeOnApply; // Optional flag to control modal closing behavior
   final bool showAsDialog;
   final bool showSkipButton;
@@ -36,6 +41,7 @@ class CouponModal extends StatefulWidget {
   const CouponModal({
     super.key,
     this.subTotal,
+    this.couponLines,
     this.initialFlatDiscount,
     this.initialPercentageDiscount,
     required this.initialCouponCode,
@@ -57,6 +63,17 @@ class _CouponModalState extends State<CouponModal> {
   static const _couponController = BillingMobileCouponController();
 
   DiscountData? _selectedDiscount;
+  bool _fillingCouponFields = false;
+
+  void _fillCouponFields(DiscountData discount) {
+    final values = _couponController.fieldValuesForSelectedDiscount(discount);
+    _fillingCouponFields = true;
+    flatDiscountController.text = values.flat;
+    percentageDiscountController.text = values.percent;
+    _selectedDiscount = discount;
+    _fillingCouponFields = false;
+  }
+
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
   final FocusNode _flatDiscountFocusNode = FocusNode();
@@ -128,7 +145,10 @@ class _CouponModalState extends State<CouponModal> {
   }
 
   Future<void> _fetchDiscountsIfNeeded() async {
-    if (_discountProvider.discounts.isEmpty && !_discountProvider.isLoading) {
+    await loadCouponCategories(context);
+    if (!mounted) return;
+    prepareCouponContext(context, context.read<LocalProductProvider>());
+    if (!_discountProvider.isLoading) {
       await _discountProvider.fetchDiscounts();
     }
   }
@@ -141,7 +161,7 @@ class _CouponModalState extends State<CouponModal> {
     try {
       for (final discount in _discountProvider.discounts) {
         if (discount.couponCode.toLowerCase() == couponCode.toLowerCase()) {
-          _selectedDiscount = discount;
+          _fillCouponFields(discount);
           return;
         }
       }
@@ -151,6 +171,7 @@ class _CouponModalState extends State<CouponModal> {
   }
 
   void _onManualDiscountChanged() {
+    if (_fillingCouponFields) return;
     // Only an actual edit away from the coupon's values drops the coupon;
     // focus/selection changes also notify these controllers.
     if (_couponController.shouldClearSelectedCouponOnManualInput(
@@ -174,13 +195,8 @@ class _CouponModalState extends State<CouponModal> {
     debugPrint('  - Valid From: ${discount.validFromDate}');
     debugPrint('  - Valid To: ${discount.validToDate}');
 
-    final values = _couponController.fieldValuesForSelectedDiscount(discount);
-
-    // Select first so the field listeners see values matching the coupon.
-    _selectedDiscount = discount;
     setState(() {
-      flatDiscountController.text = values.flat;
-      percentageDiscountController.text = values.percent;
+      _fillCouponFields(discount);
       isCouponApplied = false;
     });
 
@@ -246,7 +262,8 @@ class _CouponModalState extends State<CouponModal> {
       return;
     }
 
-    if (!_validateDiscountInputs(originalSubTotal)) {
+    if (_selectedDiscount == null &&
+        !_validateDiscountInputs(originalSubTotal)) {
       return;
     }
 
@@ -272,6 +289,18 @@ class _CouponModalState extends State<CouponModal> {
     double percentageDiscount =
         double.tryParse(percentageDiscountController.text) ?? 0.0;
 
+    if (_selectedDiscount != null) {
+      prepareCouponContext(context, localProductProvider);
+      final result = localProductProvider.evaluateCoupon(_selectedDiscount!,
+          subtotal: originalSubTotal, lines: widget.couponLines);
+      if (!result.isValid) {
+        showScaffoldError(context: context, message: result.error!);
+        return;
+      }
+      flatDiscount = result.amount;
+      percentageDiscount = 0;
+    }
+
     // Pass the coupon code through so it is kept on the order (coupon_id) and
     // the coupon is re-selected when the discount step is reopened.
     widget.onCouponAction(
@@ -279,6 +308,7 @@ class _CouponModalState extends State<CouponModal> {
       flatDiscount > 0 || percentageDiscount > 0,
       flatDiscount: flatDiscount,
       percentageDiscount: percentageDiscount,
+      coupon: _selectedDiscount,
     );
     if (widget.closeOnApply) {
       Navigator.of(context).pop();
@@ -322,8 +352,7 @@ class _CouponModalState extends State<CouponModal> {
                     child: FocusTraversalOrder(
                       order: const NumericFocusOrder(10),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'coupon.flat_discount'.tr,
@@ -338,26 +367,19 @@ class _CouponModalState extends State<CouponModal> {
                           BuildBoxShadowContainer(
                             circleRadius: 7,
                             alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(
-                                left: 15),
+                            padding: const EdgeInsets.only(left: 15),
                             height: 50,
                             child: TextField(
-                              controller:
-                                  flatDiscountController,
-                              focusNode:
-                                  _flatDiscountFocusNode,
-                              textInputAction:
-                                  TextInputAction.done,
-                              onSubmitted: (_) =>
-                                  _applyDiscount(),
+                              controller: flatDiscountController,
+                              focusNode: _flatDiscountFocusNode,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _applyDiscount(),
                               keyboardType:
-                                  const TextInputType
-                                      .numberWithOptions(
-                                      decimal: true,
-                                      signed: false),
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: false),
                               inputFormatters: [
-                                FilteringTextInputFormatter
-                                    .allow(RegExp(r'[\d\.]')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[\d\.]')),
                               ],
                               decoration: InputDecoration(
                                 hintText: '0.00',
@@ -377,22 +399,17 @@ class _CouponModalState extends State<CouponModal> {
                               ),
                               onTap: () {
                                 WidgetsBinding.instance
-                                    .addPostFrameCallback(
-                                        (_) {
-                                  if (flatDiscountController
-                                      .text.isNotEmpty) {
-                                    flatDiscountController
-                                            .selection =
+                                    .addPostFrameCallback((_) {
+                                  if (flatDiscountController.text.isNotEmpty) {
+                                    flatDiscountController.selection =
                                         TextSelection(
                                       baseOffset: 0,
                                       extentOffset:
-                                          flatDiscountController
-                                              .text.length,
+                                          flatDiscountController.text.length,
                                     );
                                   }
                                 });
-                                Provider.of<KeyboardProvider>(
-                                        context,
+                                Provider.of<KeyboardProvider>(context,
                                         listen: false)
                                     .show(
                                   'number',
@@ -411,8 +428,7 @@ class _CouponModalState extends State<CouponModal> {
                     child: FocusTraversalOrder(
                       order: const NumericFocusOrder(20),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'coupon.percentage_discount'.tr,
@@ -427,24 +443,18 @@ class _CouponModalState extends State<CouponModal> {
                           BuildBoxShadowContainer(
                             circleRadius: 7,
                             alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(
-                                left: 15),
+                            padding: const EdgeInsets.only(left: 15),
                             height: 50,
                             child: TextField(
-                              controller:
-                                  percentageDiscountController,
-                              textInputAction:
-                                  TextInputAction.done,
-                              onSubmitted: (_) =>
-                                  _applyDiscount(),
+                              controller: percentageDiscountController,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _applyDiscount(),
                               keyboardType:
-                                  const TextInputType
-                                      .numberWithOptions(
-                                      decimal: false,
-                                      signed: false),
+                                  const TextInputType.numberWithOptions(
+                                      decimal: false, signed: false),
                               inputFormatters: [
-                                FilteringTextInputFormatter
-                                    .allow(RegExp(r'[\d]')),
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[\d]')),
                               ],
                               decoration: InputDecoration(
                                 hintText: '0',
@@ -464,22 +474,18 @@ class _CouponModalState extends State<CouponModal> {
                               ),
                               onTap: () {
                                 WidgetsBinding.instance
-                                    .addPostFrameCallback(
-                                        (_) {
+                                    .addPostFrameCallback((_) {
                                   if (percentageDiscountController
                                       .text.isNotEmpty) {
-                                    percentageDiscountController
-                                            .selection =
+                                    percentageDiscountController.selection =
                                         TextSelection(
                                       baseOffset: 0,
-                                      extentOffset:
-                                          percentageDiscountController
-                                              .text.length,
+                                      extentOffset: percentageDiscountController
+                                          .text.length,
                                     );
                                   }
                                 });
-                                Provider.of<KeyboardProvider>(
-                                        context,
+                                Provider.of<KeyboardProvider>(context,
                                         listen: false)
                                     .show(
                                   'number',
@@ -528,16 +534,16 @@ class _CouponModalState extends State<CouponModal> {
                       '${discount.couponCode} - ${discount.couponName}',
                   searchHintText: 'coupon.search_by_code_or_name'.tr,
                   showName: false,
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 0, vertical: 0),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   height: 50,
                   autofocus: false,
                 ),
               ),
               SizedBox(height: isDenseEmbedded ? 14 : 20),
               if (_selectedDiscount != null)
-                _buildDiscountDetailsCard(_selectedDiscount!,
-                    currency, discountProvider),
+                _buildDiscountDetailsCard(
+                    _selectedDiscount!, currency, discountProvider),
             ],
           ),
         );
@@ -546,27 +552,22 @@ class _CouponModalState extends State<CouponModal> {
           child: Column(
             children: [
               Container(
-                padding:
-                    EdgeInsets.all(isDenseEmbedded ? 10 : 14),
+                padding: EdgeInsets.all(isDenseEmbedded ? 10 : 14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: Colors.grey.shade200, width: 1),
+                  border: Border.all(color: Colors.grey.shade200, width: 1),
                 ),
                 child: Column(
                   children: [
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'coupon.net_total'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
-                            isDenseEmbedded
-                                ? FontSize.s12
-                                : FontSize.s14,
+                            isDenseEmbedded ? FontSize.s12 : FontSize.s14,
                             0.21,
                             Colors.grey.shade800,
                           ),
@@ -575,44 +576,36 @@ class _CouponModalState extends State<CouponModal> {
                           '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
                           style: buildCustomStyle(
                             FontWeightManager.bold,
-                            isDenseEmbedded
-                                ? FontSize.s13
-                                : FontSize.s15,
+                            isDenseEmbedded ? FontSize.s13 : FontSize.s15,
                             0.21,
                             Colors.grey.shade900,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(
-                        height: isDenseEmbedded ? 7 : 10),
+                    SizedBox(height: isDenseEmbedded ? 7 : 10),
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'coupon.discount_amount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
-                            isDenseEmbedded
-                                ? FontSize.s12
-                                : FontSize.s14,
+                            isDenseEmbedded ? FontSize.s12 : FontSize.s14,
                             0.21,
                             Colors.red.shade700,
                           ),
                         ),
                         Flexible(
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Flexible(
                                 child: Text(
                                   '-$currency ${AmountHelper.formatAmount(totalDiscount)}',
                                   maxLines: 1,
-                                  overflow:
-                                      TextOverflow.ellipsis,
+                                  overflow: TextOverflow.ellipsis,
                                   style: buildCustomStyle(
                                     FontWeightManager.bold,
                                     isDenseEmbedded
@@ -625,22 +618,18 @@ class _CouponModalState extends State<CouponModal> {
                               ),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets
-                                    .symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.red.shade100,
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                          4),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   '${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%',
                                   style: buildCustomStyle(
-                                    FontWeightManager
-                                        .semiBold,
+                                    FontWeightManager.semiBold,
                                     FontSize.s10,
                                     0.21,
                                     Colors.red.shade700,
@@ -658,38 +647,31 @@ class _CouponModalState extends State<CouponModal> {
                       thickness: 1,
                     ),
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'coupon.total_after_discount'.tr,
                           style: buildCustomStyle(
                             FontWeightManager.semiBold,
-                            isDenseEmbedded
-                                ? FontSize.s12
-                                : FontSize.s14,
+                            isDenseEmbedded ? FontSize.s12 : FontSize.s14,
                             0.21,
                             Colors.grey.shade800,
                           ),
                         ),
                         Container(
                           padding: EdgeInsets.symmetric(
-                            horizontal:
-                                isDenseEmbedded ? 8 : 12,
+                            horizontal: isDenseEmbedded ? 8 : 12,
                             vertical: isDenseEmbedded ? 3 : 4,
                           ),
                           decoration: BoxDecoration(
                             color: ColorManager.kPrimaryColor,
-                            borderRadius:
-                                BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '$currency ${AmountHelper.formatAmount(newTotal)}',
                             style: buildCustomStyle(
                               FontWeightManager.bold,
-                              isDenseEmbedded
-                                  ? FontSize.s14
-                                  : FontSize.s16,
+                              isDenseEmbedded ? FontSize.s14 : FontSize.s16,
                               0.21,
                               Colors.white,
                             ),
@@ -708,9 +690,7 @@ class _CouponModalState extends State<CouponModal> {
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.orange.shade300,
-                        width: 1),
+                    border: Border.all(color: Colors.orange.shade300, width: 1),
                   ),
                   child: Row(
                     children: [
@@ -901,7 +881,11 @@ class _CouponModalState extends State<CouponModal> {
       cartTotal,
     );
 
-    final isPercentage = discount.discountType.toLowerCase() == 'percent';
+    final evaluation = localProductProvider.evaluateCoupon(discount,
+        subtotal: cartTotal, lines: widget.couponLines);
+    final isValid = evaluation.isValid;
+    final isPercentage =
+        ['percent', 'percentage'].contains(discount.discountType.toLowerCase());
     final discountText = isPercentage
         ? '${discount.discountValue}%'
         : '$currency ${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
@@ -913,7 +897,7 @@ class _CouponModalState extends State<CouponModal> {
 
     switch (validity) {
       case DiscountValidity.valid:
-        badgeColor = Colors.green.shade600;
+        badgeColor = isValid ? Colors.green.shade600 : Colors.red.shade600;
         badgeText = 'Valid';
         badgeIcon = Icons.check_circle;
         break;
@@ -937,22 +921,23 @@ class _CouponModalState extends State<CouponModal> {
         badgeText = 'Not started';
         badgeIcon = Icons.schedule;
         break;
+      case DiscountValidity.invalid:
+        badgeColor = Colors.red.shade600;
+        badgeText = 'Invalid dates';
+        badgeIcon = Icons.cancel;
+        break;
     }
 
-    final isClickable = validity == DiscountValidity.valid;
+    final isClickable = isValid;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: validity == DiscountValidity.valid
-            ? Colors.green.shade50
-            : Colors.red.shade50,
+        color: isValid ? Colors.green.shade50 : Colors.red.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: validity == DiscountValidity.valid
-              ? Colors.green.shade300
-              : Colors.red.shade300,
+          color: isValid ? Colors.green.shade300 : Colors.red.shade300,
           width: 1.5,
         ),
       ),
@@ -982,9 +967,7 @@ class _CouponModalState extends State<CouponModal> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: validity == DiscountValidity.valid
-                      ? Colors.green.shade600
-                      : Colors.red.shade600,
+                  color: isValid ? Colors.green.shade600 : Colors.red.shade600,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -999,7 +982,13 @@ class _CouponModalState extends State<CouponModal> {
               ),
             ],
           ),
-          if (validity != DiscountValidity.valid) ...[
+          const SizedBox(height: 8),
+          Text(
+              couponRuleDescriptions(
+                      context, discount, localProductProvider, currency)
+                  .join('\n'),
+              style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          if (!isValid) ...[
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1018,13 +1007,7 @@ class _CouponModalState extends State<CouponModal> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      validity == DiscountValidity.belowMin
-                          ? 'Cart amount is below minimum (Min: $currency${AmountHelper.formatAmount(discount.discountCouponMinAmount?.toDouble() ?? 0.0)})'
-                          : validity == DiscountValidity.aboveMax
-                              ? 'Cart amount exceeds maximum (Max: $currency${AmountHelper.formatAmount(discount.discountCouponMaxAmount?.toDouble() ?? 0.0)})'
-                              : validity == DiscountValidity.expired
-                                  ? 'Coupon has expired'
-                                  : 'Coupon not yet active',
+                      evaluation.error ?? 'This coupon is unavailable.',
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s11,

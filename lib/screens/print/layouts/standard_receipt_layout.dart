@@ -18,6 +18,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
+import '../receipt_line_discount.dart';
 import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
 import 'receipt_pdf_builder.dart';
@@ -808,6 +809,11 @@ class StandardReceiptLayout implements ReceiptLayout {
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
   ) {
+    displayConfig = {
+      ...?displayConfig,
+      'showItemDiscount': DisplayOption(visible: params.showItemDiscountColumn),
+    };
+
     final bool isDualLanguage = params.isBilingual;
 
     // Shared item-header text (same as the A4/A5 PDFs): the typed label for
@@ -820,6 +826,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     final String rateExcTaxLabel = params.fieldLabel('showRateExcTax');
     final String unitLabel = params.fieldLabel('showUnit');
     final String totalLabel = params.fieldLabel('showTotal');
+    final String discountLabel = params.fieldLabel('showItemDiscount');
     final String taxHeaderLabel = params.fieldLabel('showTaxHeader');
     final String slLabel = params.fieldLabel('showSLNumber');
 
@@ -841,6 +848,7 @@ class StandardReceiptLayout implements ReceiptLayout {
       rateExcTaxLabel,
       unitLabel,
       totalLabel,
+      discountLabel,
       taxHeaderLabel,
       slLabel,
       tableWeights,
@@ -897,6 +905,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     String rateExcTaxLabel,
     String unitLabel,
     String totalLabel,
+    String discountLabel,
     String taxHeaderLabel,
     String slLabel,
     Map<String, double> tableWeights,
@@ -948,12 +957,18 @@ class StandardReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(col(taxHeaderLabel, 'showTaxHeader'));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(col(discountLabel, 'showItemDiscount'));
+      }
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(col(totalLabel, 'showTotal'));
       }
     } else {
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(col(totalLabel, 'showTotal', align: TextAlign.right));
+      }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(col(discountLabel, 'showItemDiscount'));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols
@@ -1064,6 +1079,11 @@ class StandardReceiptLayout implements ReceiptLayout {
     }
 
     final slNumber = (index + 1).toString();
+    final amounts = ReceiptLineDiscount.fromItem(item);
+    final discount = amounts.totalDiscount.toStringAsFixed(2);
+    unitPrice = amounts.originalRate.toStringAsFixed(2);
+    totalPrice = amounts.discountedTotal.toStringAsFixed(2);
+    unitPriceExTax = amounts.formattedRateExcTax;
 
     ReceiptTableColumn valueCol(
       String text,
@@ -1117,6 +1137,9 @@ class StandardReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(valueCol(itemTaxAmount, 'showTaxHeader'));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        priceCols.add(valueCol(discount, 'showItemDiscount'));
+      }
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(valueCol(totalPrice, 'showTotal'));
       }
@@ -1159,6 +1182,9 @@ class StandardReceiptLayout implements ReceiptLayout {
     final priceCols = <ReceiptTableColumn>[];
     if (displayConfig?['showTotal']?.visible == true) {
       priceCols.add(valueCol(totalPrice, 'showTotal'));
+    }
+    if (displayConfig?['showItemDiscount']?.visible == true) {
+      priceCols.add(valueCol(discount, 'showItemDiscount'));
     }
     if (displayConfig?['showTaxHeader']?.visible == true) {
       priceCols.add(valueCol(itemTaxAmount, 'showTaxHeader'));
@@ -1203,6 +1229,8 @@ class StandardReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showUnit']?.visible == true) 'showUnit': 0.12,
       if (displayConfig?['showTaxHeader']?.visible == true)
         'showTaxHeader': 0.13,
+      if (displayConfig?['showItemDiscount']?.visible == true)
+        'showItemDiscount': 0.20,
       if (displayConfig?['showTotal']?.visible == true) 'showTotal': 0.15,
     };
 

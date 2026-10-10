@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class DiscountListModel {
   final String? status;
   final String? message;
@@ -52,7 +50,7 @@ class DiscountData {
   final String couponCode;
   final int discountCategoryId;
   final String couponName;
-  final int storeId;
+  final int? storeId;
   final int? categoryId;
   final int? productId;
   final String discountType;
@@ -62,7 +60,9 @@ class DiscountData {
   final double discountCouponLimitAmount;
   final double? discountCouponMinAmount;
   final double? discountCouponMaxAmount;
-  final int discountValue;
+  final num discountValue;
+  final int? usageCount;
+  final int? remainingUses;
   final int companyId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -83,25 +83,30 @@ class DiscountData {
     this.discountCouponMinAmount,
     this.discountCouponMaxAmount,
     required this.discountValue,
+    this.usageCount,
+    this.remainingUses,
     required this.companyId,
     this.createdAt,
     this.updatedAt,
   });
 
   factory DiscountData.fromJson(Map<String, dynamic> json) => DiscountData(
-        id: json["id"],
-        couponCode: json["coupon_code"],
-        discountCategoryId: json["discount_category_id"],
-        couponName: json["coupon_name"],
-        storeId: json["store_id"],
-        categoryId: json["category_id"],
-        productId: json["product_id"],
-        discountType: json["discount_type"],
-        validFromDate: json["valid_from_date"],
-        validToDate: json["valid_to_date"],
-        discountCouponLimitCount: json["discount_coupon_limit_count"],
+        id: _int(json["id"]) ?? 0,
+        couponCode: json["coupon_code"]?.toString() ?? '',
+        discountCategoryId: _int(json["discount_category_id"]) ?? 0,
+        couponName: json["coupon_name"]?.toString() ?? '',
+        storeId: _int(json["store_id"]),
+        categoryId: _int(json["category_id"]),
+        productId: _int(json["product_id"]),
+        discountType: json["discount_type"]?.toString() ?? '',
+        validFromDate: json["valid_from_date"]?.toString() ?? '',
+        validToDate: json["valid_to_date"]?.toString() ?? '',
+        discountCouponLimitCount:
+            _int(json["discount_coupon_limit_count"]) ?? 0,
         discountCouponLimitAmount: json["discount_coupon_limit_amount"] != null
-            ? double.tryParse(json["discount_coupon_limit_amount"].toString()) ?? 0.0
+            ? double.tryParse(
+                    json["discount_coupon_limit_amount"].toString()) ??
+                0.0
             : 0.0,
         discountCouponMinAmount: json["discount_coupon_min_amount"] != null
             ? double.tryParse(json["discount_coupon_min_amount"].toString())
@@ -109,14 +114,17 @@ class DiscountData {
         discountCouponMaxAmount: json["discount_coupon_max_amount"] != null
             ? double.tryParse(json["discount_coupon_max_amount"].toString())
             : null,
-        discountValue: json["discount_value"],
-        companyId: json["company_id"],
+        discountValue:
+            num.tryParse(json["discount_value"]?.toString() ?? '') ?? 0,
+        usageCount: _int(json['usage_count']),
+        remainingUses: _int(json['remaining_uses']),
+        companyId: _int(json["company_id"]) ?? 0,
         createdAt: json["created_at"] == null
             ? null
-            : DateTime.parse(json["created_at"]),
+            : DateTime.tryParse(json["created_at"].toString()),
         updatedAt: json["updated_at"] == null
             ? null
-            : DateTime.parse(json["updated_at"]),
+            : DateTime.tryParse(json["updated_at"].toString()),
       );
 
   Map<String, dynamic> toJson() => {
@@ -135,38 +143,38 @@ class DiscountData {
         "discount_coupon_min_amount": discountCouponMinAmount,
         "discount_coupon_max_amount": discountCouponMaxAmount,
         "discount_value": discountValue,
+        if (usageCount != null) 'usage_count': usageCount,
+        if (remainingUses != null) 'remaining_uses': remainingUses,
         "company_id": companyId,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };
 
-  DateTime? _safeParseDate(String? dateStr) {
-    if (dateStr == null || dateStr.isEmpty) return null;
-    try {
-      return DateTime.parse(dateStr);
-    } catch (e) {
-      debugPrint('⚠️ Failed to parse date: $dateStr, error: $e');
-      return null;
-    }
-  }
+  static int? _int(dynamic value) => int.tryParse(value?.toString() ?? '');
 
   DiscountValidity checkValidity(double cartTotal, DateTime now) {
-    // Use safe date parsing - if dates are invalid, assume valid (API sends only valid coupons)
-    final validFrom = _safeParseDate(validFromDate);
-    final validTo = _safeParseDate(validToDate);
-
-    // If dates are null or invalid, assume valid as per requirement
-    if (validFrom == null || validTo == null) {
-      return DiscountValidity.valid;
+    // Coupon boundaries are business calendar dates, independent of the
+    // device's timezone and of TZDateTime's UTC offset.
+    now = DateTime(
+        now.year, now.month, now.day, now.hour, now.minute, now.second);
+    final validFrom = DateTime.tryParse(validFromDate);
+    final validTo = DateTime.tryParse(validToDate);
+    if ((validFromDate.isNotEmpty && validFrom == null) ||
+        (validToDate.isNotEmpty && validTo == null)) {
+      return DiscountValidity.invalid;
     }
 
     // Check if before start date
-    if (now.isBefore(validFrom)) return DiscountValidity.notStarted;
+    if (validFrom != null && now.isBefore(validFrom)) {
+      return DiscountValidity.notStarted;
+    }
 
     // Check if after valid to date (inclusive - treat valid_to as end of day)
     // Convert validTo to end of day (23:59:59) for inclusive comparison
-    final validToEndOfDay = DateTime(validTo.year, validTo.month, validTo.day, 23, 59, 59);
-    if (now.isAfter(validToEndOfDay)) return DiscountValidity.expired;
+    if (validTo != null) {
+      final nextDay = DateTime(validTo.year, validTo.month, validTo.day + 1);
+      if (!now.isBefore(nextDay)) return DiscountValidity.expired;
+    }
 
     if (discountCouponMinAmount != null &&
         discountCouponMinAmount! > 0 &&
@@ -190,4 +198,5 @@ enum DiscountValidity {
   aboveMax,
   expired,
   notStarted,
+  invalid,
 }

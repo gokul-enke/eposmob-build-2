@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:pos_machine/features/billing/domain/cart_discount_breakdown.dart';
+import 'package:pos_machine/features/offers/domain/offer_money.dart';
 
 /// Canonical request contract for every POS order-submission surface.
 ///
@@ -24,6 +26,7 @@ class OrderSubmissionPayload {
     this.creditSaleAmount,
     this.balanceAmount,
     this.couponId,
+    this.couponCode,
     this.orderId,
     this.comment,
     this.deliveryMethodId,
@@ -35,6 +38,8 @@ class OrderSubmissionPayload {
     this.flatDiscount,
     this.percentageDiscount,
     this.discountAmount,
+    this.grandTotal,
+    this.roundOff,
     this.toCustomerCredit,
     this.address,
     this.addressId,
@@ -74,6 +79,26 @@ class OrderSubmissionPayload {
   final double? creditSaleAmount;
   final String? balanceAmount;
   final String? couponId;
+  final String? couponCode;
+
+  Map<String, dynamic> get _couponFields =>
+      couponFields(couponId, code: couponCode);
+
+  static Map<String, dynamic> couponFields(String? idValue, {String? code}) {
+    code = code?.trim();
+    // Existing callers store the code in couponId. Never send that string to
+    // the integer-only backend field. New callers can supply both explicitly.
+    final legacy = idValue?.trim();
+    final id = int.tryParse(legacy ?? '');
+    return {
+      'coupon_id': id,
+      if (code?.isNotEmpty == true)
+        'coupon_code': code
+      else if (legacy?.isNotEmpty == true && id == null)
+        'coupon_code': legacy,
+    };
+  }
+
   final String? orderId;
   final String? comment;
   final String? deliveryMethodId;
@@ -85,6 +110,8 @@ class OrderSubmissionPayload {
   final double? flatDiscount;
   final double? percentageDiscount;
   final double? discountAmount;
+  final double? grandTotal;
+  final double? roundOff;
   final bool? toCustomerCredit;
   final String? address;
   final int? addressId;
@@ -112,6 +139,12 @@ class OrderSubmissionPayload {
     'tax_rate',
     'tax_amount',
     'total_price',
+    'item_discount_amount',
+    'discount_origin',
+    'offer_name',
+    'offer_names',
+    'offer_discount_type',
+    'offer_discount_value',
   ];
 
   /// Whether this is a frozen, printed sale being uploaded as a new order:
@@ -156,6 +189,20 @@ class OrderSubmissionPayload {
       // applied. The app never prints delivery tax, so the snapshot is zero.
       if (completedSale) 'pricing_mode': completedSalePricingMode,
       if (completedSale) 'delivery_tax_amount': 0,
+      if (completedSale && grandTotal != null)
+        'grand_total': roundMoney(grandTotal!),
+      if (completedSale && roundOff != null) 'round_off': roundMoney(roundOff!),
+      if (completedSale &&
+          items.every(
+              (item) => item['total_price'] is num && item['tax_rate'] is num))
+        'tax_total': roundMoney(CartDiscountBreakdown.calculate([
+          for (final item in items.reversed)
+            (
+              total: (item['total_price'] as num).toDouble(),
+              taxRate: (item['tax_rate'] as num).toDouble()
+            ),
+        ], discountAmount ?? 0)
+            .fold<double>(0, (sum, line) => sum + line.tax)),
       if (clientSaleId != null) 'client_sale_id': clientSaleId,
       if (receiptNumber != null) 'receipt_number': receiptNumber,
       if (issuedAt != null) 'issued_at': issuedAt,
@@ -171,7 +218,7 @@ class OrderSubmissionPayload {
         'paid_amount': paidAmount,
       'source_type': sourceType,
       'balance': _apiBalanceAmount,
-      'coupon_id': couponId,
+      ..._couponFields,
       if (orderId != null) 'order_id': orderId,
       if (comment != null) 'comment': comment,
       if (deliveryMethodId != null) 'delivery_method_id': deliveryMethodId,
@@ -217,7 +264,7 @@ class OrderSubmissionPayload {
         'paid_amount': paidAmount,
       'source_type': sourceType,
       'balance': _apiBalanceAmount,
-      'coupon_id': couponId,
+      ..._couponFields,
       if (orderId != null) 'order_id': orderId,
       if (comment != null) 'comment': comment,
       if (deliveryMethodId != null) 'delivery_method_id': deliveryMethodId,

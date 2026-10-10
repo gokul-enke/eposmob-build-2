@@ -16,7 +16,7 @@ This is what the app sends and expects, after the backend developer's contract a
 
 ## 2. Offer feed
 
-`GET /api/v1/offers/pos-sync?store_id=1[&since=<server_time>]` with `X-Tenant`, `Authorization: Bearer`, `Accept: application/json`.
+`GET /api/v1/offers/pos-sync?store_id=1` with `X-Tenant`, `Authorization: Bearer`, `Accept: application/json`. Every app refresh requests the full catalog; it does not send `since`, even when its cache contains offers and a saved timestamp.
 
 What the app reads from each offer: `id`, `version`, `name`, `store_id` (null means every store), `valid_from`, `valid_until` and `lines`. Dates must carry a time zone offset or `Z`; `valid_until` is exclusive.
 
@@ -24,8 +24,8 @@ What it reads from each line: `line_id` (numeric on product lines; text such as 
 
 - `type` is `percentage` or `flat_amount`. A line with any other type is skipped.
 - A disabled, deleted or moved offer must arrive in `removed_offer_ids`. As a safeguard the app also removes an offer returned with `enabled: false`, an offer it cannot read (for example without `valid_until`), and an id sent in both `offers` and `removed_offer_ids`.
-- `full_snapshot: true` replaces the whole local cache. Without it, returned offers replace the cached ones by id.
-- `server_time` becomes the next `since`, and is used to correct the device clock.
+- Every successful full download replaces the whole local cache, including an empty snapshot. The server must return every eligible offer for the requested store across its pages. A missing unchanged offer in a partially populated cache is recovered by the next refresh.
+- `server_time` records the last successful sync and corrects the device clock; it is not sent as a delta cursor.
 - `next_page` is followed if it is ever sent. The app replaces its cache only after the last page.
 - `target_type`, `category_id`, `source_types`, `base_unit_only` and `selection` are ignored.
 - `changes.offers` in `GET /api/v1/sync/changes` makes the app fetch the feed again.

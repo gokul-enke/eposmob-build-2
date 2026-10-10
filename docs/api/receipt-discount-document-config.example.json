@@ -1,0 +1,24 @@
+{
+  "status": "success",
+  "document_configurations": {
+    "Bill A4": {
+      "type": "Bill A4",
+      "template": "bill_a4",
+      "theme": "bilingual_centered_tax_invoice",
+      "language": "en_ar",
+      "show_logo": false,
+      "display_configuration": {
+        "showParticulars": {"visible": true, "value": "الصنف", "default": "Item"},
+        "showQty": {"visible": true, "value": "الكمية", "default": "Qty"},
+        "showRate": {"visible": true, "value": "السعر", "default": "Rate"},
+        "showRateExcTax": {"visible": true, "value": "السعر بدون ضريبة", "default": "Rate Ex Tax"},
+        "showTotal": {"visible": true, "value": "الإجمالي", "default": "Total"},
+        "showSubTotal": {"visible": true, "value": "المجموع الفرعي", "default": "Subtotal"},
+        "showDiscount": {"visible": true, "value": "خصم الطلب", "default": "Order discount"},
+        "showTax": {"visible": true, "value": "الضريبة", "default": "VAT"},
+        "showNetAmount": {"visible": true, "value": "المبلغ المستحق", "default": "Payable"},
+        "showDiscountColumn": {"visible": true, "value": "الخصم", "default": "Discount"}
+      }
+    }
+  }
+}

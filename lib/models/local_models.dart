@@ -93,6 +93,10 @@ class HiveLocalCartItem {
   @HiveField(22)
   final double? standardUnitPrice;
 
+  /// Sale-time offer label and rule, independent of the current offer feed.
+  @HiveField(23)
+  final HiveStringValue? serializedOfferDetails;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -117,6 +121,7 @@ class HiveLocalCartItem {
     this.offerId,
     this.offerVersion,
     this.standardUnitPrice,
+    this.serializedOfferDetails,
   });
 }
 
@@ -226,6 +231,9 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(33)
   final String? quotationNumber;
 
+  @HiveField(34)
+  final Map<String, dynamic>? couponDetails;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -262,6 +270,7 @@ class HiveSavedOrder extends HiveObject {
     this.pincode,
     this.quotationId,
     this.quotationNumber,
+    this.couponDetails,
   });
 }
 

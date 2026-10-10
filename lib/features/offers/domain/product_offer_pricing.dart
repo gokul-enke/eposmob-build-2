@@ -8,6 +8,8 @@ class ProductOfferPrice {
     required this.standardPrice,
     required this.offerId,
     required this.offerVersion,
+    required this.discountType,
+    required this.discountValue,
     this.offerName = '',
   });
 
@@ -19,6 +21,8 @@ class ProductOfferPrice {
   final int offerId;
   final int offerVersion;
   final String offerName;
+  final String discountType;
+  final double discountValue;
 }
 
 /// Picks the offer price for one cart line, or null when the standard price
@@ -88,6 +92,8 @@ ProductOfferPrice? resolveProductOfferPrice({
     offerId: offer.id,
     offerVersion: offer.version,
     offerName: offer.name,
+    discountType: line.type.apiValue,
+    discountValue: line.value,
   );
 }
 

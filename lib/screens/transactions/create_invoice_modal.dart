@@ -1234,6 +1234,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                             context: context,
                             builder: (context) => CouponModal(
                               subTotal: _netTotal + _totalTax,
+                                      couponLines: [for (final card in _invoiceItemCards)
+                                        (productId: null, categoryId: null,
+                                         total: double.tryParse(card.totalController.text) ?? 0,
+                                         hasOffer: false)],
                               initialFlatDiscount: _discount,
                               initialPercentageDiscount: _discountPercentage,
                               initialCouponCode: _couponCode,
@@ -1244,6 +1248,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                     shouldApply, {
                                     double? flatDiscount,
                                     double? percentageDiscount,
+                                            coupon,
                                   }) async {
                                     if (shouldApply) {
                                       setState(() {
@@ -1410,6 +1415,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                     context: context,
                                     builder: (context) => CouponModal(
                                       subTotal: _netTotal + _totalTax,
+                                      couponLines: [for (final card in _invoiceItemCards)
+                                        (productId: null, categoryId: null,
+                                         total: double.tryParse(card.totalController.text) ?? 0,
+                                         hasOffer: false)],
                                       initialFlatDiscount: _discount,
                                       initialPercentageDiscount:
                                           _discountPercentage,
@@ -1421,6 +1430,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                             shouldApply, {
                                             double? flatDiscount,
                                             double? percentageDiscount,
+                                            coupon,
                                           }) async {
                                             if (shouldApply) {
                                               setState(() {

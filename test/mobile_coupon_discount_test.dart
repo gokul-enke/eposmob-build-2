@@ -16,6 +16,7 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_contr
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
@@ -332,7 +333,9 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(lpp.getCurrentDiscount()['percentageDiscount'], 20.0);
+      expect(lpp.getCurrentDiscount()['percentageDiscount'], 0.0);
+      expect(lpp.getCurrentDiscount()['flatDiscount'], 20.0);
+      expect(lpp.appliedCoupon?.discountValue, 20);
       expect(lpp.priceSummary!.netTotal, 80.0);
       expect(bp.coupenCodeTextController.text, 'SUNDAYOFFER');
       expect(bp.couponCode, 'SUNDAYOFFER');
@@ -544,6 +547,79 @@ void main() {
     });
   });
 
+  group('coupon rules remain attached to the cart', () {
+    test('quantity changes recalculate a capped percentage and check minimum',
+        () {
+      final cart = _cartWithSubtotal('100');
+      final coupon = DiscountData.fromJson({
+        ..._couponJson(type: 'percent', value: 20),
+        'discount_coupon_limit_amount': 30,
+        'discount_coupon_min_amount': 100
+      });
+      cart.applyDiscount(
+          flatDiscount: 0, percentageDiscount: 20, coupon: coupon);
+      expect(cart.cartTotal, 80);
+      cart.cartItems.single.quantity = 2;
+      expect(cart.cartTotal, 170);
+      cart.cartItems.single.quantity = 1;
+      cart.cartItems.single.price = 50;
+      expect(cart.cartTotal, 50);
+      expect(cart.discountValidationError, contains('minimum'));
+      expect(() => cart.saveCurrentCartAsConfirmedOrder(), throwsStateError);
+      cart.cartItems.single.quantity = 1;
+      cart.cartItems.single.price = 100;
+      expect(cart.cartTotal, 80);
+      expect(cart.discountValidationError, isNull);
+    });
+    test('held rules survive Hive while confirmed receipt amounts stay frozen',
+        () async {
+      final cart = _cartWithSubtotal('100');
+      final coupon =
+          DiscountData.fromJson(_couponJson(type: 'percent', value: 20));
+      cart.applyDiscount(
+          flatDiscount: 0, percentageDiscount: 20, coupon: coupon);
+      final draft = cart.saveCurrentCartAsOrder(couponId: coupon.couponCode);
+      final sale =
+          cart.saveCurrentCartAsConfirmedOrder(couponId: coupon.couponCode);
+      await cart.flushPersistence();
+      expect(
+          Hive.box<HiveSavedOrder>('saved_orders')
+              .values
+              .firstWhere((value) => value.id == draft.id)
+              .couponDetails!['coupon']['id'],
+          coupon.id);
+      cart.clearCart();
+      cart.loadOrderForEditing(draft.id);
+      expect(cart.appliedCoupon?.id, coupon.id);
+      cart.cartItems.single.quantity = 2;
+      expect(cart.cartTotal, 160);
+      expect(sale.total, 80);
+      expect(sale.flatDiscount, 20);
+      final rows = PrintService.savedOrderReceiptItems(
+          sale.items, sale.flatDiscount!,
+          couponCode: sale.couponId, couponName: coupon.couponName);
+      expect(rows.single['discounted_total'], '80.00');
+      expect(rows.single['order_discount_allocations'].single['code'],
+          coupon.couponCode);
+      expect(sale.withOrderNumber('server-order').couponDetails,
+          sale.couponDetails);
+    });
+    test('manual replacement and cart clear remove the coupon rule', () {
+      final cart = _cartWithSubtotal('100');
+      cart.applyDiscount(
+          flatDiscount: 0,
+          percentageDiscount: 20,
+          coupon:
+              DiscountData.fromJson(_couponJson(type: 'percent', value: 20)));
+      cart.applyDiscount(flatDiscount: 5, percentageDiscount: 0);
+      expect(cart.appliedCoupon, isNull);
+      expect(cart.cartTotal, 95);
+      cart.clearCart();
+      expect(cart.discountValidationError, isNull);
+      expect(cart.getCurrentDiscount()['flatDiscount'], 0);
+    });
+  });
+
   group('CouponSection smoke', () {
     Widget wrapCouponSection(
       LocalProductProvider localProductProvider, {
@@ -585,6 +661,40 @@ void main() {
         ),
       );
     }
+
+    testWidgets('switching coupon type preserves its cap and code',
+        (tester) async {
+      late LocalProductProvider cart;
+      await tester.runAsync(() async {
+        cart = _cartWithSubtotal('100');
+      });
+      final bp = BillingProvider()..setTotalOrderAmount(100);
+      final fixed =
+          DiscountData.fromJson(_couponJson(type: 'fixed', value: 20));
+      final percentage = DiscountData.fromJson({
+        ..._couponJson(type: 'percent', value: 50),
+        'coupon_code': 'CAPPED50',
+        'discount_coupon_limit_amount': 5,
+      });
+      await tester.pumpWidget(wrapCouponSection(cart,
+          billingProvider: bp,
+          discountProvider: _SeededDiscountProvider([fixed, percentage])));
+      await tester.pump();
+      final dropdown = tester.widget<CustomDropDownWithSearch<DiscountData>>(
+          find.byType(CustomDropDownWithSearch<DiscountData>));
+      dropdown.onChanged(fixed);
+      await tester.pump();
+      await tester.tap(find.text('Apply Discount'));
+      await tester.pump();
+      expect(cart.cartTotal, 80);
+      dropdown.onChanged(percentage);
+      await tester.pump();
+      await tester.tap(find.text('Apply Discount'));
+      await tester.pump();
+      expect(cart.cartTotal, 95);
+      expect(cart.appliedCoupon?.couponCode, 'CAPPED50');
+      expect(bp.couponCode, 'CAPPED50');
+    });
 
     testWidgets('Apply Discount button applies flat discount via controller',
         (tester) async {

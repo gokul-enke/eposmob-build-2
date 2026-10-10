@@ -16,6 +16,9 @@ import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/domain/product_price_preview.dart';
 import 'package:pos_machine/features/billing/domain/cart_line_amounts.dart';
+import 'package:pos_machine/features/billing/domain/cart_discount_breakdown.dart';
+import 'package:pos_machine/features/billing/domain/coupon_calculation.dart';
+import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/features/offers/domain/offer_money.dart';
 import 'package:pos_machine/features/offers/domain/product_offer_pricing.dart';
@@ -23,6 +26,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
 import '../models/local_models.dart';
+import '../models/item_discount_details.dart';
 import '../resources/app_url.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/master_data_provider.dart';
@@ -125,6 +129,7 @@ class LocalCartItem {
   /// together with [standardUnitPrice] as `standard_unit_price`.
   int? offerId;
   int? offerVersion;
+  ItemDiscountDetails? offerDetails;
 
   /// Per-base-unit standard price (before any offer or manual change). Set on
   /// every priced line, and kept on manual lines as their reference; shown
@@ -156,6 +161,7 @@ class LocalCartItem {
     this.variantAttributes,
     this.offerId,
     this.offerVersion,
+    this.offerDetails,
     this.standardUnitPrice,
   })  : lineId =
             lineId == null || lineId.trim().isEmpty ? _newLineId() : lineId,
@@ -241,6 +247,7 @@ class LocalCartItem {
   void clearOffer() {
     offerId = null;
     offerVersion = null;
+    offerDetails = null;
   }
 
   num toDisplayQuantity(num baseQuantity) {
@@ -312,6 +319,9 @@ class LocalCartItem {
 
 /// Represents a saved order stored locally
 class SavedOrder {
+  /// Coupon definition at the time of saving. Confirmed totals stay frozen;
+  /// held orders use these rules again when the cart is resumed.
+  final Map<String, dynamic>? couponDetails;
   final String id; // Unique identifier for the order
   final String orderNumber; // Display order number (ORD-1, ORD-2, etc.)
   final List<LocalCartItem> items;
@@ -367,6 +377,7 @@ class SavedOrder {
     this.balanceAmount,
     this.transactionId,
     this.couponId,
+    this.couponDetails,
     this.deliveryMethodId,
     this.carNumber,
     this.status,
@@ -406,6 +417,7 @@ class SavedOrder {
         balanceAmount: balanceAmount,
         transactionId: transactionId,
         couponId: couponId,
+        couponDetails: couponDetails,
         deliveryMethodId: deliveryMethodId,
         carNumber: carNumber,
         status: status,
@@ -613,8 +625,22 @@ class LocalProductProvider extends ChangeNotifier {
   // Returns Map with "TaxName @ Rate%" as key and amount as value
   Map<String, double> get taxBreakdown {
     final breakdown = <String, double>{};
+    cartTotal;
+    final discountedLines = CartDiscountBreakdown.grouped(
+        [
+          for (var i = 0; i < _cartItems.length; i++)
+            for (final split in _cartItems[i].orderLineSplits)
+              (
+                index: i,
+                total: roundMoney(split.price * split.quantity),
+                taxRate: _cartItems[i].taxRate ?? 0
+              ),
+        ].reversed.toList(),
+        _cartItems.length,
+        priceSummary?.discount ?? 0);
 
-    for (var item in _cartItems) {
+    for (var i = 0; i < _cartItems.length; i++) {
+      final item = _cartItems[i];
       final double itemTotal = item.amounts.total;
       final double currentTaxRate = item.taxRate ?? 0.0;
 
@@ -622,7 +648,7 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Extract total tax from tax-inclusive price
       // Formula: Tax = Price × TaxRate / (100 + TaxRate)
-      final double totalTaxAmount = item.amounts.tax;
+      final double totalTaxAmount = discountedLines[i].tax;
 
       final double productTotalTaxRate = item.product.totalTaxRate;
 
@@ -714,6 +740,61 @@ class LocalProductProvider extends ChangeNotifier {
   // Discount management
   double _flatDiscount = 0.0;
   double _percentageDiscount = 0.0;
+  DiscountData? _appliedCoupon;
+  int? _couponStoreId;
+  Map<int, int?> _couponCategoryParents = const {};
+  String? _discountValidationError;
+
+  DiscountData? get appliedCoupon => _appliedCoupon;
+  String? get discountValidationError {
+    cartTotal;
+    return _discountValidationError;
+  }
+
+  void setCouponContext({int? storeId, Map<int, int?> categoryParents = const {}}) {
+    _couponStoreId = storeId;
+    _couponCategoryParents = Map.unmodifiable(categoryParents);
+  }
+
+  CouponCalculation evaluateCoupon(DiscountData coupon, {double? subtotal, List<CouponCartLine>? lines}) =>
+      CouponCalculation.evaluate(
+        coupon: coupon,
+        lines: lines ?? [
+          for (final item in _cartItems)
+            (productId: item.product.productId,
+             categoryId: item.product.categoryId,
+             total: item.amounts.total,
+             hasOffer: item.hasOffer),
+        ],
+        now: DateHelper.nowInConfiguredTimeZone(),
+        storeId: _visibilityStoreId ?? _couponStoreId,
+        categoryParents: _couponCategoryParents,
+        subtotal: subtotal,
+      );
+
+  Map<String, dynamic>? get _couponSnapshot => _appliedCoupon == null ? null : {
+    'coupon': _appliedCoupon!.toJson(),
+    'store_id': _visibilityStoreId ?? _couponStoreId,
+    'category_parents': {
+      for (final entry in _couponCategoryParents.entries)
+        entry.key.toString(): entry.value,
+    },
+  };
+
+  void _restoreCoupon(Map<String, dynamic>? snapshot) {
+    final raw = snapshot?['coupon'];
+    _appliedCoupon = raw is Map
+        ? DiscountData.fromJson(Map<String, dynamic>.from(raw)) : null;
+    _discountValidationError = null;
+    _couponStoreId = int.tryParse(snapshot?['store_id']?.toString() ?? '');
+    final parents = snapshot?['category_parents'];
+    _couponCategoryParents = {
+      if (parents is Map)
+        for (final entry in parents.entries)
+          if (int.tryParse(entry.key.toString()) case final id?)
+            id: int.tryParse(entry.value?.toString() ?? ''),
+    };
+  }
 
   /// Sets the stock enabled status from the GeneralSettingsProvider
   void setStockEnabled(bool enabled) {
@@ -1520,6 +1601,14 @@ class LocalProductProvider extends ChangeNotifier {
     item.price = offer.price;
     item.offerId = offer.offerId;
     item.offerVersion = offer.offerVersion;
+    item.offerDetails = ItemDiscountDetails(
+      discountOrigin: 'offer',
+      offerId: offer.offerId,
+      offerVersion: offer.offerVersion,
+      offerName: offer.offerName,
+      offerDiscountType: offer.discountType,
+      offerDiscountValue: offer.discountValue.toString(),
+    );
   }
 
   /// Re-applies [_applyOfferPricing] to a line whose price was just set to
@@ -1758,6 +1847,8 @@ class LocalProductProvider extends ChangeNotifier {
       offerId: hiveCartItem.offerId,
       offerVersion: hiveCartItem.offerVersion,
       standardUnitPrice: hiveCartItem.standardUnitPrice,
+      offerDetails:
+          _deserializeOfferDetails(hiveCartItem.serializedOfferDetails?.value),
     );
   }
 
@@ -1802,6 +1893,9 @@ class LocalProductProvider extends ChangeNotifier {
       offerId: item.offerId,
       offerVersion: item.offerVersion,
       standardUnitPrice: item.standardUnitPrice,
+      serializedOfferDetails: item.offerDetails == null
+          ? null
+          : HiveStringValue(json.encode(item.offerDetails!.toJson())),
     );
   }
 
@@ -1831,6 +1925,7 @@ class LocalProductProvider extends ChangeNotifier {
       offerId: item.offerId,
       offerVersion: item.offerVersion,
       standardUnitPrice: item.standardUnitPrice,
+      offerDetails: item.offerDetails,
     );
   }
 
@@ -1850,6 +1945,16 @@ class LocalProductProvider extends ChangeNotifier {
       }
     } catch (_) {}
     return null;
+  }
+
+  ItemDiscountDetails? _deserializeOfferDetails(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = json.decode(raw);
+      return decoded is Map ? ItemDiscountDetails.fromJson(decoded) : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   HiveStringValue? _serializeVariantAttributes(
@@ -2207,6 +2312,14 @@ class LocalProductProvider extends ChangeNotifier {
         price: unitPrice, quantity: quantity, taxRate: taxRate);
     return {
       'standard_unit_price': reference,
+      'item_discount_amount': roundMoney(
+          (roundMoney(reference * quantity) - amounts.total)
+              .clamp(0, double.infinity)),
+      if (item.hasOffer) ...?item.offerDetails?.toJson(),
+      if (item.isManualPriceOverride)
+        'discount_origin': 'manual'
+      else if (item.hasOffer)
+        'discount_origin': 'offer',
       'tax_rate': taxRate,
       'tax_amount': amounts.tax,
       'total_price': amounts.total,
@@ -2361,6 +2474,7 @@ class LocalProductProvider extends ChangeNotifier {
           balanceAmount: hiveSavedOrder.balanceAmount,
           transactionId: hiveSavedOrder.transactionId,
           couponId: hiveSavedOrder.couponId,
+          couponDetails: hiveSavedOrder.couponDetails,
           deliveryMethodId: hiveSavedOrder.deliveryMethodId,
           carNumber: hiveSavedOrder.carNumber,
           status: hiveSavedOrder.status,
@@ -2417,6 +2531,7 @@ class LocalProductProvider extends ChangeNotifier {
           balanceAmount: order.balanceAmount,
           transactionId: order.transactionId,
           couponId: order.couponId,
+          couponDetails: order.couponDetails,
           deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
           status: order.status,
@@ -2624,6 +2739,7 @@ class LocalProductProvider extends ChangeNotifier {
         balanceAmount: hiveSavedOrder.balanceAmount,
         transactionId: hiveSavedOrder.transactionId,
         couponId: hiveSavedOrder.couponId,
+        couponDetails: hiveSavedOrder.couponDetails,
         deliveryMethodId: hiveSavedOrder.deliveryMethodId,
         carNumber: hiveSavedOrder.carNumber,
         status: hiveSavedOrder.status,
@@ -2834,6 +2950,7 @@ class LocalProductProvider extends ChangeNotifier {
         balanceAmount: order.balanceAmount,
         transactionId: order.transactionId,
         couponId: order.couponId,
+        couponDetails: order.couponDetails,
         deliveryMethodId: order.deliveryMethodId,
         carNumber: order.carNumber,
         status: order.status,
@@ -2892,6 +3009,12 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     // Calculate discount amounts
+    if (_appliedCoupon != null) {
+      final result = evaluateCoupon(_appliedCoupon!);
+      _discountValidationError = result.error;
+      _flatDiscount = result.amount;
+      _percentageDiscount = 0;
+    }
     double flatDiscountAmount = _flatDiscount;
     double percentageDiscountAmount = roundMoney(subTotal * _percentageDiscount / 100);
     double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
@@ -2909,6 +3032,9 @@ class LocalProductProvider extends ChangeNotifier {
         // Adjust percentage to match the capped discount
         _percentageDiscount = (totalDiscount / subTotal) * 100;
       }
+      flatDiscountAmount = _flatDiscount;
+      percentageDiscountAmount =
+          roundMoney(subTotal * _percentageDiscount / 100);
     }
 
     // Net Payable = SubTotal - Discount (tax is already included in prices)
@@ -2916,6 +3042,18 @@ class LocalProductProvider extends ChangeNotifier {
 
     // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
     double netTotal = roundMoney(netPayable);
+
+    // The backend allocates in reversed submission order, including batch
+    // splits. Extract VAT from the discounted totals, not the original lines.
+    totalTax = CartDiscountBreakdown.calculate([
+      for (final item in _cartItems.reversed)
+        for (final split in item.orderLineSplits.toList().reversed)
+          (
+            total: roundMoney(split.price * split.quantity),
+            taxRate: item.taxRate ?? 0
+          ),
+    ], totalDiscount)
+        .fold<double>(0, (sum, line) => sum + line.tax);
 
     // Create a PriceSummary instance with discount details
     priceSummary = PriceSummary(
@@ -4174,6 +4312,7 @@ class LocalProductProvider extends ChangeNotifier {
         offerId: sourceItem.offerId,
         offerVersion: sourceItem.offerVersion,
         standardUnitPrice: sourceItem.standardUnitPrice,
+        offerDetails: sourceItem.offerDetails,
       );
       _refreshCartItemPricing(_cartItems[currentIndex]);
       debugPrint('[UNIT_SWITCH] applied productId=$productId '
@@ -5118,6 +5257,8 @@ class LocalProductProvider extends ChangeNotifier {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
     }
+    final couponError = discountValidationError;
+    if (couponError != null) throw StateError(couponError);
 
     final String orderId = clientSaleId?.trim().isNotEmpty == true
         ? clientSaleId!.trim()
@@ -5160,7 +5301,8 @@ class LocalProductProvider extends ChangeNotifier {
       paidAmount: paidAmount,
       balanceAmount: balanceAmount,
       transactionId: transactionId,
-      couponId: couponId,
+      couponId: _appliedCoupon?.couponCode ?? couponId,
+      couponDetails: _couponSnapshot,
       deliveryMethodId: deliveryMethodId,
       carNumber: carNumber,
       status: status ?? "confirmed", // Default to "confirmed" if not provided
@@ -5220,6 +5362,7 @@ class LocalProductProvider extends ChangeNotifier {
           balanceAmount: order.balanceAmount,
           transactionId: order.transactionId,
           couponId: order.couponId,
+          couponDetails: order.couponDetails,
           deliveryMethodId: order.deliveryMethodId,
           carNumber: order.carNumber,
           status: "confirmed",
@@ -5383,7 +5526,8 @@ class LocalProductProvider extends ChangeNotifier {
       paidAmount: paidAmount,
       balanceAmount: balanceAmount,
       transactionId: transactionId,
-      couponId: couponId,
+      couponId: _appliedCoupon?.couponCode ?? couponId,
+      couponDetails: _couponSnapshot,
       deliveryMethodId: deliveryMethodId,
       carNumber: carNumber,
       status: status ?? "saved", // Default to "saved" for regular orders
@@ -5459,6 +5603,7 @@ class LocalProductProvider extends ChangeNotifier {
       // Restore discounts
       _flatDiscount = order.flatDiscount ?? 0.0;
       _percentageDiscount = order.percentageDiscount ?? 0.0;
+      _restoreCoupon(order.couponDetails);
 
       // Release any stock reserved by the current cart before switching drafts.
       if (isStockEnabled) {
@@ -5517,6 +5662,7 @@ class LocalProductProvider extends ChangeNotifier {
           "🧾 [LocalProductProvider] Loading quotation draft id=${draft.quotationId}, number=${draft.quotationNumber}, customerId=${draft.customerId}, customerName=${draft.customerName}, customerPhone=${draft.customerPhone}, items=${draft.items.length}");
       _flatDiscount = draft.flatDiscount ?? 0.0;
       _percentageDiscount = draft.percentageDiscount ?? 0.0;
+      _restoreCoupon(draft.couponDetails);
 
       if (isStockEnabled) {
         for (final cartItem in _cartItems) {
@@ -5620,6 +5766,7 @@ class LocalProductProvider extends ChangeNotifier {
         balanceAmount: balanceAmount ?? _savedOrders[index].balanceAmount,
         transactionId: transactionId ?? _savedOrders[index].transactionId,
         couponId: couponId ?? _savedOrders[index].couponId,
+        couponDetails: _couponSnapshot,
         deliveryMethodId:
             deliveryMethodId ?? _savedOrders[index].deliveryMethodId,
         carNumber: carNumber ?? _savedOrders[index].carNumber,
@@ -6058,13 +6205,16 @@ class LocalProductProvider extends ChangeNotifier {
   void applyDiscount({
     required double flatDiscount,
     required double percentageDiscount,
+    DiscountData? coupon,
   }) {
     debugPrint("🏷️ APPLYING DISCOUNT");
     debugPrint("  - Flat Discount: $flatDiscount");
     debugPrint("  - Percentage Discount: $percentageDiscount%");
 
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
+    _appliedCoupon = coupon;
+    _discountValidationError = null;
+    _flatDiscount = flatDiscount.isFinite ? flatDiscount.clamp(0, double.infinity) : 0;
+    _percentageDiscount = percentageDiscount.isFinite ? percentageDiscount.clamp(0, 100) : 0;
 
     // Recalculate totals by calling cartTotal getter
     cartTotal;
@@ -6080,6 +6230,8 @@ class LocalProductProvider extends ChangeNotifier {
 
     _flatDiscount = 0.0;
     _percentageDiscount = 0.0;
+    _appliedCoupon = null;
+    _discountValidationError = null;
 
     // Recalculate totals by calling cartTotal getter
     cartTotal;
@@ -6091,6 +6243,7 @@ class LocalProductProvider extends ChangeNotifier {
 
   /// Gets current discount values
   Map<String, double> getCurrentDiscount() {
+    cartTotal;
     return {
       'flatDiscount': _flatDiscount,
       'percentageDiscount': _percentageDiscount,
@@ -6144,6 +6297,8 @@ class LocalProductProvider extends ChangeNotifier {
       _currentOrder = null;
       _flatDiscount = 0.0;
       _percentageDiscount = 0.0;
+      _appliedCoupon = null;
+      _discountValidationError = null;
       priceSummary = null;
       _currentPage = 1;
       _totalPages = 1;

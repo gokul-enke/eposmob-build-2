@@ -56,7 +56,6 @@ class ProductOfferRepository extends ChangeNotifier {
   String? _tenant;
   Future<bool>? _refreshing;
   Completer<bool>? _queued;
-  bool _queuedFull = false;
   bool _storeInitialized = false;
   int _generation = 0;
   Future<ProductOfferCatalog?>? _loadingStore;
@@ -147,44 +146,44 @@ class ProductOfferRepository extends ChangeNotifier {
         if (generation != _generation) return;
         notifyListeners();
       }
-      // Offers that changed while the switch was off may be older than the
-      // cached `since`, so switching on downloads everything.
       if (enabled && generation == _generation) {
-        await refresh(full: !wasEnabled);
+        await refresh();
       }
     } catch (error) {
       debugPrint('Product offers: applying POS_OFFERS failed: $error');
     }
   }
 
-  /// Pulls offer changes from the backend. Completes with true when the
+  /// Downloads the complete offer catalog from the backend on every refresh.
+  /// A nonempty cache and saved cursor cannot prove no unchanged offers are
+  /// missing. [full] is retained for existing callers; all requests are full.
+  /// Completes with true when the
   /// catalog is up to date or there is nothing to sync (offers off, no
   /// store or no login), and false when the download failed. A failure
   /// while offers are on is retried with backoff.
   ///
   /// A request made while a sync is running runs once more afterwards
-  /// (full if any queued request was full) and completes with that run.
+  /// and completes with that run.
   /// Never throws.
   Future<bool> refresh({bool full = false}) {
     if (_refreshing != null) {
-      _queuedFull = _queuedFull || full;
       return (_queued ??= Completer<bool>()).future;
     }
-    return _startRefresh(full: full);
+    return _startRefresh();
   }
 
-  Future<bool> _startRefresh({required bool full}) {
+  Future<bool> _startRefresh() {
     _endpointMissing = false;
     // This run replaces a scheduled retry; its outcome schedules the next.
     _retry?.cancel();
     _retry = null;
-    final run = _refresh(full: full);
+    final run = _refresh();
     _refreshing = run;
-    unawaited(run.then((synced) => _refreshFinished(run, synced, full)));
+    unawaited(run.then((synced) => _refreshFinished(run, synced)));
     return run;
   }
 
-  void _refreshFinished(Future<bool> run, bool synced, bool full) {
+  void _refreshFinished(Future<bool> run, bool synced) {
     // clear() permits a new session to start its own request immediately.
     if (!identical(_refreshing, run)) return;
     _refreshing = null;
@@ -192,18 +191,16 @@ class ProductOfferRepository extends ChangeNotifier {
     if (synced) _retryDelay = null;
     final queued = _queued;
     if (queued != null) {
-      final queuedFull = _queuedFull;
       _queued = null;
-      _queuedFull = false;
-      queued.complete(_startRefresh(full: queuedFull));
+      queued.complete(_startRefresh());
       return;
     }
     if (!synced && !_endpointMissing) {
-      _scheduleRetry(full: full);
+      _scheduleRetry();
     }
   }
 
-  void _scheduleRetry({required bool full}) {
+  void _scheduleRetry() {
     if (!_catalog.enabled) return;
     final previous = _retryDelay;
     final delay = previous == null
@@ -216,7 +213,7 @@ class ProductOfferRepository extends ChangeNotifier {
     _retry?.cancel();
     _retry = _retryTimer(delay, () {
       _retry = null;
-      if (generation == _generation) unawaited(refresh(full: full));
+      if (generation == _generation) unawaited(refresh());
     });
     debugPrint('Product offers: retrying the sync in ${delay.inSeconds} s.');
   }
@@ -227,7 +224,7 @@ class ProductOfferRepository extends ChangeNotifier {
     _retryDelay = null;
   }
 
-  Future<bool> _refresh({required bool full}) async {
+  Future<bool> _refresh() async {
     int? requestGeneration;
     try {
       final storeId = await _session.activeStoreId();
@@ -246,12 +243,13 @@ class ProductOfferRepository extends ChangeNotifier {
         return true;
       }
 
-      final since = full ? null : _catalog.lastSyncedAt;
+      // Always omit `since`: deltas cannot restore unchanged rules missing
+      // from a partially populated cache. The API collects every page before
+      // the complete snapshot replaces the catalog.
       final response = await _api.fetch(
         accessToken: accessToken,
         apiKey: apiKey,
         storeId: storeId,
-        since: since,
       );
       // Store ids may be reused by another tenant, or after switching away
       // and back. Check both the request generation and current session.
@@ -268,11 +266,12 @@ class ProductOfferRepository extends ChangeNotifier {
       final previous = _catalog;
       _catalog = _catalog.applySync(
         response,
-        fullSync: since == null,
+        fullSync: true,
         deviceNow: clock?.call() ?? response.receivedAt ?? DateTime.now(),
       );
       final clockChanged = previous.lastSyncedAt == null ||
-          (_catalog.clockOffset - previous.clockOffset).inMilliseconds.abs() >= 1000;
+          (_catalog.clockOffset - previous.clockOffset).inMilliseconds.abs() >=
+              1000;
       if (!clockChanged) {
         _catalog = _catalog.copyWith(clockOffset: previous.clockOffset);
       }
@@ -281,7 +280,9 @@ class ProductOfferRepository extends ChangeNotifier {
         DateHelper.setServerTime(serverTime, deviceTime: response.receivedAt);
       }
       await _save(generation);
-      if (clockChanged || _pricingFingerprint(previous) != _pricingFingerprint(_catalog)) {
+      if (generation != _generation) return true;
+      if (clockChanged ||
+          _pricingFingerprint(previous) != _pricingFingerprint(_catalog)) {
         notifyListeners();
       }
       return true;
@@ -314,7 +315,6 @@ class ProductOfferRepository extends ChangeNotifier {
     _refreshing = null;
     final queued = _queued;
     _queued = null;
-    _queuedFull = false;
     _cancelRetry();
     _catalog = ProductOfferCatalog.empty;
     notifyListeners();

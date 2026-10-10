@@ -108,15 +108,15 @@ class DocumentConfig {
   });
 
   factory DocumentConfig.fromJson(Map<String, dynamic> json) {
-    var displayConfigJson = json["display_configuration"];
-    displayConfigJson ??= _displayFlagsToDisplayConfiguration(
-      json["display_flags"],
-    );
+    final flags = _displayFlagsToDisplayConfiguration(json['display_flags']);
+    final configured = _asMap(json['display_configuration']);
+    final displayConfigJson = {
+      ...?flags,
+      ...?configured,
+    };
     DisplayConfiguration? displayConfiguration;
 
-    if (displayConfigJson is Map<String, dynamic>) {
-      displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
-    }
+    displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
 
     ItemName? parseItemName(dynamic raw) {
       if (raw == null) return null;
@@ -178,17 +178,29 @@ class DocumentConfig {
   static Map<String, dynamic>? _displayFlagsToDisplayConfiguration(
     dynamic raw,
   ) {
-    if (raw is! Map) return null;
+    final flags = _asMap(raw);
+    if (flags == null) return null;
 
-    return Map.from(raw).map(
+    return flags.map(
       (key, value) => MapEntry<String, dynamic>(
         key.toString(),
         {
-          'visible': value == true,
+          'visible': DisplayOption._parseBooleanFlag(value),
           'value': null,
         },
       ),
     );
+  }
+
+  static Map<String, dynamic>? _asMap(dynamic raw) {
+    if (raw is String) {
+      try {
+        raw = jsonDecode(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
   }
 
   Map<String, dynamic> toJson() => {
@@ -271,8 +283,11 @@ class DisplayConfiguration {
     }
 
     try {
-      final options = Map.from(json).map((k, v) =>
-          MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v)));
+      final options = json.map((k, v) => MapEntry<String, DisplayOption>(
+          k,
+          v is Map
+              ? DisplayOption.fromJson(Map<String, dynamic>.from(v))
+              : DisplayOption(visible: DisplayOption._parseBooleanFlag(v))));
 
       return DisplayConfiguration(options: options);
     } catch (e) {

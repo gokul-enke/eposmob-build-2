@@ -2,6 +2,7 @@ import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/print_unit_helper.dart';
+import '../receipt_line_discount.dart';
 
 import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
@@ -55,6 +56,7 @@ class ReceiptItemLine {
     required this.rateExcTax,
     required this.unit,
     required this.tax,
+    required this.discount,
     required this.total,
     required this.hasWarranty,
   });
@@ -67,6 +69,7 @@ class ReceiptItemLine {
   final String rateExcTax;
   final String unit;
   final String tax;
+  final String discount;
   final String total;
   final bool hasWarranty;
 
@@ -80,6 +83,7 @@ class ReceiptItemLine {
         'showRateExcTax' => rateExcTax,
         'showUnit' => unit,
         'showTaxHeader' => tax,
+        'showItemDiscount' => discount,
         'showTotal' => total,
         _ => '',
       };
@@ -180,6 +184,7 @@ extension ReceiptSections on ReceiptLayoutParams {
     'showRateExcTax',
     'showUnit',
     'showTaxHeader',
+    'showItemDiscount',
     'showTotal',
   ];
 
@@ -379,7 +384,10 @@ extension ReceiptSections on ReceiptLayoutParams {
   /// Visible item-table columns in the thermal order.
   List<ReceiptItemColumn> get itemColumns => [
         for (final key in itemColumnKeys)
-          if (isVisible(key)) ReceiptItemColumn(key, fieldLabelParts(key)),
+          if (key == 'showItemDiscount'
+              ? showItemDiscountColumn
+              : isVisible(key))
+            ReceiptItemColumn(key, fieldLabelParts(key)),
       ];
 
   /// Printable values of every cart line.
@@ -407,23 +415,20 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
 
     final quantity = number(read(['quantity'], () => item.quantity));
-    final unitPrice =
-        number(read(['unitPrice', 'unit_price'], () => item.unitPrice));
     final tax = number(read(['tax_amount', 'taxAmount'], () => item.taxAmount));
-    final total =
-        number(read(['totalPrice', 'total_price'], () => item.totalPrice));
     final mrp = number(read(['mrp'], () => item.mrp));
-    final taxPerUnit = quantity > 0 ? tax / quantity : 0.0;
+    final amounts = ReceiptLineDiscount.fromItem(item);
     return ReceiptItemLine(
       index: index,
       nameLines: itemNameLines(item),
       mrp: mrp.toStringAsFixed(2),
       quantity: formatQuantity(quantity),
-      rate: unitPrice.toStringAsFixed(2),
-      rateExcTax: (unitPrice - taxPerUnit).toStringAsFixed(2),
+      rate: amounts.originalRate.toStringAsFixed(2),
+      rateExcTax: amounts.formattedRateExcTax,
       unit: getPrintUnit(item),
       tax: tax.toStringAsFixed(2),
-      total: total.toStringAsFixed(2),
+      discount: amounts.totalDiscount.toStringAsFixed(2),
+      total: amounts.discountedTotal.toStringAsFixed(2),
       hasWarranty: itemHasWarranty(item),
     );
   }
@@ -468,12 +473,24 @@ extension ReceiptSections on ReceiptLayoutParams {
   double get savedAmountValue =>
       double.tryParse((savedTotal ?? '0').replaceAll(',', '')) ?? 0.0;
 
-  /// Retail total uses the same net-plus-savings amount in every layout.
-  double get mrpTotalValue => netAmountValue + savedAmountValue;
+  /// MRP is independent of coupons, delivery and round-off.
+  double get mrpTotalValue => cartItems.isEmpty
+      ? netAmountValue + savedAmountValue
+      : cartItems.fold<double>(0, (sum, item) {
+          final line = itemLine(item, 0);
+          return sum +
+              (double.tryParse(line.mrp) ?? 0) *
+                  (double.tryParse(line.quantity) ?? 0);
+        });
 
-  /// Taxable amount: the API's net excluding tax, else the item lines'
-  /// totals minus their tax.
+  /// Add back the inclusive order discount for the subtotal row: the footer
+  /// subtracts it once before adding the final VAT. This also reconciles
+  /// delivery/round-off already included in the payable amount. Older API
+  /// versions disagree on whether net_exc_tax includes the discount.
   double get subtotalExcTax {
+    if (discountAmountValue > 0) {
+      return netAmountValue + discountAmountValue - totalTax;
+    }
     final api = double.tryParse((netExcTax ?? '').replaceAll(',', ''));
     if (api != null) return api;
     var sum = 0.0;

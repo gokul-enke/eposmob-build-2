@@ -1067,16 +1067,19 @@ class ThermalPrinter {
                 ? displayConfig!['showNetAmount']!.value as String
                 : "Net Total:";
 
-        if (displayConfig?['showItemsCount']?.visible == true) {
+        if (displayConfig?['showItemsCount']?.visible == true ||
+            displayConfig?['showDiscount']?.visible == true) {
+          final showItems = displayConfig?['showItemsCount']?.visible == true;
+          final showDiscount = displayConfig?['showDiscount']?.visible == true;
           part1Rows.add(ReceiptTableRow([
-            ReceiptTableColumn(itemsCountLabel,
+            ReceiptTableColumn(showItems ? itemsCountLabel : '',
                 weight: 0.25, align: TextAlign.left),
-            ReceiptTableColumn(cartItems.length.toString(),
+            ReceiptTableColumn(showItems ? cartItems.length.toString() : '',
                 weight: 0.25, align: TextAlign.left),
             ReceiptTableColumn(" ", weight: 0.05),
-            ReceiptTableColumn(discountLabel,
+            ReceiptTableColumn(showDiscount ? discountLabel : '',
                 weight: 0.25, align: TextAlign.right),
-            ReceiptTableColumn(discountAmountValue.toStringAsFixed(2),
+            ReceiptTableColumn(showDiscount ? discountAmountValue.toStringAsFixed(2) : '',
                 weight: 0.20, align: TextAlign.right),
           ]));
         }
@@ -1158,7 +1161,8 @@ class ThermalPrinter {
         ]));
 
         // 2. Discounts
-        if (totalDiscountAmount > 0) {
+        if (totalDiscountAmount > 0 &&
+            displayConfig?['showDiscount']?.visible == true) {
           final discountLabel =
               (displayConfig?['showDiscount']?.value as String?)?.isNotEmpty ==
                       true
