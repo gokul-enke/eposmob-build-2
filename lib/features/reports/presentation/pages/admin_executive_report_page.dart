@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/network/tenant_session.dart';
@@ -101,14 +102,21 @@ class _AdminExecutiveReportPageState extends State<AdminExecutiveReportPage> {
   }
 
   Future<AdminExecutiveSource> _readSource() async {
-    final tenant = await const TenantSession().apiKey();
+    const session = TenantSession();
+    final tenant = await session.apiKey();
+    // Like the legacy provider, fall back to the persisted store and role when
+    // the in-memory session has not been restored yet.
+    final storeId =
+        _stores!.activeStore?.storeId ?? await session.activeStoreId();
+    final role = _roles!.currentUserRole ??
+        (await SharedPreferences.getInstance()).getString('userRole');
     if (!mounted) throw StateError('Admin executive report closed');
     return AdminExecutiveRepository(AdminExecutiveScope(
         token: _auth!.token ?? '',
         tenant: tenant ?? '',
-        storeId: _stores!.activeStore?.storeId ?? 0,
+        storeId: storeId ?? 0,
         actorId: _auth!.userId ?? 0,
-        role: _roles!.currentUserRole ?? '',
+        role: role ?? '',
         endpoint: APPUrl.getAdminSalesExecutiveReport));
   }
 

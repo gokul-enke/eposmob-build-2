@@ -7,7 +7,12 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/features/reports/presentation/pages/admin_executive_report_page.dart';
 import 'package:pos_machine/features/reports/domain/report_date_range.dart';
 import '../../test_support/export_capture.dart' show useTempExportDirectory;
@@ -246,6 +251,47 @@ void main() {
     await t.pumpAndSettle();
     expect(queries.last.isEmpty, true);
     expect(queries.length, 3);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets('falls back to persisted store and role like the legacy screen',
+      (t) async {
+    SharedPreferences.setMockInitialValues({
+      'api_key': 'tenant',
+      'active_store_id': 7,
+      'userRole': 'company_admin',
+    });
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      return http.Response(
+          '{"status":"success","data":[{"name":"Alice","phone":"001234",'
+          '"order_count":2,"total_sales":"10","online_sales":"2",'
+          '"cash_sales":"8","credit_sales":"0","collected_sales":"10"}]}',
+          200);
+    });
+    await http.runWithClient(() async {
+      await t.pumpWidget(MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AppSettingsProvider>(
+                create: (_) => CloseSettings()),
+            ChangeNotifierProvider(
+                create: (_) => AuthModel()..login('token', 4)),
+            ChangeNotifierProvider(create: (_) => StoreSessionProvider()),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
+          child: GetMaterialApp(
+              translations: CloseTranslations(),
+              home: Scaffold(
+                  body: AdminExecutiveReportPage(onView: (_, __) {})))));
+      for (var i = 0; i < 5; i++) {
+        await t.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await t.pump();
+      }
+      await t.pumpAndSettle();
+    }, () => client);
+    expect(requests.single.queryParameters['store_id'], '7');
+    expect(find.text('Alice'), findsWidgets);
     expect(t.takeException(), isNull);
   });
 }
