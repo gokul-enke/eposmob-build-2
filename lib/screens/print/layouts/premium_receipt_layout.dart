@@ -1125,6 +1125,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
+    itemTaxAmount = ReceiptSections.itemTaxUnitText(item) ?? itemTaxAmount;
     bool show(String key) => _isVisible(displayConfig, key);
 
     if (isEnglish) {

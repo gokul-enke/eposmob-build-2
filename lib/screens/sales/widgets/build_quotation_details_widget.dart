@@ -41,7 +41,8 @@ class QuotationDetailWidget extends StatelessWidget {
         children: [
           if (isPhone) ...[
             SelectableText(
-              'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
+              'quotations.quotation_hash'
+                  .trParams({'number': data.quotationNumber ?? ''}),
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -58,7 +59,8 @@ class QuotationDetailWidget extends StatelessWidget {
               children: [
                 Expanded(
                   child: SelectableText(
-                    'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
+                    'quotations.quotation_hash'
+                        .trParams({'number': data.quotationNumber ?? ''}),
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s18,
@@ -179,7 +181,8 @@ class QuotationDetailWidget extends StatelessWidget {
             child: QuotationsSectionTitle(title: 'quotations.items'.tr),
           ),
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(14)),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final table = Table(
@@ -188,6 +191,7 @@ class QuotationDetailWidget extends StatelessWidget {
                     1: FlexColumnWidth(1),
                     2: FlexColumnWidth(1.5),
                     3: FlexColumnWidth(1.5),
+                    4: FlexColumnWidth(1.5),
                   },
                   children: [
                     TableRow(
@@ -198,6 +202,7 @@ class QuotationDetailWidget extends StatelessWidget {
                         'confirmed_orders.product'.tr,
                         'billing.table_qty'.tr,
                         'sales.price'.tr,
+                        'billing.tax'.tr,
                         'billing.total'.tr,
                       ]
                           .map(
@@ -249,6 +254,18 @@ class QuotationDetailWidget extends StatelessWidget {
                             padding: const EdgeInsets.all(12),
                             child: Text(
                               "$currency ${item.unitPrice ?? '0'}",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s12,
+                                0.18,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              "$currency ${item.taxAmountUnit ?? '0'}",
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s12,
@@ -342,6 +359,10 @@ class QuotationDetailWidget extends StatelessWidget {
               QuotationsInfoChip(
                 label: 'sales.price'.tr,
                 value: '$currency ${item.unitPrice ?? '0'}',
+              ),
+              QuotationsInfoChip(
+                label: 'billing.tax'.tr,
+                value: '$currency ${item.taxAmountUnit ?? '0'}',
               ),
               QuotationsInfoChip(
                 label: 'billing.total'.tr,

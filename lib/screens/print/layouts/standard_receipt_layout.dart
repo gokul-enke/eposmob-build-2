@@ -1084,6 +1084,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
+    itemTaxAmount = ReceiptSections.itemTaxUnitText(item) ?? itemTaxAmount;
 
     ReceiptTableColumn valueCol(
       String text,

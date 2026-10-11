@@ -56,6 +56,7 @@ class ReceiptItemLine {
     required this.rateExcTax,
     required this.unit,
     required this.tax,
+    this.taxAmountUnit,
     required this.discount,
     required this.total,
     required this.hasWarranty,
@@ -68,7 +69,12 @@ class ReceiptItemLine {
   final String rate;
   final String rateExcTax;
   final String unit;
+
+  /// Full row tax, retained for subtotal calculations.
   final String tax;
+
+  /// Optional unit tax that overrides only the visible Tax cell.
+  final String? taxAmountUnit;
   final String discount;
   final String total;
   final bool hasWarranty;
@@ -82,7 +88,7 @@ class ReceiptItemLine {
         'showRate' => rate,
         'showRateExcTax' => rateExcTax,
         'showUnit' => unit,
-        'showTaxHeader' => tax,
+        'showTaxHeader' => taxAmountUnit ?? tax,
         'showItemDiscount' => discount,
         'showTotal' => total,
         _ => '',
@@ -427,6 +433,7 @@ extension ReceiptSections on ReceiptLayoutParams {
       rateExcTax: amounts.formattedRateExcTax,
       unit: getPrintUnit(item),
       tax: tax.toStringAsFixed(2),
+      taxAmountUnit: itemTaxUnitText(item),
       discount: amounts.totalDiscount.toStringAsFixed(2),
       total: amounts.discountedTotal.toStringAsFixed(2),
       hasWarranty: itemHasWarranty(item),
@@ -452,6 +459,14 @@ extension ReceiptSections on ReceiptLayoutParams {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Quotation unit tax is display-only. Missing values leave other receipt
+  /// types on their existing full-row tax display.
+  static String? itemTaxUnitText(dynamic item) {
+    if (item is! Map) return null;
+    final value = double.tryParse(item['tax_amount_unit']?.toString() ?? '');
+    return value != null && value.isFinite ? value.toStringAsFixed(2) : null;
   }
 
   static String formatQuantity(double quantity) {

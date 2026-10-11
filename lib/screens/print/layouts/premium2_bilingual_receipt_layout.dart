@@ -1360,6 +1360,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
+    itemTaxAmount = ReceiptSections.itemTaxUnitText(item) ?? itemTaxAmount;
 
     if (isLtrLayout) {
       // Product name row (English - single name)

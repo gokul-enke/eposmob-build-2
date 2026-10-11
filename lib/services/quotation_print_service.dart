@@ -51,8 +51,7 @@ class QuotationPrintService {
       customerPhone: printPayload['customerPhone'] as String?,
       customerEmail: printPayload['customerEmail'] as String?,
       customerAddress: printPayload['customerAddress'] as String?,
-      customerAlternatePhone:
-          printPayload['customerAlternatePhone'] as String?,
+      customerAlternatePhone: printPayload['customerAlternatePhone'] as String?,
       customerOldBalance: printPayload['customerOldBalance'] as double?,
       paidAmount: printPayload['paidAmount'] as double?,
       paymentMethod: printPayload['paymentMethod'] as String?,
@@ -66,6 +65,7 @@ class QuotationPrintService {
       deliveryMethod: printPayload['deliveryMethod'] as String?,
       isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
       netExcTax: printPayload['netExcTax'] as String?,
+      apiTotalTax: printPayload['apiTotalTax'] as double?,
     );
 
     if (!autoPrintSuccess && context.mounted) {
@@ -99,6 +99,7 @@ class QuotationPrintService {
             deliveryMethod: printPayload['deliveryMethod'] as String?,
             isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
             netExcTax: printPayload['netExcTax'] as String?,
+            apiTotalTax: printPayload['apiTotalTax'] as double?,
           ),
         ),
       );
@@ -149,6 +150,8 @@ class QuotationPrintService {
               'unit_price': item.unitPrice ?? '0',
               'tax_amount': item.taxAmount ?? '0',
               'taxAmount': item.taxAmount ?? '0',
+              // Keep the full row tax above for receipt totals and ex-tax rates.
+              'tax_amount_unit': item.taxAmountUnit ?? '0',
               'totalPrice': item.totalPrice ?? '0',
               'total_price': item.totalPrice ?? '0',
             })
@@ -164,6 +167,7 @@ class QuotationPrintService {
     // Caller values come from the live billing customer; the quotation's own
     // customer covers reprints from the quotation list.
     final customer = details.customer;
+    final apiTotalTax = double.tryParse(details.tax?.trim() ?? '');
 
     return {
       'cartItems': cartItems,
@@ -192,6 +196,10 @@ class QuotationPrintService {
       'deliveryMethod': deliveryMethod,
       'isDefaultCustomer': isDefaultCustomer,
       'netExcTax': details.subTotal,
+      // Prefer the backend's final quotation tax, including an explicit zero.
+      // A missing or invalid value preserves the existing full-row tax sum.
+      'apiTotalTax':
+          apiTotalTax != null && apiTotalTax.isFinite ? apiTotalTax : null,
     };
   }
 }
