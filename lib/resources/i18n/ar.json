@@ -2188,6 +2188,13 @@
     "total_return": "إجمالي المرتجع"
   },
   "daily_sales_close": {
+    "admin_list_subtitle": "راجع سجلات المبيعات اليومية لجميع مندوبي المبيعات.",
+    "admin_list_find": "البحث عن سجلات المبيعات اليومية",
+    "admin_list_filter_hint": "التصفية حسب التاريخ ومندوب المبيعات.",
+    "admin_all_executives": "جميع مندوبي المبيعات",
+    "admin_executives_failed": "تعذر تحميل مندوبي المبيعات. أعد المحاولة لتحديث الخيارات.",
+    "admin_list_count": "@count سجل في هذه الصفحة",
+    "admin_executive_id": "معرف مندوب المبيعات",
     "list_subtitle": "راجع المبيعات اليومية وإغلاق الورديات.",
     "list_find": "البحث عن الإغلاقات اليومية",
     "list_filter_hint": "تصفية حسب تاريخ العمل.",
