@@ -282,3 +282,25 @@ layouts at 375/768/1280 pixels. They cover repeated product withdrawals,
 overlapping IDs, date Reset/clear, page-2 export, retry/failure retention,
 permissions/session changes, native-menu keyboard visibility and 10k products.
 Native Windows repainting/Save As and live backend data still need device QA.
+
+## Admin Sales Executive Report listing
+
+The admin listing now has a scoped repository, controller, shared desktop table
+and mobile cards, and shared Excel export. Its existing details dialog remains
+in the compatibility screen without changes. The API returns all executive
+rows at once: no pagination or name parameter is invented. Name search remains
+local, and export uses all matching loaded rows.
+
+Requests retain the scalar active store, tenant and bearer headers, today default,
+custom date-time bounds (including open bounds), and sales-executive redirection.
+Reset clears both dates and name and reloads today. Failed refreshes retain rows
+with a retry/error state and disable export; empty success remains distinct.
+Generation and session checks discard late responses and cancel stale exports.
+Missing financial values remain blank and incomplete core rows disable export.
+Workbook amounts are numeric, phone numbers are text, and currency, applied
+bounds, date mode and load time describe the captured report.
+
+Focused contract and widget tests cover filter/reset/reload sequences, failures,
+late responses, account changes, workbook contents, shared controls, and
+English/Arabic/Malayalam layouts. Live backend and native save/share need manual
+QA; these tests do not guarantee absence of every possible defect.
