@@ -8,6 +8,7 @@ import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import '../../data/invoice_list_repository.dart';
 import '../state/invoice_list_controller.dart';
+import '../state/invoice_details_action.dart';
 import '../export/invoice_list_excel.dart';
 import '../widgets/invoice_list_rows.dart';
 import '../widgets/invoice_list_filters.dart';
@@ -44,7 +45,9 @@ class InvoiceListPage extends StatefulWidget {
 }
 
 class _InvoiceListPageState extends State<InvoiceListPage>
-    with InvoiceRowActions<InvoiceListPage> {
+    with
+        InvoiceDetailsAction<InvoiceListPage>,
+        InvoiceRowActions<InvoiceListPage> {
   final SideBarController sideBarController = Get.put(SideBarController());
   Worker? _sidebarIndexWorker;
   late final InvoiceListController _list;
