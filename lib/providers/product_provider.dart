@@ -112,7 +112,6 @@ class ProductProvider extends ChangeNotifier {
     double? purchasePrice,
     int? categoryId,
     int? rackNumber,
-    num? quantity,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? variants,
     List<Map<String, dynamic>>? saleUnits,
@@ -148,7 +147,6 @@ class ProductProvider extends ChangeNotifier {
       'unit': unit,
       if (unitId != null && unitId.isNotEmpty) 'unit_id': unitId,
       if (rackNumber != null) 'rack_number': rackNumber,
-      if (quantity != null) 'quantity': quantity,
       'store_id': activeStoreId,
       if (productNames != null && productNames.isNotEmpty)
         'product_names': productNames,

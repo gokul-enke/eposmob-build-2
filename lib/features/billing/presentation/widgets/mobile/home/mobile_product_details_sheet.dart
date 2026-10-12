@@ -131,7 +131,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
-  late TextEditingController _quantityController;
   late TextEditingController _taxController;
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
@@ -164,7 +163,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController = TextEditingController();
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
-    _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
@@ -178,7 +176,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _unitController,
       _priceController,
       _mrpController,
-      _quantityController,
       _purchasePriceController,
       _minMarginController,
       _minMarginPriceController,
@@ -646,7 +643,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController.text = product.unit ?? '';
     _priceController.text = productDetailsValueToString(product.price?.price);
     _mrpController.text = productDetailsValueToString(product.mrp);
-    _quantityController.text = '';
     _taxController.text = productDetailsValueToString(product.totalTaxRate);
     _purchasePriceController.text = product.purchasePrice ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -728,7 +724,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final updatedUnit = _unitController.text.trim();
     final updatedPriceString = _priceController.text.trim();
     final updatedMrpString = _mrpController.text.trim();
-    final updatedQuantityString = _quantityController.text.trim();
     final updatedPurchasePrice = _purchasePriceController.text.trim();
     final updatedMinMargin = _minMarginController.text.trim();
     final updatedMinMarginPrice = _minMarginPriceController.text.trim();
@@ -743,9 +738,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final purchasePriceForApi = updatedPurchasePrice.isEmpty
         ? double.tryParse(product.purchasePrice ?? '')
         : double.tryParse(updatedPurchasePrice);
-    final quantityForApi = updatedQuantityString.isEmpty
-        ? null
-        : num.tryParse(updatedQuantityString);
 
     final updatedPriceValue = priceForApi;
     final updatedMrpValue = mrpForApi;
@@ -799,7 +791,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
-        quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         variants: variantsPayload,
         minMarginPercentage: updatedMinMargin,
@@ -979,14 +970,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       showMrp: _showMrp(),
       initialPurchasePrice: stock.purchasePrice ?? '',
       showPurchasePrice: _canViewPurchasePrice(),
-      initialQuantity: stock.quantity?.toString() ?? '0',
       initialRack: stock.rack ?? '',
       onSuccess: (result) async {
-        final updatedQty = num.tryParse(result.quantity) ?? stock.quantity;
         if (!mounted) return;
         setState(() {
           _editedStockRows[stock.id!] = stock.copyWith(
-            quantity: updatedQty,
             price: result.retailPrice,
             mrp: result.mrp,
             purchasePrice: _canViewPurchasePrice()
@@ -1009,7 +997,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
-    _quantityController.dispose();
     _taxController.dispose();
     _purchasePriceController.dispose();
     _minMarginController.dispose();
@@ -1725,14 +1712,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 hint: 'Enter price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 12),
-              _mobileTextField(
-                controller: _quantityController,
-                label: 'product_detail.quantity'.tr,
-                hint: 'Enter quantity',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: false),
               ),
               if (_showMrp()) ...[
                 const SizedBox(height: 12),

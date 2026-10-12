@@ -644,6 +644,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String sellingPrice,
     required String mrp,
     required String quantity,
+    int? supplierId,
     required String unit,
     required String barcode,
     required String accessToken,
@@ -667,6 +668,10 @@ class GridSelectionProvider extends ChangeNotifier {
       'purchase_rate': double.parse(purchasePrice),
       'conversion_rate_base': num.parse(conversionRateBase ?? '1'),
     };
+
+    if (supplierId != null) {
+      apiBodyData['supplier_id'] = supplierId;
+    }
 
     if (itemCode != null && itemCode.isNotEmpty) {
       apiBodyData['item_code'] = itemCode;

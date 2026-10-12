@@ -384,7 +384,6 @@ class _StockListPageState extends State<StockListPage> {
       initialMrp: stock.mrp ?? '',
       initialPurchasePrice: stock.purchaseRate ?? '',
       showPurchasePrice: _canViewPurchasePrice(),
-      initialQuantity: stock.qty?.toString() ?? '0',
       initialRack: stock.rack ?? '',
     );
   }

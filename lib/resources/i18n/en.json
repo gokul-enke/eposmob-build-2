@@ -2584,6 +2584,8 @@
     "remove_sale_unit": "Remove sale unit"
   },
   "product_form": {
+    "supplier": "Supplier",
+    "select_supplier": "Select Supplier",
     "title": "Create New Product",
     "subtitle": "Create a new product with custom barcode",
     "no_product_found_barcode": "No product found with barcode @barcode",

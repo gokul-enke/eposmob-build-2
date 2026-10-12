@@ -20,6 +20,8 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -74,6 +76,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   final _mrpController = TextEditingController();
   final _sellingPriceController = TextEditingController();
   final _quantityController = TextEditingController(text: '0');
+  // Optional supplier for the opening stock; only offered when quantity > 0.
+  final _supplierSearchController = TextEditingController();
+  Supplier? _selectedSupplier;
+  bool _suppliersRequested = false;
+  bool _hasOpeningQuantity = false;
   final _itemCodeController = TextEditingController();
   final _minMarginController = TextEditingController();
   final _minMarginPriceController = TextEditingController();
@@ -96,10 +103,42 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       _barcodeController.text = widget.barcode!;
     }
     _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
+    _quantityController.addListener(_handleQuantityChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
       _fetchVariantProperties();
     });
+  }
+
+  void _handleQuantityChange() {
+    final hasQuantity =
+        (num.tryParse(_quantityController.text.trim()) ?? 0) > 0;
+    if (hasQuantity == _hasOpeningQuantity) return;
+    setState(() {
+      _hasOpeningQuantity = hasQuantity;
+      if (!hasQuantity) {
+        _selectedSupplier = null;
+        _supplierSearchController.clear();
+      }
+    });
+    if (hasQuantity) _fetchSuppliers();
+  }
+
+  Future<void> _fetchSuppliers() async {
+    if (_suppliersRequested) return;
+    final supplierProvider = context.read<SupplierProvider>();
+    if (supplierProvider.allSuppliers?.isNotEmpty ?? false) return;
+
+    final accessToken = context.read<AuthModel>().token ?? '';
+    if (accessToken.isEmpty) return;
+
+    _suppliersRequested = true;
+    try {
+      await supplierProvider.fetchSuppliers(accessToken: accessToken);
+    } catch (e) {
+      _suppliersRequested = false;
+      debugPrint('⚠️ fetchSuppliers failed: $e');
+    }
   }
 
   @override
@@ -119,6 +158,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     _mrpController.dispose();
     _sellingPriceController.dispose();
     _quantityController.dispose();
+    _supplierSearchController.dispose();
     _itemCodeController.dispose();
     _minMarginController.dispose();
     _minMarginPriceController.dispose();
@@ -826,6 +866,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         mrp: _mrpController.text,
         unit: _selectedUnit!,
         quantity: _quantityController.text,
+        supplierId: _hasOpeningQuantity ? _selectedSupplier?.id : null,
         barcode: _barcodeController.text,
         accessToken: token,
         purchasePrice:
@@ -934,6 +975,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       _confirmedDuplicateBarcode = null;
       _selectedUnit = null;
       _selectedCategory = null;
+      _selectedSupplier = null;
+      _supplierSearchController.clear();
       _isValidatedOnce = false;
       _showAdvancedOptions = false;
       _showSaleUnitValidation = false;
@@ -1599,6 +1642,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             inputFormatters: [_decimalInputFormatter],
           ),
           const SizedBox(height: 18),
+          if (_hasOpeningQuantity) ...[
+            _buildSupplierDropdown(),
+            const SizedBox(height: 18),
+          ],
           Consumer<AppSettingsProvider>(
             builder: (context, appSettingsProvider, _) {
               final itemCodeEnabled =
@@ -1639,6 +1686,45 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           _buildVariantsSection(),
         ],
       ),
+    );
+  }
+
+  Widget _buildSupplierDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'product_form.supplier'.tr,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Consumer<SupplierProvider>(
+          builder: (context, supplierProvider, _) {
+            final suppliers = supplierProvider.allSuppliers ?? const [];
+            final selected = _selectedSupplier == null
+                ? null
+                : suppliers
+                    .where((s) => s.id == _selectedSupplier!.id)
+                    .firstOrNull;
+            return CustomDropDownWithSearch<Supplier>(
+              hintText: 'product_form.select_supplier'.tr,
+              value: selected,
+              items: suppliers,
+              searchController: _supplierSearchController,
+              onChanged: (supplier) {
+                setState(() => _selectedSupplier = supplier);
+              },
+              displayText: (supplier) => supplier.name,
+              autofocus: false,
+            );
+          },
+        ),
+      ],
     );
   }
 

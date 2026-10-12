@@ -2577,6 +2577,8 @@
     "remove_sale_unit": "إزالة وحدة البيع"
   },
   "product_form": {
+    "supplier": "المورد",
+    "select_supplier": "اختر المورد",
     "title": "إنشاء منتج جديد",
     "subtitle": "إنشاء منتج جديد بباركود مخصص",
     "no_product_found_barcode": "لم يتم العثور على منتج بالباركود @barcode",

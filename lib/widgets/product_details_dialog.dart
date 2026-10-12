@@ -97,7 +97,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
-  late TextEditingController _quantityController;
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
@@ -178,7 +177,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController = TextEditingController();
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
-    _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
@@ -554,7 +552,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.text = product.unit ?? '';
     _priceController.text = _valueToString(product.price?.price);
     _mrpController.text = _valueToString(product.mrp);
-    _quantityController.text = '';
     // 🔧 FIX: Revert to Tax Rate (Percentage) as requested
     // We display the static rate, no longer the calculated amount
     _taxController.text = _valueToString(product.totalTaxRate);
@@ -728,7 +725,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedUnit = _unitController.text.trim();
     final String updatedPriceString = _priceController.text.trim();
     final String updatedMrpString = _mrpController.text.trim();
-    final String updatedQuantityString = _quantityController.text.trim();
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
     final String updatedMinMargin = _minMarginController.text.trim();
     final String updatedMinMarginPrice = _minMarginPriceController.text.trim();
@@ -750,9 +746,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ? double.tryParse(product.purchasePrice ?? '')
             : double.tryParse(updatedPurchasePrice))
         : double.tryParse(existingPurchasePrice ?? '');
-    final num? quantityForApi = updatedQuantityString.isEmpty
-        ? null
-        : num.tryParse(updatedQuantityString);
 
     final double updatedPriceValue = priceForApi;
     final double updatedMrpValue = mrpForApi;
@@ -795,7 +788,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     debugPrint('[EDIT_PRODUCT] form normalized '
         'nameLength=${updatedName.length}, slug="$updatedSlug", '
         'barcode="$updatedBarcode", unitId=$_selectedUnitId, '
-        'price=$priceForApi, mrp=$mrpForApi, quantity=$quantityForApi, '
+        'price=$priceForApi, mrp=$mrpForApi, '
         'categoryId=$resolvedCategoryId, saleUnits=${saleUnitsPayload?.length ?? 0}, '
         'variants=${variantsPayload?.length ?? 0}');
 
@@ -843,7 +836,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
-        quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         variants: variantsPayload,
         saleUnits: saleUnitsPayload,
@@ -1086,7 +1078,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
-    _quantityController.dispose();
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _minMarginController.dispose();
@@ -2756,6 +2747,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             final double fieldHeight = size.height * 0.05;
 
             Widget spacing() => const SizedBox(width: horizontalGap);
+            final bool showMrpField = !widget.useBillingProductPermissions ||
+                context.watch<AppSettingsProvider>().appSettings?.showMrpPos ==
+                    true;
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -2906,29 +2900,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: fieldWidth,
-                          child: buildColumnWidgetForTextFields(
-                            controller: _quantityController,
-                            size: size,
-                            title: 'product_detail.quantity'.tr,
-                            hintText: 'product_detail.enter_quantity'.tr,
-                            width: fieldWidth,
-                            height: fieldHeight,
-                            margin: EdgeInsets.zero,
-                            readOnly: false,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: false,
-                            ),
-                          ),
-                        ),
-                        if (!widget.useBillingProductPermissions ||
-                            context
-                                    .watch<AppSettingsProvider>()
-                                    .appSettings
-                                    ?.showMrpPos ==
-                                true) ...[
-                          spacing(),
+                        if (showMrpField) ...[
                           SizedBox(
                             width: fieldWidth,
                             child: buildColumnWidgetForTextFields(
@@ -2947,7 +2919,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                         ],
                         if (_canViewPurchasePrice(context)) ...[
-                          spacing(),
+                          if (showMrpField) spacing(),
                           SizedBox(
                             width: fieldWidth,
                             child: buildColumnWidgetForTextFields(
@@ -3193,14 +3165,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
       initialPurchasePrice: stock.purchasePrice ?? '',
       showPurchasePrice: _canViewPurchasePrice(context),
-      initialQuantity: stock.quantity?.toString() ?? '0',
       initialRack: stock.rack ?? '',
       onSuccess: (result) async {
-        final num? updatedQty = num.tryParse(result.quantity) ?? stock.quantity;
         if (!mounted) return;
         setState(() {
           _editedStockRows[stock.id!] = stock.copyWith(
-            quantity: updatedQty,
             price: result.retailPrice,
             mrp: result.mrp,
             purchasePrice: _canViewPurchasePrice(context)

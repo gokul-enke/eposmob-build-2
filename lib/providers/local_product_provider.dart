@@ -5102,7 +5102,6 @@ class LocalProductProvider extends ChangeNotifier {
     required String retailPrice,
     required String mrp,
     required String purchasePrice,
-    required String quantity,
     required String rack,
   }) {
     final productIndex = _products.indexWhere(
@@ -5124,7 +5123,6 @@ class LocalProductProvider extends ChangeNotifier {
 
     final existingStock = updatedStock[stockIndex];
     updatedStock[stockIndex] = existingStock.copyWith(
-      quantity: num.tryParse(quantity) ?? existingStock.quantity,
       price: retailPrice,
       mrp: mrp,
       purchasePrice: purchasePrice,
