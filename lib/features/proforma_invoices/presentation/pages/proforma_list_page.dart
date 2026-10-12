@@ -3,7 +3,7 @@ import '../state/proforma_list_controller.dart';
 import '../widgets/proforma_list_filters.dart';
 import '../widgets/proforma_list_rows.dart';
 import '../export/proforma_list_excel.dart';
-import 'package:pos_machine/screens/transactions/proforma_invoice_list/proforma_row_actions.dart';
+import '../state/proforma_details_action.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
