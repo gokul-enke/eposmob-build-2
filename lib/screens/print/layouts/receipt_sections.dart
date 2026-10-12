@@ -1,5 +1,7 @@
 import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/item_tax_display.dart';
+import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/print_unit_helper.dart';
 import '../receipt_line_discount.dart';
@@ -461,12 +463,28 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
   }
 
-  /// Quotation unit tax is display-only. Missing values leave other receipt
-  /// types on their existing full-row tax display.
-  static String? itemTaxUnitText(dynamic item) {
-    if (item is! Map) return null;
-    final value = double.tryParse(item['tax_amount_unit']?.toString() ?? '');
-    return value != null && value.isFinite ? value.toStringAsFixed(2) : null;
+  /// An override exists only when this document explicitly selects unit tax.
+  /// The original row tax remains available for all accounting calculations.
+  String? itemTaxUnitText(dynamic item) {
+    if (billDocumentConfig.itemTaxDisplayMode != ItemTaxDisplayMode.unit) {
+      return null;
+    }
+    dynamic read(String key, String alias, dynamic Function() model) {
+      if (item is Map) return item[key] ?? item[alias];
+      try {
+        return model();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return ItemTaxDisplay.amount(
+      mode: billDocumentConfig.itemTaxDisplayMode,
+      rowTax: read('tax_amount', 'taxAmount', () => item.taxAmount),
+      unitTax:
+          read('tax_amount_unit', 'taxAmountUnit', () => item.taxAmountUnit),
+      quantity: read('quantity', 'quantity', () => item.quantity),
+    ).toStringAsFixed(2);
   }
 
   static String formatQuantity(double quantity) {

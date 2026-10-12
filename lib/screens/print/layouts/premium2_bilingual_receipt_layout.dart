@@ -976,7 +976,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
           rows,
           params.cartItems[i],
           i,
-          params.isFromLocalStorage,
+          params,
           displayConfig,
           isEnglish,
           isLtrLayout,
@@ -1248,7 +1248,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     List<ReceiptRow> rows,
     dynamic item,
     int index,
-    bool isFromLocalStorage,
+    ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
     bool isLtrLayout,
@@ -1258,6 +1258,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     double tableMinScale,
     double tableCellPadding,
   ) {
+    final isFromLocalStorage = params.isFromLocalStorage;
     String productName = '';
     String productNameArabic = ''; // Add Arabic name field
     String mrp = '';
@@ -1360,7 +1361,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
-    itemTaxAmount = ReceiptSections.itemTaxUnitText(item) ?? itemTaxAmount;
+    itemTaxAmount = params.itemTaxUnitText(item) ?? itemTaxAmount;
 
     if (isLtrLayout) {
       // Product name row (English - single name)

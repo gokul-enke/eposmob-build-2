@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/models/quotation_model.dart';
+import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/helpers/item_tax_display.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -18,13 +21,18 @@ class QuotationDetailWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency =
         Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? '';
+    final configs = context.watch<DocumentConfigProvider?>();
+    final taxMode = (configs?.getDocumentConfig('Quotation') ??
+                configs?.getDocumentConfig('quotation'))
+            ?.itemTaxDisplayMode ??
+        ItemTaxDisplayMode.rowTotal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInfoCard(context),
         const SizedBox(height: 16),
-        _buildItemsSection(context, currency),
+        _buildItemsSection(context, currency, taxMode),
         const SizedBox(height: 16),
         _buildSummaryCard(context, currency),
       ],
@@ -163,12 +171,21 @@ class QuotationDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildItemsSection(BuildContext context, String currency) {
+  String _itemTaxText(QuotationItem item, ItemTaxDisplayMode mode) =>
+      ItemTaxDisplay.amount(
+        mode: mode,
+        rowTax: item.taxAmount,
+        unitTax: item.taxAmountUnit,
+        quantity: item.quantity,
+      ).toStringAsFixed(2);
+
+  Widget _buildItemsSection(
+      BuildContext context, String currency, ItemTaxDisplayMode taxMode) {
     final items = data.items ?? [];
     if (items.isEmpty) return const SizedBox.shrink();
 
     if (quotationsIsPhone(context)) {
-      return _buildMobileItemsList(items, currency);
+      return _buildMobileItemsList(items, currency, taxMode);
     }
 
     return QuotationsContentCard(
@@ -265,7 +282,7 @@ class QuotationDetailWidget extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(12),
                             child: Text(
-                              "$currency ${item.taxAmountUnit ?? '0'}",
+                              "$currency ${_itemTaxText(item, taxMode)}",
                               style: buildCustomStyle(
                                 FontWeightManager.regular,
                                 FontSize.s12,
@@ -309,7 +326,8 @@ class QuotationDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileItemsList(List<QuotationItem> items, String currency) {
+  Widget _buildMobileItemsList(
+      List<QuotationItem> items, String currency, ItemTaxDisplayMode taxMode) {
     return QuotationsContentCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -319,14 +337,15 @@ class QuotationDetailWidget extends StatelessWidget {
           const SizedBox(height: 12),
           for (int i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
-            _buildMobileItemCard(items[i], currency),
+            _buildMobileItemCard(items[i], currency, taxMode),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildMobileItemCard(QuotationItem item, String currency) {
+  Widget _buildMobileItemCard(
+      QuotationItem item, String currency, ItemTaxDisplayMode taxMode) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsetsDirectional.all(12),
@@ -362,7 +381,7 @@ class QuotationDetailWidget extends StatelessWidget {
               ),
               QuotationsInfoChip(
                 label: 'billing.tax'.tr,
-                value: '$currency ${item.taxAmountUnit ?? '0'}',
+                value: '$currency ${_itemTaxText(item, taxMode)}',
               ),
               QuotationsInfoChip(
                 label: 'billing.total'.tr,

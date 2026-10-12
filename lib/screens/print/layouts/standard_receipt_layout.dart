@@ -862,7 +862,7 @@ class StandardReceiptLayout implements ReceiptLayout {
         rows,
         params.cartItems[i],
         i,
-        params.isFromLocalStorage,
+        params,
         displayConfig,
         isEnglish,
         isDualLanguage,
@@ -1009,7 +1009,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     List<ReceiptRow> rows,
     dynamic item,
     int index,
-    bool isFromLocalStorage,
+    ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
     bool isDualLanguage,
@@ -1019,6 +1019,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     double tableCellPadding,
     List<String> nameLines,
   ) {
+    final isFromLocalStorage = params.isFromLocalStorage;
     // Shared item name (variant attributes included): Arabic above English
     // when the document prints two lines.
     final visibleNames = displayConfig?['showParticulars']?.visible == true
@@ -1084,7 +1085,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
-    itemTaxAmount = ReceiptSections.itemTaxUnitText(item) ?? itemTaxAmount;
+    itemTaxAmount = params.itemTaxUnitText(item) ?? itemTaxAmount;
 
     ReceiptTableColumn valueCol(
       String text,

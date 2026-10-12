@@ -545,6 +545,7 @@ class OrderDetailsModelDataCartItem {
   final String? totalPrice; // Changed to int
   final String? currency;
   final String? taxAmount; // Added tax_amount field
+  final String? taxAmountUnit;
   final int? saleUnitId;
   final int? productSaleUnitId;
   final String? saleUnitName;
@@ -581,6 +582,7 @@ class OrderDetailsModelDataCartItem {
     this.totalPrice,
     this.currency,
     this.taxAmount, // Added tax_amount field
+    this.taxAmountUnit,
     this.saleUnitId,
     this.productSaleUnitId,
     this.saleUnitName,
@@ -636,6 +638,7 @@ class OrderDetailsModelDataCartItem {
         totalPrice: json["total_price"].toString(),
         currency: json["currency"],
         taxAmount: json["tax_amount"]?.toString(), // Added tax_amount parsing
+        taxAmountUnit: json['tax_amount_unit']?.toString(),
         standardUnitPrice: json['standard_unit_price']?.toString(),
         lineDiscount: json['line_discount']?.toString(),
         discountedTotal: json['discounted_total']?.toString(),
@@ -719,6 +722,7 @@ class OrderDetailsModelDataCartItem {
         totalPrice: totalPrice ?? this.totalPrice,
         currency: currency,
         taxAmount: taxAmount ?? this.taxAmount,
+        taxAmountUnit: taxAmountUnit,
         saleUnitId: saleUnitId,
         productSaleUnitId: productSaleUnitId,
         saleUnitName: saleUnitName,
@@ -766,6 +770,7 @@ class OrderDetailsModelDataCartItem {
         "total_price": totalPrice,
         "currency": currency,
         "tax_amount": taxAmount, // Added tax_amount serialization
+        'tax_amount_unit': taxAmountUnit,
         "sale_unit_id": saleUnitId,
         "product_sale_unit_id": productSaleUnitId,
         "sale_unit_name": saleUnitName,

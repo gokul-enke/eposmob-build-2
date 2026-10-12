@@ -151,7 +151,7 @@ class QuotationPrintService {
               'tax_amount': item.taxAmount ?? '0',
               'taxAmount': item.taxAmount ?? '0',
               // Keep the full row tax above for receipt totals and ex-tax rates.
-              'tax_amount_unit': item.taxAmountUnit ?? '0',
+              'tax_amount_unit': item.taxAmountUnit,
               'totalPrice': item.totalPrice ?? '0',
               'total_price': item.totalPrice ?? '0',
             })
