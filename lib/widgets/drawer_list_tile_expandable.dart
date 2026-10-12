@@ -5,7 +5,7 @@ import 'package:websafe_svg/websafe_svg.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
-import 'side_menu.dart';
+import 'collapsible_sidebar.dart';
 
 class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? iconPath;
@@ -436,8 +436,7 @@ class _DrawerListTileExpandableColumnState
     final double gap = widget.horizontalGap ?? 12.0;
 
     // Check if sidebar is collapsed
-    final sidebarState =
-        context.findAncestorStateOfType<CollapsibleSidebarState>();
+    final sidebarState = CollapsibleSidebar.of(context);
     final isSidebarExpanded = sidebarState?.isExpanded ?? true;
 
     // Collapsed state - icon only with click to show popup menu

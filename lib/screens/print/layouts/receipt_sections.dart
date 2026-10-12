@@ -1,7 +1,10 @@
 import 'package:pos_machine/helpers/return_print_amounts.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/item_tax_display.dart';
+import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/print_unit_helper.dart';
+import '../receipt_line_discount.dart';
 
 import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
@@ -55,6 +58,8 @@ class ReceiptItemLine {
     required this.rateExcTax,
     required this.unit,
     required this.tax,
+    this.taxAmountUnit,
+    required this.discount,
     required this.total,
     required this.hasWarranty,
   });
@@ -66,7 +71,13 @@ class ReceiptItemLine {
   final String rate;
   final String rateExcTax;
   final String unit;
+
+  /// Full row tax, retained for subtotal calculations.
   final String tax;
+
+  /// Optional unit tax that overrides only the visible Tax cell.
+  final String? taxAmountUnit;
+  final String discount;
   final String total;
   final bool hasWarranty;
 
@@ -79,7 +90,8 @@ class ReceiptItemLine {
         'showRate' => rate,
         'showRateExcTax' => rateExcTax,
         'showUnit' => unit,
-        'showTaxHeader' => tax,
+        'showTaxHeader' => taxAmountUnit ?? tax,
+        'showItemDiscount' => discount,
         'showTotal' => total,
         _ => '',
       };
@@ -180,6 +192,7 @@ extension ReceiptSections on ReceiptLayoutParams {
     'showRateExcTax',
     'showUnit',
     'showTaxHeader',
+    'showItemDiscount',
     'showTotal',
   ];
 
@@ -379,7 +392,10 @@ extension ReceiptSections on ReceiptLayoutParams {
   /// Visible item-table columns in the thermal order.
   List<ReceiptItemColumn> get itemColumns => [
         for (final key in itemColumnKeys)
-          if (isVisible(key)) ReceiptItemColumn(key, fieldLabelParts(key)),
+          if (key == 'showItemDiscount'
+              ? showItemDiscountColumn
+              : isVisible(key))
+            ReceiptItemColumn(key, fieldLabelParts(key)),
       ];
 
   /// Printable values of every cart line.
@@ -407,23 +423,21 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
 
     final quantity = number(read(['quantity'], () => item.quantity));
-    final unitPrice =
-        number(read(['unitPrice', 'unit_price'], () => item.unitPrice));
     final tax = number(read(['tax_amount', 'taxAmount'], () => item.taxAmount));
-    final total =
-        number(read(['totalPrice', 'total_price'], () => item.totalPrice));
     final mrp = number(read(['mrp'], () => item.mrp));
-    final taxPerUnit = quantity > 0 ? tax / quantity : 0.0;
+    final amounts = ReceiptLineDiscount.fromItem(item);
     return ReceiptItemLine(
       index: index,
       nameLines: itemNameLines(item),
       mrp: mrp.toStringAsFixed(2),
       quantity: formatQuantity(quantity),
-      rate: unitPrice.toStringAsFixed(2),
-      rateExcTax: (unitPrice - taxPerUnit).toStringAsFixed(2),
+      rate: amounts.originalRate.toStringAsFixed(2),
+      rateExcTax: amounts.formattedRateExcTax,
       unit: getPrintUnit(item),
       tax: tax.toStringAsFixed(2),
-      total: total.toStringAsFixed(2),
+      taxAmountUnit: itemTaxUnitText(item),
+      discount: amounts.totalDiscount.toStringAsFixed(2),
+      total: amounts.discountedTotal.toStringAsFixed(2),
       hasWarranty: itemHasWarranty(item),
     );
   }
@@ -449,6 +463,30 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
   }
 
+  /// An override exists only when this document explicitly selects unit tax.
+  /// The original row tax remains available for all accounting calculations.
+  String? itemTaxUnitText(dynamic item) {
+    if (billDocumentConfig.itemTaxDisplayMode != ItemTaxDisplayMode.unit) {
+      return null;
+    }
+    dynamic read(String key, String alias, dynamic Function() model) {
+      if (item is Map) return item[key] ?? item[alias];
+      try {
+        return model();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return ItemTaxDisplay.amount(
+      mode: billDocumentConfig.itemTaxDisplayMode,
+      rowTax: read('tax_amount', 'taxAmount', () => item.taxAmount),
+      unitTax:
+          read('tax_amount_unit', 'taxAmountUnit', () => item.taxAmountUnit),
+      quantity: read('quantity', 'quantity', () => item.quantity),
+    ).toStringAsFixed(2);
+  }
+
   static String formatQuantity(double quantity) {
     if (quantity % 1 == 0) return quantity.toInt().toString();
     return quantity
@@ -468,12 +506,28 @@ extension ReceiptSections on ReceiptLayoutParams {
   double get savedAmountValue =>
       double.tryParse((savedTotal ?? '0').replaceAll(',', '')) ?? 0.0;
 
-  /// Retail total uses the same net-plus-savings amount in every layout.
-  double get mrpTotalValue => netAmountValue + savedAmountValue;
+  /// MRP is independent of coupons, delivery and round-off. A line without
+  /// an MRP counts at its selling total before the order discount.
+  double get mrpTotalValue => cartItems.isEmpty
+      ? netAmountValue + savedAmountValue
+      : cartItems.fold<double>(0, (sum, item) {
+          final line = itemLine(item, 0);
+          final mrp = double.tryParse(line.mrp) ?? 0;
+          if (mrp > 0) {
+            return sum + mrp * (double.tryParse(line.quantity) ?? 0);
+          }
+          final amounts = ReceiptLineDiscount.fromItem(item);
+          return sum + amounts.discountedTotal + amounts.orderDiscount;
+        });
 
-  /// Taxable amount: the API's net excluding tax, else the item lines'
-  /// totals minus their tax.
+  /// Add back the inclusive order discount for the subtotal row: the footer
+  /// subtracts it once before adding the final VAT. This also reconciles
+  /// delivery/round-off already included in the payable amount. Older API
+  /// versions disagree on whether net_exc_tax includes the discount.
   double get subtotalExcTax {
+    if (discountAmountValue > 0) {
+      return netAmountValue + discountAmountValue - totalTax;
+    }
     final api = double.tryParse((netExcTax ?? '').replaceAll(',', ''));
     if (api != null) return api;
     var sum = 0.0;

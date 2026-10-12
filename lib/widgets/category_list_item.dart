@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:drag_select_grid_view/drag_select_grid_view.dart';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_category_container.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -377,6 +378,7 @@ class CategoryListItem extends StatelessWidget {
                                   //  product.isSelected = !product.isSelected;
                                 },
                                 child: SelectedCategoryListItemWidget(
+                                  product: product,
                                   isSelected: isSelected,
                                   currency: selectionProvider
                                           .productList![index].currency ??
@@ -421,10 +423,10 @@ class CategoryListItem extends StatelessWidget {
                                       selectionProvider
                                               .productList![index].productId ??
                                           0,
-                                      selectionProvider
-                                          .productList![index].attachment!
+                                      (product.attachment ?? const <Attachment>[])
                                           .map((e) => e.filePath)
-                                          .toList());
+                                          .toList(),
+                                      product: product);
                                   // Provider.of<CartProvider>(context,
                                   //         listen: false)
                                   //     .addToCartAPI(
@@ -435,6 +437,7 @@ class CategoryListItem extends StatelessWidget {
                                       "product id ${selectionProvider.productList![index].productId}");
                                 },
                                 child: CategoryListItemWidget(
+                                  product: product,
                                   file: file ?? "",
                                   attachment: selectionProvider
                                           .productList![index].attachment ??
@@ -479,7 +482,8 @@ showDialogFunctionForProductDetails(
     int customerId,
     String categoryName,
     int productId,
-    final List<Attachment>? attachment) {
+    final List<Attachment>? attachment,
+    {required GetProduct product}) {
   return showDialog(
       context: context,
       builder: (context) {
@@ -522,10 +526,14 @@ showDialogFunctionForProductDetails(
                     ),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(5),
-                      child: Image.asset(
-                        ImageAssets.mightyZinkerImage,
+                      child: SizedBox(
                         width: 200,
                         height: 100,
+                        child: ProductImage(
+                          product: product,
+                          placeholder: const Icon(Icons.inventory_2_outlined,
+                              color: Colors.grey),
+                        ),
                       ),
                     ),
                     RichText(
@@ -621,7 +629,8 @@ showDialogFunctionForProductDetailsAnimated(
     int customerId,
     String categoryName,
     int productId,
-    final List<String?> attachment) {
+    final List<String?> attachment,
+    {required GetProduct product}) {
   return showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -685,10 +694,11 @@ showDialogFunctionForProductDetailsAnimated(
                           // ),
                           CarouselSlider.builder(
                               itemCount:
-                                  attachment.isEmpty ? 0 : attachment.length,
+                                  attachment.isEmpty ? 1 : attachment.length,
                               itemBuilder: (context, index, realIndex) {
-                                final urlImage = attachment[index];
-                                return buildImages(urlImage ?? "", index);
+                                final urlImage =
+                                    attachment.isEmpty ? null : attachment[index];
+                                return buildImages(product, index, imageUrl: urlImage);
                               },
                               options: CarouselOptions(
                                   height: 300,
@@ -797,12 +807,14 @@ showDialogFunctionForProductDetailsAnimated(
       });
 }
 
-Widget buildImages(String urlImage, int index) => Container(
+Widget buildImages(GetProduct product, int index, {String? imageUrl}) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       color: Colors.grey,
-      child: Image.network(
-        urlImage,
-        fit: BoxFit.cover,
+      child: ProductImage(
+        product: imageUrl == null
+            ? product
+            : product.copyWith(attachment: [Attachment(filePath: imageUrl)]),
+        placeholder: const Icon(Icons.inventory_2_outlined, color: Colors.grey),
       ),
     );
 Widget buildIndicator(int count, int index) => AnimatedSmoothIndicator(

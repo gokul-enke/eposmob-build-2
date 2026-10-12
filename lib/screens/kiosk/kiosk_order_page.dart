@@ -14,6 +14,7 @@ import 'package:pos_machine/models/add_to_cart.dart';
 import 'package:pos_machine/models/add_to_order.dart';
 import 'package:pos_machine/features/customers/domain/models/customer_list.dart';
 import 'package:pos_machine/models/list_cart.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/features/customers/presentation/state/customer_provider.dart';
@@ -365,11 +366,16 @@ class KioskOrderPageState extends State<KioskOrderPage> {
                 final product = cartItem[index];
                 // return _buildOrderListItem(cartItem[index], index);
                 return ProductCardList(
+                  product: GetProduct(
+                    productId: product.productId,
+                    categoryId: product.categoryId,
+                    productName: product.productName,
+                    attachment: [
+                      if (product.productAttachment != null)
+                        Attachment.fromJson(product.productAttachment!.toJson()),
+                    ],
+                  ),
                   height: 50,
-                  // imageLink: product.productAttchment?.isNotEmpty == true
-                  //     ? product.productAttchment![0].filePath ??
-                  //         'https://via.placeholder.com/150'
-                  //     : 'https://via.placeholder.com/150',
                   title: product.productName.toString(),
                   currency: product.currency ?? "",
                   price: product.unitPrice ?? "0.0",

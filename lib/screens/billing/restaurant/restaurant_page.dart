@@ -292,11 +292,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (disableCounterConfirmActions) return;
         if (hasInternet && !showConfirmOrderButton) return;
         if (hasInternet) {
-          orderPanelState?.showCheckoutFromParent();
+          orderPanelState?.showCheckoutFromParent(
+            allowSkipCheckoutOnConfirm: true,
+          );
         } else {
-          // Offline F2 opens checkout (Confirm), never skip-to-print.
+          // Offline F2 uses the plain-confirm setting and never prints.
           orderPanelState?.showOfflineConfirmCheckoutFromParent(
-            allowSkipCheckout: false,
+            printBill: false,
           );
         }
       } else if (key == LogicalKeyboardKey.f3) {

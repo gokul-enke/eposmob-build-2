@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -28,6 +29,17 @@ class _CouponSectionState extends State<CouponSection> {
   static const _paymentController = BillingMobilePaymentController();
 
   DiscountData? _selectedDiscount;
+  bool _fillingCouponFields = false;
+
+  void _fillCouponFields(DiscountData discount) {
+    final values = _couponController.fieldValuesForSelectedDiscount(discount);
+    _fillingCouponFields = true;
+    flatDiscountController.text = values.flat;
+    percentageDiscountController.text = values.percent;
+    _selectedDiscount = discount;
+    _fillingCouponFields = false;
+  }
+
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
 
@@ -63,7 +75,10 @@ class _CouponSectionState extends State<CouponSection> {
       if (!mounted) return;
       final discountProvider =
           Provider.of<DiscountProvider>(context, listen: false);
-      if (discountProvider.discounts.isEmpty && !discountProvider.isLoading) {
+      await loadCouponCategories(context);
+      if (!mounted) return;
+      prepareCouponContext(context, localProductProvider);
+      if (!discountProvider.isLoading) {
         try {
           await discountProvider.fetchDiscounts();
         } catch (_) {
@@ -82,7 +97,7 @@ class _CouponSectionState extends State<CouponSection> {
       );
       if (match != null && mounted) {
         setState(() {
-          _selectedDiscount = match;
+          _fillCouponFields(match);
         });
       }
     });
@@ -98,6 +113,7 @@ class _CouponSectionState extends State<CouponSection> {
   }
 
   void _onManualDiscountChanged() {
+    if (_fillingCouponFields) return;
     if (_couponController.shouldClearSelectedCouponOnManualInput(
       flatDiscountText: flatDiscountController.text,
       percentageDiscountText: percentageDiscountController.text,
@@ -120,13 +136,8 @@ class _CouponSectionState extends State<CouponSection> {
       });
       return;
     }
-    final values = _couponController.fieldValuesForSelectedDiscount(discount);
-
-    // Select first so the field listeners see values matching the coupon.
-    _selectedDiscount = discount;
     setState(() {
-      flatDiscountController.text = values.flat;
-      percentageDiscountController.text = values.percent;
+      _fillCouponFields(discount);
     });
   }
 
@@ -136,6 +147,7 @@ class _CouponSectionState extends State<CouponSection> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final discountProvider =
         Provider.of<DiscountProvider>(context, listen: false);
+    prepareCouponContext(context, localProductProvider);
 
     final result = await _couponController.applyDiscount(
       localProductProvider: localProductProvider,
@@ -203,25 +215,14 @@ class _CouponSectionState extends State<CouponSection> {
             .appSettings
             ?.currency ??
         '';
-    final validity = discountProvider.getValidityForDiscount(
-      discount,
-      _couponController.originalSubTotal(localProductProvider),
-    );
-    final isValid = validity == DiscountValidity.valid;
-    final isPercentage = discount.discountType.toLowerCase() == 'percent';
+    final evaluation = localProductProvider.evaluateCoupon(discount);
+    final isValid = evaluation.isValid;
+    final isPercentage =
+        ['percent', 'percentage'].contains(discount.discountType.toLowerCase());
     final valueText = isPercentage
         ? '${discount.discountValue}%'
         : '$currency ${AmountHelper.formatAmount(discount.discountValue.toDouble())}';
-
-    final String? problem = switch (validity) {
-      DiscountValidity.valid => null,
-      DiscountValidity.belowMin =>
-        'Cart amount is below minimum (Min: $currency ${AmountHelper.formatAmount(discount.discountCouponMinAmount?.toDouble() ?? 0.0)})',
-      DiscountValidity.aboveMax =>
-        'Cart amount exceeds maximum (Max: $currency ${AmountHelper.formatAmount(discount.discountCouponMaxAmount?.toDouble() ?? 0.0)})',
-      DiscountValidity.expired => 'Coupon has expired',
-      DiscountValidity.notStarted => 'Coupon not yet active',
-    };
+    final problem = evaluation.error;
 
     final accent = isValid ? Colors.green.shade600 : Colors.red.shade600;
     return Container(
@@ -273,6 +274,12 @@ class _CouponSectionState extends State<CouponSection> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Text(
+              couponRuleDescriptions(
+                      context, discount, localProductProvider, currency)
+                  .join('\n'),
+              style: const TextStyle(fontSize: 12, color: Colors.black54)),
           if (problem != null) ...[
             const SizedBox(height: 6),
             Text(

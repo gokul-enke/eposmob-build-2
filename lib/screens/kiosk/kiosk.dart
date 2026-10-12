@@ -22,6 +22,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/models/add_to_cart.dart';
+import 'package:pos_machine/models/get_product.dart';
 
 class KioskScreen extends StatefulWidget {
   const KioskScreen({Key? key}) : super(key: key);
@@ -213,6 +214,7 @@ class _KioskScreenState extends State<KioskScreen> {
             itemBuilder: (context, index) {
               final product = productProvider.productList![index];
               return _menuItem(
+                product,
                 product.productName ?? 'kiosk.default_product_name'.tr,
                 product.description ?? 'kiosk.default_description'.tr,
                 product.attachment?.isNotEmpty == true
@@ -271,6 +273,7 @@ class _KioskScreenState extends State<KioskScreen> {
                       .productList![index]
                       .productId!); // Get count from CartProvider
                   return ProductCardSquare(
+                    product: product,
                     file: file ?? "",
                     attachment:
                         productProvider.productList![index].attachment ?? [],
@@ -296,13 +299,14 @@ class _KioskScreenState extends State<KioskScreen> {
     );
   }
 
-  Widget _menuItem(String title, String description, String imageLink,
+  Widget _menuItem(GetProduct product, String title, String description, String imageLink,
       String price, int productId, String currency) {
     return Consumer<CartProvider>(
       builder: (context, cartProvider, child) {
         int count =
             cartProvider.getItemCount(productId); // Get count from CartProvider
         return ProductCardList(
+          product: product,
           imageLink: imageLink,
           title: title,
           currency: currency,

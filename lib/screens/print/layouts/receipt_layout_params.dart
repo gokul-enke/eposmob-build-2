@@ -14,6 +14,7 @@ import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:provider/provider.dart';
 import 'receipt_configuration_contract.dart';
 import '../thermal/thermal_paper_profile.dart';
+import '../receipt_line_discount.dart';
 
 /// Data class containing all parameters needed for receipt generation.
 /// This eliminates the need to pass many individual parameters to layout methods.
@@ -139,8 +140,17 @@ class ReceiptLayoutParams {
 
   /// Get the display configuration options from the document config
   Map<String, DisplayOption>? get displayConfig {
-    final options = billDocumentConfig.displayConfiguration?.options;
-    if (options == null) return null;
+    final sourceOptions = billDocumentConfig.displayConfiguration?.options;
+    if (sourceOptions == null) return null;
+    // The current API names the table column showDiscountColumn. Keep the
+    // renderer's legacy key compatible and give the current key precedence.
+    // showDiscount remains the independent footer option.
+    final options = sourceOptions.containsKey('showDiscountColumn')
+        ? <String, DisplayOption>{
+            ...sourceOptions,
+            'showItemDiscount': sourceOptions['showDiscountColumn']!,
+          }
+        : sourceOptions;
     final titleOverride = documentTitleOverride?.trim();
 
     final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
@@ -480,6 +490,7 @@ class ReceiptLayoutParams {
     'showRateExcTax': ('Rate Ex Tax', 'السعر بدون ضريبة'),
     'showUnit': ('Unit', 'الوحدة'),
     'showTaxHeader': ('Tax', 'الضريبة'),
+    'showItemDiscount': ('Discount', 'الخصم'),
     'showTotal': ('Total', 'الإجمالي'),
     'showWarranty': ('Warranty', 'الضمان'),
     'showSubTotal': ('NET TOTAL (Exc Tax)', 'المجموع'),
@@ -927,6 +938,13 @@ class ReceiptLayoutParams {
     }
     return [withAttributes(english)];
   }
+
+  /// An explicit switch controls the column independently of Particulars and
+  /// the footer. Older configurations show it when at least one row is discounted.
+  bool get showItemDiscountColumn =>
+      displayConfig?['showItemDiscount']?.visible ??
+      cartItems
+          .any((item) => ReceiptLineDiscount.fromItem(item).totalDiscount > 0);
 
   static String _variantText(dynamic raw) {
     var attributes = raw;

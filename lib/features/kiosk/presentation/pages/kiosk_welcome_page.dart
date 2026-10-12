@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_home_page.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_language_sheet.dart';
@@ -403,7 +404,6 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
     final name = product.localizedName?.trim().isNotEmpty == true
         ? product.localizedName!.trim()
         : product.productName?.trim() ?? '';
@@ -414,21 +414,14 @@ class _ProductTile extends StatelessWidget {
         children: [
           ColoredBox(
             color: const Color(0xFFF1F5FA),
-            child: imageUrl == null
-                ? const Icon(
-                    Icons.inventory_2_outlined,
-                    color: ColorManager.kGreyColor,
-                    size: 58,
-                  )
-                : Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.inventory_2_outlined,
-                      color: ColorManager.kGreyColor,
-                      size: 58,
-                    ),
-                  ),
+            child: ProductImage(
+              product: product,
+              placeholder: const Icon(
+                Icons.inventory_2_outlined,
+                color: ColorManager.kGreyColor,
+                size: 58,
+              ),
+            ),
           ),
           if (name.isNotEmpty)
             Positioned(

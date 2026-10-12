@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
@@ -80,14 +81,9 @@ class _HorizontalProductViewState extends State<HorizontalProductView> {
                         width: 80,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            product.attachment?.isNotEmpty == true
-                                ? product.attachment![0].filePath ??
-                                    'https://via.placeholder.com/150'
-                                : 'https://via.placeholder.com/150',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
+                          child: ProductImage(
+                            product: product,
+                            placeholder: Container(
                               color: Colors.grey[100],
                               child: const Icon(Icons.image_not_supported,
                                   color: Colors.grey, size: 20),

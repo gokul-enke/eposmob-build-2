@@ -41,6 +41,21 @@ class DocumentConfigurationsModel {
       };
 }
 
+/// Selects the item Tax cell only; document totals keep their own API values.
+enum ItemTaxDisplayMode {
+  unit('unit'),
+  rowTotal('row_total');
+
+  const ItemTaxDisplayMode(this.apiValue);
+
+  final String apiValue;
+
+  static ItemTaxDisplayMode parse(dynamic value) =>
+      value?.toString().trim().toLowerCase() == 'unit'
+          ? ItemTaxDisplayMode.unit
+          : ItemTaxDisplayMode.rowTotal;
+}
+
 class DocumentConfig {
   final int? id;
   final int? companyId;
@@ -68,6 +83,7 @@ class DocumentConfig {
   final dynamic createdAt; // Can be null
   final String? updatedAt;
   final String? language; // Added language field
+  final ItemTaxDisplayMode itemTaxDisplayMode;
   final int? isActive;
   final String?
       activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
@@ -101,6 +117,7 @@ class DocumentConfig {
     this.createdAt,
     this.updatedAt,
     this.language, // Added to constructor
+    this.itemTaxDisplayMode = ItemTaxDisplayMode.rowTotal,
     this.isActive,
     this.activeTheme, // Theme identifier
     this.displayConfiguration,
@@ -108,15 +125,15 @@ class DocumentConfig {
   });
 
   factory DocumentConfig.fromJson(Map<String, dynamic> json) {
-    var displayConfigJson = json["display_configuration"];
-    displayConfigJson ??= _displayFlagsToDisplayConfiguration(
-      json["display_flags"],
-    );
+    final flags = _displayFlagsToDisplayConfiguration(json['display_flags']);
+    final configured = _asMap(json['display_configuration']);
+    final displayConfigJson = {
+      ...?flags,
+      ...?configured,
+    };
     DisplayConfiguration? displayConfiguration;
 
-    if (displayConfigJson is Map<String, dynamic>) {
-      displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
-    }
+    displayConfiguration = DisplayConfiguration.fromJson(displayConfigJson);
 
     ItemName? parseItemName(dynamic raw) {
       if (raw == null) return null;
@@ -165,6 +182,8 @@ class DocumentConfig {
       createdAt: json["created_at"],
       updatedAt: json["updated_at"],
       language: json["language"], // Parse language from JSON
+      itemTaxDisplayMode:
+          ItemTaxDisplayMode.parse(json['item_tax_display_mode']),
       isActive: _parseIntegerFlag(json["is_active"]),
       // The document-configurations API sends the template id as `theme`;
       // `active_theme` is the key this model writes back into its own cache.
@@ -178,17 +197,29 @@ class DocumentConfig {
   static Map<String, dynamic>? _displayFlagsToDisplayConfiguration(
     dynamic raw,
   ) {
-    if (raw is! Map) return null;
+    final flags = _asMap(raw);
+    if (flags == null) return null;
 
-    return Map.from(raw).map(
+    return flags.map(
       (key, value) => MapEntry<String, dynamic>(
         key.toString(),
         {
-          'visible': value == true,
+          'visible': DisplayOption._parseBooleanFlag(value),
           'value': null,
         },
       ),
     );
+  }
+
+  static Map<String, dynamic>? _asMap(dynamic raw) {
+    if (raw is String) {
+      try {
+        raw = jsonDecode(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
   }
 
   Map<String, dynamic> toJson() => {
@@ -218,6 +249,7 @@ class DocumentConfig {
         "created_at": createdAt,
         "updated_at": updatedAt,
         "language": language,
+        "item_tax_display_mode": itemTaxDisplayMode.apiValue,
         "is_active": isActive,
         "active_theme": activeTheme,
         "display_configuration": displayConfiguration?.toJson(),
@@ -271,8 +303,11 @@ class DisplayConfiguration {
     }
 
     try {
-      final options = Map.from(json).map((k, v) =>
-          MapEntry<String, DisplayOption>(k, DisplayOption.fromJson(v)));
+      final options = json.map((k, v) => MapEntry<String, DisplayOption>(
+          k,
+          v is Map
+              ? DisplayOption.fromJson(Map<String, dynamic>.from(v))
+              : DisplayOption(visible: DisplayOption._parseBooleanFlag(v))));
 
       return DisplayConfiguration(options: options);
     } catch (e) {

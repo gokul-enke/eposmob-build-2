@@ -241,6 +241,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final customerRows = params.customerInfoRows;
     final commentText = params.commentText;
     final bankRows = params.bankDetailRows;
+    // Room the summary + signatures need at the bottom of a page before they
+    // move to a fresh page instead of splitting from each other.
+    final bottomBlockReserve = isA5 ? 160.0 : 220.0;
     final totalsRows = params.totalsRows;
     final wordsLines = params.isVisible('showAmountInWords')
         ? params.amountInWordsLines(params.netAmountValue, currency: currency)
@@ -426,10 +429,15 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           pdfReceiptLine(params.commentLine, style: infoStyle),
         pw.SizedBox(height: 5),
 
-        // Items table and the bank | QR | totals summary (sales only).
+        // Items table and the bank | QR | totals summary (sales only). The
+        // summary is pinned to the bottom of the last page together with the
+        // signatures: start a fresh page when too little room remains, then
+        // let the spacer absorb the free space above.
         if (!params.isReturnOnly) ...[
           _buildItemsTable(params, bodyBold, itemsHeaderAr, bodyStyle),
           pw.SizedBox(height: 5),
+          pw.NewPage(freeSpace: bottomBlockReserve),
+          pw.Spacer(),
           if (summaryBoxes.isNotEmpty) _boxRow(summaryBoxes),
           if (paymentRows.isNotEmpty ||
               balanceRows.isNotEmpty ||
@@ -462,6 +470,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           ..._buildFinalSummaryPdfSection(
               params, currency, font, fontBold, isA5),
         pw.SizedBox(height: 4),
+
+        // A return-only document has no totals box; pin its signatures to
+        // the bottom instead.
+        if (params.isReturnOnly) pw.Spacer(),
 
         // Terms, thank-you message, VAT and order-number footers.
         // One run per line: terms aligned to their own script, the

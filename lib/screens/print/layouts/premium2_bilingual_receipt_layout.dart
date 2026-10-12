@@ -19,6 +19,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 
 import 'receipt_layout.dart';
+import '../receipt_line_discount.dart';
 import 'receipt_configuration_contract.dart';
 import 'receipt_layout_params.dart';
 import 'receipt_pdf_builder.dart';
@@ -920,6 +921,11 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     bool isEnglish,
     bool isLtrLayout,
   ) {
+    displayConfig = {
+      ...?displayConfig,
+      'showItemDiscount': DisplayOption(visible: params.showItemDiscountColumn),
+    };
+
     final bool isBilingual = _isBilingualContent(params);
 
     // Table headers: the shared per-key label (same words on every template).
@@ -930,6 +936,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     final String rateExcTaxLabel = params.fieldLabel('showRateExcTax');
     final String unitLabel = params.fieldLabel('showUnit');
     final String totalLabel = params.fieldLabel('showTotal');
+    final String discountLabel = params.fieldLabel('showItemDiscount');
     final String taxHeaderLabel = params.fieldLabel('showTaxHeader');
     final String slLabel = params.fieldLabel('showSLNumber');
     final tableWeights = _buildNormalizedTableWeights(displayConfig);
@@ -951,6 +958,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         rateExcTaxLabel,
         unitLabel,
         totalLabel,
+        discountLabel,
         taxHeaderLabel,
         slLabel,
         tableWeights,
@@ -968,7 +976,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
           rows,
           params.cartItems[i],
           i,
-          params.isFromLocalStorage,
+          params,
           displayConfig,
           isEnglish,
           isLtrLayout,
@@ -1025,6 +1033,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     String rateExcTaxLabel,
     String unitLabel,
     String totalLabel,
+    String discountLabel,
     String taxHeaderLabel,
     String slLabel,
     Map<String, double> tableWeights,
@@ -1117,6 +1126,15 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
             minScale: tableMinScale,
             horizontalPadding: tableCellPadding));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(discountLabel,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(fitHeader(totalLabel),
             weight: tableWeights['showTotal'] ?? 0,
@@ -1132,6 +1150,15 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         headerCols.add(ReceiptTableColumn(fitHeader(totalLabel),
             weight: tableWeights['showTotal'] ?? 0,
             align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(discountLabel,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.center,
             isBold: true,
             scale: tableScale,
             minScale: tableMinScale,
@@ -1221,7 +1248,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     List<ReceiptRow> rows,
     dynamic item,
     int index,
-    bool isFromLocalStorage,
+    ReceiptLayoutParams params,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
     bool isLtrLayout,
@@ -1231,6 +1258,7 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     double tableMinScale,
     double tableCellPadding,
   ) {
+    final isFromLocalStorage = params.isFromLocalStorage;
     String productName = '';
     String productNameArabic = ''; // Add Arabic name field
     String mrp = '';
@@ -1328,6 +1356,12 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     }
 
     String slNumber = (index + 1).toString();
+    final amounts = ReceiptLineDiscount.fromItem(item);
+    final discount = amounts.totalDiscount.toStringAsFixed(2);
+    unitPrice = amounts.originalRate.toStringAsFixed(2);
+    totalPrice = amounts.discountedTotal.toStringAsFixed(2);
+    unitPriceExTax = amounts.formattedRateExcTax;
+    itemTaxAmount = params.itemTaxUnitText(item) ?? itemTaxAmount;
 
     if (isLtrLayout) {
       // Product name row (English - single name)
@@ -1397,6 +1431,14 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
             minScale: tableMinScale,
             horizontalPadding: tableCellPadding));
       }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(discount,
+            weight: tableWeights['showItemDiscount'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: tableWeights['showTotal'] ?? 0,
@@ -1457,6 +1499,14 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
             weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showItemDiscount']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(discount,
+            weight: tableWeights['showItemDiscount'] ?? 0,
             align: TextAlign.right,
             scale: tableScale,
             minScale: tableMinScale,
@@ -1555,6 +1605,8 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showUnit']?.visible == true) 'showUnit': 0.12,
       if (displayConfig?['showTaxHeader']?.visible == true)
         'showTaxHeader': 0.15,
+      if (displayConfig?['showItemDiscount']?.visible == true)
+        'showItemDiscount': 0.20,
       if (displayConfig?['showTotal']?.visible == true) 'showTotal': 0.15,
     };
 

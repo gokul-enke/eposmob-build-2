@@ -705,6 +705,36 @@ void main() {
     await restarted.flushPersistence();
   });
 
+  test('confirmed receipt retains its offer name and rule after feed removal',
+      () async {
+    final provider = providerWith([tenPercent]);
+    await provider.hydrated;
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.addToCart(product: item, quantity: 2, selectedStock: batch);
+    final sale = provider.saveCurrentCartAsConfirmedOrder();
+    await provider.flushPersistence();
+    expect(sale.items.single.offerDetails?.offerName, 'Test Offer');
+    // Confirmation may clear the live cart; read the frozen sale instead.
+    final snapshot =
+        LocalProductProvider.buildOrderItemsPayloadFrom(sale.items).single;
+    expect(snapshot['offer_name'], 'Test Offer');
+    expect(snapshot['offer_discount_type'], 'percentage');
+    expect(snapshot['offer_discount_value'], '10.0');
+    expect(snapshot['item_discount_amount'], 20);
+    final restarted = providerWith(const [], enabled: false);
+    await restarted.hydrated;
+    final restored = restarted.confirmedOrders.single;
+    final row = PrintService.savedOrderReceiptItem(restored.items.single);
+    expect(row['offer_name'], 'Test Offer');
+    expect(row['offer_discount_value'], '10.0');
+    expect(restored.items.single.price, 90);
+    expect(copyKioskCartItem(restored.items.single).offerDetails?.offerName,
+        'Test Offer');
+    await restarted.flushPersistence();
+  });
+
   test('a restored cart is re-priced when offers were switched off', () async {
     final provider = providerWith([tenPercent]);
     final batch = stock();

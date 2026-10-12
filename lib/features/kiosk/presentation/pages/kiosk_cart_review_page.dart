@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/kiosk/presentation/models/kiosk_order_draft.dart';
 import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_order_details_page.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_flow_scaffold.dart';
@@ -209,7 +209,6 @@ class _ReviewItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(item.product);
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 560;
@@ -222,17 +221,11 @@ class _ReviewItem extends StatelessWidget {
                 height: compact ? 72 : 92,
                 child: ColoredBox(
                   color: const Color(0xFFF7F9FC),
-                  child: imageUrl == null
-                      ? const Icon(Icons.inventory_2_outlined,
-                          color: ColorManager.kGreyColor)
-                      : Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.broken_image_outlined,
-                            color: ColorManager.kGreyColor,
-                          ),
-                        ),
+                  child: ProductImage(
+                    product: item.product,
+                    placeholder: const Icon(Icons.inventory_2_outlined,
+                        color: ColorManager.kGreyColor),
+                  ),
                 ),
               ),
             ),

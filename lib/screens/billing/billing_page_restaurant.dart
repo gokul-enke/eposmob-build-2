@@ -26,6 +26,7 @@ import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -2021,7 +2022,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             }
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               isCouponApplied = isApplied;
               coupenCodeTextController.text = code;
@@ -2031,6 +2032,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 localProductProvider.applyDiscount(
                   flatDiscount: flat,
                   percentageDiscount: percent,
+                  coupon: coupon,
                 );
               } else {
                 localProductProvider.clearDiscount();
@@ -6749,20 +6751,15 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) async {
+            {double? flatDiscount, double? percentageDiscount, coupon}) async {
           if (shouldApply) {
             coupenCodeTextController.text = couponCode;
-
-            // Validate the coupon against the pre-discount total first.
-            if (couponCode.isNotEmpty) {
-              await _applyCoupon();
-            }
-            if (!mounted) return;
 
             // Apply manual discounts to local product provider
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
+              coupon: coupon,
             );
 
             setState(() {
@@ -6794,65 +6791,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         },
       ),
     );
-  }
-
-  Future<void> _applyCoupon() async {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    double? totalAmount =
-        Provider.of<LocalProductProvider>(context, listen: false)
-            .priceSummary!
-            .netTotal;
-    String couponCode = coupenCodeTextController.text;
-
-    if (accessToken != null) {
-      final result =
-          await Provider.of<CartProvider>(context, listen: false).applyCoupon(
-        totalAmount: totalAmount!,
-        couponCode: couponCode,
-        accessToken: accessToken,
-      );
-
-      if (result != null) {
-        // Check if the response indicates success
-        if (result['success'] == true) {
-          final couponData = result['data']['data'];
-          double discountAmount = double.parse(couponData['discount_amount']
-              .replaceAll(',', '')); // Convert discount amount to double
-          double discountedTotal = totalAmount - discountAmount;
-
-          // Update the price summary with the new values
-          Provider.of<CartProvider>(context, listen: false).updatePriceSummary(
-            discountAmount: discountAmount,
-            discountedTotal: discountedTotal,
-          );
-
-          setState(() {
-            isCouponApplied = true;
-          });
-
-          showScaffold(
-            context: context,
-            message: result['message'] ?? 'billing.coupon_applied'.tr,
-          );
-        } else {
-          // Handle failure to apply coupon
-          showScaffoldError(
-            context: context,
-            message: result['message'] ?? 'billing.coupon_apply_failed'.tr,
-          );
-        }
-      } else {
-        // Handle case where result is null
-        showScaffoldError(
-          context: context,
-          message: 'billing.error_occurred'.tr,
-        );
-      }
-    } else {
-      // Handle unauthenticated state
-      showScaffoldError(
-          context: context, message: 'billing.not_authenticated'.tr);
-    }
   }
 
   void resetAutocomplete({bool shouldFetchCustomers = false}) {
@@ -8472,47 +8410,24 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       ),
                                       // Product Image (Right End)
                                       Builder(builder: (context) {
-                                        String? primaryImage;
-                                        if (item.product.attachment != null &&
-                                            item.product.attachment!
-                                                .isNotEmpty) {
-                                          for (final attachment
-                                              in item.product.attachment!) {
-                                            if (attachment.isPrimary == 1) {
-                                              primaryImage =
-                                                  attachment.filePath;
-                                              break;
-                                            }
-                                          }
-                                          primaryImage ??= item.product
-                                              .attachment!.first.filePath;
-                                        }
-
-                                        if (primaryImage == null) {
-                                          return const SizedBox.shrink();
-                                        }
-
                                         return Padding(
                                           padding:
                                               const EdgeInsets.only(left: 8.0),
                                           child: ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(6),
-                                            child: Image.network(
-                                              primaryImage,
+                                            child: SizedBox(
                                               width: 45,
                                               height: 45,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error,
-                                                      stackTrace) =>
-                                                  Container(
-                                                width: 45,
-                                                height: 45,
-                                                color: Colors.grey.shade100,
-                                                child: const Icon(
-                                                    Icons.image_not_supported,
-                                                    size: 16,
-                                                    color: Colors.grey),
+                                              child: ProductImage(
+                                                product: item.product,
+                                                placeholder: Container(
+                                                  color: Colors.grey.shade100,
+                                                  child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      size: 16,
+                                                      color: Colors.grey),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -8966,24 +8881,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                       focusedProductIndex ==
                                                           index;
 
-                                              String? primaryImage;
-                                              if (showImage &&
-                                                  product.attachment != null &&
-                                                  product
-                                                      .attachment!.isNotEmpty) {
-                                                for (final attachment
-                                                    in product.attachment!) {
-                                                  if (attachment.isPrimary ==
-                                                      1) {
-                                                    primaryImage =
-                                                        attachment.filePath;
-                                                    break;
-                                                  }
-                                                }
-                                                primaryImage ??= product
-                                                    .attachment!.first.filePath;
-                                              }
-
                                               return GestureDetector(
                                                 onTap: () async {
                                                   setState(() {
@@ -9032,7 +8929,6 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                       ? _buildProductCardWithImage(
                                                           context,
                                                           product,
-                                                          primaryImage,
                                                           fontProvider)
                                                       : _buildCompactProductCard(
                                                           context,
@@ -9109,7 +9005,7 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Widget _buildProductCardWithImage(BuildContext context, GetProduct product,
-      String? primaryImage, AppFontProvider fontProvider) {
+      AppFontProvider fontProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -9126,22 +9022,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                 ),
                 child: Container(
                   color: Colors.grey.shade50,
-                  child: primaryImage != null
-                      ? Image.network(
-                          primaryImage,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.image_not_supported,
-                            size: 32,
-                            color: Colors.grey,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.inventory_2_outlined,
-                          size: 32,
-                          color: Colors.grey,
-                        ),
+                  child: ProductImage(
+                    product: product,
+                    placeholder: const Icon(
+                      Icons.inventory_2_outlined,
+                      size: 32,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
               // Info button (top-right corner)

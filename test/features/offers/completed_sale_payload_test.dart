@@ -21,6 +21,12 @@ const _offerLine = <String, dynamic>{
   'tax_rate': 18.0,
   'tax_amount': 27.46,
   'total_price': 180.0,
+  'item_discount_amount': 20.0,
+  'discount_origin': 'offer',
+  'offer_name': 'Test Offer',
+  'offer_names': {'en': 'Test Offer'},
+  'offer_discount_type': 'percentage',
+  'offer_discount_value': '10.0',
 };
 
 const _identity = <String, String>{

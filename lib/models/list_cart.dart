@@ -104,6 +104,7 @@ class ListCartModelDataCartItem {
   final String? totalPrice;
   final String? taxRate; // Changed from int to String to match new response
   final String? taxAmount; // Changed from int to String to match new response
+  final String? taxAmountUnit;
   final String? currency;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -124,6 +125,7 @@ class ListCartModelDataCartItem {
     this.totalPrice,
     this.taxRate,
     this.taxAmount,
+    this.taxAmountUnit,
     this.currency,
     this.createdAt,
     this.updatedAt,
@@ -147,6 +149,7 @@ class ListCartModelDataCartItem {
         totalPrice: (json["total_price"]).toString(),
         taxRate: json["tax_rate"].toString(), // Now a String
         taxAmount: json["tax_amount"].toString(), // Now a String
+        taxAmountUnit: json['tax_amount_unit']?.toString(),
         currency: json["currency"],
         createdAt: json["created_at"] == null
             ? null
@@ -172,6 +175,7 @@ class ListCartModelDataCartItem {
         "total_price": totalPrice,
         "tax_rate": taxRate,
         "tax_amount": taxAmount,
+        'tax_amount_unit': taxAmountUnit,
         "currency": currency,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),

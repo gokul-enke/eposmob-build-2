@@ -22,6 +22,8 @@ class CartItemsTable extends StatelessWidget {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         final cartItems = localProductProvider.getCartItems();
+        final showItemDiscount =
+            cartItems.any((item) => item.itemDiscountAmount > 0);
 
         if (cartItems.isEmpty) {
           return _buildEmptyCart();
@@ -34,15 +36,17 @@ class CartItemsTable extends StatelessWidget {
         const double qtyWidth = 120;
         const double mrpWidth = 80;
         const double priceWidth = 80;
+        final double discountWidth = showItemDiscount ? 80 : 0;
         const double totalWidth = 80;
         const double actionsWidth = 50;
 
-        const double totalTableWidth = indexWidth +
+        final double totalTableWidth = indexWidth +
             itemNameWidth +
             unitWidth +
             qtyWidth +
             mrpWidth +
             priceWidth +
+            discountWidth +
             totalWidth +
             actionsWidth;
 
@@ -107,6 +111,10 @@ class CartItemsTable extends StatelessWidget {
                         width: mrpWidth, alignment: Alignment.center),
                     _buildFixedHeaderCell('billing.table_price'.tr,
                         width: priceWidth, alignment: Alignment.center),
+                    if (showItemDiscount)
+                      _buildFixedHeaderCell('billing.discount_label'.tr,
+                          width: discountWidth,
+                          alignment: Alignment.centerRight),
                     _buildFixedHeaderCell('billing.table_total'.tr,
                         width: totalWidth, alignment: Alignment.center),
                     _buildFixedHeaderCell('',
@@ -233,6 +241,16 @@ class CartItemsTable extends StatelessWidget {
                               width: priceWidth,
                               alignment: Alignment.center,
                             ),
+
+                            if (showItemDiscount)
+                              _buildFixedContentCell(
+                                Text(item.itemDiscountAmount.toStringAsFixed(2),
+                                    key: ValueKey(
+                                        'item-discount-${item.lineId}'),
+                                    textAlign: TextAlign.right),
+                                width: discountWidth,
+                                alignment: Alignment.centerRight,
+                              ),
 
                             // Total
                             _buildFixedContentCell(
