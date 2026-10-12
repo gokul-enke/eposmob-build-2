@@ -591,26 +591,19 @@ class PrintService {
     };
   }
 
-  /// Saved order rows are already in submission/receipt order. Preserve each
-  /// batch's reversed submission order, then aggregate allocations back into
-  /// these rows. Uses the backend's current
-  /// proportional accounting rule; coupon eligibility still needs server
-  /// validation (see the backend requirements document).
+  /// Saved order rows are already in submission/receipt order. Allocates in
+  /// the same order as billing ([LocalProductProvider.discountAllocationLines]),
+  /// then aggregates allocations back into these rows. Uses the backend's
+  /// current proportional accounting rule; coupon eligibility still needs
+  /// server validation (see the backend requirements document).
   static List<Map<String, dynamic>> savedOrderReceiptItems(
       List<LocalCartItem> items, double discount,
       {String? couponCode, String? couponName}) {
     final rows = [for (final item in items) savedOrderReceiptItem(item)];
-    final sources = <({int index, double total, double taxRate})>[
-      for (var i = 0; i < items.length; i++)
-        for (final split in items[i].orderLineSplits.toList().reversed)
-          (
-            index: i,
-            total: roundMoney(split.price * split.quantity),
-            taxRate: items[i].taxRate ?? 0
-          ),
-    ];
-    final breakdown =
-        CartDiscountBreakdown.grouped(sources, items.length, discount);
+    final breakdown = CartDiscountBreakdown.grouped(
+        LocalProductProvider.discountAllocationLines(items),
+        items.length,
+        discount);
     for (var i = 0; i < rows.length; i++) {
       final line = breakdown[i];
       rows[i].addAll({

@@ -647,15 +647,7 @@ class LocalProductProvider extends ChangeNotifier {
     final breakdown = <String, double>{};
     cartTotal;
     final discountedLines = CartDiscountBreakdown.grouped(
-        [
-          for (var i = 0; i < _cartItems.length; i++)
-            for (final split in _cartItems[i].orderLineSplits)
-              (
-                index: i,
-                total: roundMoney(split.price * split.quantity),
-                taxRate: _cartItems[i].taxRate ?? 0
-              ),
-        ].reversed.toList(),
+        discountAllocationLines(_cartItems),
         _cartItems.length,
         priceSummary?.discount ?? 0);
 
@@ -2346,6 +2338,21 @@ class LocalProductProvider extends ChangeNotifier {
     };
   }
 
+  /// Order-discount allocation lines in the backend's order: reversed
+  /// submission order, including batch splits. [index] is the cart row.
+  /// Billing totals, the tax breakdown and local receipts must all use this
+  /// so the rounding remainder lands on the same line.
+  static List<({int index, double total, double taxRate})>
+      discountAllocationLines(List<LocalCartItem> items) => [
+            for (var i = items.length - 1; i >= 0; i--)
+              for (final split in items[i].orderLineSplits.toList().reversed)
+                (
+                  index: i,
+                  total: roundMoney(split.price * split.quantity),
+                  taxRate: items[i].taxRate ?? 0
+                ),
+          ];
+
   List<Map<String, dynamic>> buildOrderItemsPayload() {
     return buildOrderItemsPayloadFrom(_cartItems);
   }
@@ -3063,15 +3070,10 @@ class LocalProductProvider extends ChangeNotifier {
     // For tax-inclusive pricing: Total = Net Payable (NOT adding tax again)
     double netTotal = roundMoney(netPayable);
 
-    // The backend allocates in reversed submission order, including batch
-    // splits. Extract VAT from the discounted totals, not the original lines.
+    // Extract VAT from the discounted totals, not the original lines.
     totalTax = CartDiscountBreakdown.calculate([
-      for (final item in _cartItems.reversed)
-        for (final split in item.orderLineSplits.toList().reversed)
-          (
-            total: roundMoney(split.price * split.quantity),
-            taxRate: item.taxRate ?? 0
-          ),
+      for (final line in discountAllocationLines(_cartItems))
+        (total: line.total, taxRate: line.taxRate),
     ], totalDiscount)
         .fold<double>(0, (sum, line) => sum + line.tax);
 
@@ -5785,7 +5787,12 @@ class LocalProductProvider extends ChangeNotifier {
         paidAmount: paidAmount ?? _savedOrders[index].paidAmount,
         balanceAmount: balanceAmount ?? _savedOrders[index].balanceAmount,
         transactionId: transactionId ?? _savedOrders[index].transactionId,
-        couponId: couponId ?? _savedOrders[index].couponId,
+        // A coupon removed from the cart must not survive as a stale code.
+        couponId: _appliedCoupon?.couponCode ??
+            couponId ??
+            (_savedOrders[index].couponDetails == null
+                ? _savedOrders[index].couponId
+                : null),
         couponDetails: _couponSnapshot,
         deliveryMethodId:
             deliveryMethodId ?? _savedOrders[index].deliveryMethodId,

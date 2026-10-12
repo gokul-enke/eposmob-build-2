@@ -221,14 +221,20 @@ void main() {
     expect(ReceiptLineDiscount.fromItem(row).itemDiscount, 1.36);
   });
 
-  test('saved receipt order keeps the rounding remainder on the last row', () {
-    final rows = PrintService.savedOrderReceiptItems([
+  test('saved receipt allocates the rounding remainder like billing', () {
+    final items = [
       _item(price: 0.05, quantity: 1),
       _item(price: 0.05, quantity: 1),
       _item(price: 0.05, quantity: 1),
-    ], 0.01);
-    expect(rows.map((r) => r['discounted_total']), ['0.05', '0.05', '0.04']);
-    expect(rows.map((r) => r['line_discount']), ['0.00', '0.00', '0.01']);
+    ];
+    final rows = PrintService.savedOrderReceiptItems(items, 0.01);
+    // Reversed submission order puts the remainder on the first cart row.
+    expect(rows.map((r) => r['discounted_total']), ['0.04', '0.05', '0.05']);
+    expect(rows.map((r) => r['line_discount']), ['0.01', '0.00', '0.00']);
+    final billed = CartDiscountBreakdown.grouped(
+        LocalProductProvider.discountAllocationLines(items), items.length, 0.01);
+    expect(rows.map((r) => r['discounted_tax_amount']),
+        billed.map((line) => line.tax.toStringAsFixed(2)));
   });
 
   test('completed sale sends printed tax, round-off and payable snapshot', () {

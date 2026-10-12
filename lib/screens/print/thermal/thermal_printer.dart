@@ -1067,10 +1067,12 @@ class ThermalPrinter {
                 ? displayConfig!['showNetAmount']!.value as String
                 : "Net Total:";
 
-        if (displayConfig?['showItemsCount']?.visible == true ||
-            displayConfig?['showDiscount']?.visible == true) {
-          final showItems = displayConfig?['showItemsCount']?.visible == true;
-          final showDiscount = displayConfig?['showDiscount']?.visible == true;
+        final showItems = displayConfig?['showItemsCount']?.visible == true;
+        // Configurations without showDiscount keep the old behaviour: the
+        // discount shares the items-count row.
+        final showDiscount =
+            displayConfig?['showDiscount']?.visible ?? showItems;
+        if (showItems || showDiscount) {
           part1Rows.add(ReceiptTableRow([
             ReceiptTableColumn(showItems ? itemsCountLabel : '',
                 weight: 0.25, align: TextAlign.left),
@@ -1161,8 +1163,10 @@ class ThermalPrinter {
         ]));
 
         // 2. Discounts
+        // Hidden only when explicitly switched off, so the printed subtotal
+        // and total still reconcile on configurations without showDiscount.
         if (totalDiscountAmount > 0 &&
-            displayConfig?['showDiscount']?.visible == true) {
+            displayConfig?['showDiscount']?.visible != false) {
           final discountLabel =
               (displayConfig?['showDiscount']?.value as String?)?.isNotEmpty ==
                       true

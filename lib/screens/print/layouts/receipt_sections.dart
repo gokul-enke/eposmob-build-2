@@ -506,14 +506,18 @@ extension ReceiptSections on ReceiptLayoutParams {
   double get savedAmountValue =>
       double.tryParse((savedTotal ?? '0').replaceAll(',', '')) ?? 0.0;
 
-  /// MRP is independent of coupons, delivery and round-off.
+  /// MRP is independent of coupons, delivery and round-off. A line without
+  /// an MRP counts at its selling total before the order discount.
   double get mrpTotalValue => cartItems.isEmpty
       ? netAmountValue + savedAmountValue
       : cartItems.fold<double>(0, (sum, item) {
           final line = itemLine(item, 0);
-          return sum +
-              (double.tryParse(line.mrp) ?? 0) *
-                  (double.tryParse(line.quantity) ?? 0);
+          final mrp = double.tryParse(line.mrp) ?? 0;
+          if (mrp > 0) {
+            return sum + mrp * (double.tryParse(line.quantity) ?? 0);
+          }
+          final amounts = ReceiptLineDiscount.fromItem(item);
+          return sum + amounts.discountedTotal + amounts.orderDiscount;
         });
 
   /// Add back the inclusive order discount for the subtotal row: the footer
