@@ -179,43 +179,105 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
           failed: 0,
           warning: 0,
         );
-    return ResponsiveStatGrid(
-      maxColumns: 4,
-      cards: [
-        DashboardStatCard(
-          title: 'dashboard.zatca_overview.success'.tr,
-          subtitle: 'dashboard.zatca_overview.success_subtitle'.tr,
-          value: '${overview.successZatca}',
-          color: const Color(0xFF21A366),
-          icon: Icons.check_circle_outline_rounded,
-          showTrend: false,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildGroupTitle('dashboard.zatca_overview.invoice_title'.tr),
+        ResponsiveStatGrid(
+          maxColumns: 4,
+          cards: _buildStatusCards(
+            success: overview.successZatca,
+            notSent: overview.notSent,
+            failed: overview.failed,
+            warning: overview.warning,
+            successSubtitle: 'dashboard.zatca_overview.success_subtitle'.tr,
+            notSentSubtitle: 'dashboard.zatca_overview.not_sent_subtitle'.tr,
+            failedSubtitle: 'dashboard.zatca_overview.failed_subtitle'.tr,
+            warningSubtitle: 'dashboard.zatca_overview.warning_subtitle'.tr,
+          ),
         ),
-        DashboardStatCard(
-          title: 'dashboard.zatca_overview.not_sent'.tr,
-          subtitle: 'dashboard.zatca_overview.not_sent_subtitle'.tr,
-          value: '${overview.notSent}',
-          color: const Color(0xFF64748B),
-          icon: Icons.schedule_send_outlined,
-          showTrend: false,
-        ),
-        DashboardStatCard(
-          title: 'dashboard.zatca_overview.failed'.tr,
-          subtitle: 'dashboard.zatca_overview.failed_subtitle'.tr,
-          value: '${overview.failed}',
-          color: ColorManager.kRed,
-          icon: Icons.error_outline_rounded,
-          showTrend: false,
-        ),
-        DashboardStatCard(
-          title: 'dashboard.zatca_overview.warning'.tr,
-          subtitle: 'dashboard.zatca_overview.warning_subtitle'.tr,
-          value: '${overview.warning}',
-          color: const Color(0xFFE59A17),
-          icon: Icons.warning_amber_rounded,
-          showTrend: false,
+        const SizedBox(height: 18),
+        _buildGroupTitle('dashboard.zatca_overview.voucher_title'.tr),
+        ResponsiveStatGrid(
+          maxColumns: 4,
+          cards: _buildStatusCards(
+            success: overview.voucherSuccess,
+            notSent: overview.voucherNotSent,
+            failed: overview.voucherFailed,
+            warning: overview.voucherWarning,
+            successSubtitle:
+                'dashboard.zatca_overview.voucher_success_subtitle'.tr,
+            notSentSubtitle:
+                'dashboard.zatca_overview.voucher_not_sent_subtitle'.tr,
+            failedSubtitle:
+                'dashboard.zatca_overview.voucher_failed_subtitle'.tr,
+            warningSubtitle:
+                'dashboard.zatca_overview.voucher_warning_subtitle'.tr,
+          ),
         ),
       ],
     );
+  }
+
+  Widget _buildGroupTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+      child: Text(
+        title,
+        style: buildCustomStyle(
+          FontWeightManager.semiBold,
+          FontSize.s14,
+          0.15,
+          ColorManager.textColor,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildStatusCards({
+    required int success,
+    required int notSent,
+    required int failed,
+    required int warning,
+    required String successSubtitle,
+    required String notSentSubtitle,
+    required String failedSubtitle,
+    required String warningSubtitle,
+  }) {
+    return [
+      DashboardStatCard(
+        title: 'dashboard.zatca_overview.success'.tr,
+        subtitle: successSubtitle,
+        value: '$success',
+        color: const Color(0xFF21A366),
+        icon: Icons.check_circle_outline_rounded,
+        showTrend: false,
+      ),
+      DashboardStatCard(
+        title: 'dashboard.zatca_overview.not_sent'.tr,
+        subtitle: notSentSubtitle,
+        value: '$notSent',
+        color: const Color(0xFF64748B),
+        icon: Icons.schedule_send_outlined,
+        showTrend: false,
+      ),
+      DashboardStatCard(
+        title: 'dashboard.zatca_overview.failed'.tr,
+        subtitle: failedSubtitle,
+        value: '$failed',
+        color: ColorManager.kRed,
+        icon: Icons.error_outline_rounded,
+        showTrend: false,
+      ),
+      DashboardStatCard(
+        title: 'dashboard.zatca_overview.warning'.tr,
+        subtitle: warningSubtitle,
+        value: '$warning',
+        color: const Color(0xFFE59A17),
+        icon: Icons.warning_amber_rounded,
+        showTrend: false,
+      ),
+    ];
   }
 
   Widget _buildMessageCard(Widget child) {

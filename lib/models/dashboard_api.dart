@@ -392,16 +392,25 @@ class GraphDataPoint {
 }
 
 class ZatcaOverview {
+  // The backend retains these legacy keys for invoice totals.
   final int successZatca;
   final int notSent;
   final int failed;
   final int warning;
+  final int voucherSuccess;
+  final int voucherNotSent;
+  final int voucherFailed;
+  final int voucherWarning;
 
   const ZatcaOverview({
     required this.successZatca,
     required this.notSent,
     required this.failed,
     required this.warning,
+    this.voucherSuccess = 0,
+    this.voucherNotSent = 0,
+    this.voucherFailed = 0,
+    this.voucherWarning = 0,
   });
 
   factory ZatcaOverview.fromJson(Map<String, dynamic> json) {
@@ -410,6 +419,10 @@ class ZatcaOverview {
       notSent: _parseInt(json['not_sent']),
       failed: _parseInt(json['failed']),
       warning: _parseInt(json['warning']),
+      voucherSuccess: _parseInt(json['voucher_success']),
+      voucherNotSent: _parseInt(json['voucher_not_sent']),
+      voucherFailed: _parseInt(json['voucher_failed']),
+      voucherWarning: _parseInt(json['voucher_warning']),
     );
   }
 }
