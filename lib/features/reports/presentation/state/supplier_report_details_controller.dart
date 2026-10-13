@@ -29,7 +29,11 @@ class SupplierReportDetailsController extends ChangeNotifier {
   String type = 'All', payment = 'All';
   bool loading = false, showFilters = true;
   Object? error;
+  String? errorKey;
   int errorRevision = 0;
+  static const dateRangeErrorKey =
+      'supplier_transaction_report.from_date_after_to_date';
+  bool get hasValidationError => errorKey == dateRangeErrorKey;
   List<SupplierTransaction> _allRows = const [], rows = const [];
   SupplierReportScope? _loadedScope;
   SupplierReportDetailsSelection? _loadedSupplier;
@@ -49,9 +53,11 @@ class SupplierReportDetailsController extends ChangeNotifier {
       _ready &&
       !loading &&
       error == null &&
+      errorKey == null &&
       rows.isNotEmpty &&
       _loadedSupplier == selection() &&
-      query.hasSupplier;
+      query.hasSupplier &&
+      query.isDateRangeValid;
   bool get hasActiveFilters =>
       type != 'All' ||
       payment != 'All' ||
@@ -109,9 +115,18 @@ class SupplierReportDetailsController extends ChangeNotifier {
     final generation = ++_generation;
     _revision++;
     final requested = query;
+    _ready = false;
+    if (!requested.isDateRangeValid) {
+      loading = false;
+      error = null;
+      errorKey = dateRangeErrorKey;
+      errorRevision++;
+      _notify();
+      return;
+    }
     loading = true;
     error = null;
-    _ready = false;
+    errorKey = null;
     _notify();
     try {
       if (!requested.hasSupplier) throw StateError('No supplier selected.');

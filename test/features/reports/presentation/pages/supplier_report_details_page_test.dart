@@ -294,6 +294,57 @@ void main() {
     expect(Get.find<SideBarController>().index.value,
         SideBarController.supplierTransactionsReportScreenIndex);
   });
+  for (final locale in ['en', 'ar', 'ml']) {
+    testWidgets(
+        'invalid dates show localized validation and recover in $locale',
+        (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repo = DetailRepository();
+      await pumpDetails(tester, repo, locale: locale);
+      final today = DateTime.parse(repo.calls.single.to!);
+      Future<void> selectDate(String field, DateTime date) async {
+        await tester
+            .tap(find.byKey(ValueKey('supplier-report-details-$field')));
+        await tester.pumpAndSettle();
+        tester
+            .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
+            .onDateChanged(date);
+        await tester.pumpAndSettle();
+      }
+
+      await selectDate('from', today.add(const Duration(days: 1)));
+      final message = AllTranslations().keys[locale]![
+          'supplier_transaction_report.from_date_after_to_date']!;
+      expect(find.text(message), findsOneWidget);
+      expect(tester.widget<ReportErrorBar>(find.byType(ReportErrorBar)).onRetry,
+          isNull);
+      expect(repo.calls.length, 1);
+      expect(listing(tester).isLoading, isFalse);
+      expect(header(tester).actions[1].onPressed, isNull);
+      header(tester).actions[2].onPressed!();
+      await tester.pumpAndSettle();
+      expect(repo.calls.length, 1);
+      expect(find.text(message), findsOneWidget);
+      await selectDate('from', today);
+      expect(repo.calls.length, 2);
+      expect(find.byType(ReportErrorBar), findsNothing);
+      expect(listing(tester).items.length, 2);
+      expect(header(tester).actions[1].onPressed, isNotNull);
+      await selectDate('to', today.subtract(const Duration(days: 1)));
+      expect(repo.calls.length, 2);
+      expect(find.text(message), findsOneWidget);
+      tester.widget<FilterPanel>(find.byType(FilterPanel)).onReset();
+      await tester.pumpAndSettle();
+      expect(repo.calls.length, 3);
+      expect(find.byType(ReportErrorBar), findsNothing);
+      expect(listing(tester).items.length, 2);
+      expect(header(tester).actions[1].onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets(
       'shared export delivers numeric workbook, preserves rows and supplier selection',
       (tester) async {

@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 
+import 'supplier_report.dart';
+
 typedef SupplierReportDetailsSelection = ({String id, String name});
 
 /// Captured View filters. Defaults and predicates match the legacy report.
@@ -17,6 +19,8 @@ class SupplierReportDetailsQuery {
   final SupplierReportDetailsSelection supplier;
   final String from, to, type, payment, search;
   bool get hasSupplier => supplier.id.isNotEmpty || supplier.name.isNotEmpty;
+  bool get isDateRangeValid =>
+      SupplierReportQuery(fromDate: from, toDate: to).isDateRangeValid;
 
   List<SupplierTransaction> apply(Iterable<SupplierTransaction> rows) =>
       List.unmodifiable(rows.where((row) {

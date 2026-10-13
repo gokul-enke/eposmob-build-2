@@ -184,13 +184,15 @@ class _SupplierTransactionDetailsScreenState
             onFrom: (date) => _details.selectDate(date, true),
             onTo: (date) => _details.selectDate(date, false),
           ),
-          toolbar: _details.error == null
+          toolbar: _details.error == null && !_details.hasValidationError
               ? null
               : ReportErrorBar(
-                  message: _tr('err_loading_transaction_data')
-                      .replaceAll('@error', '${_details.error}'),
+                  message: _details.hasValidationError
+                      ? _details.errorKey!.tr
+                      : _tr('err_loading_transaction_data')
+                          .replaceAll('@error', '${_details.error}'),
                   retryLabel: _tr('retry'),
-                  onRetry: _load),
+                  onRetry: _details.hasValidationError ? null : _load),
           isLoading: _details.loading || initLoading,
           items: _details.rows,
           columns: supplierReportDetailsColumns(),
