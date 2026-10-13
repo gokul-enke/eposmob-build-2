@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'local_order_detail_inputs.dart';
 
+/// A label on the left and its value aligned right, like a receipt line.
 class LocalOrderDetailInfoRow extends StatelessWidget {
   const LocalOrderDetailInfoRow(this.label, this.value,
       {super.key, required this.inputs, this.valueStyle});
@@ -11,30 +12,36 @@ class LocalOrderDetailInfoRow extends StatelessWidget {
   final TextStyle? valueStyle;
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            "$label:",
-            style: const TextStyle(
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: valueStyle ??
-                const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ).merge(valueStyle),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

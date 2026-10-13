@@ -14,7 +14,7 @@ class LocalSalesHeader extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: Color(0xFF1E293B))),
       SizedBox(height: 6),
-      Text('Review requests, edit JSON and sync saved orders.',
+      Text('Orders saved on this device that have not reached the server.',
           style:
               TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.45)),
     ]);
@@ -39,7 +39,9 @@ class LocalSalesHeader extends StatelessWidget {
             child: Text(
                 visibleCount == 0
                     ? 'No orders need attention'
-                    : '$visibleCount order${visibleCount == 1 ? '' : 's'} need attention',
+                    : visibleCount == 1
+                        ? '1 order needs attention'
+                        : '$visibleCount orders need attention',
                 style: TextStyle(
                     color: visibleCount == 0
                         ? const Color(0xFF16764A)
