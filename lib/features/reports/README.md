@@ -6,8 +6,9 @@ Report screens built on the shared listing kit (`core/ui`). So far:
 still live in `lib/screens/reports/` and move here one at a time.
 
 **Supplier Transactions Report listing** uses the same header, filter panel,
-table/cards, loading/empty states and pagination. Its details and print pages
-stay at their legacy paths.
+table/cards, loading/empty states and pagination. Its View details now lives in
+this feature with a compatibility export at the legacy path; print pages stay
+at their legacy paths.
 
 The supplier listing uses `domain/supplier_report.dart`,
 `data/supplier_report_source.dart`, `data/supplier_report_snapshot.dart`,
@@ -40,6 +41,53 @@ in the workbook. The pagination safety guard accepts up to 1,000 declared pages;
 it fails rather than truncating an export. There is no new date-period limit.
 The caller may inject ExportController; only a page-owned controller is disposed.
 Windows uses the shared Save As service; other platforms use its share sheet.
+
+## Supplier Transactions Report View
+
+`SupplierTransactionDetailsScreen` (sidebar slot 68) now delegates to
+`SupplierReportDetailsController`, a query, repository-backed source, snapshot
+reader and stateless filters/results under `widgets/supplier_report/details/`.
+The public class/import, Back to Report (slot 67), selected supplier ID/name,
+seven displayed columns, two-decimal display, default previous-month/today dates,
+Reset defaults, choices and local filter predicates remain compatible.
+The main summary listing already has the feature architecture, shared layout
+and export; its implementation is unchanged by this View extraction.
+
+View uses `ListPageScaffold`, `PageHeader`, `FilterPanel`, shared inputs,
+table/cards, badges, loading/empty/error states and Filters/Export/Refresh.
+The same date-only auto-dismiss calendar keeps bounds 2000–2101. No pagination
+controls or date-period limit are added to View.
+
+Two client state defects are addressed during extraction: local filters use
+View's fetched rows instead of the independently paged supplier directory;
+changing date bounds reloads the same endpoint so widening the range can recover
+rows outside the previous server-filtered subset. ID selection does not fall
+back to a different supplier with the same name. Request generations and session
+checks prevent stale results replacing the latest selection.
+
+Requests still use the existing SupplierRepository/API, bearer/tenant/store
+scope, supplier ID, date-only `from_date`/`to_date` and `list_all=true`.
+Excel export reads its own complete snapshot without publishing shared state,
+follows declared outer supplier pages, validates optional nested counts,
+rejects overlapping IDs, invalid dates/amounts and incomplete/changing metadata,
+and rechecks filters, selection, session and lifecycle before file delivery.
+If pagination or nested counts are omitted, completeness relies on the existing
+`list_all=true` contract returning full supplier transaction arrays.
+The workbook includes the displayed fields, currency, supplier ID/name and date
+bounds; amounts retain their numeric precision. Native Save As/share and busy
+states use the existing shared export services.
+
+Print preparation/navigation is extracted separately with the same inputs,
+total calculation, date bounds and destination. Its existing name-based lookup
+in the shared supplier directory is retained: unavailable directory rows can
+omit contact details, and same-name suppliers can supply the wrong contact.
+These pre-existing Print P2 cases are not introduced by View/export changes.
+
+Focused tests cover request compatibility, all-page snapshot validation,
+filters/date widening/Reset/Retry, stale requests and export cancellation,
+numeric workbook delivery, Print route inputs and English/Arabic/Malayalam
+desktop/tablet/phone/short-window layouts. Live backend, Windows Save As and a
+physical printer still require manual QA; passing tests cover exercised cases.
 
 Customer and supplier report search menus reuse `AppSearchDropdownPopup` from
 the shared UI kit for white surfaces, blue selected/hover states and input text
