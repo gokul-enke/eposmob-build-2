@@ -5,6 +5,7 @@ import '../domain/customer_report_details_query.dart';
 
 /// Isolated all-page read: outer pagination counts customer groups in the new
 /// response, and transactions in the legacy flat response.
+/// Rejects declarations above 1,000 pages instead of truncating the export.
 Future<List<ListTransaction>> fetchCustomerReportDetailsSnapshot(
   Future<dynamic> Function(int page) fetch,
   CustomerReportDetailsQuery query, {
@@ -32,6 +33,7 @@ Future<List<ListTransaction>> fetchCustomerReportDetailsSnapshot(
     if (current != page ||
         nextLast == null ||
         nextLast < page ||
+        nextLast > 1000 ||
         raw is! List ||
         (data['total'] != null && (nextTotal == null || nextTotal < 0)) ||
         (data['per_page'] != null &&

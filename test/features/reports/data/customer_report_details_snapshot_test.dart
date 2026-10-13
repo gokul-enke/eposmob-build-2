@@ -44,6 +44,58 @@ Map<String, dynamic> response(List<Map<String, dynamic>> rows,
     };
 
 void main() {
+  for (final grouped in [true, false]) {
+    for (final declared in [1001, 1000000, '1001']) {
+      test(
+          'rejects excessive ${grouped ? 'grouped' : 'flat'} pages: $declared (${declared.runtimeType})',
+          () async {
+        final calls = <int>[], progress = <(int, int)>[];
+        await expectLater(
+            fetchCustomerReportDetailsSnapshot((page) async {
+              calls.add(page);
+              if (page > 1) throw StateError('Unexpected extra page request.');
+              final value = response(grouped
+                  ? [
+                      group(42, [row(1)])
+                    ]
+                  : [row(1)]);
+              (value['data'] as Map)['last_page'] = declared;
+              return value;
+            }, query, onProgress: (page, last) => progress.add((page, last))),
+            throwsFormatException);
+        expect(calls, [1]);
+        expect(progress, isEmpty);
+      });
+    }
+    test('accepts all 1000 ${grouped ? 'grouped' : 'flat'} pages at the limit',
+        () async {
+      final calls = <int>[], progress = <(int, int)>[];
+      final result = await fetchCustomerReportDetailsSnapshot((page) async {
+        calls.add(page);
+        final customer = page == 1000 ? 42 : 10000 + page;
+        final value = response(
+            grouped
+                ? [
+                    group(customer, [row(page, customer: customer)])
+                  ]
+                : [row(page)],
+            page: page,
+            last: 1000,
+            total: 1000);
+        final data = value['data'] as Map;
+        data['per_page'] = 1;
+        if (grouped) data['last_page'] = '1000';
+        return value;
+      }, query, onProgress: (page, last) => progress.add((page, last)));
+      expect(calls, List.generate(1000, (index) => index + 1));
+      expect(progress.length, 1000);
+      expect(progress.last, (1000, 1000));
+      expect(result.length, grouped ? 1 : 1000);
+      expect(result.last.id, 1000);
+      expect(result.last.amount, '10.125');
+    });
+  }
+
   test('outer grouped pages find the selected ID and preserve financial values',
       () async {
     final pages = <int>[], progress = <(int, int)>[];

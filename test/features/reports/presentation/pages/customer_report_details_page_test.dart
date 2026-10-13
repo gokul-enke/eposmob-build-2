@@ -482,6 +482,62 @@ void main() {
   });
 
   testWidgets(
+      'excessive pagination releases Export and a corrected retry succeeds',
+      (tester) async {
+    var deliveries = 0;
+    final export = ExportController(deliver: (context, file,
+        {required mimeType, shareText, shareOrigin, onStage}) async {
+      expect(
+          Excel.decodeBytes(file.readAsBytesSync())
+              .tables
+              .values
+              .single
+              .maxRows,
+          4);
+      deliveries++;
+    });
+    addTearDown(export.dispose);
+    final provider = DetailsInvoices()
+      ..respondPage = (page, update) async {
+        if (update) return response();
+        if (page != 1) throw StateError('Unexpected extra page request.');
+        final value = paginatedResponse();
+        (value['data'] as Map)['last_page'] = 1001;
+        return value;
+      };
+    await mount(tester, invoices: provider, export: export);
+    await tester.tap(find.byKey(SimpleTransactionDetailsScreen.exportKey));
+    await tester.pumpAndSettle();
+    expect(
+        provider.calls.where((call) => !call.update).map((call) => call.page),
+        [1]);
+    expect(deliveries, 0);
+    expect(export.busy, isFalse);
+    expect(export.stage, isNull);
+    expect(rows(tester).map((row) => row.id), [1, 2, 3]);
+    expect(exportAction(tester).onPressed, isNotNull);
+    expect(find.text('Could not export the complete report. Please try again.'),
+        findsOneWidget);
+    provider.respondPage =
+        (_, update) async => update ? response() : paginatedResponse();
+    await useTempExportDirectory(tester, 'customer-details-page-limit-');
+    await tester.tap(find.byKey(SimpleTransactionDetailsScreen.exportKey));
+    await tester.pump();
+    for (var attempt = 0; deliveries == 0 && attempt < 200; attempt++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(deliveries, 1);
+    expect(export.busy, isFalse);
+    expect(export.stage, isNull);
+    expect(rows(tester).map((row) => row.id), [1, 2, 3]);
+    expect(exportAction(tester).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
       'selected ID keeps same-name customers separate and retains request contract',
       (tester) async {
     final provider = await mount(tester);
