@@ -68,7 +68,8 @@ class _CategoryListPageState extends State<CategoryListPage> {
     setState(() => _openingEdit = true);
     try {
       _provider.setEditCategoryId(categoryId: entry.id ?? 1);
-      await _provider.viewCategoryApi(categoryId: entry.id ?? 1);
+      await _provider.viewCategoryApi(
+          categoryId: entry.id ?? 1, slug: entry.slug ?? '');
       // The details are already fetched; a background load of another
       // category scope must not cancel the navigation the user asked for.
       if (mounted) CategoryNavigation.openEdit();

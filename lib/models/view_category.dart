@@ -83,13 +83,15 @@ class ViewCategory {
         categoryIcon: json["category_icon"],
         userId: json["user_id"],
         status: json["status"],
-        categoryIconFullPath: json["category_icon_full_path"],
-        categoryImageFullPath: json["category_image_full_path"],
+        categoryIconFullPath:
+            json["icon_url"] ?? json["category_icon_full_path"],
+        categoryImageFullPath:
+            json["image_url"] ?? json["category_image_full_path"],
         names: json["names"] == null
             ? null
-            : CategoryNames.fromJson(json["names"]),
-        isPurchasable: json["is_purchasable"],
-        isSellable: json["is_sellable"],
+            : CategoryNames.fromResponse(json["names"]),
+        isPurchasable: json["purchasable"] ?? json["is_purchasable"],
+        isSellable: json["sellable"] ?? json["is_sellable"],
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
@@ -134,6 +136,18 @@ class CategoryNames {
         hi: json["hi"],
         ar: json["ar"],
       );
+
+  /// Slug details return language records; retain support for legacy fixtures.
+  factory CategoryNames.fromResponse(dynamic value) {
+    if (value is Map<String, dynamic>) return CategoryNames.fromJson(value);
+    final names = <String, dynamic>{};
+    for (final entry in value as List) {
+      if (entry is Map && entry['code'] is String && entry['name'] is String) {
+        names[entry['code']] = entry['name'];
+      }
+    }
+    return CategoryNames.fromJson(names);
+  }
 
   Map<String, dynamic> toJson() => {
         "en": en,
