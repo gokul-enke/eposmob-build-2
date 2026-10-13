@@ -1,0 +1,108 @@
+{
+  "status": "success",
+  "document_configurations": {
+    "Bill A4": {
+      "type": "Bill A4",
+      "theme": "boxed_header_tax_invoice",
+      "language": "en_ar",
+      "show_logo": 0,
+      "show_icon": 0,
+      "display_configuration": {
+        "showSLNumber": {
+          "visible": true,
+          "value": "سي#",
+          "default": "SL"
+        },
+        "showParticulars": {
+          "visible": true,
+          "value": "تفاصيل",
+          "default": "E-ITEM"
+        },
+        "showMRP": {
+          "visible": true,
+          "value": "سعر التجزئة",
+          "default": "MRP"
+        },
+        "showQty": {
+          "visible": true,
+          "value": "الكمية",
+          "default": "QTY"
+        },
+        "showRate": {
+          "visible": true,
+          "value": "السعر",
+          "default": "Rate"
+        },
+        "showRateExcTax": {
+          "visible": true,
+          "value": "السعر",
+          "default": "E-RATE"
+        },
+        "showUnit": {
+          "visible": true,
+          "value": "الوحدة",
+          "default": "Unit"
+        },
+        "showTaxHeader": {
+          "visible": true,
+          "value": "الضريبة",
+          "default": "Tax"
+        },
+        "showRowTotalTaxHeader": {
+          "visible": true,
+          "value": "Row Total الضريبة",
+          "default": "TAX"
+        },
+        "showDiscountColumn": {
+          "visible": true,
+          "value": "عربي ",
+          "default": "DIS"
+        },
+        "showTotal": {
+          "visible": true,
+          "value": "الإجمالي",
+          "default": "Total"
+        },
+        "showWarranty": {
+          "visible": true,
+          "value": null
+        },
+        "showTax": {
+          "visible": true,
+          "value": "VAT عربي ",
+          "default": "TAX"
+        },
+        "showSubTotal": {
+          "visible": true,
+          "value": "SUB T عربي "
+        },
+        "showNetAmount": {
+          "visible": true,
+          "value": "Net Amount عربي ",
+          "default": "NET AMOUNT"
+        }
+      },
+      "resolved_labels": {
+        "sl_number": "سي#",
+        "sl_number_default": "Sl#",
+        "particulars": "تفاصيل",
+        "particulars_default": "PARTICULARS",
+        "mrp": "سعر التجزئة",
+        "mrp_default": "MRP",
+        "qty": "الكمية",
+        "qty_default": "QTY",
+        "rate": "السعر",
+        "rate_default": "RATE (INC TAX)",
+        "rate_exc_tax": "السعر",
+        "rate_exc_tax_default": "RATE (EXC TAX)",
+        "unit": "الوحدة",
+        "unit_default": "UNIT",
+        "total": "الإجمالي",
+        "total_default": "Total",
+        "tax": "الضريبة",
+        "tax_default": "Tax",
+        "row_total_tax": "Row Total الضريبة"
+      }
+    }
+  }
+}

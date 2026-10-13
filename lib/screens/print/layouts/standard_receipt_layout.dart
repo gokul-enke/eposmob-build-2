@@ -828,6 +828,8 @@ class StandardReceiptLayout implements ReceiptLayout {
     final String totalLabel = params.fieldLabel('showTotal');
     final String discountLabel = params.fieldLabel('showItemDiscount');
     final String taxHeaderLabel = params.fieldLabel('showTaxHeader');
+    final String rowTotalTaxHeaderLabel =
+        params.fieldLabel('showRowTotalTaxHeader');
     final String slLabel = params.fieldLabel('showSLNumber');
 
     final tableWeights = _buildNormalizedTableWeights(displayConfig);
@@ -850,6 +852,7 @@ class StandardReceiptLayout implements ReceiptLayout {
       totalLabel,
       discountLabel,
       taxHeaderLabel,
+      rowTotalTaxHeaderLabel,
       slLabel,
       tableWeights,
       tableScale,
@@ -907,6 +910,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     String totalLabel,
     String discountLabel,
     String taxHeaderLabel,
+    String rowTotalTaxHeaderLabel,
     String slLabel,
     Map<String, double> tableWeights,
     double tableScale,
@@ -957,6 +961,9 @@ class StandardReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(col(taxHeaderLabel, 'showTaxHeader'));
       }
+      if (displayConfig?['showRowTotalTaxHeader']?.visible == true) {
+        headerCols.add(col(rowTotalTaxHeaderLabel, 'showRowTotalTaxHeader'));
+      }
       if (displayConfig?['showItemDiscount']?.visible == true) {
         headerCols.add(col(discountLabel, 'showItemDiscount'));
       }
@@ -969,6 +976,10 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
       if (displayConfig?['showItemDiscount']?.visible == true) {
         headerCols.add(col(discountLabel, 'showItemDiscount'));
+      }
+      if (displayConfig?['showRowTotalTaxHeader']?.visible == true) {
+        headerCols.add(col(rowTotalTaxHeaderLabel, 'showRowTotalTaxHeader',
+            align: TextAlign.right));
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols
@@ -1085,6 +1096,7 @@ class StandardReceiptLayout implements ReceiptLayout {
     unitPrice = amounts.originalRate.toStringAsFixed(2);
     totalPrice = amounts.discountedTotal.toStringAsFixed(2);
     unitPriceExTax = amounts.formattedRateExcTax;
+    final rowTotalTaxAmount = params.itemLine(item, index + 1).tax;
     itemTaxAmount = params.itemTaxUnitText(item) ?? itemTaxAmount;
 
     ReceiptTableColumn valueCol(
@@ -1097,7 +1109,9 @@ class StandardReceiptLayout implements ReceiptLayout {
         weight: tableWeights[key] ?? 0,
         align: align,
         scale: tableScale,
-        minScale: tableMinScale,
+        minScale: key == 'showTaxHeader' || key == 'showRowTotalTaxHeader'
+            ? 0.4
+            : tableMinScale,
         horizontalPadding: tableCellPadding,
       );
     }
@@ -1138,6 +1152,9 @@ class StandardReceiptLayout implements ReceiptLayout {
       }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(valueCol(itemTaxAmount, 'showTaxHeader'));
+      }
+      if (displayConfig?['showRowTotalTaxHeader']?.visible == true) {
+        priceCols.add(valueCol(rowTotalTaxAmount, 'showRowTotalTaxHeader'));
       }
       if (displayConfig?['showItemDiscount']?.visible == true) {
         priceCols.add(valueCol(discount, 'showItemDiscount'));
@@ -1188,6 +1205,9 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showItemDiscount']?.visible == true) {
       priceCols.add(valueCol(discount, 'showItemDiscount'));
     }
+    if (displayConfig?['showRowTotalTaxHeader']?.visible == true) {
+      priceCols.add(valueCol(rowTotalTaxAmount, 'showRowTotalTaxHeader'));
+    }
     if (displayConfig?['showTaxHeader']?.visible == true) {
       priceCols.add(valueCol(itemTaxAmount, 'showTaxHeader'));
     }
@@ -1231,6 +1251,8 @@ class StandardReceiptLayout implements ReceiptLayout {
       if (displayConfig?['showUnit']?.visible == true) 'showUnit': 0.12,
       if (displayConfig?['showTaxHeader']?.visible == true)
         'showTaxHeader': 0.13,
+      if (displayConfig?['showRowTotalTaxHeader']?.visible == true)
+        'showRowTotalTaxHeader': 0.13,
       if (displayConfig?['showItemDiscount']?.visible == true)
         'showItemDiscount': 0.20,
       if (displayConfig?['showTotal']?.visible == true) 'showTotal': 0.15,

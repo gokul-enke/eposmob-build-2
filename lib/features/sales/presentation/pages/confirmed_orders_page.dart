@@ -13,6 +13,7 @@ import '../commands/local_sales_services.dart';
 import '../commands/print_local_sale.dart';
 import '../commands/show_local_sale_details.dart';
 import '../commands/show_local_sale_sync_log.dart';
+import '../commands/update_local_sale_identity.dart';
 import '../widgets/local_orders/local_sale_attention_card.dart';
 import '../widgets/local_orders/local_sales_header.dart';
 
@@ -68,10 +69,11 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
           record == null || record.state == LocalSaleSyncState.queued,
       };
 
-  bool _matchesSearch(SavedOrder order) {
+  bool _matchesSearch(SavedOrder order, LocalSaleSyncRecord? record) {
     final query = _search.text.trim().toLowerCase();
     return query.isEmpty ||
         order.orderNumber.toLowerCase().contains(query) ||
+        localSaleReceiptNumber(order, record).toLowerCase().contains(query) ||
         (order.customerName?.toLowerCase().contains(query) ?? false);
   }
 
@@ -128,7 +130,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -147,7 +149,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
                 final visible = orders
                     .where((order) =>
                         _matchesFilter(_filter, sync.recordFor(order.id)) &&
-                        _matchesSearch(order))
+                        _matchesSearch(order, sync.recordFor(order.id)))
                     .toList();
                 final narrowed = _filter != _AttentionFilter.all ||
                     _search.text.trim().isNotEmpty;
@@ -206,7 +208,8 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
                                       ? const _EmptyState(
                                           icon: Icons.cloud_done_outlined,
                                           color: Color(0xFF16764A),
-                                          title: 'No sales need sync attention.',
+                                          title:
+                                              'No sales need sync attention.',
                                           subtitle:
                                               'Synced orders are available in Sales.')
                                       : _EmptyState(
@@ -270,7 +273,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
         textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Search order or customer',
+          hintText: 'Search receipt no. or customer',
           hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: _search.text.isEmpty
@@ -319,8 +322,8 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
                 color: _filter == filter
                     ? ColorManager.kPrimaryColor
                     : const Color(0xFFE2E8F0)),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999)),
           ),
     ];
     // One swipeable row on phones keeps the first order above the fold.
@@ -474,7 +477,8 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
         Icon(icon, size: 20, color: color),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title,
                 style: TextStyle(
                     color: color, fontSize: 13, fontWeight: FontWeight.w700)),
@@ -499,31 +503,40 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
   }
 
   Widget _buildCard(SavedOrder order, LocalSaleSyncService sync, bool busy,
-          Set<String> eligibleIds) =>
-      LocalSaleAttentionCard(
-        key: ValueKey('attention-order-${order.id}'),
-        order: order,
-        syncRecord: sync.recordFor(order.id),
-        currency: _services.settings.appSettings?.currency ?? 'INR',
-        selected: _selectedIds.contains(order.id),
-        actionsEnabled: !busy && !sync.isSubmitting(order.id),
-        onSelectionChanged: busy || !eligibleIds.contains(order.id)
-            ? null
-            : (value) => setState(() {
-                  if (value) {
-                    _selectedIds.add(order.id);
-                  } else {
-                    _selectedIds.remove(order.id);
-                  }
-                }),
-        onView: () => showLocalSaleDetails(context, order, _services),
-        onSync: () => _syncOrders([order]),
-        onEdit: () => editLocalSaleRequest(context, order, _services),
-        onDismiss: () => confirmAndDismissLocalSale(context, order, _services),
-        onDelete: () => confirmAndDeleteLocalSale(context, order, _services),
-        onLog: () => showLocalSaleSyncLog(context, order.id, _services),
-        onPrint: () => printLocalSale(context, order, _services),
-      );
+      Set<String> eligibleIds) {
+    final record = sync.recordFor(order.id);
+    return LocalSaleAttentionCard(
+      key: ValueKey('attention-order-${order.id}'),
+      order: order,
+      syncRecord: record,
+      currency: _services.settings.appSettings?.currency ?? 'INR',
+      receiptNumber: localSaleReceiptNumber(order, record),
+      issuedAt: localSaleIssuedAt(order, record),
+      onReceiptNumberChanged: (value) => updateLocalSaleIdentity(
+          context, order, _services,
+          receiptNumber: value),
+      onIssuedAtChanged: (value) =>
+          updateLocalSaleIdentity(context, order, _services, issuedAt: value),
+      selected: _selectedIds.contains(order.id),
+      actionsEnabled: !busy && !sync.isSubmitting(order.id),
+      onSelectionChanged: busy || !eligibleIds.contains(order.id)
+          ? null
+          : (value) => setState(() {
+                if (value) {
+                  _selectedIds.add(order.id);
+                } else {
+                  _selectedIds.remove(order.id);
+                }
+              }),
+      onView: () => showLocalSaleDetails(context, order, _services),
+      onSync: () => _syncOrders([order]),
+      onEdit: () => editLocalSaleRequest(context, order, _services),
+      onDismiss: () => confirmAndDismissLocalSale(context, order, _services),
+      onDelete: () => confirmAndDeleteLocalSale(context, order, _services),
+      onLog: () => showLocalSaleSyncLog(context, order.id, _services),
+      onPrint: () => printLocalSale(context, order, _services),
+    );
+  }
 }
 
 class _EmptyState extends StatelessWidget {
@@ -540,19 +553,17 @@ class _EmptyState extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 52, color: color),
-            const SizedBox(height: 16),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text(subtitle,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-                textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 12), action!],
-          ]);
+  Widget build(BuildContext context) =>
+      Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, size: 52, color: color),
+        const SizedBox(height: 16),
+        Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text(subtitle,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+            textAlign: TextAlign.center),
+        if (action != null) ...[const SizedBox(height: 12), action!],
+      ]);
 }

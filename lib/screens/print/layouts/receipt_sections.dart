@@ -75,7 +75,7 @@ class ReceiptItemLine {
   /// Full row tax, retained for subtotal calculations.
   final String tax;
 
-  /// Optional unit tax that overrides only the visible Tax cell.
+  /// Per-unit tax for the Tax cell; never used for accounting totals.
   final String? taxAmountUnit;
   final String discount;
   final String total;
@@ -91,6 +91,7 @@ class ReceiptItemLine {
         'showRateExcTax' => rateExcTax,
         'showUnit' => unit,
         'showTaxHeader' => taxAmountUnit ?? tax,
+        'showRowTotalTaxHeader' => tax,
         'showItemDiscount' => discount,
         'showTotal' => total,
         _ => '',
@@ -192,6 +193,7 @@ extension ReceiptSections on ReceiptLayoutParams {
     'showRateExcTax',
     'showUnit',
     'showTaxHeader',
+    'showRowTotalTaxHeader',
     'showItemDiscount',
     'showTotal',
   ];
@@ -463,10 +465,10 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
   }
 
-  /// An override exists only when this document explicitly selects unit tax.
-  /// The original row tax remains available for all accounting calculations.
+  /// New configurations use per-unit tax in showTaxHeader and expose full row
+  /// tax separately. Older single-column configurations keep their saved mode.
   String? itemTaxUnitText(dynamic item) {
-    if (billDocumentConfig.itemTaxDisplayMode != ItemTaxDisplayMode.unit) {
+    if (billDocumentConfig.taxHeaderDisplayMode != ItemTaxDisplayMode.unit) {
       return null;
     }
     dynamic read(String key, String alias, dynamic Function() model) {
@@ -479,7 +481,7 @@ extension ReceiptSections on ReceiptLayoutParams {
     }
 
     return ItemTaxDisplay.amount(
-      mode: billDocumentConfig.itemTaxDisplayMode,
+      mode: ItemTaxDisplayMode.unit,
       rowTax: read('tax_amount', 'taxAmount', () => item.taxAmount),
       unitTax:
           read('tax_amount_unit', 'taxAmountUnit', () => item.taxAmountUnit),

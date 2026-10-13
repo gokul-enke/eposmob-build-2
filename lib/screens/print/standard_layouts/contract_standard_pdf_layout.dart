@@ -357,6 +357,19 @@ class ContractStandardPdfRenderer {
     }
     final lines = params.itemLines;
     final warranty = params.warrantyLabel;
+    const columnFlex = <String, double>{
+      'showSLNumber': 0.6,
+      'showParticulars': 3,
+      'showMRP': 1,
+      'showQty': 0.8,
+      'showRate': 1.2,
+      'showRateExcTax': 1.2,
+      'showUnit': 0.8,
+      'showTaxHeader': 1.1,
+      'showRowTotalTaxHeader': 1.1,
+      'showItemDiscount': 1,
+      'showTotal': 1.5,
+    };
 
     pw.Widget valueCell(ReceiptItemLine line, String key) {
       if (key == 'showParticulars') {
@@ -417,7 +430,7 @@ class ContractStandardPdfRenderer {
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
           for (var i = 0; i < ordered.length; i++)
-            i: pw.FlexColumnWidth(ordered[i].key == 'showParticulars' ? 3 : 1),
+            i: pw.FlexColumnWidth(columnFlex[ordered[i].key] ?? 1),
         },
         children: tableRows,
       ),

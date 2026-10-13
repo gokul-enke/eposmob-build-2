@@ -490,6 +490,7 @@ class ReceiptLayoutParams {
     'showRateExcTax': ('Rate Ex Tax', 'السعر بدون ضريبة'),
     'showUnit': ('Unit', 'الوحدة'),
     'showTaxHeader': ('Tax', 'الضريبة'),
+    'showRowTotalTaxHeader': ('Row Total Tax', 'إجمالي ضريبة الصنف'),
     'showItemDiscount': ('Discount', 'الخصم'),
     'showTotal': ('Total', 'الإجمالي'),
     'showWarranty': ('Warranty', 'الضمان'),
@@ -594,6 +595,10 @@ class ReceiptLayoutParams {
         return fallback('Tax', 'الضريبة',
             resolvedArabic: labels?.tax,
             resolvedEnglish: englishResolved(labels?.taxDefault));
+      case 'showRowTotalTaxHeader':
+        return fallback('Row Total Tax', 'إجمالي ضريبة الصنف',
+            resolvedArabic: labels?.rowTotalTax,
+            resolvedEnglish: englishResolved(labels?.rowTotalTaxDefault));
       case 'showTotal':
         return fallback('Total', 'الإجمالي',
             resolvedArabic: labels?.total,

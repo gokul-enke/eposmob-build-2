@@ -932,6 +932,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       'showRateExcTax': 1.2,
       'showUnit': 0.8,
       'showTaxHeader': 1.1,
+      'showRowTotalTaxHeader': 1.1,
       'showTotal': 1.5,
     };
     final warranty = params.warrantyLabel;

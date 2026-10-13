@@ -896,6 +896,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       'showRateExcTax': 1.4,
       'showUnit': 1.0,
       'showTaxHeader': 1.3,
+      'showRowTotalTaxHeader': 1.3,
       'showTotal': 1.6,
     };
     final lines = params.itemLines;

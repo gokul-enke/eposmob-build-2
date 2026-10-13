@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -52,8 +53,9 @@ class _Paths extends PathProviderPlatform {
 }
 
 class _Configs extends DocumentConfigProvider {
-  _Configs(this.mode);
+  _Configs(this.mode, [this.taxColumns]);
   String? mode;
+  Map<String, DisplayOption>? taxColumns;
 
   @override
   Future<void> initHive() async {}
@@ -63,6 +65,11 @@ class _Configs extends DocumentConfigProvider {
       ? DocumentConfig.fromJson({
           'type': type,
           if (mode != null) 'item_tax_display_mode': mode,
+          if (taxColumns != null)
+            'display_configuration': {
+              for (final entry in taxColumns!.entries)
+                entry.key: entry.value.toJson(),
+            },
         })
       : null;
 
@@ -70,7 +77,25 @@ class _Configs extends DocumentConfigProvider {
     mode = value;
     notifyListeners();
   }
+
+  void changeColumns(Map<String, DisplayOption> value) {
+    taxColumns = value;
+    notifyListeners();
+  }
 }
+
+Map<String, DisplayOption> _taxColumns(bool unit, bool rowTotal,
+        {bool bilingual = false}) =>
+    {
+      'showTaxHeader': DisplayOption(
+          visible: unit,
+          value: bilingual ? 'ضريبة الوحدة' : 'Unit Tax',
+          defaultValue: bilingual ? 'Unit Tax' : null),
+      'showRowTotalTaxHeader': DisplayOption(
+          visible: rowTotal,
+          value: bilingual ? 'إجمالي ضريبة الصنف' : 'Row Tax',
+          defaultValue: bilingual ? 'Row Tax' : null),
+    };
 
 QuotationDetailsData _quotation({
   String unitTax = '5.00',
@@ -104,14 +129,16 @@ Map<String, dynamic> _payload({
       _quotation(unitTax: unitTax, apiTax: apiTax),
     );
 
-Widget _host(Widget child, {String? taxMode = 'unit'}) => MultiProvider(
+Widget _host(Widget child,
+        {String? taxMode = 'unit', Map<String, DisplayOption>? taxColumns}) =>
+    MultiProvider(
       providers: [
         ChangeNotifierProvider<AppSettingsProvider>(create: (_) => _Settings()),
         ChangeNotifierProvider<PaymentGatewaysProvider>(
           create: (_) => PaymentGatewaysProvider(),
         ),
         ChangeNotifierProvider<DocumentConfigProvider>(
-          create: (_) => _Configs(taxMode),
+          create: (_) => _Configs(taxMode, taxColumns),
         ),
       ],
       child: MaterialApp(home: Scaffold(body: child)),
@@ -130,6 +157,9 @@ ReceiptLayoutParams _params(
   String documentType = 'Quotation',
   List<dynamic>? printItems,
   bool isFromLocalStorage = true,
+  Map<String, DisplayOption>? taxColumns,
+  String language = 'en',
+  DocumentConfig? documentConfig,
 }) {
   final payload = quotation == null
       ? _payload(unitTax: unitTax, apiTax: apiTax)
@@ -148,27 +178,29 @@ ReceiptLayoutParams _params(
     customerCareEmail: '',
     netExcTax: includeApiSubtotal ? payload['netExcTax'] as String? : null,
     apiTotalTax: payload['apiTotalTax'] as double?,
-    billDocumentConfig: DocumentConfig(
-      type: documentType,
-      itemTaxDisplayMode: ItemTaxDisplayMode.parse(taxMode),
-      activeTheme: theme,
-      language: 'en',
-      showLogo: 0,
-      displayConfiguration: DisplayConfiguration(options: {
-        for (final key in [
-          'showParticulars',
-          'showQty',
-          'showRate',
-          'showRateExcTax',
-          'showTaxHeader',
-          'showTotal',
-          if (includeSubtotal) 'showSubTotal',
-          'showTax',
-          'showNetAmount',
-        ])
-          key: DisplayOption(visible: true),
-      }),
-    ),
+    billDocumentConfig: documentConfig ??
+        DocumentConfig(
+          type: documentType,
+          itemTaxDisplayMode: ItemTaxDisplayMode.parse(taxMode),
+          activeTheme: theme,
+          language: language,
+          showLogo: 0,
+          displayConfiguration: DisplayConfiguration(options: {
+            for (final key in [
+              'showParticulars',
+              'showQty',
+              'showRate',
+              'showRateExcTax',
+              'showTaxHeader',
+              'showTotal',
+              if (includeSubtotal) 'showSubTotal',
+              'showTax',
+              'showNetAmount',
+            ])
+              key: DisplayOption(visible: true),
+            ...?taxColumns,
+          }),
+        ),
   );
 }
 
@@ -220,6 +252,33 @@ void main() {
   });
 
   for (final width in [390.0, 1200.0]) {
+    for (final flags in [
+      (true, true),
+      (true, false),
+      (false, true),
+      (false, false)
+    ]) {
+      testWidgets('details show separate tax columns $flags at width $width',
+          (tester) async {
+        tester.view.physicalSize = Size(width, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(_host(
+          SingleChildScrollView(
+              child: QuotationDetailWidget(data: _quotation())),
+          taxMode: 'row_total',
+          taxColumns: _taxColumns(flags.$1, flags.$2),
+        ));
+        expect(find.text('Unit Tax'), flags.$1 ? findsOneWidget : findsNothing);
+        expect(find.text('Row Tax'), flags.$2 ? findsOneWidget : findsNothing);
+        expect(find.text('SAR 5.00'), flags.$1 ? findsOneWidget : findsNothing);
+        expect(find.text('SAR 50.00'),
+            flags.$2 ? findsNWidgets(2) : findsOneWidget);
+        expect(find.text('SAR 1050.00'), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      });
+    }
     for (final mode in ['unit', 'row_total', null, 'invalid']) {
       testWidgets('details respect $mode tax mode at width $width',
           (tester) async {
@@ -257,6 +316,14 @@ void main() {
     await tester.pump();
     expect(find.text('SAR 5.00'), findsOneWidget);
     expect(find.text('SAR 50.00'), findsOneWidget);
+    configs.changeColumns(_taxColumns(true, true));
+    await tester.pump();
+    expect(find.text('SAR 5.00'), findsOneWidget);
+    expect(find.text('SAR 50.00'), findsNWidgets(2));
+    configs.changeColumns(_taxColumns(false, true));
+    await tester.pump();
+    expect(find.text('SAR 5.00'), findsNothing);
+    expect(find.text('SAR 50.00'), findsNWidgets(2));
   });
 
   testWidgets('unit tax cannot change PDF totals, subtotal or ex-tax rate',
@@ -267,12 +334,16 @@ void main() {
       return const SizedBox();
     })));
     for (final unitTax in ['5.00', '0.000', '4.762', '999.00']) {
-      final params =
-          _params(context, unitTax: unitTax, includeApiSubtotal: false);
+      final params = _params(context,
+          unitTax: unitTax,
+          includeApiSubtotal: false,
+          taxMode: 'row_total',
+          taxColumns: _taxColumns(true, true));
       final line = params.itemLines.single;
       expect(line.valueFor('showTaxHeader'),
           double.parse(unitTax).toStringAsFixed(2));
       expect(line.tax, '50.00');
+      expect(line.valueFor('showRowTotalTaxHeader'), '50.00');
       expect(line.rateExcTax, '100.00');
       expect(line.total, '1050.00');
       expect(params.totalTax, 50);
@@ -367,18 +438,30 @@ void main() {
       discount: '16',
       grandTotal: '144',
     );
-    ReceiptLayoutParams paramsFor(String? mode) => _params(context,
-        quotation: quotation,
-        taxMode: mode,
-        documentType: 'Bill',
-        printItems: rows);
+    ReceiptLayoutParams paramsFor(String? mode,
+            [Map<String, DisplayOption>? columns]) =>
+        _params(context,
+            quotation: quotation,
+            taxMode: mode,
+            taxColumns: columns,
+            documentType: 'Bill',
+            printItems: rows);
     final baseline = paramsFor(null);
     final original = baseline.itemLines.single;
-    for (final mode in ['unit', 'row_total']) {
-      final params = paramsFor(mode);
+    for (final settings in [
+      ('unit', null),
+      ('row_total', null),
+      ('row_total', _taxColumns(true, true)),
+      ('row_total', _taxColumns(true, false)),
+      ('row_total', _taxColumns(false, true)),
+      ('row_total', _taxColumns(false, false)),
+    ]) {
+      final params = paramsFor(settings.$1, settings.$2);
       final line = params.itemLines.single;
-      expect(line.valueFor('showTaxHeader'), mode == 'unit' ? '9.39' : '18.78');
+      expect(line.valueFor('showTaxHeader'),
+          settings.$1 == 'unit' || settings.$2 != null ? '9.39' : '18.78');
       expect(line.tax, '18.78');
+      expect(line.valueFor('showRowTotalTaxHeader'), '18.78');
       expect([
         line.rate,
         line.rateExcTax,
@@ -399,7 +482,7 @@ void main() {
     expect(rows.single['tax_amount'], '18.78');
   });
 
-  testWidgets('quotation and sales PDFs and thermal prints respect tax mode',
+  testWidgets('quotation and sales PDFs and thermal prints respect tax columns',
       (tester) async {
     const export = bool.fromEnvironment('EXPORT_QUOTATION_TAX');
     final root = export
@@ -458,11 +541,38 @@ void main() {
     );
     final salesLocalItems = PrintService.savedOrderReceiptItems([localItem], 0);
     expect(salesLocalItems.single['tax_amount'], '50.00');
+    final supplied = DocumentConfigurationsModel.fromJson(jsonDecode(
+        File('test/fixtures/document-config-two-tax-columns.json')
+            .readAsStringSync()));
+    final suppliedConfig = supplied.documentConfigurations!['Bill A4']!;
+    expect(suppliedConfig.hasSeparateItemTaxColumns, isTrue);
+    expect(suppliedConfig.resolvedLabels!.rowTotalTax, 'Row Total الضريبة');
     await tester.runAsync(() async {
       for (final source in ['quotation', 'sales_api', 'sales_local']) {
-        for (final mode in ['unit', 'row_total', null]) {
+        for (final mode in [
+          'unit',
+          'row_total',
+          null,
+          'both',
+          'unit_only',
+          'row_only',
+          'hidden',
+          'api_columns',
+        ]) {
+          final flags = {
+            'both': (true, true),
+            'unit_only': (true, false),
+            'row_only': (false, true),
+            'hidden': (false, false),
+            'api_columns': (true, true),
+          }[mode];
+          final language = mode == 'both' || mode == 'api_columns'
+              ? 'en_ar'
+              : mode == 'row_only'
+                  ? 'ar'
+                  : 'en';
           final label = '$source-${mode ?? 'missing'}';
-          final expectedRowTax = mode == 'unit'
+          final expectedRowTax = mode == 'unit' || flags != null
               ? source == 'sales_api'
                   ? '4.75'
                   : '5.00'
@@ -483,7 +593,18 @@ void main() {
                 theme: theme,
                 paper: paper,
                 quotation: sourceQuotation,
-                taxMode: mode,
+                taxMode: flags == null ? mode : 'row_total',
+                taxColumns: flags == null
+                    ? null
+                    : _taxColumns(flags.$1, flags.$2,
+                        bilingual: language != 'en'),
+                language: language,
+                documentConfig: mode == 'api_columns'
+                    ? DocumentConfig.fromJson({
+                        ...suppliedConfig.toJson(),
+                        'active_theme': theme,
+                      })
+                    : null,
                 documentType: source == 'quotation' ? 'Quotation' : 'Bill',
                 printItems: source == 'sales_api'
                     ? salesApiItems
@@ -499,6 +620,14 @@ void main() {
               expect(params.itemLines.single.valueFor('showTaxHeader'),
                   expectedRowTax);
               expect(params.itemLines.single.tax, '50.00');
+              expect(params.itemLines.single.valueFor('showRowTotalTaxHeader'),
+                  '50.00');
+              expect(params.itemColumns.any((c) => c.key == 'showTaxHeader'),
+                  flags?.$1 ?? true);
+              expect(
+                  params.itemColumns
+                      .any((c) => c.key == 'showRowTotalTaxHeader'),
+                  flags?.$2 ?? false);
               expect(params.itemLines.single.rateExcTax, '100.00');
               expect(params.totalTax, expectedTotalTax);
               expect(params.subtotalExcTax, 1050 - expectedTotalTax);
@@ -520,26 +649,95 @@ void main() {
           ]) {
             for (final paper in ['58mm', '80mm']) {
               final columns = <List<ReceiptTableColumn>>[];
+              final dimensions =
+                  <ReceiptTableColumn, (double, double, TextDirection)>{};
               ArabicPrinterHelper.debugRenderedRowsObserver =
-                  (rows, _, __, ___) {
+                  (rows, width, fontSize, direction) {
                 for (final row in rows) {
-                  if (row is ReceiptTableRow) columns.add(row.columns);
+                  if (row is ReceiptTableRow) {
+                    columns.add(row.columns);
+                    for (final column in row.columns) {
+                      dimensions[column] = (width, fontSize, direction);
+                    }
+                  }
                   if (row is MultiLineReceiptTableRow) columns.add(row.columns);
                 }
               };
               final params = paramsFor(theme, paper, subtotal: false);
               await ReceiptLayoutFactory.getLayout(theme).printThermal(params);
-              final header = columns.firstWhere(
-                  (row) => row.any((column) => column.text == 'Tax'));
-              final taxIndex =
-                  header.indexWhere((column) => column.text == 'Tax');
+              String normalized(String text) =>
+                  text.replaceAll(RegExp(r'\s+'), ' ').trim();
+              final header = columns.firstWhere((row) => row.any((column) =>
+                  normalized(column.text) ==
+                  normalized(params.fieldLabel('showQty'))));
+              final taxIndex = header.indexWhere((column) =>
+                  normalized(column.text) ==
+                  normalized(params.fieldLabel('showTaxHeader')));
+              final rowTaxIndex = header.indexWhere((column) =>
+                  normalized(column.text) ==
+                  normalized(params.fieldLabel('showRowTotalTaxHeader')));
+              expect(taxIndex >= 0, flags?.$1 ?? true,
+                  reason: '$label $theme $paper unit header visibility');
+              expect(rowTaxIndex >= 0, flags?.$2 ?? false,
+                  reason: '$label $theme $paper row header visibility');
+              // The item description occupies one full-width line; its SL
+              // and name header cells combine into one spacer in the value
+              // row. Compare physical column boundaries, not cell indexes.
+              ReceiptTableColumn? valueAt(
+                  List<ReceiptTableColumn> row, int headerIndex) {
+                if (headerIndex < 0) return null;
+                final start = header
+                    .take(headerIndex)
+                    .fold<double>(0, (sum, column) => sum + column.weight);
+                var offset = 0.0;
+                for (final column in row) {
+                  if ((offset - start).abs() < 0.000001 &&
+                      (column.weight - header[headerIndex].weight).abs() <
+                          0.000001) {
+                    return column;
+                  }
+                  offset += column.weight;
+                }
+                return null;
+              }
+
+              final valueRows = columns.where((row) =>
+                  (taxIndex < 0 ||
+                      valueAt(row, taxIndex)?.text == expectedRowTax) &&
+                  (rowTaxIndex < 0 ||
+                      valueAt(row, rowTaxIndex)?.text == '50.00') &&
+                  row.any((column) => column.text == '1050.00'));
               expect(
-                columns.any((row) =>
-                    row.length == header.length &&
-                    row[taxIndex].text == expectedRowTax),
-                isTrue,
-                reason: '$label $theme $paper must display $expectedRowTax',
+                valueRows,
+                isNotEmpty,
+                reason:
+                    '$label $theme $paper must align both independent tax columns',
               );
+              for (final row in valueRows) {
+                for (final index in [taxIndex, rowTaxIndex]) {
+                  final column = valueAt(row, index);
+                  if (column == null) continue;
+                  final size = dimensions[column]!;
+                  expect(
+                      column
+                          .createPainter(size.$1, size.$2, size.$3)
+                          .didExceedMaxLines,
+                      isFalse,
+                      reason:
+                          '$label $theme $paper tax amount must not be shortened');
+                }
+              }
+              if (export) {
+                final images = Directory('${root.path}/epos/developer_prints')
+                    .listSync()
+                    .whereType<File>()
+                    .where((file) => file.path.endsWith('.png'))
+                    .toList()
+                  ..sort((a, b) =>
+                      b.path.split('_').last.compareTo(a.path.split('_').last));
+                await images.first
+                    .copy('${root.path}/thermal-$label-$theme-$paper.png');
+              }
               expect(params.totalTax, expectedTotalTax);
               ArabicPrinterHelper.debugRenderedRowsObserver = null;
             }
@@ -547,5 +745,5 @@ void main() {
         }
       }
     });
-  }, timeout: const Timeout(Duration(minutes: 5)));
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }
