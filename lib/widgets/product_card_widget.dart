@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 
 class ProductCardWidget extends StatelessWidget {
   final GetProduct product;
@@ -19,24 +20,8 @@ class ProductCardWidget extends StatelessWidget {
     this.height,
   }) : super(key: key);
 
-  String? _getPrimaryImage() {
-    if (product.attachment != null && product.attachment!.isNotEmpty) {
-      // Look for primary image
-      for (var attachment in product.attachment!) {
-        if (attachment.isPrimary == 1) {
-          return attachment.filePath;
-        }
-      }
-      // If no primary image found, use the first one
-      return product.attachment!.first.filePath;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final primaryImage = _getPrimaryImage();
-
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -73,22 +58,14 @@ class ProductCardWidget extends StatelessWidget {
                     ),
                     child: Container(
                       color: Colors.grey.shade50,
-                      child: primaryImage != null
-                          ? Image.network(
-                              primaryImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                Icons.image_not_supported,
-                                size: 24,
-                                color: Colors.grey,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.inventory_2_outlined,
-                              size: 24,
-                              color: Colors.grey,
-                            ),
+                      child: ProductImage(
+                        product: product,
+                        placeholder: const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 24,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
                   ),
                   // Price indicator

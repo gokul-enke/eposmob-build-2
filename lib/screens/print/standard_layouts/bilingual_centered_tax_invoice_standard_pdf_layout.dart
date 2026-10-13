@@ -203,6 +203,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     final orderRows = params.orderInfoRows;
     final bankHeading = params.bankDetailsHeading;
     final bankRows = params.bankDetailRows;
+    // Room the totals band + signatures need at the bottom of a page before
+    // they move to a fresh page instead of splitting from each other.
+    final bottomBlockReserve = isA5 ? 160.0 : 220.0;
     final commentText = params.commentText;
     final paymentRows = params.paymentBreakdownRows;
     final balanceRows = params.customerBalanceRows;
@@ -486,8 +489,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
           // ═══════════════════════════════════════════════════════
           // SECTION 5: BANK DETAILS | QR CODE | TOTALS
+          // Pinned to the bottom of the last page together with the
+          // signatures: start a fresh page when too little room remains,
+          // then let the spacer absorb the free space above.
           // ═══════════════════════════════════════════════════════
           if (!params.isReturnOnly) ...[
+            pw.NewPage(freeSpace: bottomBlockReserve),
+            pw.Spacer(),
             pw.Table(
               columnWidths: {
                 for (var i = 0; i < summaryWidths.length; i++)
@@ -640,6 +648,9 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           // ═══════════════════════════════════════════════════════
           // TERMS & CONDITIONS / THANK YOU / VAT + ORDER-NUMBER FOOTERS
           // ═══════════════════════════════════════════════════════
+          // A return-only document has no totals box; pin its signatures
+          // to the bottom instead.
+          if (params.isReturnOnly) pw.Spacer(),
           if (termsText.isNotEmpty) ...[
             modeText(termsText, smallStyle, pw.CrossAxisAlignment.start),
             pw.SizedBox(height: 4),

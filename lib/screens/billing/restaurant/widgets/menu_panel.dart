@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_dialog_box.dart';
@@ -128,16 +129,6 @@ class MenuPanelState extends State<MenuPanel> {
     return MenuCardMode.large;
   }
 
-  String? _resolvePrimaryImage(GetProduct product) {
-    if (product.attachment == null || product.attachment!.isEmpty) return null;
-    for (var attachment in product.attachment!) {
-      if (attachment.isPrimary == 1 && (attachment.filePath ?? '').isNotEmpty) {
-        return attachment.filePath;
-      }
-    }
-    return product.attachment!.first.filePath;
-  }
-
   String _formatMenuPrice(dynamic value) {
     final parsed = value is num ? value.toDouble() : double.tryParse('$value');
     return parsed?.toStringAsFixed(2) ?? '0.00';
@@ -184,18 +175,6 @@ class MenuPanelState extends State<MenuPanel> {
         Provider.of<LocalProductProvider>(context, listen: false)
             .isStockEnabled;
     final isOutOfStock = _isOutOfStock(product, stockEnabled);
-
-    // Resolve primary image
-    String? primaryImage;
-    if (product.attachment != null && product.attachment!.isNotEmpty) {
-      for (var attachment in product.attachment!) {
-        if (attachment.isPrimary == 1) {
-          primaryImage = attachment.filePath;
-          break;
-        }
-      }
-      primaryImage ??= product.attachment!.first.filePath;
-    }
 
     // Resolve category name from product model directly
     final String? categoryName = product.category?.name;
@@ -301,19 +280,13 @@ class MenuPanelState extends State<MenuPanel> {
                               border: Border.all(color: Colors.grey.shade200),
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: primaryImage != null
-                                ? Image.network(
-                                    primaryImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Icon(
-                                            Icons.image_not_supported,
-                                            color: Colors.grey.shade500),
-                                  )
-                                : Center(
-                                    child: Icon(Icons.image,
-                                        color: Colors.grey.shade400, size: 36),
-                                  ),
+                            child: ProductImage(
+                              product: product,
+                              placeholder: Center(
+                                child: Icon(Icons.image,
+                                    color: Colors.grey.shade400, size: 36),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
 
@@ -1345,7 +1318,6 @@ class MenuPanelState extends State<MenuPanel> {
         Provider.of<LocalProductProvider>(context, listen: false)
             .isStockEnabled;
     final isAvailable = _isMenuItemAvailable(item, stockEnabled);
-    final imageUrl = _resolvePrimaryImage(item);
     final denseMode = !showCategory;
 
     return Container(
@@ -1380,14 +1352,10 @@ class MenuPanelState extends State<MenuPanel> {
                   child: Container(
                     width: double.infinity,
                     color: Colors.grey.shade100,
-                    child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildImageFallback(),
-                          )
-                        : _buildImageFallback(),
+                    child: ProductImage(
+                      product: item,
+                      placeholder: _buildImageFallback(),
+                    ),
                   ),
                 ),
               ),
@@ -1531,7 +1499,6 @@ class MenuPanelState extends State<MenuPanel> {
             .isStockEnabled;
     final isAvailable = _isMenuItemAvailable(item, stockEnabled);
 
-    final imageUrl = _resolvePrimaryImage(item);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
@@ -1572,22 +1539,14 @@ class MenuPanelState extends State<MenuPanel> {
                       ),
                       child: Container(
                         color: Colors.grey.shade50,
-                        child: imageUrl != null
-                            ? Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 32,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.inventory_2_outlined,
-                                size: 32,
-                                color: Colors.grey,
-                              ),
+                        child: ProductImage(
+                          product: item,
+                          placeholder: const Icon(
+                            Icons.inventory_2_outlined,
+                            size: 32,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
                     ),
                     Positioned(

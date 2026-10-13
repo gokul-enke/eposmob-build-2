@@ -202,7 +202,19 @@ class LocalSaleSyncRecord {
       state == LocalSaleSyncState.needsReview ||
       state == LocalSaleSyncState.rejected;
 
+  bool get canEditRequest =>
+      !isDismissed && (canRetry || state == LocalSaleSyncState.queued);
+
+  /// A pre-outbox sale whose rebuilt request was saved but never sent. It has
+  /// no duplicate protection and no server copy, so it stays deletable.
+  bool get isUnsentLegacy =>
+      surface == LocalSaleSurface.legacy &&
+      attempts.isEmpty &&
+      state != LocalSaleSyncState.sending &&
+      state != LocalSaleSyncState.synced;
+
   LocalSaleSyncRecord copyWith({
+    Map<String, dynamic>? payload,
     LocalSaleSyncState? state,
     String? updatedAt,
     String? message,
@@ -220,7 +232,7 @@ class LocalSaleSyncRecord {
       surface: surface,
       operation: operation,
       state: state ?? this.state,
-      payload: payload,
+      payload: payload ?? this.payload,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       message: message ?? this.message,
@@ -341,6 +353,17 @@ typedef LocalSaleHttpSender = Future<http.Response> Function(
   String body,
 );
 
+class LocalSaleBatchResult {
+  int synced = 0;
+  int rejected = 0;
+  int needsReview = 0;
+  int skipped = 0;
+  int failed = 0;
+
+  String get summary => '$synced synced · $rejected rejected · '
+      '$needsReview need review · $skipped skipped · $failed could not send';
+}
+
 /// Owns the one and only initial server attempt for locally confirmed sales.
 ///
 /// There is deliberately no automatic retry API here. Without backend
@@ -364,6 +387,9 @@ class LocalSaleSyncService extends ChangeNotifier {
   final Map<String, LocalSaleSyncRecord> _records = {};
   Future<void>? _hydration;
   Future<void> _submissionTail = Future<void>.value();
+  final Map<String, int> _pendingSubmissionCounts = {};
+  bool _batchSyncing = false;
+  bool get isBatchSyncing => _batchSyncing;
 
   List<LocalSaleSyncRecord> get records {
     final values = _records.values.toList()
@@ -372,6 +398,107 @@ class LocalSaleSyncService extends ChangeNotifier {
   }
 
   LocalSaleSyncRecord? recordFor(String localOrderId) => _records[localOrderId];
+
+  bool isSubmitting(String localOrderId) =>
+      _pendingSubmissionCounts.containsKey(localOrderId);
+
+  /// Saves the next request without changing its sync state or past attempts.
+  /// Shares the submission queue so a durable edit cannot race an HTTP send.
+  Future<LocalSaleSyncRecord> updateRequestPayload(
+    String localOrderId,
+    Map<String, dynamic> payload,
+  ) {
+    if (isSubmitting(localOrderId) || isBatchSyncing) {
+      return Future.error(StateError('Wait for this sale to finish sending.'));
+    }
+    final durablePayload = Map<String, dynamic>.from(
+      jsonDecode(jsonEncode(payload)) as Map,
+    );
+    if (durablePayload.isEmpty) {
+      return Future.error(
+          StateError('The request must be a non-empty JSON object.'));
+    }
+    final result = _submissionTail.then((_) async {
+      await hydrate();
+      final record = _records[localOrderId];
+      if (record == null || !record.canEditRequest) {
+        throw StateError(
+            'Only an unsynced, active sale request can be edited.');
+      }
+      return _update(record.copyWith(
+        payload: durablePayload,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ));
+    });
+    _submissionTail = result.then<void>((_) {}, onError: (_, __) {});
+    return result;
+  }
+
+  /// One operator-authorized attempt per unique sale. Failures are isolated and
+  /// records resolved or already sending since selection are skipped.
+  Future<LocalSaleBatchResult> syncAfterVerification({
+    required Iterable<String> localOrderIds,
+    required String accessToken,
+    String? tenantKey,
+    Uri? endpoint,
+    Future<void> Function(String)? prepareSale,
+    void Function(int completed, int total)? onProgress,
+  }) async {
+    if (isBatchSyncing) {
+      throw StateError(
+          'A sync batch is already running. Wait for it to finish.');
+    }
+    if (accessToken.trim().isEmpty) {
+      throw StateError('Please log in again before syncing sales.');
+    }
+    _batchSyncing = true;
+    notifyListeners();
+    try {
+      await hydrate();
+      final ids = localOrderIds.toSet().toList();
+      final result = LocalSaleBatchResult();
+      for (var index = 0; index < ids.length; index++) {
+        final id = ids[index];
+        try {
+          if (_records[id] == null && prepareSale != null) {
+            await prepareSale(id);
+          }
+          final record = _records[id];
+          if (record == null ||
+              record.isDismissed ||
+              record.state == LocalSaleSyncState.synced ||
+              record.state == LocalSaleSyncState.sending ||
+              isSubmitting(id)) {
+            result.skipped++;
+          } else {
+            if (record.canRetry) await authorizeRetryAfterVerification(id);
+            final sent = await submitOnce(
+                localOrderId: id,
+                accessToken: accessToken,
+                tenantKey: tenantKey,
+                endpoint: endpoint);
+            switch (sent.state) {
+              case LocalSaleSyncState.synced:
+                result.synced++;
+              case LocalSaleSyncState.rejected:
+                result.rejected++;
+              case LocalSaleSyncState.needsReview:
+                result.needsReview++;
+              default:
+                result.skipped++;
+            }
+          }
+        } catch (_) {
+          result.failed++;
+        }
+        onProgress?.call(index + 1, ids.length);
+      }
+      return result;
+    } finally {
+      _batchSyncing = false;
+      notifyListeners();
+    }
+  }
 
   bool hasRecordedCartSession(String cartSessionId) =>
       cartSessionId.isNotEmpty &&
@@ -402,8 +529,7 @@ class LocalSaleSyncService extends ChangeNotifier {
     final cutoff = (now ?? DateTime.now()).toUtc().subtract(retention);
     final expired = _records.values
         .where((record) {
-          if (record.state != LocalSaleSyncState.synced ||
-              record.isDismissed) {
+          if (record.state != LocalSaleSyncState.synced || record.isDismissed) {
             return false;
           }
           final updated =
@@ -495,18 +621,31 @@ class LocalSaleSyncService extends ChangeNotifier {
     // The current backend can reuse an active cart for the same customer/store.
     // Serialize initial submissions so two quickly confirmed sales cannot mutate
     // that server cart concurrently.
-    final result = _submissionTail.then((_) => _submitOnceImpl(
-          localOrderId: localOrderId,
-          accessToken: accessToken,
-          tenantKey: tenantKey,
-          endpoint: endpoint,
-        ));
+    _pendingSubmissionCounts.update(localOrderId, (count) => count + 1,
+        ifAbsent: () => 1);
+    notifyListeners();
+    final result = _submissionTail
+        .then((_) => _submitOnceImpl(
+              localOrderId: localOrderId,
+              accessToken: accessToken,
+              tenantKey: tenantKey,
+              endpoint: endpoint,
+            ))
+        .whenComplete(() {
+      final remaining = _pendingSubmissionCounts[localOrderId]! - 1;
+      if (remaining == 0) {
+        _pendingSubmissionCounts.remove(localOrderId);
+      } else {
+        _pendingSubmissionCounts[localOrderId] = remaining;
+      }
+      notifyListeners();
+    });
     _submissionTail = result.then<void>((_) {}, onError: (_, __) {});
     return result;
   }
 
   /// Reopens a needs-review or rejected sale for exactly one new attempt,
-  /// sending the same stored payload. An ambiguous sale must first be verified
+  /// sending the current stored payload. An ambiguous sale must first be verified
   /// as absent from the backend; a rejected one is retried after its cause is
   /// fixed. This only changes the durable state to
   /// [LocalSaleSyncState.queued]; callers must then invoke [submitOnce] and
@@ -800,7 +939,9 @@ class LocalSaleSyncService extends ChangeNotifier {
 
   Future<void> remove(String localOrderId) async {
     final record = _records[localOrderId];
-    if (record != null && record.state != LocalSaleSyncState.synced) {
+    if (record != null &&
+        record.state != LocalSaleSyncState.synced &&
+        !(record.isUnsentLegacy && !isSubmitting(localOrderId))) {
       throw StateError('An unsynced sale cannot be removed.');
     }
     await _store.remove(localOrderId);

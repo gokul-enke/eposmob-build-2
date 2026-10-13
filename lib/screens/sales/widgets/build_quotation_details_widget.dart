@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/models/quotation_model.dart';
+import 'package:pos_machine/models/document_configurations.dart';
+import 'package:pos_machine/helpers/item_tax_display.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -18,13 +21,18 @@ class QuotationDetailWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency =
         Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? '';
+    final configs = context.watch<DocumentConfigProvider?>();
+    final taxMode = (configs?.getDocumentConfig('Quotation') ??
+                configs?.getDocumentConfig('quotation'))
+            ?.itemTaxDisplayMode ??
+        ItemTaxDisplayMode.rowTotal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInfoCard(context),
         const SizedBox(height: 16),
-        _buildItemsSection(context, currency),
+        _buildItemsSection(context, currency, taxMode),
         const SizedBox(height: 16),
         _buildSummaryCard(context, currency),
       ],
@@ -41,7 +49,8 @@ class QuotationDetailWidget extends StatelessWidget {
         children: [
           if (isPhone) ...[
             SelectableText(
-              'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
+              'quotations.quotation_hash'
+                  .trParams({'number': data.quotationNumber ?? ''}),
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -58,7 +67,8 @@ class QuotationDetailWidget extends StatelessWidget {
               children: [
                 Expanded(
                   child: SelectableText(
-                    'quotations.quotation_hash'.trParams({'number': data.quotationNumber ?? ''}),
+                    'quotations.quotation_hash'
+                        .trParams({'number': data.quotationNumber ?? ''}),
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s18,
@@ -161,12 +171,21 @@ class QuotationDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildItemsSection(BuildContext context, String currency) {
+  String _itemTaxText(QuotationItem item, ItemTaxDisplayMode mode) =>
+      ItemTaxDisplay.amount(
+        mode: mode,
+        rowTax: item.taxAmount,
+        unitTax: item.taxAmountUnit,
+        quantity: item.quantity,
+      ).toStringAsFixed(2);
+
+  Widget _buildItemsSection(
+      BuildContext context, String currency, ItemTaxDisplayMode taxMode) {
     final items = data.items ?? [];
     if (items.isEmpty) return const SizedBox.shrink();
 
     if (quotationsIsPhone(context)) {
-      return _buildMobileItemsList(items, currency);
+      return _buildMobileItemsList(items, currency, taxMode);
     }
 
     return QuotationsContentCard(
@@ -179,7 +198,8 @@ class QuotationDetailWidget extends StatelessWidget {
             child: QuotationsSectionTitle(title: 'quotations.items'.tr),
           ),
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(14)),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final table = Table(
@@ -188,6 +208,7 @@ class QuotationDetailWidget extends StatelessWidget {
                     1: FlexColumnWidth(1),
                     2: FlexColumnWidth(1.5),
                     3: FlexColumnWidth(1.5),
+                    4: FlexColumnWidth(1.5),
                   },
                   children: [
                     TableRow(
@@ -198,6 +219,7 @@ class QuotationDetailWidget extends StatelessWidget {
                         'confirmed_orders.product'.tr,
                         'billing.table_qty'.tr,
                         'sales.price'.tr,
+                        'billing.tax'.tr,
                         'billing.total'.tr,
                       ]
                           .map(
@@ -260,6 +282,18 @@ class QuotationDetailWidget extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.all(12),
                             child: Text(
+                              "$currency ${_itemTaxText(item, taxMode)}",
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s12,
+                                0.18,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
                               "$currency ${item.totalPrice ?? '0'}",
                               style: buildCustomStyle(
                                 FontWeightManager.medium,
@@ -292,7 +326,8 @@ class QuotationDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileItemsList(List<QuotationItem> items, String currency) {
+  Widget _buildMobileItemsList(
+      List<QuotationItem> items, String currency, ItemTaxDisplayMode taxMode) {
     return QuotationsContentCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -302,14 +337,15 @@ class QuotationDetailWidget extends StatelessWidget {
           const SizedBox(height: 12),
           for (int i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
-            _buildMobileItemCard(items[i], currency),
+            _buildMobileItemCard(items[i], currency, taxMode),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildMobileItemCard(QuotationItem item, String currency) {
+  Widget _buildMobileItemCard(
+      QuotationItem item, String currency, ItemTaxDisplayMode taxMode) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsetsDirectional.all(12),
@@ -342,6 +378,10 @@ class QuotationDetailWidget extends StatelessWidget {
               QuotationsInfoChip(
                 label: 'sales.price'.tr,
                 value: '$currency ${item.unitPrice ?? '0'}',
+              ),
+              QuotationsInfoChip(
+                label: 'billing.tax'.tr,
+                value: '$currency ${_itemTaxText(item, taxMode)}',
               ),
               QuotationsInfoChip(
                 label: 'billing.total'.tr,

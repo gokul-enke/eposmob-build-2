@@ -1,0 +1,82 @@
+{
+  "status": "success",
+  "data": {
+    "orders_id": 123,
+    "store_id": 2,
+    "delivery_charge": "0.00",
+    "cart": {
+      "cart_items": [
+        {
+          "id": 101,
+          "product_id": 123,
+          "product_name": "Offer product",
+          "product_names": {"en": "Offer product", "ar": "منتج العرض"},
+          "product_unit": "PCS",
+          "quantity": "2.000",
+          "standard_unit_price": "100.000",
+          "unit_price": "80.000",
+          "total_price": "160.00",
+          "item_discount_amount": "40.00",
+          "discount_origin": "offer",
+          "offer_id": 7,
+          "offer_version": 3,
+          "offer_name": "Summer offer",
+          "offer_names": {"en": "Summer offer", "ar": "عرض الصيف"},
+          "offer_discount_type": "percentage",
+          "offer_discount_value": "20.000",
+          "tax_rate": "15.000",
+          "line_discount": "16.00",
+          "discounted_total": "144.00",
+          "discounted_base_amount": "125.22",
+          "discounted_tax_amount": "18.78",
+          "tax_amount": "18.78",
+          "order_discount_allocations": [
+            {
+              "source": "coupon",
+              "code": "SAVE10",
+              "name": "Welcome coupon",
+              "names": {"en": "Welcome coupon", "ar": "قسيمة الترحيب"},
+              "amount": "10.00"
+            },
+            {"source": "manual", "amount": "6.00"}
+          ]
+        },
+        {
+          "id": 102,
+          "product_id": 124,
+          "product_name": "Manually reduced product",
+          "product_unit": "PCS",
+          "quantity": "1.000",
+          "standard_unit_price": "50.000",
+          "unit_price": "45.000",
+          "total_price": "45.00",
+          "item_discount_amount": "5.00",
+          "discount_origin": "manual",
+          "offer_id": null,
+          "offer_version": null,
+          "offer_name": null,
+          "offer_names": {},
+          "offer_discount_type": null,
+          "offer_discount_value": null,
+          "tax_rate": "15.000",
+          "line_discount": "4.50",
+          "discounted_total": "40.50",
+          "discounted_base_amount": "35.22",
+          "discounted_tax_amount": "5.28",
+          "tax_amount": "5.28",
+          "order_discount_allocations": [
+            {"source": "coupon", "code": "SAVE10", "name": "Welcome coupon", "amount": "4.50"}
+          ]
+        }
+      ],
+      "price_summary": {
+        "sub_total": "205.00",
+        "net_total": "205.00",
+        "discount": "20.50",
+        "net_payable": "184.50",
+        "total_tax": "24.06",
+        "net_exc_tax": "160.44"
+      }
+    }
+  }
+}

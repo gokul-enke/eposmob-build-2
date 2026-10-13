@@ -29,6 +29,7 @@ class AppSettingsProvider extends ChangeNotifier {
   bool get posHideNonStockProduct =>
       appSettings?.posHideNonStockProduct ?? false;
   bool get ecommerceEnabled => appSettings?.ecommerceEnabled ?? false;
+  bool get skipCheckoutOnConfirm => appSettings?.skipCheckoutOnConfirm ?? false;
 
   /// Settings that could not be loaded keep offline-first, so a cashier who
   /// started the app without a connection can still complete sales.

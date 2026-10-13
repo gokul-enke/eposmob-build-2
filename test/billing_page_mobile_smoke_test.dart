@@ -16,6 +16,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/models/local_models.dart';
+import 'package:pos_machine/models/get_app_settings.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
@@ -76,9 +78,28 @@ class _FakeBillingProvider extends BillingProvider {
 }
 
 class _FakeAppSettingsProvider extends AppSettingsProvider {
+  _FakeAppSettingsProvider([this.settings]);
+
+  final AppSettings? settings;
+
+  @override
+  AppSettings? get appSettings => settings;
+
   @override
   Future<void> fetchAppSettings() async {
     // no-op: real constructor calls this and it hits the network.
+  }
+}
+
+class _FakeMasterDataProvider extends MasterDataProvider {
+  int paymentFetches = 0;
+
+  @override
+  Future<List<MasterDataValue>?> fetchPaymentMethods({
+    bool forceRefresh = false,
+  }) async {
+    paymentFetches++;
+    return null;
   }
 }
 
@@ -189,7 +210,11 @@ void main() {
     addTearDown(() => FlutterError.onError = original);
   }
 
-  Widget wrap({KeyboardProvider? keyboardProvider}) {
+  Widget wrap({
+    KeyboardProvider? keyboardProvider,
+    AppSettings? settings,
+    MasterDataProvider? masterDataProvider,
+  }) {
     final auth = AuthModel()..login('test-token', 1);
     return MultiProvider(
       providers: [
@@ -203,7 +228,7 @@ void main() {
         ChangeNotifierProvider<SalesExecutiveProvider>(
             create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider<AppSettingsProvider>(
-            create: (_) => _FakeAppSettingsProvider()),
+            create: (_) => _FakeAppSettingsProvider(settings)),
         ChangeNotifierProvider<GridSelectionProvider>(
             create: (_) => _FakeGridSelectionProvider()),
         ChangeNotifierProvider<LocalProductProvider>(
@@ -226,12 +251,54 @@ void main() {
         ChangeNotifierProvider<DiscountProvider>(
             create: (_) => DiscountProvider()),
         ChangeNotifierProvider<MasterDataProvider>(
-            create: (_) => MasterDataProvider()),
+            create: (_) => masterDataProvider ?? MasterDataProvider()),
         ChangeNotifierProvider<GeneralSettingsProvider>(
             create: (_) => _FakeGeneralSettingsProvider()),
       ],
       child: const MaterialApp(home: BillingPageMobile()),
     );
+  }
+
+  for (final skipConfirm in [false, true]) {
+    testWidgets('plain confirm prepares checkout only when enabled=$skipConfirm',
+        (tester) async {
+      tolerateHomeTabOverflow();
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final masterData = _FakeMasterDataProvider();
+      await tester.pumpWidget(wrap(
+        masterDataProvider: masterData,
+        settings: AppSettings.fromJson({
+          'data': [
+            {'code': 'SKIP_CHECKOUT_ON_CONFIRM', 'status': skipConfirm},
+            {'code': 'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT', 'status': true},
+            {'code': 'DEFAULT_PAYMENT_METHOD', 'value': 'CASH'},
+          ],
+        }),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final state = tester.state<BillingPageMobileState>(
+          find.byType(BillingPageMobile));
+      final billing = state.context.read<BillingProvider>();
+      final previousFetches = masterData.paymentFetches;
+      expect(billing.paymentStepVisited, isFalse);
+
+      // Preserve the cashier's payment choice while applying other defaults.
+      billing.setPaymentMethod('CASH', false);
+      billing.setPaymentMethod('CARD', true);
+      billing.cardAmountController.text = '12.50';
+      await state.confirmOrder();
+      await tester.pump();
+
+      expect(billing.paymentStepVisited, skipConfirm);
+      expect(masterData.paymentFetches - previousFetches, skipConfirm ? 1 : 0);
+      expect(billing.isCardSelected, isTrue);
+      expect(billing.cardAmountController.text, '12.50');
+      // Bypassing checkout must still reject a missing customer.
+      expect(Hive.box<HiveSavedOrder>('confirmed_orders').values, isEmpty);
+      await tester.pump(const Duration(seconds: 5));
+    });
   }
 
   testWidgets('mounts and renders the 4-tab scaffold at phone size',

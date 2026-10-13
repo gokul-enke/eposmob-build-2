@@ -2053,8 +2053,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 title: product.productName ?? 'Product Details',
                 subtitle: product.category?.name,
                 thumbnail: buildProductThumbnail(
-                  productName: product.productName,
-                  attachments: product.attachment,
+                  product: product,
                 ),
                 onClose: () => Navigator.pop(context),
               ),

@@ -7,7 +7,7 @@ What the app sends and expects from the backend is in `docs/OFFLINE_OFFERS_BACKE
 
 1. `AppSettingsProvider` reads the `POS_OFFERS` setting row and calls `ProductOfferRepository.applySetting`.
    The repository remembers the value per store, so offers keep working after an offline start.
-2. `ProductOfferRepository` downloads `GET /api/v1/offers/pos-sync` (full, then deltas with `since`), stores the catalog in the `product_offers` Hive box and measures the device clock offset from `server_time`.
+2. `ProductOfferRepository` downloads the full `GET /api/v1/offers/pos-sync?store_id=...` catalog on every refresh, without `since`. An empty or partially populated cache cannot hide an unchanged offer behind a saved cursor. All pages must finish before the full snapshot replaces the catalog; offers absent from that snapshot are removed. The repository stores the catalog in the `product_offers` Hive box and measures the device clock offset from `server_time`. Failed requests preserve cached offers and retry the full download with backoff.
    Syncs are triggered by the setting, a manual product sync (`SyncProvider`) and `offers` changes in `sync/changes` (`RealtimeSyncRepository`).
 3. `LocalProductProvider` resolves the standard price as before, then calls `resolveProductOfferPrice` (`domain/product_offer_pricing.dart`), which picks one winning rule from the feed.
    Every cart line keeps `standardUnitPrice`; offer lines also keep `offerId` and `offerVersion`.

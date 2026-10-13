@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class ProductCardList extends StatelessWidget {
+  final GetProduct product;
   final String? imageLink;
   final double? height;
   final String title;
@@ -16,6 +19,7 @@ class ProductCardList extends StatelessWidget {
 
   const ProductCardList({
     Key? key,
+    required this.product,
     this.imageLink,
     this.height,
     required this.title,
@@ -39,14 +43,17 @@ class ProductCardList extends StatelessWidget {
         height: height ?? 100,
         child: Row(
           children: [
-            if (imageLink != null)
-              Expanded(
-                flex: 2,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(imageLink!, fit: BoxFit.cover),
+            Expanded(
+              flex: 2,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: ProductImage(
+                  product: product,
+                  placeholder: const Icon(Icons.inventory_2_outlined,
+                      color: Colors.grey),
                 ),
               ),
+            ),
             Expanded(
               flex: 4,
               child: Padding(
@@ -108,26 +115,26 @@ class ProductCardList extends StatelessWidget {
                 ],
               ),
             ),
-            if(totalPrice != null)
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$currency $totalPrice',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12, // Lower priority
+            if (totalPrice != null)
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$currency $totalPrice',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12, // Lower priority
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

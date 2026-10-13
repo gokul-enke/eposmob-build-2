@@ -74,13 +74,14 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       offerId: fields[20] as int?,
       offerVersion: fields[21] as int?,
       standardUnitPrice: fields[22] as double?,
+      serializedOfferDetails: fields[23] as HiveStringValue?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveLocalCartItem obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -126,7 +127,9 @@ class HiveLocalCartItemAdapter extends TypeAdapter<HiveLocalCartItem> {
       ..writeByte(21)
       ..write(obj.offerVersion)
       ..writeByte(22)
-      ..write(obj.standardUnitPrice);
+      ..write(obj.standardUnitPrice)
+      ..writeByte(23)
+      ..write(obj.serializedOfferDetails);
   }
 
   @override
@@ -185,13 +188,14 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       pincode: fields[31] as String?,
       quotationId: fields[32] as int?,
       quotationNumber: fields[33] as String?,
+      couponDetails: (fields[34] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(34)
+      ..writeByte(35)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -259,7 +263,9 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(32)
       ..write(obj.quotationId)
       ..writeByte(33)
-      ..write(obj.quotationNumber);
+      ..write(obj.quotationNumber)
+      ..writeByte(34)
+      ..write(obj.couponDetails);
   }
 
   @override

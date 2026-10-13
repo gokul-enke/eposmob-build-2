@@ -63,7 +63,8 @@ void main() {
       ],
       'source_type': 'executive',
       'balance': '12.50',
-      'coupon_id': 'SAVE10',
+      'coupon_id': null,
+      'coupon_code': 'SAVE10',
       'order_id': '44',
       'comment': 'deliver carefully',
       'delivery_method_id': '7',
@@ -192,7 +193,8 @@ void main() {
       ],
       'source_type': 'executive',
       'balance': '0',
-      'coupon_id': 'SAVE10',
+      'coupon_id': null,
+      'coupon_code': 'SAVE10',
       'order_id': '501',
       'comment': 'table bill',
       'delivery_method_id': '',
@@ -248,7 +250,8 @@ void main() {
     expect(whatsapp.toApiJson()['whatsapp_receipt'], isTrue);
     expect(whatsapp.toUpdateApiJson()['whatsapp_receipt'], isTrue);
 
-    final plain = OrderSubmissionPayload(items: const [], transactionNumber: '');
+    final plain =
+        OrderSubmissionPayload(items: const [], transactionNumber: '');
     expect(plain.toApiJson().containsKey('whatsapp_receipt'), isFalse);
     expect(plain.toUpdateApiJson().containsKey('whatsapp_receipt'), isFalse);
   });

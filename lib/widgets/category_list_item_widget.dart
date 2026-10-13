@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../components/build_round_button.dart';
 import '../models/add_to_cart.dart';
 import '../models/get_product.dart';
+import 'product_image.dart';
 import '../providers/auth_model.dart';
 import '../providers/cart_provider.dart';
 import '../resources/color_manager.dart';
@@ -13,6 +14,7 @@ import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 
 class CategoryListItemWidget extends StatelessWidget {
+  final GetProduct product;
   final String? imageUrlPath;
   final String price;
   final String title;
@@ -28,6 +30,7 @@ class CategoryListItemWidget extends StatelessWidget {
 
   const CategoryListItemWidget(
       {super.key,
+      required this.product,
       this.imageUrlPath,
       required this.price,
       required this.title,
@@ -73,16 +76,11 @@ class CategoryListItemWidget extends StatelessWidget {
                   ),
                 ],
                 color: Colors.white),
-            child: file.isEmpty
-                ? Container()
-                : Image.network(
-                    file,
-                    fit: BoxFit.cover,
-                  ), //
-            //  Image.network(
-            //   fileType,
-            // ),
-            // Image.asset(imageUrlPath),
+            child: ProductImage(
+              product: product,
+              placeholder:
+                  const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+            ),
           ),
           SizedBox(
             height: 15,
@@ -135,16 +133,15 @@ class CategoryListItemWidget extends StatelessWidget {
                 if (value["status"] == "success") {
                   showScaffold(
                     context: context,
-                    message: addToCartModel.message ??
-                        'billing.added_to_cart'.tr,
+                    message:
+                        addToCartModel.message ?? 'billing.added_to_cart'.tr,
                   );
                   //  'Order Placed Successfully',
                 } else {
                   showScaffoldError(
                     context: context,
-                    message:
-                        addToCartModel.message ??
-                            'general.error_occurred_try_again'.tr,
+                    message: addToCartModel.message ??
+                        'general.error_occurred_try_again'.tr,
                   );
                 }
               });
@@ -160,6 +157,7 @@ class CategoryListItemWidget extends StatelessWidget {
 }
 
 class SelectedCategoryListItemWidget extends StatelessWidget {
+  final GetProduct product;
   final String imageUrlPath;
   final String price;
   final String title;
@@ -173,6 +171,7 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
   final List<Attachment>? attachment;
   const SelectedCategoryListItemWidget(
       {super.key,
+      required this.product,
       required this.imageUrlPath,
       required this.price,
       required this.title,
@@ -212,12 +211,11 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
                       ),
                     ],
                     color: Colors.white),
-                child: file.isEmpty
-                    ? Container()
-                    : Image.network(
-                        file,
-                        fit: BoxFit.cover,
-                      ), // Image.asset(imageUrlPath),
+                child: ProductImage(
+                  product: product,
+                  placeholder: const Icon(Icons.inventory_2_outlined,
+                      color: Colors.grey),
+                ),
               ),
               Container(
                 height: 20,
@@ -287,16 +285,15 @@ class SelectedCategoryListItemWidget extends StatelessWidget {
                 if (value["status"] == "success") {
                   showScaffold(
                     context: context,
-                    message: addToCartModel.message ??
-                        'billing.added_to_cart'.tr,
+                    message:
+                        addToCartModel.message ?? 'billing.added_to_cart'.tr,
                   );
                   //  'Order Placed Successfully',
                 } else {
                   showScaffoldError(
                     context: context,
-                    message:
-                        addToCartModel.message ??
-                            'general.error_occurred_try_again'.tr,
+                    message: addToCartModel.message ??
+                        'general.error_occurred_try_again'.tr,
                   );
                   //  'Added To Cart',
                 }
