@@ -51,6 +51,120 @@ filter and View selection contracts are unchanged.
 Built the same way as `features/customers` (the reference implementation);
 see its README for the full set of layer and UI rules.
 
+## Customer Transaction Report View/details
+
+`presentation/pages/customer_report_details_page.dart` owns the existing
+`SimpleTransactionDetailsScreen` used by sidebar slot 66. The old
+`screens/reports/customer_transactions_reports/customer_transaction_details_screen.dart`
+path re-exports it, so existing View callers and the constructor remain compatible.
+Back still opens the report listing at slot 65.
+
+This moves the details screen into the report feature and applies the shared
+listing UI approved for this screen:
+
+- `presentation/state/customer_report_details_state.dart` owns initialization,
+  controllers, response mapping, local filters, Reset and disposal.
+- `presentation/state/customer_report_details_print.dart` owns the existing
+  customer lookup, totals and navigation to `TransactionReportPrintPage`.
+- Value-and-callback widgets under `presentation/widgets/customer_report/details/`
+  own the filter panel, date-only adapters, desktop columns and phone cards.
+- The page composes `ListPageScaffold`, `PageHeader`, shared buttons, `FilterPanel`,
+  `AppDataTable`/`AppListCard`, badges, loading and empty states. Narrow headers
+  fold Filters/Export/Refresh into the shared menu. The details display still
+  has no pagination controls.
+- `presentation/state/customer_report_details_export_state.dart` composes the
+  existing `ExportController`, `FileExportService` and Excel builder; it owns
+  busy state, progress, selection/session checks and error feedback.
+- `domain/customer_report_details_query.dart` freezes the selected customer and
+  current local filters. `data/customer_report_details_snapshot.dart` reads all
+  declared pages without modifying provider state, validates grouped/flat
+  pagination, IDs, financial values and available transaction counts, then
+  applies those same contains/inclusive-date filters to the complete snapshot.
+- `presentation/export/customer_report_details_export.dart` uses
+  `ListExcelExportService` for the visible transaction fields, customer ID/name
+  and selected dates. Amounts are numeric cells without display rounding.
+  Windows uses the shared Save As flow; other platforms use shared delivery.
+
+State, print and export parts share one Dart library and the original state
+instance. Print's executable implementation remains unchanged; display state
+only gains export readiness, session capture and invalidation hooks. Existing
+translations, request arguments, grouped response parsing and print arguments
+are retained. Date-only
+controls reuse the auto-dismiss calendar with the same 2000–2101 bounds. Reset
+clears the visible dates and dropdowns as well as their existing filter values.
+In particular, this legacy details request still uses
+`InvoiceProvider.listAllTransaction` with its default `updateState: true`; the
+listing controller's isolated-request rules below are not newly applied to the
+display loader. Export uses the same endpoint with explicit page numbers and
+`updateState: false`. It is disabled for loading, empty or failed loads; a
+filter change, refresh, customer/session change or disposal prevents an in-flight
+snapshot from reaching Save As. Reset keeps the stable selected customer name
+for export, independently of the legacy print controller.
+The print pages, provider/API implementations, main report listing and shared
+`lib/core` components remain unchanged.
+
+### Verification and existing issues
+
+The original extraction tests were first exercised against the original screen.
+The final focused run passes 96 checks across details, snapshots, report
+listing/controller, provider, localization, toast guards and shared Excel/file
+delivery. They cover selected ID versus duplicate names, the existing name
+fallback, numeric response fields,
+combined filters, inclusive dates, Reset/reload, errors/retry, empty selection,
+Back and disposal during loading. Shared layout checks exercise desktop, phone,
+tablet, short windows, Arabic and Malayalam, actual calendar selection/cancel,
+the All dropdown choice, hide/show/refresh, visible Reset, pending loading and
+long source values in a narrow desktop panel with larger text. The old phone
+header/card overflow no longer occurs in the tested layouts. Local English and
+Arabic renders were inspected with loaded fonts. Focused static analysis has no
+issues.
+
+Review compared the extracted display/print bodies and request/route contracts,
+inspected callbacks, field/status/value rendering and lifecycle behavior, and
+exercised regression and responsive render checks. No new P0/P1/P2/P3 finding
+was identified in the reviewed changes. Export tests additionally exercise
+grouped/flat all-page reads, duplicate names/IDs, invalid amounts/dates,
+truncated counts, changing pagination, Reset, numeric workbooks, phone actions,
+busy/repeated clicks, errors and session/filter/disposal cancellation. Shared
+file delivery tests cover Save As, cancellation and extension/overwrite handling.
+Missing pagination metadata or inconsistent rows fail visibly instead of
+producing a partial workbook. Nested completeness is checked against the count
+when the API supplies one; otherwise it relies on the endpoint returning the
+full group's transaction array. The following original print issues are
+retained under the instruction to preserve logic:
+
+- **P2:** Reset clears `_customerController`; Print then omits the selected
+  customer's name and skips the contact lookup, although the rows remain.
+- **P2:** Print looks up a name and takes the first result rather than matching
+  the selected ID. Same-name customers can therefore get another customer's
+  contact/address on the report.
+- **P2:** Print resumes after its asynchronous lookup without a mounted check
+  before `setState` and navigation. Leaving while it waits can cause an update
+  after disposal.
+
+These print findings are confirmed by unchanged source paths, not by a live
+backend/printer test. Actual API responses, printer output and the complete
+running-app navigation still require manual verification. Concurrent reloads
+also retain their original ordering behavior; no request generation is added.
+
+Manual check after loading the new code: open Reports > Customer Transaction
+Report > View; compare the selected customer and rows; combine transaction type,
+status, Credit/Debit and From/To dates; Reset and refresh; toggle phone filters;
+check Print rows, totals and dates; export with combined filters and after Reset,
+open the saved workbook and compare customer, dates, rows and numeric amounts;
+cancel Save As and verify Export becomes available; return to the report listing.
+
+Run the details tests with:
+
+```powershell
+flutter test --no-pub test/features/reports/presentation/pages/customer_report_details_page_test.dart
+```
+
+The optional `CUSTOMER_REPORT_DETAILS_CAPTURE=shared` mode stores local PNGs in
+the Windows temporary `customer-report-details-shared` directory. The behavioral
+and layout checks run without that variable; there is no image-parity assertion
+against the superseded UI.
+
 ## Layers
 
 ```text
