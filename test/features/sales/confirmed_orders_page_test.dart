@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/features/sales/presentation/pages/confirmed_orders_page.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -38,7 +39,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  // Edit JSON, log, print and remove live in each card's "more" menu.
+  // Search and status use the shared FilterPanel.
+  Finder searchField() => find.descendant(
+      of: find.byType(FilterPanel), matching: find.byType(TextField));
+
+  Future<void> pickStatus(
+      WidgetTester tester, String current, String next) async {
+    await tester.tap(find.text(current));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(next).last);
+    await tester.pumpAndSettle();
+  }
+
+  // Edit JSON, print and remove live in each card's "more" menu.
   Future<void> openActions(WidgetTester tester, String id) async {
     final menu = find.byKey(ValueKey('order-actions-$id'));
     await tester.ensureVisible(menu);
@@ -186,26 +199,62 @@ void main() {
     await mount(tester, const Size(1200, 900));
     await tester.tap(find.byKey(const ValueKey('select-order-qa-1')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('filter-rejected')));
+    await pickStatus(tester, 'All (4)', 'Rejected (1)');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('attention-order-qa-2')), findsOneWidget);
     expect(find.byKey(const ValueKey('attention-order-qa-1')), findsNothing);
     // A hidden order is never synced by surprise.
     expect(find.text('0 selected'), findsOneWidget);
     expect(find.text('Sync shown (1)'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('filter-all')));
-    await tester.enterText(
-        find.byKey(const ValueKey('search-attention-orders')), 'customer 3');
+    await pickStatus(tester, 'Rejected (1)', 'All (4)');
+    await tester.enterText(searchField(), 'customer 3');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('attention-order-qa-3')), findsOneWidget);
     expect(find.byKey(const ValueKey('attention-order-qa-1')), findsNothing);
-    await tester.enterText(
-        find.byKey(const ValueKey('search-attention-orders')), 'nothing');
+    await tester.enterText(searchField(), 'nothing');
     await tester.pumpAndSettle();
     expect(find.text('No orders match this view.'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('reset-order-filters')));
     await tester.pumpAndSettle();
     expect(find.text('Sync all (4)'), findsOneWidget);
+
+    // The header Filters button hides the panel; the filters still apply.
+    await pickStatus(tester, 'All (4)', 'Rejected (1)');
+    await tester.tap(find.byKey(ConfirmedOrdersPage.filterToggleKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(FilterPanel), findsNothing);
+    expect(find.byKey(const ValueKey('attention-order-qa-1')), findsNothing);
+    await tester.tap(find.byKey(ConfirmedOrdersPage.filterToggleKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(FilterPanel), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Log sits beside Sync for orders that have a sync record',
+      (tester) async {
+    await mount(tester, const Size(1200, 900));
+    final log = find.byKey(const ValueKey('sync-log-qa-1'));
+    expect(log, findsOneWidget);
+    expect(find.descendant(of: log, matching: find.text('Log (1)')),
+        findsOneWidget);
+    // A legacy order has no sync record, so it has no log.
+    expect(find.byKey(const ValueKey('sync-log-qa-4')), findsNothing);
+    await tester.tap(log);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phones show search and filters in a collapsible tile',
+      (tester) async {
+    await mount(tester, const Size(390, 844));
+    expect(find.text('Search and filters'), findsOneWidget);
+    expect(searchField(), findsNothing);
+    await tester.tap(find.text('Search and filters'));
+    await tester.pumpAndSettle();
+    await tester.enterText(searchField(), 'customer 2');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('attention-order-qa-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('attention-order-qa-1')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -344,13 +393,11 @@ void main() {
             matching: find.text('2-11-261009-0042')),
         findsOneWidget);
 
-    await tester.enterText(
-        find.byKey(const ValueKey('search-attention-orders')), '0042');
+    await tester.enterText(searchField(), '0042');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('attention-order-qa-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('attention-order-qa-2')), findsNothing);
-    await tester.enterText(
-        find.byKey(const ValueKey('search-attention-orders')), '');
+    await tester.enterText(searchField(), '');
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('sync-order-qa-1')));

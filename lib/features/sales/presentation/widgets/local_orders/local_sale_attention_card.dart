@@ -6,15 +6,13 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 
-import 'local_sale_sync_badge.dart';
-
 const _ink = Color(0xFF0F172A);
 const _body = Color(0xFF475569);
 const _muted = Color(0xFF64748B);
 const _line = Color(0xFFE2E8F0);
 const _danger = Color(0xFFB42318);
 
-enum _CardAction { details, print, editJson, log, remove }
+enum _CardAction { details, print, editJson, remove }
 
 /// One unsynced sale: who and how much, the receipt number and sale time the
 /// next sync will send, and a single primary action. The sale details are
@@ -257,10 +255,11 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Who bought and how much, with the sync status.
+                // Who bought and how much. The hint line below says what the
+                // sync status means for the operator.
                 LayoutBuilder(
                   builder: (context, box) => Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         SizedBox(
                             width: 40,
@@ -276,46 +275,34 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
                                         .onSelectionChanged!(value ?? false))),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      customer?.isNotEmpty == true
-                                          ? customer!
-                                          : 'Walk-in customer',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: _ink,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 6),
-                                  LocalSaleSyncBadge(record: record),
-                                ]),
-                          ),
+                          child: Text(
+                              customer?.isNotEmpty == true
+                                  ? customer!
+                                  : 'Walk-in customer',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: _ink,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600)),
                         ),
                         const SizedBox(width: 12),
                         // Shrinks a long amount instead of squeezing the name.
                         ConstrainedBox(
                           constraints:
                               BoxConstraints(maxWidth: box.maxWidth * 0.45),
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                  '${widget.currency} ${order.total.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                      color: _ink,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      fontFeatures: [
-                                        FontFeature.tabularFigures()
-                                      ])),
-                            ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                                '${widget.currency} ${order.total.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                    color: _ink,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures()
+                                    ])),
                           ),
                         ),
                       ]),
@@ -346,42 +333,57 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
                                         height: 1.4))),
                           ]),
                       const SizedBox(height: 14),
-                      Row(children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                              key: ValueKey('sync-order-${order.id}'),
-                              // An unsaved edit must not be sent by surprise.
-                              onPressed:
-                                  canAct && !_editing ? widget.onSync : null,
-                              icon: sending
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2))
-                                  : const Icon(Icons.sync, size: 18),
-                              label: Text(sending
-                                  ? 'Sending…'
-                                  : record?.state == LocalSaleSyncState.rejected
-                                      ? 'Retry sync'
-                                      : 'Sync order'),
-                              style: FilledButton.styleFrom(
-                                  backgroundColor: ColorManager.kPrimaryColor,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(0, 44),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                  textStyle: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600))),
-                        ),
-                        const SizedBox(width: 8),
-                        _moreMenu(
-                            canAct: canAct,
-                            canDelete: canDelete,
-                            canDismiss: canDismiss,
-                            attempts: record?.attempts.length ?? 0),
-                      ]),
+                      // On narrow cards Log shows only its icon so Sync
+                      // keeps a readable label.
+                      LayoutBuilder(
+                          builder: (context, box) => Row(children: [
+                                Expanded(
+                                  child: FilledButton.icon(
+                                      key: ValueKey('sync-order-${order.id}'),
+                                      // An unsaved edit must not be sent by surprise.
+                                      onPressed: canAct && !_editing
+                                          ? widget.onSync
+                                          : null,
+                                      icon: sending
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2))
+                                          : const Icon(Icons.sync, size: 18),
+                                      label: Text(
+                                          sending
+                                              ? 'Sending…'
+                                              : record?.state ==
+                                                      LocalSaleSyncState
+                                                          .rejected
+                                                  ? 'Retry sync'
+                                                  : 'Sync order',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
+                                      style: FilledButton.styleFrom(
+                                          backgroundColor:
+                                              ColorManager.kPrimaryColor,
+                                          foregroundColor: Colors.white,
+                                          minimumSize: const Size(0, 44),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                          textStyle: const TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600))),
+                                ),
+                                if (record != null) ...[
+                                  const SizedBox(width: 8),
+                                  _logButton(record.attempts.length,
+                                      compact: box.maxWidth < 330),
+                                ],
+                                const SizedBox(width: 8),
+                                _moreMenu(
+                                    canAct: canAct,
+                                    canDelete: canDelete,
+                                    canDismiss: canDismiss),
+                              ])),
                     ],
                   ),
                 ),
@@ -391,6 +393,33 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
         ),
       ),
     );
+  }
+
+  Widget _logButton(int attempts, {required bool compact}) {
+    final key = ValueKey('sync-log-${_order.id}');
+    final style = OutlinedButton.styleFrom(
+        foregroundColor: _body,
+        side: const BorderSide(color: Color(0xFFCBD5E1)),
+        minimumSize: const Size(44, 44),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600));
+    if (compact) {
+      return Tooltip(
+        message: 'Sync log ($attempts)',
+        child: OutlinedButton(
+            key: key,
+            onPressed: widget.onLog,
+            style: style,
+            child: const Icon(Icons.history, size: 19)),
+      );
+    }
+    return OutlinedButton.icon(
+        key: key,
+        onPressed: widget.onLog,
+        icon: const Icon(Icons.history, size: 18),
+        label: Text('Log ($attempts)'),
+        style: style);
   }
 
   /// Receipt number and sale time: read-only rows, or the edit form after
@@ -533,7 +562,9 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
                         color: _danger, fontSize: 12.5, height: 1.4)),
               ],
               const SizedBox(height: 12),
-              Wrap(
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
                   alignment: WrapAlignment.end,
                   spacing: 8,
                   runSpacing: 8,
@@ -564,7 +595,9 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
                             minimumSize: const Size(0, 40),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)))),
-                  ]),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -591,7 +624,6 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
     required bool canAct,
     required bool canDelete,
     required bool canDismiss,
-    required int attempts,
   }) {
     final id = _order.id;
     PopupMenuItem<_CardAction> item(
@@ -633,8 +665,6 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
             widget.onPrint();
           case _CardAction.editJson:
             widget.onEdit();
-          case _CardAction.log:
-            widget.onLog();
           case _CardAction.remove:
             canDelete ? widget.onDelete() : widget.onDismiss();
         }
@@ -647,9 +677,6 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
         item(_CardAction.editJson, 'edit-request', Icons.data_object,
             'Edit request JSON',
             enabled: canAct && !_editing),
-        if (_record != null)
-          item(_CardAction.log, 'sync-log', Icons.history,
-              'Sync log ($attempts)'),
         if (canDelete || canDismiss) ...[
           const PopupMenuDivider(),
           item(
@@ -759,8 +786,6 @@ class _PickerField extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           fontFeatures: const [FontFeature.tabularFigures()]))),
-              if (enabled)
-                const Icon(Icons.expand_more, size: 18, color: _muted),
             ]),
           ),
         ),
