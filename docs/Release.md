@@ -5,8 +5,8 @@ git push build hotfix/urgent-fix
 git push build mobileappfixes
 git push build integrate/b2b-plus-gokul-dev
 git push build gokul-dev
-git tag v0.1.0-dev.877
-git push build v0.1.0-dev.877
+git tag v0.1.0-dev.878
+git push build v0.1.0-dev.878
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468
