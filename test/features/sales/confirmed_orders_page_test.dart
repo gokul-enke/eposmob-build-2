@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/sales/presentation/pages/confirmed_orders_page.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 
 import '../../../tool/qa_confirmed_orders.dart';
@@ -265,30 +266,83 @@ void main() {
     expect(saveRect.bottom, lessThanOrEqualTo(288));
   });
 
-  testWidgets('receipt number edits on the card feed search and the next sync',
+  Future<void> editSaleDetails(WidgetTester tester, String id) async {
+    final edit = find.byKey(ValueKey('edit-sale-details-$id'));
+    await tester.ensureVisible(edit);
+    await tester.pumpAndSettle();
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+  }
+
+  bool enabled(WidgetTester tester, String key) =>
+      tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key))).enabled;
+
+  // Saving waits for the local order to reach disk, which happens in real
+  // time outside the fake test clock.
+  Future<void> settleSave(WidgetTester tester) async {
+    await tester.pump();
+    await tester.runAsync(LocalProductProvider.flushPendingPersistence);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('sale details are read-only until Edit, then saved together',
       (tester) async {
     await mount(tester, const Size(1200, 900));
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('receipt-value-qa-1')),
+            matching: find.text('2-11-261009-0001')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('receipt-number-qa-1')), findsNothing);
+
+    await editSaleDetails(tester, 'qa-1');
     final field = find.byKey(const ValueKey('receipt-number-qa-1'));
     expect(
         tester.widget<TextField>(field).controller!.text, '2-11-261009-0001');
+    expect(enabled(tester, 'save-sale-details-qa-1'), isFalse);
+    // An unsaved edit cannot be synced by surprise.
+    expect(enabled(tester, 'sync-order-qa-1'), isFalse);
     await tester.enterText(field, '2-11-261009-0042');
     await tester.pump();
-    expect(find.byKey(const ValueKey('save-receipt-qa-1')), findsOneWidget);
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    expect(enabled(tester, 'save-sale-details-qa-1'), isTrue);
+    await tester.tap(find.byKey(const ValueKey('save-sale-details-qa-1')));
+    await settleSave(tester);
     expect(environment.sync.recordFor('qa-1')!.payload['receipt_number'],
         '2-11-261009-0042');
+    expect(environment.sync.recordFor('qa-1')!.payload['issued_at'],
+        '2026-10-09T09:15:00');
     expect(environment.sync.recordFor('qa-1')!.attempts.length, 1);
     expect(environment.requests, isEmpty);
-
-    // An empty number is refused and the saved one comes back.
-    await tester.enterText(field, '');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    // Reprints and details use the corrected number; the time is unchanged.
+    final local = environment.products.findConfirmedOrderById('qa-1')!;
+    expect(local.orderNumber, '2-11-261009-0042');
+    expect(local.createdAt, '2026-10-09T09:15:00');
+    expect(local.total, 18.75);
+    expect(field, findsNothing);
     expect(
-        tester.widget<TextField>(field).controller!.text, '2-11-261009-0042');
+        find.descendant(
+            of: find.byKey(const ValueKey('receipt-value-qa-1')),
+            matching: find.text('2-11-261009-0042')),
+        findsOneWidget);
+    expect(enabled(tester, 'sync-order-qa-1'), isTrue);
+
+    // An empty number is refused in place; Cancel restores the saved one.
+    await editSaleDetails(tester, 'qa-1');
+    await tester.enterText(field, '');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-sale-details-qa-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a receipt number.'), findsOneWidget);
     expect(environment.sync.recordFor('qa-1')!.payload['receipt_number'],
         '2-11-261009-0042');
+    await tester.tap(find.byKey(const ValueKey('cancel-sale-details-qa-1')));
+    await tester.pumpAndSettle();
+    expect(field, findsNothing);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('receipt-value-qa-1')),
+            matching: find.text('2-11-261009-0042')),
+        findsOneWidget);
 
     await tester.enterText(
         find.byKey(const ValueKey('search-attention-orders')), '0042');
@@ -307,15 +361,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('receipt number edit on a legacy order creates its request',
-      (tester) async {
+  testWidgets('editing a legacy order creates its request', (tester) async {
     await mount(tester, const Size(1200, 900));
     expect(environment.sync.recordFor('qa-4'), isNull);
-    final field = find.byKey(const ValueKey('receipt-number-qa-4'));
-    await tester.ensureVisible(field);
-    await tester.enterText(field, '2-11-261009-0099');
+    await editSaleDetails(tester, 'qa-4');
+    await tester.enterText(
+        find.byKey(const ValueKey('receipt-number-qa-4')), '2-11-261009-0099');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    await settleSave(tester);
     final record = environment.sync.recordFor('qa-4')!;
     expect(record.surface, LocalSaleSurface.legacy);
     expect(record.payload['receipt_number'], '2-11-261009-0099');
@@ -324,12 +377,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('sale date is picked on the card and saved as a UTC instant',
+  testWidgets('sale date is picked in edit mode and saved as a UTC instant',
       (tester) async {
     // Pin "now" so the picker range does not depend on the test clock.
     DateHelper.setServerTime(DateTime(2026, 10, 13, 12));
     addTearDown(() => DateHelper.setServerTime(DateTime.now()));
     await mount(tester, const Size(1200, 900));
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('sale-time-value-qa-1')),
+            matching: find.text('09-10-2026 · 09:15 AM')),
+        findsOneWidget);
+    await editSaleDetails(tester, 'qa-1');
     final date = find.byKey(const ValueKey('sale-date-qa-1'));
     expect(find.descendant(of: date, matching: find.text('09-10-2026')),
         findsOneWidget);
@@ -339,18 +398,55 @@ void main() {
         of: find.byType(DatePickerDialog), matching: find.text('8')));
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
+    expect(find.descendant(of: date, matching: find.text('08-10-2026')),
+        findsOneWidget);
+    // Nothing is stored until Save.
+    expect(environment.sync.recordFor('qa-1')!.payload['issued_at'],
+        '2026-10-09T09:15:00');
+    await tester.tap(find.byKey(const ValueKey('save-sale-details-qa-1')));
+    await settleSave(tester);
     // 09:15 business time on the 8th; QA has no timezone set, so the
     // IST fallback applies.
     expect(environment.sync.recordFor('qa-1')!.payload['issued_at'],
         startsWith('2026-10-08T03:45:00'));
-    expect(find.descendant(of: date, matching: find.text('08-10-2026')),
-        findsOneWidget);
+    expect(
+        environment.sync.recordFor('qa-1')!.payload['receipt_number'], isNull);
+    final local = environment.products.findConfirmedOrderById('qa-1')!;
+    expect(local.createdAt, startsWith('2026-10-08T03:45:00'));
+    expect(local.orderNumber, '2-11-261009-0001');
     expect(
         find.descendant(
-            of: find.byKey(const ValueKey('sale-time-qa-1')),
-            matching: find.text('09:15 AM')),
+            of: find.byKey(const ValueKey('sale-time-value-qa-1')),
+            matching: find.text('08-10-2026 · 09:15 AM')),
         findsOneWidget);
     expect(environment.requests, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a queued order waiting behind another send says so',
+      (tester) async {
+    await mount(tester, const Size(1200, 900));
+    const ready = 'Saved on this device and ready to sync.';
+    const waiting = 'Waiting for earlier orders to finish sending…';
+    // Loading turns leftover queued sales into needs-review, so queue two
+    // again: qa-1 sends first (slow fake server) and qa-3 waits behind it.
+    await environment.sync.authorizeRetryAfterVerification('qa-1');
+    await environment.sync.authorizeRetryAfterVerification('qa-3');
+    await tester.pump();
+    expect(find.text(ready), findsNWidgets(2));
+    final first = environment.sync.submitOnce(
+        localOrderId: 'qa-1', accessToken: 'qa-token', tenantKey: 'orders-qa');
+    final second = environment.sync.submitOnce(
+        localOrderId: 'qa-3', accessToken: 'qa-token', tenantKey: 'orders-qa');
+    await tester.pump();
+    expect(find.text(waiting), findsOneWidget);
+    expect(enabled(tester, 'sync-order-qa-3'), isFalse);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await first;
+    await second;
+    await tester.pumpAndSettle();
+    expect(find.text(waiting), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

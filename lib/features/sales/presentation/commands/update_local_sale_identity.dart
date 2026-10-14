@@ -21,8 +21,8 @@ String localSaleIssuedAt(SavedOrder order, LocalSaleSyncRecord? record) {
 }
 
 /// Saves a corrected receipt number and/or sale time into the next request
-/// for [order]. Like the JSON editor, it never changes past attempts or the
-/// saved receipt, and nothing is sent until the operator syncs.
+/// for [order] and into the saved local order. Past attempts are never
+/// changed, and nothing is sent until the operator syncs.
 Future<bool> updateLocalSaleIdentity(
   BuildContext context,
   SavedOrder order,
@@ -51,12 +51,15 @@ Future<bool> updateLocalSaleIdentity(
     } else {
       await services.sync.updateRequestPayload(order.id, payload);
     }
+    // The local order carries the same receipt number and sale time, so
+    // reprints and details match what will be synced.
+    services.products.updateConfirmedOrderIdentity(order.id,
+        orderNumber: receiptNumber, createdAt: issuedAt);
+    await services.products.flushPersistence();
     if (context.mounted) {
       showScaffold(
           context: context,
-          message: receiptNumber != null
-              ? 'Receipt number updated. Sync the order to send it.'
-              : 'Sale date and time updated. Sync the order to send it.');
+          message: 'Sale details saved. Sync the order to send them.');
     }
     return true;
   } catch (error) {

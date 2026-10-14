@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -18,9 +17,10 @@ const _danger = Color(0xFFB42318);
 enum _CardAction { details, print, editJson, log, remove }
 
 /// One unsynced sale: who and how much, the receipt number and sale time the
-/// next sync will send (editable in place), and a single primary action.
-/// Rarely used tools live in the "more" menu.
-class LocalSaleAttentionCard extends StatelessWidget {
+/// next sync will send, and a single primary action. The sale details are
+/// read-only until the operator taps Edit; rarely used tools live in the
+/// "more" menu.
+class LocalSaleAttentionCard extends StatefulWidget {
   const LocalSaleAttentionCard({
     super.key,
     required this.order,
@@ -37,9 +37,9 @@ class LocalSaleAttentionCard extends StatelessWidget {
     required this.onDelete,
     required this.onLog,
     required this.onPrint,
-    required this.onReceiptNumberChanged,
-    required this.onIssuedAtChanged,
+    required this.onSaleDetailsChanged,
     this.actionsEnabled = true,
+    this.submitting = false,
   });
 
   final SavedOrder order;
@@ -58,16 +58,136 @@ class LocalSaleAttentionCard extends StatelessWidget {
       onLog,
       onPrint;
 
-  /// Save a new value and resolve to whether it was saved.
-  final Future<bool> Function(String receiptNumber) onReceiptNumberChanged;
-  final Future<bool> Function(String issuedAtUtc) onIssuedAtChanged;
+  /// Saves a corrected receipt number and/or sale time (a UTC ISO-8601
+  /// instant); a null argument is left unchanged. Resolves to whether it was
+  /// saved.
+  final Future<bool> Function({String? receiptNumber, String? issuedAt})
+      onSaleDetailsChanged;
   final bool actionsEnabled;
+
+  /// Whether a send of this sale is queued or running.
+  final bool submitting;
+
+  @override
+  State<LocalSaleAttentionCard> createState() => _LocalSaleAttentionCardState();
+}
+
+class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
+  final _receipt = TextEditingController();
+  bool _editing = false;
+  bool _saving = false;
+  DateTime? _draftTime;
+  String? _error;
+
+  @override
+  void dispose() {
+    _receipt.dispose();
+    super.dispose();
+  }
+
+  SavedOrder get _order => widget.order;
+  LocalSaleSyncRecord? get _record => widget.syncRecord;
+  bool get _canAct =>
+      widget.actionsEnabled && (_record == null || _record!.canEditRequest);
+  DateTime? get _savedTime => _toLocal(widget.issuedAt);
+  bool get _receiptChanged => _receipt.text.trim() != widget.receiptNumber;
+  bool get _timeChanged => _draftTime != null && _draftTime != _savedTime;
+
+  void _startEditing() => setState(() {
+        _receipt.text = widget.receiptNumber;
+        _draftTime = _savedTime;
+        _error = null;
+        _editing = true;
+      });
+
+  void _cancelEditing() {
+    if (_saving) return;
+    setState(() {
+      _editing = false;
+      _error = null;
+    });
+  }
+
+  String? _futureError(DateTime value) => value.isAfter(_nowLocal())
+      ? 'The sale time cannot be in the future.'
+      : null;
+
+  Future<void> _save() async {
+    if (_saving || !_canAct) return;
+    final receipt = _receipt.text.trim();
+    if (receipt.isEmpty) {
+      setState(() => _error = 'Enter a receipt number.');
+      return;
+    }
+    final time = _draftTime;
+    final timeError = _timeChanged ? _futureError(time!) : null;
+    if (timeError != null) {
+      setState(() => _error = timeError);
+      return;
+    }
+    if (!_receiptChanged && !_timeChanged) {
+      _cancelEditing();
+      return;
+    }
+    final utc = _timeChanged
+        ? DateHelper.configuredDateTimeToUtcIso(
+            DateFormat('yyyy-MM-dd HH:mm:ss').format(time!))
+        : null;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final saved = await widget.onSaleDetailsChanged(
+        receiptNumber: _receiptChanged ? receipt : null, issuedAt: utc);
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (saved) _editing = false;
+    });
+  }
+
+  Future<void> _pickDate() async {
+    final base = _draftTime ?? _nowLocal();
+    final now = _nowLocal();
+    final day = DateTime(base.year, base.month, base.day);
+    var last = DateTime(now.year, now.month, now.day);
+    if (day.isAfter(last)) last = day;
+    var first = DateTime(last.year - 1, last.month, last.day);
+    if (day.isBefore(first)) first = day;
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: day,
+        firstDate: first,
+        lastDate: last,
+        helpText: 'Sale date');
+    if (picked == null || !mounted) return;
+    setState(() {
+      _draftTime = DateTime(
+          picked.year, picked.month, picked.day, base.hour, base.minute);
+      _error = _futureError(_draftTime!);
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final base = _draftTime ?? _nowLocal();
+    final picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(base),
+        helpText: 'Sale time');
+    if (picked == null || !mounted) return;
+    setState(() {
+      _draftTime =
+          DateTime(base.year, base.month, base.day, picked.hour, picked.minute);
+      _error = _futureError(_draftTime!);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final record = syncRecord;
+    final record = _record;
+    final order = _order;
     final sending = record?.state == LocalSaleSyncState.sending;
-    final canAct = actionsEnabled && (record == null || record.canEditRequest);
+    final canAct = _canAct;
     // A never-sent order has no server copy, so it can be deleted outright.
     // Anything that reached the server is only taken off this list.
     final canDelete = record == null || record.isUnsentLegacy;
@@ -77,6 +197,12 @@ class LocalSaleAttentionCard extends StatelessWidget {
           const Color(0xFFB45309),
           Icons.info_outline,
           'Check Sales first. Sync only if this order is not there.',
+        ),
+      // Sends run one at a time, so a queued sale can wait for its turn.
+      LocalSaleSyncState.queued when widget.submitting => (
+          const Color(0xFF2563EB),
+          Icons.hourglass_top_outlined,
+          'Waiting for earlier orders to finish sending…',
         ),
       LocalSaleSyncState.queued => (
           const Color(0xFF2563EB),
@@ -102,8 +228,6 @@ class LocalSaleAttentionCard extends StatelessWidget {
         ),
     };
     final customer = order.customerName?.trim();
-    final local = _toLocal(issuedAt);
-    final attempts = record?.attempts.length ?? 0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -118,15 +242,15 @@ class LocalSaleAttentionCard extends StatelessWidget {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-                color: selected ? ColorManager.kPrimaryColor : _line,
-                width: selected ? 1.5 : 1)),
+                color: widget.selected ? ColorManager.kPrimaryColor : _line,
+                width: widget.selected ? 1.5 : 1)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: ValueKey('order-details-${order.id}'),
-          onTap: onView,
-          onLongPress: onSelectionChanged == null
+          onTap: _editing ? null : widget.onView,
+          onLongPress: widget.onSelectionChanged == null
               ? null
-              : () => onSelectionChanged!(!selected),
+              : () => widget.onSelectionChanged!(!widget.selected),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 10, 16, 16),
             child: Column(
@@ -143,13 +267,13 @@ class LocalSaleAttentionCard extends StatelessWidget {
                             height: 40,
                             child: Checkbox(
                                 key: ValueKey('select-order-${order.id}'),
-                                value: selected,
+                                value: widget.selected,
                                 semanticLabel:
                                     'Select order ${order.orderNumber}',
-                                onChanged: onSelectionChanged == null
+                                onChanged: widget.onSelectionChanged == null
                                     ? null
-                                    : (value) =>
-                                        onSelectionChanged!(value ?? false))),
+                                    : (value) => widget
+                                        .onSelectionChanged!(value ?? false))),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Padding(
@@ -183,7 +307,7 @@ class LocalSaleAttentionCard extends StatelessWidget {
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerRight,
                               child: Text(
-                                  '$currency ${order.total.toStringAsFixed(2)}',
+                                  '${widget.currency} ${order.total.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                       color: _ink,
                                       fontSize: 18,
@@ -196,60 +320,14 @@ class LocalSaleAttentionCard extends StatelessWidget {
                         ),
                       ]),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _FieldLabel('Receipt no.'),
-                      _ReceiptNumberField(
-                        orderId: order.id,
-                        value: receiptNumber,
-                        enabled: canAct,
-                        onSubmit: onReceiptNumberChanged,
-                      ),
+                      _saleDetails(),
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const _FieldLabel('Date'),
-                                _PickerField(
-                                  key: ValueKey('sale-date-${order.id}'),
-                                  icon: Icons.calendar_today_outlined,
-                                  text: local == null
-                                      ? issuedAt
-                                      : DateFormat('dd-MM-yyyy').format(local),
-                                  tooltip: 'Change sale date',
-                                  onTap: canAct
-                                      ? () => _pickDate(context, local)
-                                      : null,
-                                ),
-                              ]),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const _FieldLabel('Time'),
-                                _PickerField(
-                                  key: ValueKey('sale-time-${order.id}'),
-                                  icon: Icons.schedule_outlined,
-                                  text: local == null
-                                      ? '--:--'
-                                      : DateFormat('hh:mm a').format(local),
-                                  tooltip: 'Change sale time',
-                                  onTap: canAct
-                                      ? () => _pickTime(context, local)
-                                      : null,
-                                ),
-                              ]),
-                        ),
-                      ]),
-                      const SizedBox(height: 14),
                       Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -263,7 +341,7 @@ class LocalSaleAttentionCard extends StatelessWidget {
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        color: tone == _body ? _body : tone,
+                                        color: tone,
                                         fontSize: 12.5,
                                         height: 1.4))),
                           ]),
@@ -272,7 +350,9 @@ class LocalSaleAttentionCard extends StatelessWidget {
                         Expanded(
                           child: FilledButton.icon(
                               key: ValueKey('sync-order-${order.id}'),
-                              onPressed: canAct ? onSync : null,
+                              // An unsaved edit must not be sent by surprise.
+                              onPressed:
+                                  canAct && !_editing ? widget.onSync : null,
                               icon: sending
                                   ? const SizedBox(
                                       width: 16,
@@ -300,7 +380,7 @@ class LocalSaleAttentionCard extends StatelessWidget {
                             canAct: canAct,
                             canDelete: canDelete,
                             canDismiss: canDismiss,
-                            attempts: attempts),
+                            attempts: record?.attempts.length ?? 0),
                       ]),
                     ],
                   ),
@@ -313,17 +393,212 @@ class LocalSaleAttentionCard extends StatelessWidget {
     );
   }
 
+  /// Receipt number and sale time: read-only rows, or the edit form after
+  /// the operator taps Edit.
+  Widget _saleDetails() {
+    final id = _order.id;
+    final saved = _savedTime;
+    final enabled = _canAct && !_saving;
+    String format(DateTime value) =>
+        '${DateFormat('dd-MM-yyyy').format(value)} · ${DateFormat('hh:mm a').format(value)}';
+
+    final header = Row(children: [
+      Expanded(
+        child: Text(_editing ? 'Edit sale details' : 'Sale details',
+            style: const TextStyle(
+                color: _body, fontSize: 12.5, fontWeight: FontWeight.w600)),
+      ),
+      if (_editing)
+        IconButton(
+            key: ValueKey('close-sale-details-$id'),
+            tooltip: 'Cancel',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.close, size: 19),
+            color: _muted,
+            onPressed: _saving ? null : _cancelEditing)
+      else
+        IconButton(
+            key: ValueKey('edit-sale-details-$id'),
+            tooltip: _canAct
+                ? 'Edit receipt no., date and time'
+                : 'Cannot edit while this order is sending',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            color: ColorManager.kPrimaryColor,
+            onPressed: _canAct ? _startEditing : null),
+    ]);
+
+    final Widget body;
+    if (!_editing) {
+      body = Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Column(children: [
+          _ReadRow('Receipt no.', widget.receiptNumber,
+              key: ValueKey('receipt-value-$id')),
+          const SizedBox(height: 6),
+          _ReadRow(
+              'Date & time', saved == null ? widget.issuedAt : format(saved),
+              key: ValueKey('sale-time-value-$id')),
+        ]),
+      );
+    } else {
+      final draft = _draftTime;
+      OutlineInputBorder border(Color color, [double width = 1]) =>
+          OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: color, width: width));
+      body = CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): _cancelEditing
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(right: 6, top: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _FieldLabel('Receipt no.'),
+              TextField(
+                key: ValueKey('receipt-number-$id'),
+                controller: _receipt,
+                enabled: enabled,
+                textInputAction: TextInputAction.done,
+                autocorrect: false,
+                enableSuggestions: false,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  LengthLimitingTextInputFormatter(40),
+                ],
+                onChanged: (_) => setState(() => _error = null),
+                onSubmitted: (_) => _save(),
+                style: const TextStyle(
+                    color: _ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()]),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: 'Receipt number',
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                  prefixIcon: const Icon(Icons.tag, size: 18, color: _muted),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 44),
+                  border: border(_line),
+                  enabledBorder: border(_line),
+                  disabledBorder: border(_line),
+                  focusedBorder: border(ColorManager.kPrimaryColor, 1.5),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _FieldLabel('Date'),
+                        _PickerField(
+                          key: ValueKey('sale-date-$id'),
+                          icon: Icons.calendar_today_outlined,
+                          text: draft == null
+                              ? widget.issuedAt
+                              : DateFormat('dd-MM-yyyy').format(draft),
+                          onTap: enabled ? _pickDate : null,
+                        ),
+                      ]),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _FieldLabel('Time'),
+                        _PickerField(
+                          key: ValueKey('sale-time-$id'),
+                          icon: Icons.schedule_outlined,
+                          text: draft == null
+                              ? '--:--'
+                              : DateFormat('hh:mm a').format(draft),
+                          onTap: enabled ? _pickTime : null,
+                        ),
+                      ]),
+                ),
+              ]),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!,
+                    key: ValueKey('sale-details-error-$id'),
+                    style: const TextStyle(
+                        color: _danger, fontSize: 12.5, height: 1.4)),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                        key: ValueKey('cancel-sale-details-$id'),
+                        onPressed: _saving ? null : _cancelEditing,
+                        style: TextButton.styleFrom(
+                            foregroundColor: _body,
+                            minimumSize: const Size(0, 40)),
+                        child: const Text('Cancel')),
+                    FilledButton.icon(
+                        key: ValueKey('save-sale-details-$id'),
+                        onPressed: enabled && (_receiptChanged || _timeChanged)
+                            ? _save
+                            : null,
+                        icon: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.check, size: 18),
+                        label: Text(_saving ? 'Saving…' : 'Save'),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: ColorManager.kPrimaryColor,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 40),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)))),
+                  ]),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 2, 4, 12),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: _editing ? ColorManager.kPrimaryColor : _line,
+              width: _editing ? 1.5 : 1)),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [header, body]),
+    );
+  }
+
   Widget _moreMenu({
     required bool canAct,
     required bool canDelete,
     required bool canDismiss,
     required int attempts,
   }) {
+    final id = _order.id;
     PopupMenuItem<_CardAction> item(
             _CardAction value, String key, IconData icon, String label,
             {bool enabled = true, bool danger = false}) =>
         PopupMenuItem(
-          key: ValueKey('$key-${order.id}'),
+          key: ValueKey('$key-$id'),
           value: value,
           enabled: enabled,
           height: 44,
@@ -342,7 +617,7 @@ class LocalSaleAttentionCard extends StatelessWidget {
           ]),
         );
     return PopupMenuButton<_CardAction>(
-      key: ValueKey('order-actions-${order.id}'),
+      key: ValueKey('order-actions-$id'),
       tooltip: 'More actions',
       position: PopupMenuPosition.under,
       color: Colors.white,
@@ -353,15 +628,15 @@ class LocalSaleAttentionCard extends StatelessWidget {
       onSelected: (action) {
         switch (action) {
           case _CardAction.details:
-            onView();
+            widget.onView();
           case _CardAction.print:
-            onPrint();
+            widget.onPrint();
           case _CardAction.editJson:
-            onEdit();
+            widget.onEdit();
           case _CardAction.log:
-            onLog();
+            widget.onLog();
           case _CardAction.remove:
-            canDelete ? onDelete() : onDismiss();
+            canDelete ? widget.onDelete() : widget.onDismiss();
         }
       },
       itemBuilder: (_) => [
@@ -371,8 +646,8 @@ class LocalSaleAttentionCard extends StatelessWidget {
             'Print receipt'),
         item(_CardAction.editJson, 'edit-request', Icons.data_object,
             'Edit request JSON',
-            enabled: canAct),
-        if (syncRecord != null)
+            enabled: canAct && !_editing),
+        if (_record != null)
           item(_CardAction.log, 'sync-log', Icons.history,
               'Sync log ($attempts)'),
         if (canDelete || canDismiss) ...[
@@ -382,7 +657,7 @@ class LocalSaleAttentionCard extends StatelessWidget {
               'remove-order',
               canDelete ? Icons.delete_outline : Icons.playlist_remove,
               canDelete ? 'Delete' : 'Remove from list',
-              enabled: actionsEnabled,
+              enabled: widget.actionsEnabled,
               danger: true),
         ],
       ],
@@ -406,52 +681,29 @@ class LocalSaleAttentionCard extends StatelessWidget {
     final now = DateHelper.nowInConfiguredTimeZone();
     return DateTime(now.year, now.month, now.day, now.hour, now.minute);
   }
+}
 
-  Future<void> _pickDate(BuildContext context, DateTime? current) async {
-    final base = current ?? _nowLocal();
-    final now = _nowLocal();
-    final day = DateTime(base.year, base.month, base.day);
-    var last = DateTime(now.year, now.month, now.day);
-    if (day.isAfter(last)) last = day;
-    var first = DateTime(last.year - 1, last.month, last.day);
-    if (day.isBefore(first)) first = day;
-    final picked = await showDatePicker(
-        context: context,
-        initialDate: day,
-        firstDate: first,
-        lastDate: last,
-        helpText: 'Sale date');
-    if (picked == null || !context.mounted) return;
-    await _saveIssuedAt(
-        context,
-        current,
-        DateTime(
-            picked.year, picked.month, picked.day, base.hour, base.minute));
-  }
+class _ReadRow extends StatelessWidget {
+  const _ReadRow(this.label, this.value, {super.key});
+  final String label, value;
 
-  Future<void> _pickTime(BuildContext context, DateTime? current) async {
-    final base = current ?? _nowLocal();
-    final picked = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(base),
-        helpText: 'Sale time');
-    if (picked == null || !context.mounted) return;
-    await _saveIssuedAt(context, current,
-        DateTime(base.year, base.month, base.day, picked.hour, picked.minute));
-  }
-
-  Future<void> _saveIssuedAt(
-      BuildContext context, DateTime? current, DateTime value) async {
-    if (value == current) return;
-    if (value.isAfter(_nowLocal())) {
-      showScaffoldError(
-          context: context, message: 'The sale time cannot be in the future.');
-      return;
-    }
-    final utc = DateHelper.configuredDateTimeToUtcIso(
-        DateFormat('yyyy-MM-dd HH:mm:ss').format(value));
-    if (utc != null) await onIssuedAtChanged(utc);
-  }
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Text(label,
+            style: const TextStyle(
+                color: _muted, fontSize: 12.5, fontWeight: FontWeight.w500)),
+        const SizedBox(width: 12),
+        Expanded(
+            child: Text(value,
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: _ink,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()]))),
+      ]);
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -473,207 +725,44 @@ class _PickerField extends StatelessWidget {
     super.key,
     required this.icon,
     required this.text,
-    required this.tooltip,
     required this.onTap,
   });
 
   final IconData icon;
-  final String text, tooltip;
+  final String text;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    return Tooltip(
-      message: enabled ? tooltip : '',
-      child: Material(
-        color: enabled ? Colors.white : const Color(0xFFF8FAFC),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: _line)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: SizedBox(
-            height: 44,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(children: [
-                Icon(icon, size: 17, color: _muted),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: enabled ? _ink : _muted,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [
-                              FontFeature.tabularFigures()
-                            ]))),
-                if (enabled)
-                  const Icon(Icons.expand_more, size: 18, color: _muted),
-              ]),
-            ),
+    return Material(
+      color: enabled ? Colors.white : const Color(0xFFF8FAFC),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: _line)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(children: [
+              Icon(icon, size: 17, color: _muted),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text(text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: enabled ? _ink : _muted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()]))),
+              if (enabled)
+                const Icon(Icons.expand_more, size: 18, color: _muted),
+            ]),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Edits the receipt number in place. Saves on Enter, the check button or
-/// leaving the field; Escape or the close button restores the saved value.
-class _ReceiptNumberField extends StatefulWidget {
-  const _ReceiptNumberField({
-    required this.orderId,
-    required this.value,
-    required this.enabled,
-    required this.onSubmit,
-  });
-
-  final String orderId, value;
-  final bool enabled;
-  final Future<bool> Function(String) onSubmit;
-
-  @override
-  State<_ReceiptNumberField> createState() => _ReceiptNumberFieldState();
-}
-
-class _ReceiptNumberFieldState extends State<_ReceiptNumberField> {
-  late final _controller = TextEditingController(text: widget.value);
-  final _focus = FocusNode();
-  bool _saving = false;
-
-  /// Last value saved but not yet reflected in [widget.value], so leaving the
-  /// field right after a save does not save it twice.
-  String? _submitted;
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!mounted) return;
-      if (!_focus.hasFocus && _dirty) _commit();
-      setState(() {});
-    });
-  }
-
-  @override
-  void didUpdateWidget(_ReceiptNumberField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      _submitted = null;
-      if (!_focus.hasFocus) _controller.text = widget.value;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  String get _text => _controller.text.trim();
-  bool get _dirty => _text != widget.value && _text != _submitted;
-
-  void _revert() {
-    _controller.text = widget.value;
-    _focus.unfocus();
-    setState(() {});
-  }
-
-  Future<void> _commit() async {
-    final value = _text;
-    if (_saving || !_dirty) return;
-    if (value.isEmpty) {
-      showScaffoldError(
-          context: context, message: 'Receipt number cannot be empty.');
-      _revert();
-      return;
-    }
-    setState(() => _saving = true);
-    final saved = await widget.onSubmit(value);
-    if (!mounted) return;
-    if (saved) _submitted = value;
-    setState(() => _saving = false);
-    if (saved) _focus.unfocus();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dirty = _dirty;
-    OutlineInputBorder border(Color color, [double width = 1]) =>
-        OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: color, width: width));
-    final Widget? suffix = _saving
-        ? const Padding(
-            padding: EdgeInsets.all(13),
-            child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2)))
-        : dirty
-            ? Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(
-                    key: ValueKey('save-receipt-${widget.orderId}'),
-                    tooltip: 'Save receipt number',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.check, size: 20),
-                    color: const Color(0xFF16764A),
-                    onPressed: _commit),
-                IconButton(
-                    tooltip: 'Cancel',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close, size: 20),
-                    color: _muted,
-                    onPressed: _revert),
-                const SizedBox(width: 4),
-              ])
-            : widget.enabled && !_focus.hasFocus
-                ? const Icon(Icons.edit_outlined, size: 17, color: _muted)
-                : null;
-    return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _revert},
-      child: TextField(
-        key: ValueKey('receipt-number-${widget.orderId}'),
-        controller: _controller,
-        focusNode: _focus,
-        enabled: widget.enabled && !_saving,
-        textInputAction: TextInputAction.done,
-        autocorrect: false,
-        enableSuggestions: false,
-        inputFormatters: [
-          FilteringTextInputFormatter.deny(RegExp(r'\s')),
-          LengthLimitingTextInputFormatter(40),
-        ],
-        onChanged: (_) => setState(() {}),
-        onSubmitted: (_) => _commit(),
-        style: const TextStyle(
-            color: _ink,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            fontFeatures: [FontFeature.tabularFigures()]),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: widget.enabled ? Colors.white : const Color(0xFFF8FAFC),
-          hintText: 'Receipt number',
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-          prefixIcon: const Icon(Icons.tag, size: 18, color: _muted),
-          prefixIconConstraints:
-              const BoxConstraints(minWidth: 40, minHeight: 44),
-          suffixIcon: suffix,
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 40, minHeight: 44),
-          border: border(_line),
-          enabledBorder: border(_line),
-          disabledBorder: border(_line),
-          focusedBorder: border(ColorManager.kPrimaryColor, 1.5),
         ),
       ),
     );

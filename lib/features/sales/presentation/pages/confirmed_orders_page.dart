@@ -512,13 +512,12 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
       currency: _services.settings.appSettings?.currency ?? 'INR',
       receiptNumber: localSaleReceiptNumber(order, record),
       issuedAt: localSaleIssuedAt(order, record),
-      onReceiptNumberChanged: (value) => updateLocalSaleIdentity(
-          context, order, _services,
-          receiptNumber: value),
-      onIssuedAtChanged: (value) =>
-          updateLocalSaleIdentity(context, order, _services, issuedAt: value),
+      onSaleDetailsChanged: ({receiptNumber, issuedAt}) =>
+          updateLocalSaleIdentity(context, order, _services,
+              receiptNumber: receiptNumber, issuedAt: issuedAt),
       selected: _selectedIds.contains(order.id),
       actionsEnabled: !busy && !sync.isSubmitting(order.id),
+      submitting: sync.isSubmitting(order.id),
       onSelectionChanged: busy || !eligibleIds.contains(order.id)
           ? null
           : (value) => setState(() {
