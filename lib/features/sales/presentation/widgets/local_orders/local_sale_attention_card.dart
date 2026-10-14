@@ -202,12 +202,14 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
           const Color(0xFFB45309),
           Icons.info_outline,
           'The server already has this receipt, so it was most likely synced. '
-              'Check Sales, then remove it from this list.',
+              'Check Sales and compare the total price, then remove it from '
+              'this list.',
         ),
       LocalSaleSyncState.needsReview => (
           const Color(0xFFB45309),
           Icons.info_outline,
-          'Check Sales first. Sync only if this order is not there.',
+          'Check Sales and compare the total price. If it is there, remove '
+              'it; otherwise sync it.',
         ),
       // Sends run one at a time, so a queued sale can wait for its turn.
       LocalSaleSyncState.queued when widget.submitting => (
@@ -235,7 +237,8 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
       _ => (
           _body,
           Icons.cloud_off_outlined,
-          'Saved on this device only. Check Sales, then sync it.',
+          'Saved on this device only. Check Sales and compare the total '
+              'price, then sync it.',
         ),
     };
     final customer = order.customerName?.trim();

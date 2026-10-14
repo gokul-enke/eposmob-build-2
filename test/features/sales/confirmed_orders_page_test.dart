@@ -307,7 +307,8 @@ void main() {
         findsOneWidget);
     // Other needs-review orders keep the general advice.
     expect(
-        find.text('Check Sales first. Sync only if this order is not there.'),
+        find.text(
+            'Check Sales and compare the total price. If it is there, remove it; otherwise sync it.'),
         findsOneWidget);
   });
 
