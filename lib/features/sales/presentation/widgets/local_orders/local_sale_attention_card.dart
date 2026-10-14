@@ -190,7 +190,20 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
     // Anything that reached the server is only taken off this list.
     final canDelete = record == null || record.isUnsentLegacy;
     final canDismiss = record != null && !canDelete && record.canRetry;
+    // HTTP 409: the server already has this receipt number or client sale
+    // ID, usually because an earlier send succeeded but its reply was lost.
+    final receiptConflict = record?.attempts.lastOrNull?.responseBody
+            ?.contains('receipt_identity_conflict') ==
+        true;
     final (tone, hintIcon, hint) = switch (record?.state) {
+      LocalSaleSyncState.needsReview ||
+      LocalSaleSyncState.rejected when receiptConflict =>
+        (
+          const Color(0xFFB45309),
+          Icons.info_outline,
+          'The server already has this receipt, so it was most likely synced. '
+              'Check Sales, then remove it from this list.',
+        ),
       LocalSaleSyncState.needsReview => (
           const Color(0xFFB45309),
           Icons.info_outline,

@@ -39,6 +39,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  bool enabled(WidgetTester tester, String key) =>
+      tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key))).enabled;
+
+  // Saving waits for the local order to reach disk, which happens in real
+  // time outside the fake test clock.
+  Future<void> settleSave(WidgetTester tester) async {
+    await tester.pump();
+    await tester.runAsync(LocalProductProvider.flushPendingPersistence);
+    await tester.pumpAndSettle();
+  }
+
   // Search and status use the shared FilterPanel.
   Finder searchField() => find.descendant(
       of: find.byType(FilterPanel), matching: find.byType(TextField));
@@ -230,6 +241,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('selected orders are removed together after one confirmation',
+      (tester) async {
+    await mount(tester, const Size(1200, 900));
+    // qa-1 was sent before (needs review); qa-4 was never sent.
+    await tester.tap(find.byKey(const ValueKey('select-order-qa-1')));
+    await tester.tap(find.byKey(const ValueKey('select-order-qa-4')));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove selected (2)'), findsOneWidget);
+
+    // Cancel changes nothing.
+    await tester.tap(find.byKey(const ValueKey('remove-selected-orders')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('cancel-remove-orders')));
+    await tester.pumpAndSettle();
+    expect(environment.sync.recordFor('qa-1')!.isDismissed, isFalse);
+    expect(find.text('2 selected'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('remove-selected-orders')));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove 2 orders from the list?'), findsOneWidget);
+    expect(find.textContaining('1 order was sent before'), findsOneWidget);
+    expect(find.textContaining('1 order was never sent'), findsOneWidget);
+    // Removing needs the operator to confirm they checked Sales.
+    expect(enabled(tester, 'confirm-remove-orders'), isFalse);
+    await tester.tap(find.byKey(const ValueKey('confirm-remove-checked')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('confirm-remove-orders')));
+    await settleSave(tester);
+
+    // Sent before: kept for audit, never sent again. Never sent: deleted.
+    final dismissed = environment.sync.recordFor('qa-1')!;
+    expect(dismissed.isDismissed, isTrue);
+    expect(dismissed.attempts.length, 1);
+    expect(environment.sync.recordFor('qa-4'), isNull);
+    expect(environment.products.findConfirmedOrderById('qa-4'), isNull);
+    expect(environment.products.findConfirmedOrderById('qa-1'), isNotNull);
+    expect(find.byKey(const ValueKey('attention-order-qa-1')), findsNothing);
+    expect(find.byKey(const ValueKey('attention-order-qa-4')), findsNothing);
+    expect(find.byKey(const ValueKey('attention-order-qa-2')), findsOneWidget);
+    expect(find.text('0 selected'), findsOneWidget);
+    expect(environment.requests, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a receipt conflict says the order was most likely synced',
+      (tester) async {
+    final record =
+        LocalSaleSyncRecord.fromJson(environment.store.rows['qa-1']!);
+    await environment.store.write(record.copyWith(attempts: [
+      const LocalSaleSyncAttempt(
+          number: 1,
+          startedAt: '2026-10-14T04:24:00Z',
+          endpoint: 'https://qa.invalid/order',
+          requestBody: '{}',
+          finishedAt: '2026-10-14T04:25:00Z',
+          httpStatus: 409,
+          responseBody: '{"success":false,"code":"receipt_identity_conflict",'
+              '"message":"The receipt number or client sale ID is already '
+              'in use."}',
+          outcome: 'needs_review'),
+    ]).toJson());
+    await mount(tester, const Size(1200, 900));
+    expect(find.textContaining('The server already has this receipt'),
+        findsOneWidget);
+    // Other needs-review orders keep the general advice.
+    expect(
+        find.text('Check Sales first. Sync only if this order is not there.'),
+        findsOneWidget);
+  });
+
   testWidgets('Log sits beside Sync for orders that have a sync record',
       (tester) async {
     await mount(tester, const Size(1200, 900));
@@ -320,17 +401,6 @@ void main() {
     await tester.ensureVisible(edit);
     await tester.pumpAndSettle();
     await tester.tap(edit);
-    await tester.pumpAndSettle();
-  }
-
-  bool enabled(WidgetTester tester, String key) =>
-      tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key))).enabled;
-
-  // Saving waits for the local order to reach disk, which happens in real
-  // time outside the fake test clock.
-  Future<void> settleSave(WidgetTester tester) async {
-    await tester.pump();
-    await tester.runAsync(LocalProductProvider.flushPendingPersistence);
     await tester.pumpAndSettle();
   }
 

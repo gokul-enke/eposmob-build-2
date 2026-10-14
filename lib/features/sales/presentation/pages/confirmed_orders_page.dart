@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 
 import '../commands/confirm_and_delete_local_sale.dart';
 import '../commands/confirm_and_dismiss_local_sale.dart';
+import '../commands/confirm_and_remove_local_sales.dart';
 import '../commands/confirm_and_sync_local_sales.dart';
+import '../commands/confirm_day_close_with_unsynced_sales.dart';
 import '../commands/edit_local_sale_request.dart';
 import '../commands/local_sales_services.dart';
 import '../commands/print_local_sale.dart';
@@ -53,14 +55,6 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
     _search.dispose();
     super.dispose();
   }
-
-  List<SavedOrder> _attentionOrders(
-          LocalProductProvider provider, LocalSaleSyncService sync) =>
-      provider.confirmedOrders.where((order) {
-        final record = sync.recordFor(order.id);
-        return record?.state != LocalSaleSyncState.synced &&
-            record?.isDismissed != true;
-      }).toList();
 
   bool _matchesFilter(_AttentionFilter filter, LocalSaleSyncRecord? record) =>
       switch (filter) {
@@ -139,7 +133,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
           child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
               builder: (context, provider, sync, _) {
             final busy = _batchActive || sync.isBatchSyncing;
-            final orders = _attentionOrders(provider, sync);
+            final orders = localSalesNeedingSync(provider, sync);
             final counts = {
               for (final filter in _AttentionFilter.values)
                 filter: orders
@@ -401,8 +395,34 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
                   onPressed: busy || selected.isEmpty
                       ? null
                       : () => _syncOrders(selected)),
+              Builder(builder: (context) {
+                final removable = selected
+                    .where((order) =>
+                        localSaleCanRemove(_services.sync.recordFor(order.id)))
+                    .length;
+                return AppOutlinedButton(
+                    key: const ValueKey('remove-selected-orders'),
+                    label: 'Remove selected ($removable)',
+                    icon: Icons.delete_outline,
+                    foreground: AppColors.red,
+                    onPressed: busy || removable == 0
+                        ? null
+                        : () => _removeOrders(selected));
+              }),
             ]),
       );
+
+  Future<void> _removeOrders(List<SavedOrder> orders) async {
+    if (_batchActive) return;
+    setState(() => _batchActive = true);
+    try {
+      final removed =
+          await confirmAndRemoveLocalSales(context, orders, _services);
+      if (mounted) setState(() => _selectedIds.removeAll(removed));
+    } finally {
+      if (mounted) setState(() => _batchActive = false);
+    }
+  }
 
   Widget _buildProgress() => Container(
         margin: const EdgeInsets.only(top: 14),
