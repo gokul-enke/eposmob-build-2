@@ -37,9 +37,10 @@ Future<bool> confirmDayCloseWithUnsyncedSales(BuildContext context) async {
         ],
       ),
       content: Text(
-        '$orders not been synced to the server yet. Sync them on the '
-        'Confirmed Orders page before closing the day, otherwise they will '
-        'be missing from this day close.',
+        '$orders not been synced to the server yet. Before closing the day, '
+        'check each one on the Sales page and compare the total price. If '
+        'the order is already there, remove it from Confirmed Orders; '
+        'otherwise sync it.',
         style: const TextStyle(color: Color(0xFF334155)),
       ),
       actions: [
