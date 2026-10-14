@@ -26,7 +26,8 @@ import 'package:pos_machine/features/purchases/presentation/state/purchase_provi
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+// Stock edit disabled for now.
+// import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 
 class _DropdownOption {
@@ -952,40 +953,41 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     }
   }
 
-  void _showEditStockRowModal(Stock stock) {
-    if (stock.id == null) {
-      showScaffoldError(
-        context: context,
-        message: 'product_detail.stock_id_missing_edit'.tr,
-      );
-      return;
-    }
-
-    showEditStockDialog(
-      context: context,
-      stockId: stock.id!,
-      title: 'product_detail.edit_stock'.tr,
-      initialRetailPrice: stock.price ?? '',
-      initialMrp: stock.mrp ?? '',
-      showMrp: _showMrp(),
-      initialPurchasePrice: stock.purchasePrice ?? '',
-      showPurchasePrice: _canViewPurchasePrice(),
-      initialRack: stock.rack ?? '',
-      onSuccess: (result) async {
-        if (!mounted) return;
-        setState(() {
-          _editedStockRows[stock.id!] = stock.copyWith(
-            price: result.retailPrice,
-            mrp: result.mrp,
-            purchasePrice: _canViewPurchasePrice()
-                ? result.purchasePrice
-                : stock.purchasePrice,
-            rack: result.rack,
-          );
-        });
-      },
-    );
-  }
+  // Stock edit disabled for now.
+  // void _showEditStockRowModal(Stock stock) {
+  //   if (stock.id == null) {
+  //     showScaffoldError(
+  //       context: context,
+  //       message: 'product_detail.stock_id_missing_edit'.tr,
+  //     );
+  //     return;
+  //   }
+  //
+  //   showEditStockDialog(
+  //     context: context,
+  //     stockId: stock.id!,
+  //     title: 'product_detail.edit_stock'.tr,
+  //     initialRetailPrice: stock.price ?? '',
+  //     initialMrp: stock.mrp ?? '',
+  //     showMrp: _showMrp(),
+  //     initialPurchasePrice: stock.purchasePrice ?? '',
+  //     showPurchasePrice: _canViewPurchasePrice(),
+  //     initialRack: stock.rack ?? '',
+  //     onSuccess: (result) async {
+  //       if (!mounted) return;
+  //       setState(() {
+  //         _editedStockRows[stock.id!] = stock.copyWith(
+  //           price: result.retailPrice,
+  //           mrp: result.mrp,
+  //           purchasePrice: _canViewPurchasePrice()
+  //               ? result.purchasePrice
+  //               : stock.purchasePrice,
+  //           rack: result.rack,
+  //         );
+  //       });
+  //     },
+  //   );
+  // }
 
   @override
   void dispose() {
@@ -1176,13 +1178,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 ),
               ),
               const Spacer(),
-              if (canEditProduct && stock.id != null)
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  color: ColorManager.kPrimaryColor,
-                  tooltip: 'stock.edit'.tr,
-                  onPressed: () => _showEditStockRowModal(stock),
-                ),
+              // Stock edit disabled for now.
+              // if (canEditProduct && stock.id != null)
+              //   IconButton(
+              //     icon: const Icon(Icons.edit_outlined, size: 20),
+              //     color: ColorManager.kPrimaryColor,
+              //     tooltip: 'stock.edit'.tr,
+              //     onPressed: () => _showEditStockRowModal(stock),
+              //   ),
             ],
           ),
           const SizedBox(height: 4),

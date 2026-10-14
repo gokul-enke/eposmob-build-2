@@ -23,7 +23,8 @@ import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+// Stock edit disabled for now.
+// import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
@@ -1980,7 +1981,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             _buildStockTableHeader(
                                 'product_detail.expiry_date'.tr),
                             _buildStockTableHeader('product_detail.rack'.tr),
-                            _buildStockTableHeader('product.action'.tr),
+                            // Stock edit disabled for now.
+                            // _buildStockTableHeader('product.action'.tr),
                           ],
                         ),
                         ...stockRows.asMap().entries.map((entry) {
@@ -2048,10 +2050,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                   stock.expiryDate ?? 'product.na'.tr),
                               _buildStockTableCell(
                                   stock.rack ?? 'product.na'.tr),
-                              _buildRackTableCell(
-                                stock,
-                                canEditProduct: canEditProduct,
-                              ),
+                              // Stock edit disabled for now.
+                              // _buildRackTableCell(
+                              //   stock,
+                              //   canEditProduct: canEditProduct,
+                              // ),
                             ],
                           );
                         }),
@@ -3048,7 +3051,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       110,
       110,
       72,
-      72,
+      // 72, // Action column (stock edit disabled for now).
     ];
     return {
       for (var index = 0; index < widths.length; index++)
@@ -3112,75 +3115,76 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildRackTableCell(
-    Stock stock, {
-    required bool canEditProduct,
-  }) {
-    final bool canEdit = canEditProduct && stock.id != null;
-
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-        child: Center(
-          child: InkWell(
-            onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              height: 28,
-              width: 28,
-              decoration: BoxDecoration(
-                color:
-                    canEdit ? ColorManager.kPrimaryColor : Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(
-                Icons.edit,
-                size: 14,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEditStockRowModal(Stock stock) {
-    if (stock.id == null) {
-      showScaffoldError(
-        context: context,
-        message: 'stock.edit_missing_id'.tr,
-      );
-      return;
-    }
-
-    showEditStockDialog(
-      context: context,
-      stockId: stock.id!,
-      title: 'stock.edit_stock'.tr,
-      initialRetailPrice: stock.price ?? '',
-      initialMrp: stock.mrp ?? '',
-      showMrp: !widget.useBillingProductPermissions ||
-          context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
-      initialPurchasePrice: stock.purchasePrice ?? '',
-      showPurchasePrice: _canViewPurchasePrice(context),
-      initialRack: stock.rack ?? '',
-      onSuccess: (result) async {
-        if (!mounted) return;
-        setState(() {
-          _editedStockRows[stock.id!] = stock.copyWith(
-            price: result.retailPrice,
-            mrp: result.mrp,
-            purchasePrice: _canViewPurchasePrice(context)
-                ? result.purchasePrice
-                : stock.purchasePrice,
-            rack: result.rack,
-          );
-        });
-      },
-    );
-  }
+  // Stock edit disabled for now.
+  // Widget _buildRackTableCell(
+  //   Stock stock, {
+  //   required bool canEditProduct,
+  // }) {
+  //   final bool canEdit = canEditProduct && stock.id != null;
+  //
+  //   return TableCell(
+  //     verticalAlignment: TableCellVerticalAlignment.middle,
+  //     child: Padding(
+  //       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+  //       child: Center(
+  //         child: InkWell(
+  //           onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
+  //           borderRadius: BorderRadius.circular(6),
+  //           child: Container(
+  //             height: 28,
+  //             width: 28,
+  //             decoration: BoxDecoration(
+  //               color:
+  //                   canEdit ? ColorManager.kPrimaryColor : Colors.grey.shade400,
+  //               borderRadius: BorderRadius.circular(6),
+  //             ),
+  //             child: const Icon(
+  //               Icons.edit,
+  //               size: 14,
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+  //
+  // void _showEditStockRowModal(Stock stock) {
+  //   if (stock.id == null) {
+  //     showScaffoldError(
+  //       context: context,
+  //       message: 'stock.edit_missing_id'.tr,
+  //     );
+  //     return;
+  //   }
+  //
+  //   showEditStockDialog(
+  //     context: context,
+  //     stockId: stock.id!,
+  //     title: 'stock.edit_stock'.tr,
+  //     initialRetailPrice: stock.price ?? '',
+  //     initialMrp: stock.mrp ?? '',
+  //     showMrp: !widget.useBillingProductPermissions ||
+  //         context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
+  //     initialPurchasePrice: stock.purchasePrice ?? '',
+  //     showPurchasePrice: _canViewPurchasePrice(context),
+  //     initialRack: stock.rack ?? '',
+  //     onSuccess: (result) async {
+  //       if (!mounted) return;
+  //       setState(() {
+  //         _editedStockRows[stock.id!] = stock.copyWith(
+  //           price: result.retailPrice,
+  //           mrp: result.mrp,
+  //           purchasePrice: _canViewPurchasePrice(context)
+  //               ? result.purchasePrice
+  //               : stock.purchasePrice,
+  //           rack: result.rack,
+  //         );
+  //       });
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
