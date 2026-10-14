@@ -45,6 +45,7 @@ class MobileBillingTab extends StatefulWidget {
   final ValueChanged<DateTime>? onQuotationExpiryDateChanged;
   final TextEditingController? quotationInlineNameController;
   final TextEditingController? quotationInlinePhoneController;
+  final TextEditingController? quotationTermsController;
   final VoidCallback? onQuotationInlineCustomerChanged;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
@@ -69,6 +70,7 @@ class MobileBillingTab extends StatefulWidget {
     this.onQuotationExpiryDateChanged,
     this.quotationInlineNameController,
     this.quotationInlinePhoneController,
+    this.quotationTermsController,
     this.onQuotationInlineCustomerChanged,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
@@ -394,6 +396,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                       onInlineCustomerChanged:
                           widget.onQuotationInlineCustomerChanged ?? () {},
                       onSelectCustomer: () => _navigateToSelectCustomer(context),
+                      termsController: widget.quotationTermsController,
                     ),
                     const SizedBox(height: 12),
                   ] else ...[

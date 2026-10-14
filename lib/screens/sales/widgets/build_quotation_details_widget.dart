@@ -41,7 +41,33 @@ class QuotationDetailWidget extends StatelessWidget {
         _buildItemsSection(context, currency, taxColumns),
         const SizedBox(height: 16),
         _buildSummaryCard(context, currency),
+        if (data.terms?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 16),
+          _buildTermsCard(),
+        ],
       ],
+    );
+  }
+
+  Widget _buildTermsCard() {
+    return QuotationsContentCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          QuotationsSectionTitle(title: 'quotations.terms'.tr),
+          const SizedBox(height: 8),
+          SelectableText(
+            data.terms!.trim(),
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.2,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

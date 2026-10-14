@@ -54,10 +54,12 @@ class QuotationCheckout {
     required DateTime expiryDate,
     required double discount,
     required String comment,
+    String? terms,
     required List<LocalCartItem> cartItems,
   }) {
     final quoteCustomerName = customerName?.trim();
     final quoteCustomerPhone = customerPhone?.trim();
+    final quoteTerms = terms?.trim();
 
     return <String, dynamic>{
       if (hasExistingCustomer) ...{
@@ -76,6 +78,8 @@ class QuotationCheckout {
       'expiry_date': DateFormat('yyyy-MM-dd').format(expiryDate),
       if (discount > 0) 'discount': discount,
       'comment': comment,
+      // Salesperson terms replace the document template's terms on print.
+      if (quoteTerms != null && quoteTerms.isNotEmpty) 'terms': quoteTerms,
       'items': cartItems.map(_itemToMap).toList(),
     };
   }

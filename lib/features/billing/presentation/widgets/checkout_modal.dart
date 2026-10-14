@@ -98,6 +98,7 @@ class CheckoutModal extends StatefulWidget {
   final String? quotationCustomerPhone;
   final DateTime? initialQuotationDate;
   final DateTime? initialQuotationExpiryDate;
+  final String? initialQuotationTerms;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
@@ -136,6 +137,7 @@ class CheckoutModal extends StatefulWidget {
       Map<String, String>? extraMethodValues}) onPaymentUpdated;
   final Function(DateTime quotationDate, DateTime expiryDate)?
       onQuotationDatesUpdated;
+  final ValueChanged<String>? onQuotationTermsUpdated;
 
   final Future<void> Function() onConfirmOrder;
 
@@ -201,6 +203,7 @@ class CheckoutModal extends StatefulWidget {
     this.quotationCustomerPhone,
     this.initialQuotationDate,
     this.initialQuotationExpiryDate,
+    this.initialQuotationTerms,
     required this.onCustomerSelected,
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
@@ -209,6 +212,7 @@ class CheckoutModal extends StatefulWidget {
     this.onDeliveryAddressDetailsUpdated,
     required this.onPaymentUpdated,
     this.onQuotationDatesUpdated,
+    this.onQuotationTermsUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
     this.onConfirmAndWhatsapp,
@@ -241,6 +245,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   final TextEditingController _customerSearchController =
       TextEditingController();
   final TextEditingController _quotationCustomerNameController =
+      TextEditingController();
+  final TextEditingController _quotationTermsController =
       TextEditingController();
   final TextEditingController _quotationCustomerPhoneController =
       TextEditingController();
@@ -421,6 +427,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
       _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
     }
+    _quotationTermsController.text = widget.initialQuotationTerms ?? '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
@@ -548,6 +555,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _customerSearchController.dispose();
     _quotationCustomerNameController.dispose();
     _quotationCustomerPhoneController.dispose();
+    _quotationTermsController.dispose();
     _customerSearchFocusNode.dispose();
     _customerSearchClearFocusNode.dispose();
     _quotationCustomerNameFocusNode.dispose();
@@ -1887,8 +1895,72 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ),
             ],
           ),
+          SizedBox(height: compact ? 8 : 12),
+          _buildQuotationTermsField(),
         ],
       ),
+    );
+  }
+
+  /// Terms typed here print on the quotation instead of the document
+  /// configuration's terms. Left empty, the configured terms still print.
+  Widget _buildQuotationTermsField() {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'checkout_modal.label_quotation_terms'.tr,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 14,
+            vertical: compact ? 8 : 10,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFDDE7F3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: _quotationTermsController,
+            minLines: 2,
+            maxLines: 4,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            onChanged: (value) => widget.onQuotationTermsUpdated?.call(value),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              hintText: 'checkout_modal.hint_quotation_terms'.tr,
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF9CA3AF),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -4541,6 +4613,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       orderSummaryCard,
+                      if (widget.isQuotationMode) ...[
+                        const SizedBox(height: 12),
+                        _buildQuotationTermsField(),
+                      ],
                     ],
                   ),
                 ),

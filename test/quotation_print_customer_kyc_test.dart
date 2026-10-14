@@ -91,6 +91,23 @@ void main() {
           },
         };
 
+    test('salesperson terms print in place of the template terms', () {
+      final withTerms = QuotationDetailsData.fromJson({
+        ...currentResponse(),
+        'terms': ' 50% advance\nValid 15 days ',
+      });
+      expect(withTerms.terms, ' 50% advance\nValid 15 days ');
+      expect(service.buildPrintPayload(withTerms)['termsOverride'],
+          '50% advance\nValid 15 days');
+
+      for (final terms in [null, '', '   ']) {
+        final details =
+            QuotationDetailsData.fromJson({...currentResponse(), 'terms': terms});
+        expect(service.buildPrintPayload(details)['termsOverride'], isNull,
+            reason: 'no entry keeps the document configuration terms');
+      }
+    });
+
     test('current response still parses and prints VAT / CR, no address', () {
       final payload = service
           .buildPrintPayload(QuotationDetailsData.fromJson(currentResponse()));

@@ -49,6 +49,7 @@ class PrintPage extends StatefulWidget {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  final String? termsOverride;
   final String? deliveryMethod;
   final String? deliveryPhone;
   final String? customerAlternatePhone;
@@ -84,6 +85,7 @@ class PrintPage extends StatefulWidget {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.termsOverride,
     this.deliveryMethod,
     this.deliveryPhone,
     this.customerAlternatePhone,
@@ -124,6 +126,7 @@ class PrintPage extends StatefulWidget {
     double? customerCurrentBalance,
     double? paidAmount,
     String? orderComment,
+    String? termsOverride,
     String? deliveryMethod,
     String? deliveryPhone,
     String? customerAlternatePhone,
@@ -299,6 +302,7 @@ class PrintPage extends StatefulWidget {
         customerCurrentBalance: customerCurrentBalance,
         paidAmount: paidAmount,
         orderComment: orderComment,
+        termsOverride: termsOverride,
         deliveryMethod: deliveryMethod,
         deliveryPhone: deliveryPhone ?? customerAlternatePhone,
         customerAlternatePhone: customerAlternatePhone,
@@ -1099,6 +1103,7 @@ class _PrintPageState extends State<PrintPage> {
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      termsOverride: widget.termsOverride,
       deliveryMethod: widget.deliveryMethod,
       deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,
@@ -1214,6 +1219,7 @@ class _PrintPageState extends State<PrintPage> {
       customerCurrentBalance: widget.customerCurrentBalance,
       paidAmount: widget.paidAmount,
       orderComment: widget.orderComment,
+      termsOverride: widget.termsOverride,
       deliveryMethod: widget.deliveryMethod,
       deliveryPhone: widget.deliveryPhone ?? widget.customerAlternatePhone,
       customerAlternatePhone: widget.customerAlternatePhone,

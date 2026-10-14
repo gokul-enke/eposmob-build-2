@@ -62,6 +62,7 @@ class QuotationPrintService {
       customerCrNumber: printPayload['customerCrNumber'] as String?,
       documentConfigType: printPayload['documentConfigType'] as String?,
       orderComment: printPayload['orderComment'] as String?,
+      termsOverride: printPayload['termsOverride'] as String?,
       deliveryMethod: printPayload['deliveryMethod'] as String?,
       isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
       netExcTax: printPayload['netExcTax'] as String?,
@@ -96,6 +97,7 @@ class QuotationPrintService {
             customerCrNumber: printPayload['customerCrNumber'] as String?,
             documentConfigType: printPayload['documentConfigType'] as String?,
             orderComment: printPayload['orderComment'] as String?,
+            termsOverride: printPayload['termsOverride'] as String?,
             deliveryMethod: printPayload['deliveryMethod'] as String?,
             isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
             netExcTax: printPayload['netExcTax'] as String?,
@@ -192,6 +194,10 @@ class QuotationPrintService {
       'documentConfigType': 'Quotation',
       'orderComment': details.expiryDate?.trim().isNotEmpty == true
           ? 'Valid until: ${details.expiryDate}'
+          : null,
+      // Terms typed by the salesperson replace the document template's terms.
+      'termsOverride': details.terms?.trim().isNotEmpty == true
+          ? details.terms!.trim()
           : null,
       'deliveryMethod': deliveryMethod,
       'isDefaultCustomer': isDefaultCustomer,

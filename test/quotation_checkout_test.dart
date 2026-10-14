@@ -124,6 +124,31 @@ void main() {
       expect(payload['customer_phone'], '0500111222');
       expect(payload.containsKey('shipping_cost'), isFalse);
       expect(payload.containsKey('discount'), isFalse);
+      expect(payload.containsKey('terms'), isFalse);
+    });
+
+    test('sends trimmed salesperson terms only when entered', () {
+      Map<String, dynamic> build(String? terms) =>
+          QuotationCheckout.buildPayload(
+            hasExistingCustomer: true,
+            customerId: 42,
+            customerName: 'Acme',
+            customerPhone: null,
+            storeId: 7,
+            deliveryMethodId: null,
+            deliveryCharge: 0,
+            quotationDate: DateTime(2026, 3, 15),
+            expiryDate: DateTime(2026, 4, 15),
+            discount: 0,
+            comment: '',
+            terms: terms,
+            cartItems: const [],
+          );
+
+      expect(build(' Valid 15 days\nNo returns ')['terms'],
+          'Valid 15 days\nNo returns');
+      expect(build('   ').containsKey('terms'), isFalse);
+      expect(build(null).containsKey('terms'), isFalse);
     });
 
     test('includes variant and sale-unit identity for quotation items', () {

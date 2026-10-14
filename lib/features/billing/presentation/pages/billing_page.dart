@@ -293,6 +293,7 @@ class BillingPageState extends State<BillingPage>
   double? _selectedDeliveryCharge;
   DateTime _quotationDate = DateTime.now();
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
+  String _quotationTerms = '';
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -7404,6 +7405,8 @@ class BillingPageState extends State<BillingPage>
               : quotationCustomerPhoneForModal,
           initialQuotationDate: _quotationDate,
           initialQuotationExpiryDate: _quotationExpiryDate,
+          initialQuotationTerms: _quotationTerms,
+          onQuotationTermsUpdated: (terms) => _quotationTerms = terms,
           onQuotationDatesUpdated: (quotationDate, expiryDate) {
             _quotationDate = quotationDate;
             _quotationExpiryDate = expiryDate;
@@ -7749,6 +7752,7 @@ class BillingPageState extends State<BillingPage>
         'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
         if (discountValue > 0) 'discount': discountValue,
         'comment': _commentController.text, // Reusing delivery comment as note
+        if (_quotationTerms.trim().isNotEmpty) 'terms': _quotationTerms.trim(),
         'items': localProductProvider.cartItems.map((item) {
           final productStockId = item.stockGroupIds.length == 1
               ? item.stockGroupIds.first
@@ -7787,6 +7791,7 @@ class BillingPageState extends State<BillingPage>
           final now = DateTime.now();
           _quotationDate = now;
           _quotationExpiryDate = now.add(const Duration(days: 30));
+          _quotationTerms = '';
           if (shouldPrint) {
             final quotationId = _extractCreatedQuotationId(response);
             debugPrint(
