@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/purchases/data/purchase_order_draft_cache.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_order_editable_item.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_order_form_controller.dart';
@@ -219,6 +220,51 @@ void main() {
     expect(h.controller.isPaymentDisabled, isFalse);
     expect(h.completed, 0);
     expect(h.cache.clears, 0);
+    h.controller.dispose();
+  });
+  test('receive 422 already-received is treated as done and refreshes',
+      () async {
+    final h = Harness();
+    h.prepare();
+    await h.controller.initDraftBox();
+    h.controller.purchaseOrderId = 123;
+    h.controller.orderItems.add(h.item(id: 12, receive: true));
+    h.response = {
+      'status': 'failed',
+      'http_status_code': 422,
+      'success': false,
+      'message': 'Item 12 has already been received.'
+    };
+    await h.controller.submitPurchaseOrder();
+    expect(h.errors, isEmpty);
+    expect(h.requests.single['kind'], 'receive');
+    expect(h.refreshes, 1);
+    expect(h.completed, 1);
+    expect(h.cache.clears, 1);
+    expect(h.details, isNull);
+    h.controller.dispose();
+  });
+  test('create blocks a partial receive and sends nothing', () async {
+    final h = Harness();
+    h.prepare();
+    h.controller.orderItems
+        .addAll([h.item(receive: true), h.item(id: 12, receive: false)]);
+    await h.controller.submitPurchaseOrder();
+    expect(h.errors, ['purchase_order.partial_receive_on_create'.tr]);
+    expect(h.requests, isEmpty);
+    expect(h.completed, 0);
+    h.controller.dispose();
+  });
+  test('create allows all items received', () async {
+    final h = Harness();
+    h.prepare();
+    h.controller.orderItems
+        .addAll([h.item(receive: true), h.item(id: 12, receive: true)]);
+    await h.controller.submitPurchaseOrder();
+    expect(h.errors, isEmpty);
+    final rows = h.requests.single['items'] as List;
+    expect(rows.map((r) => r['receive']), [true, true]);
+    expect(h.completed, 1);
     h.controller.dispose();
   });
   test('late product dialog cannot write to disposed controllers', () async {

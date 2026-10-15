@@ -3193,6 +3193,8 @@
     "add_at_least_one_item": "Please add at least one item from the form above",
     "item_must_have_valid_product": "Each item must have a valid product",
     "select_at_least_one_pending": "Please select at least one pending item to receive",
+    "partial_receive_on_create": "Mark all items as received, or none. To receive only some items, save the order first, then receive them from the order.",
+    "items_already_received": "These items were already received. The order has been refreshed.",
     "session_expired": "Session expired. Please login again.",
     "order_received": "Purchase order received",
     "order_created": "Purchase order created",

@@ -23,6 +23,17 @@ extension PurchaseOrderFormControllerOperations5
       return;
     }
 
+    // Backend bug: if add-purchase-order marks only some items received, the
+    // whole order is billed. Until that is fixed, create with all items
+    // received or none; partial receipts go through the receive flow.
+    if (!isReceiveMode) {
+      final receivedCount = orderItems.where((i) => i.receive).length;
+      if (receivedCount > 0 && receivedCount < orderItems.length) {
+        showErrorMessage('purchase_order.partial_receive_on_create'.tr);
+        return;
+      }
+    }
+
     final purchaseTotals = this.purchaseTotals;
 
     // When payment is disabled (PO already fully paid), skip payment entirely.
@@ -260,6 +271,18 @@ extension PurchaseOrderFormControllerOperations5
         errorMessage ??= result?['message']?.toString() ??
             'purchase_order.payment_error_422'.tr;
 
+        // "Item N has already been received." means the receive already
+        // happened (e.g. a repeated request): treat it as done and refresh.
+        if (isReceiveMode &&
+            isAlreadyReceivedPurchaseOrderError(result, errorMessage)) {
+          await _finishSubmission(
+            provider,
+            token,
+            'purchase_order.items_already_received'.tr,
+          );
+          return;
+        }
+
         // Only disable payment if the 422 specifically indicates the PO is
         // already fully paid. Other 422 errors (validation, etc.) should show
         // the error but leave payment inputs functional.
@@ -284,21 +307,14 @@ extension PurchaseOrderFormControllerOperations5
                         'success',
                       ) ??
                   false))) {
-        await clearDraftFromHive();
-        if (!mounted) return;
-        showSuccessMessage(
+        await _finishSubmission(
+          provider,
+          token,
           result['message'] ??
               (isReceiveMode
                   ? 'purchase_order.order_received'.tr
                   : 'purchase_order.order_created'.tr),
         );
-
-        await provider.listPurchaseOrders(accessToken: token, storeId: "all");
-
-        if (!mounted) return;
-        provider.activePurchaseOrderDetails = null;
-
-        if (mounted) ports.onComplete();
       } else {
         showErrorMessage(
           result?['message'] ??
@@ -321,5 +337,22 @@ extension PurchaseOrderFormControllerOperations5
         });
       }
     }
+  }
+
+  Future<void> _finishSubmission(
+    PurchaseFormPurchasePort provider,
+    String token,
+    String message,
+  ) async {
+    await clearDraftFromHive();
+    if (!mounted) return;
+    showSuccessMessage(message);
+
+    await provider.listPurchaseOrders(accessToken: token, storeId: "all");
+
+    if (!mounted) return;
+    provider.activePurchaseOrderDetails = null;
+
+    if (mounted) ports.onComplete();
   }
 }

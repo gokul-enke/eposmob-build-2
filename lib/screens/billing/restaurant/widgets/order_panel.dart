@@ -42,6 +42,8 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
@@ -6347,6 +6349,10 @@ class OrderPanelState extends State<OrderPanel> {
                   }
                 },
           onConfirmAndPrint: () async {
+            debugPrint(
+              '[Confirm&Print] Modal button: mode=$mode '
+              'forCurrentCart=$forCurrentCart',
+            );
             if (mode == CheckoutModalMode.selectionOnly) {
               Navigator.of(dialogContext).pop();
               return;
@@ -7369,8 +7375,21 @@ class OrderPanelState extends State<OrderPanel> {
       customerCurrentBalance: customerCurrentBalance,
       fallbackDeliveryMethod: _deliveryMethod,
     );
+    final billWatch = Stopwatch()..start();
+    debugPrint(
+      '[Confirm&Print] Bill: printing orderNumber=${savedOrder.orderNumber} '
+      'oldBalance=$customerOldBalance currentBalance=$customerCurrentBalance',
+    );
     final success = await printOnce();
+    debugPrint(
+      '[Confirm&Print] Bill: ${success ? 'printed' : 'FAILED'} '
+      'in ${billWatch.elapsedMilliseconds}ms',
+    );
     await _maybePrintCustomerCopy(canPrompt: success, printAction: printOnce);
+    debugPrint(
+      '[Confirm&Print] Bill: customer-copy step done at '
+      '${billWatch.elapsedMilliseconds}ms',
+    );
   }
 
   Future<void> _printOfflineSavedOrderKot(SavedOrder savedOrder) async {
@@ -7399,6 +7418,24 @@ class OrderPanelState extends State<OrderPanel> {
     final showTableLabel = widget.tableId != null;
     final comment = savedOrder.comment?.trim();
 
+    final kotWatch = Stopwatch()..start();
+    // Mirrors KotPrintPage.autoPrint's lookup: it returns true without
+    // printing when this config is inactive, so log the state up front.
+    final docConfigProvider =
+        Provider.of<DocumentConfigProvider>(context, listen: false);
+    final kotConfig = docConfigProvider.getCachedConfig('Kitchen Order') ??
+        docConfigProvider.getCachedConfig('kitchen_order');
+    final kotConfigState = kotConfig == null
+        ? 'NOT LOADED (autoPrint will fail)'
+        : isKotDocumentConfigEnabled(kotConfig)
+            ? 'active'
+            : 'INACTIVE (autoPrint skips printing but returns true)';
+    debugPrint(
+      '[Confirm&Print] KOT: printing orderNumber=${savedOrder.orderNumber} '
+      'table="$tableName" showTableLabel=$showTableLabel '
+      'items=${printItems.length} hasComment=${comment?.isNotEmpty ?? false} '
+      'kotDocConfig=$kotConfigState',
+    );
     final success = await KotPrintPage.autoPrint(
       context,
       orderNumber: savedOrder.orderNumber,
@@ -7408,8 +7445,15 @@ class OrderPanelState extends State<OrderPanel> {
       items: printItems,
       comment: comment != null && comment.isNotEmpty ? comment : null,
     );
+    final kotPrinted =
+        success && kotConfig != null && isKotDocumentConfigEnabled(kotConfig);
+    debugPrint(
+      '[Confirm&Print] KOT: ${kotPrinted ? 'printed' : success ? 'NOT printed (KOT document config inactive)' : 'auto-print FAILED'} '
+      'in ${kotWatch.elapsedMilliseconds}ms',
+    );
 
     if (!success && mounted) {
+      debugPrint('[Confirm&Print] KOT: opening manual KOT print page');
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -7583,6 +7627,12 @@ class OrderPanelState extends State<OrderPanel> {
     required bool printBill,
     bool whatsappReceipt = false,
   }) async {
+    final logTag = whatsappReceipt
+        ? '[Confirm&WhatsApp]'
+        : printBill
+            ? '[Confirm&Print]'
+            : '[ConfirmOrder]';
+    final confirmWatch = Stopwatch()..start();
     // Offline there is no send-to-kitchen, so a table or delivery order is
     // confirmed here too, as the removed offline Save & Print allowed.
     final isOffline =
@@ -7592,7 +7642,14 @@ class OrderPanelState extends State<OrderPanel> {
         _deliveryMethodId.trim().isNotEmpty;
     final isCounterBilling =
         widget.allowCounterBilling && widget.isCounterBillingMode;
+    debugPrint(
+      '$logTag Confirm cart: isOffline=$isOffline '
+      'isCounterBilling=$isCounterBilling '
+      'hasOfflineOrderContext=$hasOfflineOrderContext '
+      'tableId=${widget.tableId} deliveryMethodId=$_deliveryMethodId',
+    );
     if (!isCounterBilling && !(isOffline && hasOfflineOrderContext)) {
+      debugPrint('$logTag Abort: quick counter disabled and not offline order');
       showScaffoldError(
         context: context,
         message: 'restaurant.quick_counter_disabled'.tr,
@@ -7603,8 +7660,12 @@ class OrderPanelState extends State<OrderPanel> {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
-    if (!ensureCouponValidForCheckout(context, localProductProvider)) return false;
+    if (!ensureCouponValidForCheckout(context, localProductProvider)) {
+      debugPrint('$logTag Abort: applied coupon is no longer valid');
+      return false;
+    }
     if (cartItems.isEmpty) {
+      debugPrint('$logTag Abort: cart is empty');
       showScaffoldError(
           context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
@@ -7614,10 +7675,16 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
+      debugPrint('$logTag Abort: no customer selected');
       showScaffoldError(
           context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
+    debugPrint(
+      '$logTag Validated: items=${cartItems.length} '
+      'customerId=${_selectedCustomer?.id ?? _selectedCustomerID} '
+      'customerPhone=$customerPhone',
+    );
 
     setState(() {
       _isLoadingConfirm = true;
@@ -7630,6 +7697,7 @@ class OrderPanelState extends State<OrderPanel> {
       if (ecommerceEnabled &&
           DeliveryMethodRegistry.requiresAddress(deliveryMethodForDraft) &&
           _deliveryPincode.trim().isEmpty) {
+        debugPrint('$logTag Abort: delivery pincode required');
         showScaffoldError(
           context: context,
           message: 'checkout_modal.msg_pincode_required'.tr,
@@ -7655,6 +7723,11 @@ class OrderPanelState extends State<OrderPanel> {
       }
       final receiptIdentity =
           await ReceiptIdentityService.instance.issue(storeId: storeId);
+      debugPrint(
+        '$logTag Receipt identity: storeId=$storeId '
+        'receiptNumber=${receiptIdentity.receiptNumber} '
+        'clientSaleId=${receiptIdentity.clientSaleId}',
+      );
       final payload = _buildRestaurantConfirmedPayload(
         localProductProvider,
         receiptIdentity,
@@ -7671,6 +7744,15 @@ class OrderPanelState extends State<OrderPanel> {
           Provider.of<AppSettingsProvider>(context, listen: false);
       final attemptServerSync =
           Provider.of<BillingProvider>(context, listen: false).hasInternet;
+      final enableKOTPrint =
+          appSettingsProvider.appSettings?.enableKOTPrint ?? true;
+      debugPrint(
+        '$logTag Submitting: mode=${appSettingsProvider.saleConfirmationMode} '
+        'attemptServerSync=$attemptServerSync printBill=$printBill '
+        'enableKOTPrint=$enableKOTPrint '
+        'total=${localProductProvider.priceSummary?.netTotal} '
+        'deliveryCharge=${_getDeliveryChargeForOrder()}',
+      );
 
       final result = await LocalFirstSaleCoordinator(
         LocalSaleSyncService.instance,
@@ -7710,14 +7792,23 @@ class OrderPanelState extends State<OrderPanel> {
         },
         printLocalReceipt: printBill
             ? (sale) async {
+                debugPrint(
+                  '$logTag Print step: orderNumber=${sale.orderNumber} '
+                  'localId=${sale.id} items=${sale.items.length}',
+                );
                 await _printOfflineSavedOrderBill(
                   sale,
                   customerOldBalance: receiptBalance.oldBalance,
                   customerCurrentBalance: receiptBalance.currentBalance,
                 );
-                if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+                if (enableKOTPrint) {
                   await _printOfflineSavedOrderKot(sale);
+                } else {
+                  debugPrint('$logTag KOT skipped: enableKOTPrint=false');
                 }
+                debugPrint(
+                  '$logTag Print step done at ${confirmWatch.elapsedMilliseconds}ms',
+                );
               }
             : null,
         withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
@@ -7738,18 +7829,28 @@ class OrderPanelState extends State<OrderPanel> {
         },
       );
 
+      debugPrint(
+        '$logTag Result in ${confirmWatch.elapsedMilliseconds}ms: '
+        'orderNumber=${result.localSale.orderNumber} '
+        'needsAttention=${result.needsAttention} '
+        'printError=${result.printError} message="${result.message}"',
+      );
       (result.needsAttention ? showScaffoldError : showScaffold)(
         context: context,
         message: result.message,
       );
       return true;
     } on OnlineSaleNotConfirmed catch (error) {
+      debugPrint(
+        '$logTag Not confirmed by server after '
+        '${confirmWatch.elapsedMilliseconds}ms: ${error.message}',
+      );
       if (mounted) {
         showScaffoldError(context: context, message: error.message);
       }
       return false;
-    } catch (e) {
-      debugPrint('Error confirming counter order: $e');
+    } catch (e, stackTrace) {
+      debugPrint('$logTag Error confirming counter order: $e\n$stackTrace');
       showScaffoldError(
         context: context,
         message: 'restaurant.failed_confirm_counter_order'
@@ -8043,7 +8144,12 @@ class OrderPanelState extends State<OrderPanel> {
     bool printBill = true,
     bool whatsappReceipt = false,
   }) async {
-    if (_isLoadingConfirm) return;
+    if (_isLoadingConfirm) {
+      debugPrint(
+        '[Confirm&Print] Direct confirm ignored: a confirm is already running',
+      );
+      return;
+    }
 
     debugPrint(
       whatsappReceipt
@@ -8066,6 +8172,15 @@ class OrderPanelState extends State<OrderPanel> {
       _hasOpenedPaymentModalOnce = true;
       _balanceAmount = _calculateBalanceAmount();
     });
+    if (printBill && !whatsappReceipt) {
+      debugPrint(
+        '[Confirm&Print] Defaults applied: deliveryMethod=$_deliveryMethod '
+        '($_deliveryMethodId) cash=$_isCashSelected:$_cashAmount '
+        'card=$_isCardSelected:$_cardAmount upi=$_isUpiSelected:$_upiAmount '
+        'cod=$_isCodSelected:$_codAmount debit=$_isDebitSelected:$_debitAmount '
+        'balance=$_balanceAmount',
+      );
+    }
 
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
@@ -8130,12 +8245,23 @@ class OrderPanelState extends State<OrderPanel> {
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
+    if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) {
+      debugPrint('[Confirm&Print] Ignored: button disabled in app settings');
+      return;
+    }
 
+    debugPrint(
+      '[Confirm&Print] Start: skipCheckout=$_skipCheckoutOnConfirmAndPrint '
+      'cartItems=${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length} '
+      'tableId=${widget.tableId} deliveryMethodId=$_deliveryMethodId '
+      'enableKOTPrint=${appSettings?.enableKOTPrint ?? true}',
+    );
     if (_skipCheckoutOnConfirmAndPrint) {
+      debugPrint('[Confirm&Print] Route: direct confirm (no checkout modal)');
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
+    debugPrint('[Confirm&Print] Route: opening checkout modal');
     showCheckoutFromParent(forCurrentCart: true);
   }
 
@@ -8165,6 +8291,13 @@ class OrderPanelState extends State<OrderPanel> {
     final skipCheckout = printBill
         ? _skipCheckoutOnConfirmAndPrint
         : _skipCheckoutOnConfirm;
+    if (printBill) {
+      debugPrint(
+        '[Confirm&Print] Offline start: skipCheckout=$skipCheckout '
+        'allowSkipCheckout=$allowSkipCheckout initialStep=$initialStep '
+        '-> ${allowSkipCheckout && skipCheckout ? 'direct confirm' : 'checkout modal'}',
+      );
+    }
     if (allowSkipCheckout && skipCheckout) {
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal(
         printBill: printBill,

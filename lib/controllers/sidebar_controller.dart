@@ -1,4 +1,5 @@
 import 'package:pos_machine/features/sales/presentation/pages/sales_list_page.dart';
+import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:get/get.dart';
 import 'package:pos_machine/features/weigh_machine/presentation/weigh_machine_export_page.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
@@ -263,7 +264,11 @@ class SideBarController extends GetxController {
     SuppliersListPage(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersPage(), // confirmedOrdersScreenIndex
+    // Each RestaurantPage entry needs its own key: the pages render in the
+    // same slot, so without one Flutter reuses the previous entry's State and
+    // the mode (attender / counter / store) set in initState never changes.
     RestaurantPage(
+      key: ValueKey('restaurant_page_attender'),
       allowCounterBillingFromAttender: false,
       defaultCounterBillingMode: false,
     ), // 55 Restaurant Page (Attender)
@@ -302,6 +307,7 @@ class SideBarController extends GetxController {
     QuotationDetailsScreen(
         quotationId: null), // 88 Quotation Details (ID from Provider)
     RestaurantPage(
+      key: ValueKey('restaurant_page_counter'),
       allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: true,
     ), // 89 Restaurant Billing Page
@@ -313,6 +319,7 @@ class SideBarController extends GetxController {
     ViewExpensePage(), // viewExpenseScreenIndex (95)
     OfflineDataPage(), // 96 Offline Data
     RestaurantPage(
+      key: ValueKey('restaurant_page_store'),
       allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: true,
       storeMode: true,

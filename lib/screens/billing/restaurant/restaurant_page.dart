@@ -52,9 +52,10 @@ class RestaurantPage extends StatefulWidget {
   final bool defaultCounterBillingMode;
 
   /// Store mode (used by the "Store" sidebar entry): the order panel shows
-  /// only the payment summary (no footer action buttons), the Ongoing tab
-  /// is hidden, and the delivery method cannot be chosen — the default
-  /// delivery method is always applied.
+  /// only the payment summary (no footer action buttons — the counter action
+  /// bar takes their place), the Ongoing tab is hidden, and there is no table
+  /// selection. The default delivery method is pre-selected but can still be
+  /// changed from the delivery chip / selector.
   final bool storeMode;
 
   const RestaurantPage({
@@ -321,8 +322,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
           );
         }
       } else if (key == LogicalKeyboardKey.f6) {
+        debugPrint(
+          '[Confirm&Print] F6 pressed: hasInternet=$hasInternet '
+          'showButton=$showConfirmAndPrintButton '
+          'disabled=$disableCounterConfirmActions '
+          'panelReady=${orderPanelState != null}',
+        );
         if (disableCounterConfirmActions) return;
-        if (hasInternet && !showConfirmAndPrintButton) return;
+        if (hasInternet && !showConfirmAndPrintButton) {
+          debugPrint('[Confirm&Print] F6 ignored: button hidden in app settings');
+          return;
+        }
         if (hasInternet) {
           orderPanelState?.showCurrentCartConfirmAndPrintFromParent();
         } else {
@@ -947,8 +957,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         color: const Color(0xFF5B8DEF),
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
-                        onPressed: () =>
-                            _orderPanelKey.currentState?.showCurrentCartConfirmAndPrintFromParent(),
+                        onPressed: () {
+                          debugPrint(
+                            '[Confirm&Print] Button tapped (online): '
+                            'panelReady=${_orderPanelKey.currentState != null}',
+                          );
+                          _orderPanelKey.currentState?.showCurrentCartConfirmAndPrintFromParent();
+                        },
                       ),
                       if (showFooterConfirmOrder) const SizedBox(width: 12),
                     ],
@@ -969,8 +984,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableConfirmActions,
                       isLoading: isCheckoutActionLoading,
-                      onPressed: () =>
-                          _orderPanelKey.currentState?.showOfflineConfirmCheckoutFromParent(),
+                      onPressed: () {
+                        debugPrint(
+                          '[Confirm&Print] Button tapped (offline): '
+                          'panelReady=${_orderPanelKey.currentState != null}',
+                        );
+                        _orderPanelKey.currentState?.showOfflineConfirmCheckoutFromParent();
+                      },
                     ),
                   if (showConfirmAndWhatsappButton) ...[
                     if (hasConfirmOrPrintAction) const SizedBox(width: 12),
@@ -1117,6 +1137,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
     bool whatsappReceipt = false,
   }) {
     if (!mounted) return;
+    if (printBill && !whatsappReceipt) {
+      debugPrint('[Confirm&Print] Footer loading=$isLoading');
+    }
     setState(() {
       if (whatsappReceipt) {
         _isLoadingCounterConfirmAndWhatsapp = isLoading;
@@ -2251,83 +2274,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildTopBarCounterToggle({required bool isCompact}) {
-    final isEnabled = _isCounterBillingMode;
-
-    return Tooltip(
-      message:
-          isEnabled ? 'restaurant.disable_quick_counter'.tr : 'restaurant.enable_quick_counter'.tr,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _setCounterBillingMode(!isEnabled),
-          borderRadius: BorderRadius.circular(999),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 10 : 14,
-              vertical: isCompact ? 8 : 9,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: const Color(0xFFCBD5E1),
-                width: 1.2,
-              ),
-              boxShadow: const [],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.point_of_sale_rounded,
-                  size: isCompact ? 15 : 16,
-                  color: const Color(0xFF64748B),
-                ),
-                SizedBox(width: isCompact ? 6 : 8),
-                Text(
-                  isCompact ? (isEnabled ? 'Counter On' : 'Counter') : 'Quick Counter',
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    isCompact ? FontSize.s12 : FontSize.s13,
-                    0.21,
-                    const Color(0xFF0F766E),
-                  ),
-                ),
-                SizedBox(width: isCompact ? 8 : 10),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isCompact ? 30 : 34,
-                  height: isCompact ? 16 : 18,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    alignment: isEnabled ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      width: isCompact ? 12 : 14,
-                      height: isCompact ? 12 : 14,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF94A3B8),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTopBarNewOrderButton({bool isCompact = false}) {
     return SizedBox(
       height: isCompact ? 30 : 34,
@@ -2406,6 +2352,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             screenSize: screenSize,
             selectedOrder: _selectedOrderFromOrderPanel,
             headerTitle: _menuTitle,
+            storeMode: widget.storeMode,
           ),
         ),
         _buildMobileCartBar(),
@@ -2938,6 +2885,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         screenSize: MediaQuery.of(context).size,
                         selectedOrder: _selectedOrderFromOrderPanel,
                         headerTitle: _menuTitle,
+                        storeMode: widget.storeMode,
                       ),
                     ),
                     // Pinned "View Order" footer (local cart only; hidden
@@ -2998,32 +2946,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
         },
       ),
     );
-  }
-
-  void _setCounterBillingMode(bool enabled) {
-    if (!widget.allowCounterBillingFromAttender) {
-      showScaffoldError(
-        context: context,
-        message: 'restaurant.counter_billing_disabled'.tr,
-      );
-      return;
-    }
-
-    if (!enabled) {
-      setState(() {
-        _isCounterBillingMode = false;
-      });
-      _orderPanelKey.currentState?.resetPaymentModalFlag();
-      _orderPanelKey.currentState?.showCurrentOrderTab();
-      return;
-    }
-
-    setState(() {
-      _isCounterBillingMode = true;
-    });
-    _applyDefaultCounterDeliveryMethodContext();
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
-    _orderPanelKey.currentState?.showCurrentOrderTab();
   }
 
   void _startNewCounterOrder() {
@@ -3101,6 +3023,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
             // Wait for server update then refresh the selected order and list silently
             await Future.delayed(const Duration(milliseconds: 1000));
+            if (!mounted) return itemWasAdded;
             setState(() {
               _refreshCounter = (_refreshCounter ?? 0) + 1;
             });
@@ -3156,7 +3079,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ? 'restaurant.added_to_table'
                       .tr
                       .replaceAll('@product', product.productName ?? '')
-                      .replaceAll('@table', _activeTableId.toString())
+                      .replaceAll('@table', _selectedTableName ?? _activeTableId!)
                   : 'restaurant.added_to_order'
                       .tr
                       .replaceAll('@product', product.productName ?? ''),
@@ -3168,10 +3091,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
         }
       }
     } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'restaurant.failed_add_item_error'.tr.replaceAll('@error', e.toString()),
-      );
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'restaurant.failed_add_item_error'.tr.replaceAll('@error', e.toString()),
+        );
+      }
     }
 
     if (itemWasAdded && mounted) {
@@ -3284,9 +3209,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (response["order_id"] != null) {
         showScaffold(
           context: context,
+          // Show the table / delivery name, never the raw id or "null".
           message: 'restaurant.order_sent_kitchen_success'
               .tr
-              .replaceAll('@table', _activeTableId.toString())
+              .replaceAll(
+                '@table',
+                _selectedTableName ??
+                    DeliveryMethodDisplay.labelForIdOrName(
+                      _selectedDeliveryMethodId,
+                      _selectedDeliveryMethodName,
+                    ),
+              )
               .replaceAll('@orderId', response["order_id"].toString()),
         );
 
@@ -3450,6 +3383,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         accessToken: Provider.of<AuthModel>(context, listen: false).token ?? '',
       );
     }
+    if (!mounted) return;
 
     // Deselect active order context
     setState(() {
@@ -3473,6 +3407,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<void> _sendOrderToKitchenWithLoading() async {
+    // A second tap before the button rebuilds would create a duplicate order.
+    if (_isLoadingSendToKitchen || _isLoadingPrint || _isLoadingKotBill) return;
     setState(() {
       _isLoadingSendToKitchen = true;
     });
@@ -3494,7 +3430,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<void> _sendKotBillWithLoading() async {
-    if (_isLoadingKotBill) return;
+    if (_isLoadingKotBill || _isLoadingSendToKitchen || _isLoadingPrint) return;
     final appSettings = Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!_isKotBillEnabled(appSettings)) {
       showScaffoldError(
@@ -3540,22 +3476,26 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Future<void> _printOrderWithLoading() async {
-    if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
-      return;
-    }
-    if (_activeTableId == null && _selectedDeliveryMethodId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'restaurant.select_table_first'.tr,
-      );
-      return;
-    }
-
+    // Mark loading before the first await so a double tap during the
+    // subscription check cannot send the same cart to the kitchen twice.
+    if (_isLoadingPrint || _isLoadingSendToKitchen || _isLoadingKotBill) return;
     setState(() {
       _isLoadingPrint = true;
     });
 
     try {
+      if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
+        return;
+      }
+      if (!mounted) return;
+      if (_activeTableId == null && _selectedDeliveryMethodId == null) {
+        showScaffoldError(
+          context: context,
+          message: 'restaurant.select_table_first'.tr,
+        );
+        return;
+      }
+
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
       final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
@@ -3777,42 +3717,86 @@ class _RestaurantPageState extends State<RestaurantPage> {
       debugPrint(
           '💾 Auto-saving cart for ${_activeTableId ?? _selectedDeliveryMethodName} before switch (${cartItems.length} items)');
 
-      // Auto-save as pending draft with tableId or deliveryMethodId
-      localProductProvider.saveCurrentCartAsOrder(
-        customerName: orderPanelState?.selectedCustomerNameForDraft,
-        customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
-        comment: (() {
-          final draftComment = orderPanelState?.buildTaggedDraftComment(_activeTableId ?? '');
-          if (draftComment == null) return null;
-          final trimmed = draftComment.trim();
-          return trimmed.isNotEmpty ? trimmed : null;
-        })(),
-        deliveryMethod: orderPanelState?.deliveryMethodForDraft,
-        customerId: orderPanelState?.selectedCustomerIdForDraft,
-        paymentMethod: orderPanelState?.paymentMethodForDraft,
-        paidAmount: orderPanelState?.paidAmountForDraft,
-        balanceAmount: orderPanelState?.balanceAmountForDraft,
-        transactionId: orderPanelState?.transactionNumberForDraft,
-        couponId: orderPanelState?.couponIdForDraft,
-        deliveryMethodId: _selectedDeliveryMethodId ?? orderPanelState?.deliveryMethodIdForDraft,
-        carNumber: orderPanelState?.carNumberForDraft,
-        status: 'pending',
-        deliveryDate: orderPanelState?.deliveryDateForDraft,
-        deliveryTime: orderPanelState?.deliveryTimeForDraft,
-        toCustomerCredit: orderPanelState?.toCustomerCreditForDraft,
-        context: context,
-        tableId: _activeTableId,
-        address: orderPanelState?.deliveryAddressForDraft,
-        deliveryCharge: orderPanelState?.deliveryChargeForDraft,
-        alternatePhone: orderPanelState?.selectedCustomerAlternatePhoneForDraft,
-        customerVatNumber: orderPanelState?.selectedCustomerVatNumberForDraft,
-        customerCrNumber: orderPanelState?.selectedCustomerCrNumberForDraft,
-        customerType: orderPanelState?.selectedCustomerTypeForDraft,
-      );
+      final draftComment = (() {
+        final raw = orderPanelState?.buildTaggedDraftComment(_activeTableId ?? '');
+        if (raw == null) return null;
+        final trimmed = raw.trim();
+        return trimmed.isNotEmpty ? trimmed : null;
+      })();
+      final deliveryMethodId =
+          _selectedDeliveryMethodId ?? orderPanelState?.deliveryMethodIdForDraft;
+
+      // A loaded local draft is updated in place (same as the order panel's
+      // Save button); otherwise switching away would leave a duplicate draft.
+      final loadedDraftId = orderPanelState?.loadedLocalDraftId ??
+          _editingLocalDraft?.id ??
+          localProductProvider.currentOrder?.id;
+      if (loadedDraftId != null && localProductProvider.findOrderById(loadedDraftId) != null) {
+        localProductProvider.updateSavedOrder(
+          loadedDraftId,
+          customerName: orderPanelState?.selectedCustomerNameForDraft,
+          customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
+          comment: draftComment,
+          deliveryMethod: orderPanelState?.deliveryMethodForDraft,
+          customerId: orderPanelState?.selectedCustomerIdForDraft,
+          paymentMethod: orderPanelState?.paymentMethodForDraft,
+          paidAmount: orderPanelState?.paidAmountForDraft,
+          balanceAmount: orderPanelState?.balanceAmountForDraft,
+          transactionId: orderPanelState?.transactionNumberForDraft,
+          couponId: orderPanelState?.couponIdForDraft,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: orderPanelState?.carNumberForDraft,
+          status: 'pending',
+          deliveryDate: orderPanelState?.deliveryDateForDraft,
+          deliveryTime: orderPanelState?.deliveryTimeForDraft,
+          toCustomerCredit: orderPanelState?.toCustomerCreditForDraft,
+          context: context,
+          tableId: _activeTableId,
+          address: orderPanelState?.deliveryAddressForDraft,
+          deliveryCharge: orderPanelState?.deliveryChargeForDraft,
+          alternatePhone: orderPanelState?.selectedCustomerAlternatePhoneForDraft,
+          customerVatNumber: orderPanelState?.selectedCustomerVatNumberForDraft,
+          customerCrNumber: orderPanelState?.selectedCustomerCrNumberForDraft,
+          customerType: orderPanelState?.selectedCustomerTypeForDraft,
+          quotationId: localProductProvider.currentOrder?.quotationId,
+          quotationNumber: localProductProvider.currentOrder?.quotationNumber,
+        );
+      } else {
+        // Auto-save as pending draft with tableId or deliveryMethodId
+        localProductProvider.saveCurrentCartAsOrder(
+          customerName: orderPanelState?.selectedCustomerNameForDraft,
+          customerPhone: orderPanelState?.selectedCustomerPhoneForDraft,
+          comment: draftComment,
+          deliveryMethod: orderPanelState?.deliveryMethodForDraft,
+          customerId: orderPanelState?.selectedCustomerIdForDraft,
+          paymentMethod: orderPanelState?.paymentMethodForDraft,
+          paidAmount: orderPanelState?.paidAmountForDraft,
+          balanceAmount: orderPanelState?.balanceAmountForDraft,
+          transactionId: orderPanelState?.transactionNumberForDraft,
+          couponId: orderPanelState?.couponIdForDraft,
+          deliveryMethodId: deliveryMethodId,
+          carNumber: orderPanelState?.carNumberForDraft,
+          status: 'pending',
+          deliveryDate: orderPanelState?.deliveryDateForDraft,
+          deliveryTime: orderPanelState?.deliveryTimeForDraft,
+          toCustomerCredit: orderPanelState?.toCustomerCreditForDraft,
+          context: context,
+          tableId: _activeTableId,
+          address: orderPanelState?.deliveryAddressForDraft,
+          deliveryCharge: orderPanelState?.deliveryChargeForDraft,
+          alternatePhone: orderPanelState?.selectedCustomerAlternatePhoneForDraft,
+          customerVatNumber: orderPanelState?.selectedCustomerVatNumberForDraft,
+          customerCrNumber: orderPanelState?.selectedCustomerCrNumberForDraft,
+          customerType: orderPanelState?.selectedCustomerTypeForDraft,
+        );
+      }
 
       debugPrint('✅ Auto-saved pending draft for ${_activeTableId ?? _selectedDeliveryMethodName}');
       localProductProvider.clearCart();
       localProductProvider.clearCurrentOrder();
+      // The draft now belongs to the context we are leaving; callers rebuild
+      // right after, so the top bar stops showing "Edit Draft".
+      _editingLocalDraft = null;
     } catch (e) {
       debugPrint('❌ Error auto-saving cart: $e');
     }
