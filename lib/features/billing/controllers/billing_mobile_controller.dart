@@ -1280,6 +1280,7 @@ class BillingMobileController {
     required DateTime expiryDate,
     required String inlineCustomerName,
     required String inlineCustomerPhone,
+    String terms = '',
   }) async {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
@@ -1352,6 +1353,7 @@ class BillingMobileController {
         expiryDate: expiryDate,
         discount: discountValue,
         comment: billingProvider.commentController.text,
+        terms: terms,
         cartItems: localProductProvider.cartItems,
       );
 

@@ -39,7 +39,7 @@ class ReceiptContractDelegate {
 /// their own language and visibility rules.  Those implementations are kept
 /// in the repository for backwards compatibility and visual reference, but
 /// the production factory routes them through this adapter so every selected
-/// theme uses the same normalized 61-key contract, three language modes, data
+/// theme uses the same normalized configuration contract, three language modes, data
 /// sources, section order, and strict visibility semantics.
 ///
 /// A theme can later provide a distinct visual renderer by replacing its

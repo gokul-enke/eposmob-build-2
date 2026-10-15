@@ -15,6 +15,8 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
@@ -90,6 +92,8 @@ class _AddProductWithBarcodeModalState
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+  final TextEditingController _supplierSearchController =
+      TextEditingController();
   final TextEditingController _baseConversionRateController =
       TextEditingController(text: '1');
   final Map<int, TextEditingController> _languageNameControllers = {};
@@ -109,6 +113,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _minMarginPriceFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _supplierFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
 
   bool isLoading = false;
@@ -118,6 +123,10 @@ class _AddProductWithBarcodeModalState
   String? _confirmedDuplicateBarcode;
   String? selectedUnit;
   Category? selectedCategory;
+  // Optional supplier for the opening stock; only offered when quantity > 0.
+  Supplier? _selectedSupplier;
+  bool _suppliersRequested = false;
+  bool _hasOpeningQuantity = false;
   bool isValidatedOnce = false;
   bool _showAdvancedOptions = false;
   bool _showSaleUnitValidation = false;
@@ -141,6 +150,7 @@ class _AddProductWithBarcodeModalState
     super.initState();
 
     _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
+    _productQuantityController.addListener(_handleQuantityChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -177,6 +187,46 @@ class _AddProductWithBarcodeModalState
       debugPrint('⚠️ fetchProductProperties failed: $e');
     } finally {
       if (mounted) setState(() => _isLoadingVariantProperties = false);
+    }
+  }
+
+  void _handleQuantityChange() {
+    final hasQuantity =
+        (num.tryParse(_productQuantityController.text.trim()) ?? 0) > 0;
+    if (hasQuantity == _hasOpeningQuantity) return;
+    setState(() {
+      _hasOpeningQuantity = hasQuantity;
+      if (!hasQuantity) {
+        _selectedSupplier = null;
+        _supplierSearchController.clear();
+      }
+    });
+    if (hasQuantity) _fetchSuppliers();
+  }
+
+  Future<void> _fetchSuppliers() async {
+    if (_suppliersRequested) return;
+    final supplierProvider = Provider.of<SupplierProvider>(
+      context,
+      listen: false,
+    );
+    if (supplierProvider.allSuppliers?.isNotEmpty ?? false) return;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) return;
+
+    _suppliersRequested = true;
+    try {
+      await supplierProvider.fetchSuppliers(accessToken: accessToken);
+      // fetchSuppliers swallows most errors and leaves the list empty; allow
+      // a retry the next time an opening quantity is entered.
+      if (supplierProvider.allSuppliers?.isEmpty ?? true) {
+        _suppliersRequested = false;
+      }
+    } catch (e) {
+      _suppliersRequested = false;
+      debugPrint('⚠️ fetchSuppliers failed: $e');
     }
   }
 
@@ -1141,6 +1191,7 @@ class _AddProductWithBarcodeModalState
     _productMinMarginPriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+    _supplierSearchController.dispose();
     _baseConversionRateController.dispose();
 
     for (final controller in _languageNameControllers.values) {
@@ -1168,6 +1219,7 @@ class _AddProductWithBarcodeModalState
     _minMarginFocusNode.dispose();
     _minMarginPriceFocusNode.dispose();
     _unitFocusNode.dispose();
+    _supplierFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
 
@@ -1615,7 +1667,11 @@ class _AddProductWithBarcodeModalState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Expanded(child: SizedBox()),
+                      Expanded(
+                        child: _hasOpeningQuantity
+                            ? _buildSupplierDropdown(size)
+                            : const SizedBox(),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -2257,6 +2313,49 @@ class _AddProductWithBarcodeModalState
               style: TextStyle(color: Colors.red[700], fontSize: 11),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildSupplierDropdown(Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'product_form.supplier'.tr,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Consumer<SupplierProvider>(
+          builder: (context, supplierProvider, child) {
+            final suppliers = supplierProvider.allSuppliers ?? const [];
+            final selected = _selectedSupplier == null
+                ? null
+                : suppliers
+                    .where((s) => s.id == _selectedSupplier!.id)
+                    .firstOrNull;
+            return CustomDropDownWithSearch<Supplier>(
+              focusNode: _supplierFocusNode,
+              title: '',
+              hintText: 'product_form.select_supplier'.tr,
+              value: selected,
+              height: size.height * 0.048,
+              margin: EdgeInsets.zero,
+              items: suppliers,
+              onChanged: (Supplier? supplier) {
+                setState(() => _selectedSupplier = supplier);
+              },
+              displayText: (supplier) => supplier.name,
+              searchController: _supplierSearchController,
+              autofocus: false,
+            );
+          },
+        ),
       ],
     );
   }
@@ -2949,6 +3048,7 @@ class _AddProductWithBarcodeModalState
           mrp: _productMRPController.text,
           unit: selectedUnit!,
           quantity: _productQuantityController.text,
+          supplierId: _hasOpeningQuantity ? _selectedSupplier?.id : null,
           barcode: _productBarcodeController.text,
           accessToken: accessToken ?? "",
           purchasePrice: _canViewPurchasePrice()
@@ -3082,6 +3182,8 @@ class _AddProductWithBarcodeModalState
       _confirmedDuplicateBarcode = null;
       selectedUnit = null;
       selectedCategory = null;
+      _selectedSupplier = null;
+      _supplierSearchController.clear();
       isValidatedOnce = false;
       _showAdvancedOptions = false;
       _showSaleUnitValidation = false;

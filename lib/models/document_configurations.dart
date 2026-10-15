@@ -258,6 +258,15 @@ class DocumentConfig {
 
   bool get isEnabled => isActive == null || isActive == 1;
 
+  /// Presence (including an explicit false) identifies the two-column API.
+  /// Older cached documents retain their original single Tax column mode.
+  bool get hasSeparateItemTaxColumns =>
+      displayConfiguration?.options?.containsKey('showRowTotalTaxHeader') ==
+      true;
+
+  ItemTaxDisplayMode get taxHeaderDisplayMode =>
+      hasSeparateItemTaxColumns ? ItemTaxDisplayMode.unit : itemTaxDisplayMode;
+
   static int? _parseIntegerFlag(dynamic value) {
     if (value == null) return null;
     if (value is bool) return value ? 1 : 0;
@@ -391,6 +400,7 @@ class ResolvedLabels {
   final String? balance;
   final String? status;
   final String? tax;
+  final String? rowTotalTax;
   // Supplier Statement specific fields (aliased from 'item' in API)
   final String? item;
   // Bill specific fields
@@ -430,6 +440,7 @@ class ResolvedLabels {
   final String? unitNameDefault;
   final String? totalDefault;
   final String? taxDefault;
+  final String? rowTotalTaxDefault;
 
   ResolvedLabels({
     this.additionalLabels = const {},
@@ -447,6 +458,7 @@ class ResolvedLabels {
     this.balance,
     this.status,
     this.tax,
+    this.rowTotalTax,
     this.item,
     this.particulars,
     this.mrp,
@@ -481,6 +493,7 @@ class ResolvedLabels {
     this.unitNameDefault,
     this.totalDefault,
     this.taxDefault,
+    this.rowTotalTaxDefault,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
@@ -499,6 +512,7 @@ class ResolvedLabels {
         balance: json["balance"],
         status: json["status"],
         tax: json["tax"],
+        rowTotalTax: json["row_total_tax"],
         item: json[
             "item"], // Supplier Statement uses 'item' instead of 'item_name'
         particulars: json["particulars"],
@@ -534,6 +548,7 @@ class ResolvedLabels {
         unitNameDefault: json["unit_name_default"] ?? json["unit_default"],
         totalDefault: json["total_default"],
         taxDefault: json["tax_default"],
+        rowTotalTaxDefault: json["row_total_tax_default"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -552,6 +567,7 @@ class ResolvedLabels {
         "balance": balance,
         "status": status,
         "tax": tax,
+        "row_total_tax": rowTotalTax,
         "item": item,
         "particulars": particulars,
         "mrp": mrp,
@@ -586,6 +602,7 @@ class ResolvedLabels {
         "unit_name_default": unitNameDefault,
         "total_default": totalDefault,
         "tax_default": taxDefault,
+        "row_total_tax_default": rowTotalTaxDefault,
       };
 }
 

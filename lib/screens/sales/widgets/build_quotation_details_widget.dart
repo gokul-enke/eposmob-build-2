@@ -9,8 +9,16 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:provider/provider.dart';
 import 'quotations_responsive.dart';
+
+class _QuotationTaxColumn {
+  const _QuotationTaxColumn(this.label, this.mode);
+
+  final String label;
+  final ItemTaxDisplayMode mode;
+}
 
 class QuotationDetailWidget extends StatelessWidget {
   final QuotationDetailsData data;
@@ -22,20 +30,44 @@ class QuotationDetailWidget extends StatelessWidget {
     final currency =
         Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? '';
     final configs = context.watch<DocumentConfigProvider?>();
-    final taxMode = (configs?.getDocumentConfig('Quotation') ??
-                configs?.getDocumentConfig('quotation'))
-            ?.itemTaxDisplayMode ??
-        ItemTaxDisplayMode.rowTotal;
+    final taxColumns = _taxColumns(configs?.getDocumentConfig('Quotation') ??
+        configs?.getDocumentConfig('quotation'));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInfoCard(context),
         const SizedBox(height: 16),
-        _buildItemsSection(context, currency, taxMode),
+        _buildItemsSection(context, currency, taxColumns),
         const SizedBox(height: 16),
         _buildSummaryCard(context, currency),
+        if (data.terms?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 16),
+          _buildTermsCard(),
+        ],
       ],
+    );
+  }
+
+  Widget _buildTermsCard() {
+    return QuotationsContentCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          QuotationsSectionTitle(title: 'quotations.terms'.tr),
+          const SizedBox(height: 8),
+          SelectableText(
+            data.terms!.trim(),
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.2,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -179,13 +211,53 @@ class QuotationDetailWidget extends StatelessWidget {
         quantity: item.quantity,
       ).toStringAsFixed(2);
 
-  Widget _buildItemsSection(
-      BuildContext context, String currency, ItemTaxDisplayMode taxMode) {
+  List<_QuotationTaxColumn> _taxColumns(DocumentConfig? config) {
+    final options = config?.displayConfiguration?.options;
+    if (config?.hasSeparateItemTaxColumns != true) {
+      return [
+        if (options?['showTaxHeader']?.visible != false)
+          _QuotationTaxColumn('billing.tax'.tr,
+              config?.itemTaxDisplayMode ?? ItemTaxDisplayMode.rowTotal),
+      ];
+    }
+    String label(String key, String english, String arabic,
+            String? resolvedArabic, String? resolvedEnglish) =>
+        ReceiptConfigurationContract.label(
+          options: options,
+          key: key,
+          mode: ReceiptConfigurationContract.languageMode(config?.language),
+          englishFallback: english,
+          arabicFallback: arabic,
+          resolvedArabic: resolvedArabic,
+          resolvedEnglish: resolvedEnglish,
+        );
+    return [
+      if (options?['showTaxHeader']?.visible == true)
+        _QuotationTaxColumn(
+          label('showTaxHeader', 'Tax per unit', 'ضريبة الوحدة',
+              config?.resolvedLabels?.tax, config?.resolvedLabels?.taxDefault),
+          ItemTaxDisplayMode.unit,
+        ),
+      if (options?['showRowTotalTaxHeader']?.visible == true)
+        _QuotationTaxColumn(
+          label(
+              'showRowTotalTaxHeader',
+              'Row Total Tax',
+              'إجمالي ضريبة الصنف',
+              config?.resolvedLabels?.rowTotalTax,
+              config?.resolvedLabels?.rowTotalTaxDefault),
+          ItemTaxDisplayMode.rowTotal,
+        ),
+    ];
+  }
+
+  Widget _buildItemsSection(BuildContext context, String currency,
+      List<_QuotationTaxColumn> taxColumns) {
     final items = data.items ?? [];
     if (items.isEmpty) return const SizedBox.shrink();
 
     if (quotationsIsPhone(context)) {
-      return _buildMobileItemsList(items, currency, taxMode);
+      return _buildMobileItemsList(items, currency, taxColumns);
     }
 
     return QuotationsContentCard(
@@ -203,12 +275,12 @@ class QuotationDetailWidget extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final table = Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(3),
-                    1: FlexColumnWidth(1),
-                    2: FlexColumnWidth(1.5),
-                    3: FlexColumnWidth(1.5),
-                    4: FlexColumnWidth(1.5),
+                  columnWidths: {
+                    0: const FlexColumnWidth(3),
+                    1: const FlexColumnWidth(1),
+                    2: const FlexColumnWidth(1.5),
+                    for (int i = 3; i < 4 + taxColumns.length; i++)
+                      i: const FlexColumnWidth(1.5),
                   },
                   children: [
                     TableRow(
@@ -219,7 +291,7 @@ class QuotationDetailWidget extends StatelessWidget {
                         'confirmed_orders.product'.tr,
                         'billing.table_qty'.tr,
                         'sales.price'.tr,
-                        'billing.tax'.tr,
+                        for (final column in taxColumns) column.label,
                         'billing.total'.tr,
                       ]
                           .map(
@@ -279,18 +351,19 @@ class QuotationDetailWidget extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              "$currency ${_itemTaxText(item, taxMode)}",
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s12,
-                                0.18,
-                                ColorManager.textColor,
+                          for (final column in taxColumns)
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                "$currency ${_itemTaxText(item, column.mode)}",
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s12,
+                                  0.18,
+                                  ColorManager.textColor,
+                                ),
                               ),
                             ),
-                          ),
                           Padding(
                             padding: const EdgeInsets.all(12),
                             child: Text(
@@ -326,8 +399,8 @@ class QuotationDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileItemsList(
-      List<QuotationItem> items, String currency, ItemTaxDisplayMode taxMode) {
+  Widget _buildMobileItemsList(List<QuotationItem> items, String currency,
+      List<_QuotationTaxColumn> taxColumns) {
     return QuotationsContentCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -337,15 +410,15 @@ class QuotationDetailWidget extends StatelessWidget {
           const SizedBox(height: 12),
           for (int i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
-            _buildMobileItemCard(items[i], currency, taxMode),
+            _buildMobileItemCard(items[i], currency, taxColumns),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildMobileItemCard(
-      QuotationItem item, String currency, ItemTaxDisplayMode taxMode) {
+  Widget _buildMobileItemCard(QuotationItem item, String currency,
+      List<_QuotationTaxColumn> taxColumns) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsetsDirectional.all(12),
@@ -379,10 +452,11 @@ class QuotationDetailWidget extends StatelessWidget {
                 label: 'sales.price'.tr,
                 value: '$currency ${item.unitPrice ?? '0'}',
               ),
-              QuotationsInfoChip(
-                label: 'billing.tax'.tr,
-                value: '$currency ${_itemTaxText(item, taxMode)}',
-              ),
+              for (final column in taxColumns)
+                QuotationsInfoChip(
+                  label: column.label,
+                  value: '$currency ${_itemTaxText(item, column.mode)}',
+                ),
               QuotationsInfoChip(
                 label: 'billing.total'.tr,
                 value: '$currency ${item.totalPrice ?? '0'}',

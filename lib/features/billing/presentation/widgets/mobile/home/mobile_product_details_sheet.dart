@@ -26,7 +26,8 @@ import 'package:pos_machine/features/purchases/presentation/state/purchase_provi
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+// Stock edit disabled for now.
+// import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 
 class _DropdownOption {
@@ -131,7 +132,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
-  late TextEditingController _quantityController;
   late TextEditingController _taxController;
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
@@ -164,7 +164,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController = TextEditingController();
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
-    _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
@@ -178,7 +177,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _unitController,
       _priceController,
       _mrpController,
-      _quantityController,
       _purchasePriceController,
       _minMarginController,
       _minMarginPriceController,
@@ -646,7 +644,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController.text = product.unit ?? '';
     _priceController.text = productDetailsValueToString(product.price?.price);
     _mrpController.text = productDetailsValueToString(product.mrp);
-    _quantityController.text = '';
     _taxController.text = productDetailsValueToString(product.totalTaxRate);
     _purchasePriceController.text = product.purchasePrice ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -728,7 +725,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final updatedUnit = _unitController.text.trim();
     final updatedPriceString = _priceController.text.trim();
     final updatedMrpString = _mrpController.text.trim();
-    final updatedQuantityString = _quantityController.text.trim();
     final updatedPurchasePrice = _purchasePriceController.text.trim();
     final updatedMinMargin = _minMarginController.text.trim();
     final updatedMinMarginPrice = _minMarginPriceController.text.trim();
@@ -743,9 +739,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final purchasePriceForApi = updatedPurchasePrice.isEmpty
         ? double.tryParse(product.purchasePrice ?? '')
         : double.tryParse(updatedPurchasePrice);
-    final quantityForApi = updatedQuantityString.isEmpty
-        ? null
-        : num.tryParse(updatedQuantityString);
 
     final updatedPriceValue = priceForApi;
     final updatedMrpValue = mrpForApi;
@@ -799,7 +792,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
-        quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         variants: variantsPayload,
         minMarginPercentage: updatedMinMargin,
@@ -961,43 +953,41 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     }
   }
 
-  void _showEditStockRowModal(Stock stock) {
-    if (stock.id == null) {
-      showScaffoldError(
-        context: context,
-        message: 'product_detail.stock_id_missing_edit'.tr,
-      );
-      return;
-    }
-
-    showEditStockDialog(
-      context: context,
-      stockId: stock.id!,
-      title: 'product_detail.edit_stock'.tr,
-      initialRetailPrice: stock.price ?? '',
-      initialMrp: stock.mrp ?? '',
-      showMrp: _showMrp(),
-      initialPurchasePrice: stock.purchasePrice ?? '',
-      showPurchasePrice: _canViewPurchasePrice(),
-      initialQuantity: stock.quantity?.toString() ?? '0',
-      initialRack: stock.rack ?? '',
-      onSuccess: (result) async {
-        final updatedQty = num.tryParse(result.quantity) ?? stock.quantity;
-        if (!mounted) return;
-        setState(() {
-          _editedStockRows[stock.id!] = stock.copyWith(
-            quantity: updatedQty,
-            price: result.retailPrice,
-            mrp: result.mrp,
-            purchasePrice: _canViewPurchasePrice()
-                ? result.purchasePrice
-                : stock.purchasePrice,
-            rack: result.rack,
-          );
-        });
-      },
-    );
-  }
+  // Stock edit disabled for now.
+  // void _showEditStockRowModal(Stock stock) {
+  //   if (stock.id == null) {
+  //     showScaffoldError(
+  //       context: context,
+  //       message: 'product_detail.stock_id_missing_edit'.tr,
+  //     );
+  //     return;
+  //   }
+  //
+  //   showEditStockDialog(
+  //     context: context,
+  //     stockId: stock.id!,
+  //     title: 'product_detail.edit_stock'.tr,
+  //     initialRetailPrice: stock.price ?? '',
+  //     initialMrp: stock.mrp ?? '',
+  //     showMrp: _showMrp(),
+  //     initialPurchasePrice: stock.purchasePrice ?? '',
+  //     showPurchasePrice: _canViewPurchasePrice(),
+  //     initialRack: stock.rack ?? '',
+  //     onSuccess: (result) async {
+  //       if (!mounted) return;
+  //       setState(() {
+  //         _editedStockRows[stock.id!] = stock.copyWith(
+  //           price: result.retailPrice,
+  //           mrp: result.mrp,
+  //           purchasePrice: _canViewPurchasePrice()
+  //               ? result.purchasePrice
+  //               : stock.purchasePrice,
+  //           rack: result.rack,
+  //         );
+  //       });
+  //     },
+  //   );
+  // }
 
   @override
   void dispose() {
@@ -1009,7 +999,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
-    _quantityController.dispose();
     _taxController.dispose();
     _purchasePriceController.dispose();
     _minMarginController.dispose();
@@ -1189,13 +1178,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 ),
               ),
               const Spacer(),
-              if (canEditProduct && stock.id != null)
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  color: ColorManager.kPrimaryColor,
-                  tooltip: 'stock.edit'.tr,
-                  onPressed: () => _showEditStockRowModal(stock),
-                ),
+              // Stock edit disabled for now.
+              // if (canEditProduct && stock.id != null)
+              //   IconButton(
+              //     icon: const Icon(Icons.edit_outlined, size: 20),
+              //     color: ColorManager.kPrimaryColor,
+              //     tooltip: 'stock.edit'.tr,
+              //     onPressed: () => _showEditStockRowModal(stock),
+              //   ),
             ],
           ),
           const SizedBox(height: 4),
@@ -1725,14 +1715,6 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 hint: 'Enter price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 12),
-              _mobileTextField(
-                controller: _quantityController,
-                label: 'product_detail.quantity'.tr,
-                hint: 'Enter quantity',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: false),
               ),
               if (_showMrp()) ...[
                 const SizedBox(height: 12),

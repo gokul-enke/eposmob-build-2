@@ -191,17 +191,28 @@ class LocalCartItem {
   bool get hasGroupedStockSelection => stockGroupIds.length > 1;
 
   /// The same quantities/units used for upload, including oversold remainder.
-  Iterable<({int? stockId, num quantity, double price, double? mrp, bool saleUnit})>
-      get orderLineSplits sync* {
-    final reservations = stockReservations.where((r) => r.quantity > 0).toList();
+  Iterable<
+      ({
+        int? stockId,
+        num quantity,
+        double price,
+        double? mrp,
+        bool saleUnit
+      })> get orderLineSplits sync* {
+    final reservations =
+        stockReservations.where((r) => r.quantity > 0).toList();
     final reserved = reservations.fold<num>(0, (sum, r) => sum + r.quantity);
     final remainder = quantity - reserved;
-    for (var index = 0; index < (reservations.isEmpty ? 1 : reservations.length); index++) {
+    for (var index = 0;
+        index < (reservations.isEmpty ? 1 : reservations.length);
+        index++) {
       final reservation = reservations.isEmpty ? null : reservations[index];
       final baseQuantity = reservation == null
           ? quantity
           : reservation.quantity +
-              (index == reservations.length - 1 && remainder > 0 ? remainder : 0);
+              (index == reservations.length - 1 && remainder > 0
+                  ? remainder
+                  : 0);
       final saleUnit = canUseSaleUnitPayloadFor(baseQuantity);
       final payloadQuantity = saleUnit
           ? toDisplayQuantity(baseQuantity)
@@ -421,14 +432,20 @@ class SavedOrder {
 
   /// A copy that prints [number] as its order number, e.g. the backend order
   /// number of an online-first sale.
-  SavedOrder withOrderNumber(String number) => SavedOrder(
+  SavedOrder withOrderNumber(String number) =>
+      withIdentity(orderNumber: number);
+
+  /// A copy with a corrected receipt number and/or sale time; null keeps the
+  /// current value.
+  SavedOrder withIdentity({String? orderNumber, String? createdAt}) =>
+      SavedOrder(
         id: id,
-        orderNumber: number,
+        orderNumber: orderNumber ?? this.orderNumber,
         items: items,
         customerName: customerName,
         customerPhone: customerPhone,
         comment: comment,
-        createdAt: createdAt,
+        createdAt: createdAt ?? this.createdAt,
         total: total,
         deliveryMethod: deliveryMethod,
         customerId: customerId,
@@ -763,40 +780,48 @@ class LocalProductProvider extends ChangeNotifier {
     return _discountValidationError;
   }
 
-  void setCouponContext({int? storeId, Map<int, int?> categoryParents = const {}}) {
+  void setCouponContext(
+      {int? storeId, Map<int, int?> categoryParents = const {}}) {
     _couponStoreId = storeId;
     _couponCategoryParents = Map.unmodifiable(categoryParents);
   }
 
-  CouponCalculation evaluateCoupon(DiscountData coupon, {double? subtotal, List<CouponCartLine>? lines}) =>
+  CouponCalculation evaluateCoupon(DiscountData coupon,
+          {double? subtotal, List<CouponCartLine>? lines}) =>
       CouponCalculation.evaluate(
         coupon: coupon,
-        lines: lines ?? [
-          for (final item in _cartItems)
-            (productId: item.product.productId,
-             categoryId: item.product.categoryId,
-             total: item.amounts.total,
-             hasOffer: item.hasOffer),
-        ],
+        lines: lines ??
+            [
+              for (final item in _cartItems)
+                (
+                  productId: item.product.productId,
+                  categoryId: item.product.categoryId,
+                  total: item.amounts.total,
+                  hasOffer: item.hasOffer
+                ),
+            ],
         now: DateHelper.nowInConfiguredTimeZone(),
         storeId: _visibilityStoreId ?? _couponStoreId,
         categoryParents: _couponCategoryParents,
         subtotal: subtotal,
       );
 
-  Map<String, dynamic>? get _couponSnapshot => _appliedCoupon == null ? null : {
-    'coupon': _appliedCoupon!.toJson(),
-    'store_id': _visibilityStoreId ?? _couponStoreId,
-    'category_parents': {
-      for (final entry in _couponCategoryParents.entries)
-        entry.key.toString(): entry.value,
-    },
-  };
+  Map<String, dynamic>? get _couponSnapshot => _appliedCoupon == null
+      ? null
+      : {
+          'coupon': _appliedCoupon!.toJson(),
+          'store_id': _visibilityStoreId ?? _couponStoreId,
+          'category_parents': {
+            for (final entry in _couponCategoryParents.entries)
+              entry.key.toString(): entry.value,
+          },
+        };
 
   void _restoreCoupon(Map<String, dynamic>? snapshot) {
     final raw = snapshot?['coupon'];
     _appliedCoupon = raw is Map
-        ? DiscountData.fromJson(Map<String, dynamic>.from(raw)) : null;
+        ? DiscountData.fromJson(Map<String, dynamic>.from(raw))
+        : null;
     _discountValidationError = null;
     _couponStoreId = int.tryParse(snapshot?['store_id']?.toString() ?? '');
     final parents = snapshot?['category_parents'];
@@ -1326,12 +1351,13 @@ class LocalProductProvider extends ChangeNotifier {
         price: line.price,
         quantity: baseQuantity,
         selectedStock: selectedStock,
-        stockReservations: reservations
-            .skip(existing?.stockReservations.length ?? 0).toList(),
+        stockReservations:
+            reservations.skip(existing?.stockReservations.length ?? 0).toList(),
         saleUnitId: saleUnitId,
         saleUnitConversionRate: saleUnit?.conversionRateValue,
-        taxRate: selectedStock == null ? product.totalTaxRate :
-            _resolveCartTaxRate(product, selectedStock: selectedStock),
+        taxRate: selectedStock == null
+            ? product.totalTaxRate
+            : _resolveCartTaxRate(product, selectedStock: selectedStock),
       ).amounts.total,
       unitPrice: line.displayPrice ?? 0,
       standardUnitPrice: standardPrice * rate,
@@ -2380,7 +2406,10 @@ class LocalProductProvider extends ChangeNotifier {
             'offer_version': item.offerVersion,
           },
           ..._completedSaleLineSnapshot(
-            item, split.price, split.quantity, split.saleUnit,
+            item,
+            split.price,
+            split.quantity,
+            split.saleUnit,
           ),
           if (item.comment != null && item.comment!.trim().isNotEmpty)
             'comment': item.comment!.trim(),
@@ -3043,7 +3072,8 @@ class LocalProductProvider extends ChangeNotifier {
       _percentageDiscount = 0;
     }
     double flatDiscountAmount = _flatDiscount;
-    double percentageDiscountAmount = roundMoney(subTotal * _percentageDiscount / 100);
+    double percentageDiscountAmount =
+        roundMoney(subTotal * _percentageDiscount / 100);
     double totalDiscount = flatDiscountAmount + percentageDiscountAmount;
 
     // Ensure discount doesn't exceed subtotal
@@ -5102,7 +5132,6 @@ class LocalProductProvider extends ChangeNotifier {
     required String retailPrice,
     required String mrp,
     required String purchasePrice,
-    required String quantity,
     required String rack,
   }) {
     final productIndex = _products.indexWhere(
@@ -5124,7 +5153,6 @@ class LocalProductProvider extends ChangeNotifier {
 
     final existingStock = updatedStock[stockIndex];
     updatedStock[stockIndex] = existingStock.copyWith(
-      quantity: num.tryParse(quantity) ?? existingStock.quantity,
       price: retailPrice,
       mrp: mrp,
       purchasePrice: purchasePrice,
@@ -5454,6 +5482,19 @@ class LocalProductProvider extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Corrects the receipt number and/or sale time of a confirmed order so
+  /// reprints match what will be synced. Returns false when it is not found.
+  bool updateConfirmedOrderIdentity(String orderId,
+      {String? orderNumber, String? createdAt}) {
+    final index = _confirmedOrders.indexWhere((o) => o.id == orderId);
+    if (index < 0) return false;
+    _confirmedOrders[index] = _confirmedOrders[index]
+        .withIdentity(orderNumber: orderNumber, createdAt: createdAt);
+    _saveConfirmedOrdersToHive();
+    notifyListeners();
+    return true;
   }
 
   /// Deletes several confirmed orders with a single persistence write.
@@ -6240,8 +6281,10 @@ class LocalProductProvider extends ChangeNotifier {
 
     _appliedCoupon = coupon;
     _discountValidationError = null;
-    _flatDiscount = flatDiscount.isFinite ? flatDiscount.clamp(0, double.infinity) : 0;
-    _percentageDiscount = percentageDiscount.isFinite ? percentageDiscount.clamp(0, 100) : 0;
+    _flatDiscount =
+        flatDiscount.isFinite ? flatDiscount.clamp(0, double.infinity) : 0;
+    _percentageDiscount =
+        percentageDiscount.isFinite ? percentageDiscount.clamp(0, 100) : 0;
 
     // Recalculate totals by calling cartTotal getter
     cartTotal;

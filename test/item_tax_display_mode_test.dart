@@ -17,6 +17,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('separate column configuration overrides legacy mode and survives cache',
+      () {
+    for (final visible in [true, false]) {
+      final config = DocumentConfig.fromJson({
+        'item_tax_display_mode': 'row_total',
+        'display_configuration': {
+          'showTaxHeader': {
+            'visible': true,
+            'value': 'الضريبة',
+            'default': 'Tax'
+          },
+          'showRowTotalTaxHeader': {
+            'visible': visible,
+            'value': 'Row Total الضريبة',
+            'default': 'TAX',
+          },
+        },
+        'resolved_labels': {'row_total_tax': 'Row Total الضريبة'},
+      });
+      for (final actual in [config, DocumentConfig.fromJson(config.toJson())]) {
+        expect(actual.hasSeparateItemTaxColumns, isTrue);
+        expect(actual.taxHeaderDisplayMode, ItemTaxDisplayMode.unit);
+        expect(
+            actual.displayConfiguration!.options!['showRowTotalTaxHeader']!
+                .visible,
+            visible);
+        expect(actual.resolvedLabels!.rowTotalTax, 'Row Total الضريبة');
+      }
+    }
+    expect(DocumentConfig.fromJson({}).hasSeparateItemTaxColumns, isFalse);
+    expect(DocumentConfig.fromJson({}).taxHeaderDisplayMode,
+        ItemTaxDisplayMode.rowTotal);
+    final flags = DocumentConfig.fromJson({
+      'display_flags': {'showTaxHeader': 1, 'showRowTotalTaxHeader': 0},
+    });
+    expect(flags.hasSeparateItemTaxColumns, isTrue);
+    expect(flags.taxHeaderDisplayMode, ItemTaxDisplayMode.unit);
+    expect(
+        flags.displayConfiguration!.options!['showRowTotalTaxHeader']!.visible,
+        isFalse);
+  });
+
   test('missing or unrecognized mode defaults to full row, including cache',
       () {
     expect(DocumentConfig().itemTaxDisplayMode, ItemTaxDisplayMode.rowTotal);
@@ -150,7 +192,14 @@ void main() {
       'document_configurations': {
         'Quotation': {'type': 'Quotation', 'item_tax_display_mode': 'unit'},
         'Bill': {'type': 'Bill', 'item_tax_display_mode': 'row_total'},
-        'Bill A4': {'type': 'Bill A4'},
+        'Bill A4': {
+          'type': 'Bill A4',
+          'display_configuration': {
+            'showTaxHeader': {'visible': true},
+            'showRowTotalTaxHeader': {'visible': true, 'value': 'Row tax'},
+          },
+          'resolved_labels': {'row_total_tax': 'Row tax'},
+        },
       }
     };
     await http.runWithClient(
@@ -174,5 +223,15 @@ void main() {
         ItemTaxDisplayMode.unit);
     expect(backup.getDocumentConfig('Bill')!.itemTaxDisplayMode,
         ItemTaxDisplayMode.rowTotal);
+    for (final cached in [restored, backup]) {
+      final config = cached.getDocumentConfig('Bill A4')!;
+      expect(config.hasSeparateItemTaxColumns, isTrue);
+      expect(config.taxHeaderDisplayMode, ItemTaxDisplayMode.unit);
+      expect(
+          config
+              .displayConfiguration!.options!['showRowTotalTaxHeader']!.visible,
+          isTrue);
+      expect(config.resolvedLabels!.rowTotalTax, 'Row tax');
+    }
   });
 }

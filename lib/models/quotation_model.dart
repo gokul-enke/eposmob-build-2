@@ -151,6 +151,10 @@ class QuotationDetailsData {
   final String? deliveryMethod;
   final String? deliveryCharge;
   final String? comment;
+
+  /// Salesperson-entered terms for this quotation. When present, prints in
+  /// place of the document configuration's terms.
+  final String? terms;
   final int? invoiceId;
   final List<QuotationItem>? items;
 
@@ -172,6 +176,7 @@ class QuotationDetailsData {
     this.deliveryMethod,
     this.deliveryCharge,
     this.comment,
+    this.terms,
     this.invoiceId,
     this.items,
   });
@@ -251,6 +256,7 @@ class QuotationDetailsData {
       deliveryCharge:
           (json['delivery_charge'] ?? json['shipping_cost'])?.toString(),
       comment: (json['comment'] ?? json['note'])?.toString(),
+      terms: json['terms']?.toString(),
       invoiceId: json['invoice_id'],
       items: parsedItems,
     );

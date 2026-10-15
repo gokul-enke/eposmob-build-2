@@ -44,6 +44,9 @@ class ReceiptLayoutParams {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  // Per-document terms (e.g. typed on a quotation). Replaces the document
+  // configuration's terms text when non-empty.
+  final String? termsOverride;
   final String? deliveryMethod;
   final String? deliveryPhone;
   final String? customerAlternatePhone;
@@ -100,6 +103,7 @@ class ReceiptLayoutParams {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.termsOverride,
     this.deliveryMethod,
     this.deliveryPhone,
     this.customerAlternatePhone,
@@ -418,10 +422,13 @@ class ReceiptLayoutParams {
     return '$prefix$printableOrderNumberComponent';
   }
 
-  /// Terms block: the text configured on `showTermsConditions`, falling back
-  /// to the document-level `terms`. Empty when the toggle is off.
+  /// Terms block: [termsOverride] when entered for this document, else the
+  /// text configured on `showTermsConditions`, falling back to the
+  /// document-level `terms`. Empty when the toggle is off.
   String get termsText {
     if (!isVisible('showTermsConditions')) return '';
+    final override = termsOverride?.trim() ?? '';
+    if (override.isNotEmpty) return override;
     final documentTerms = documentText(billDocumentConfig.terms);
     final text = labelFor(
       'showTermsConditions',
@@ -490,6 +497,7 @@ class ReceiptLayoutParams {
     'showRateExcTax': ('Rate Ex Tax', 'السعر بدون ضريبة'),
     'showUnit': ('Unit', 'الوحدة'),
     'showTaxHeader': ('Tax', 'الضريبة'),
+    'showRowTotalTaxHeader': ('Row Total Tax', 'إجمالي ضريبة الصنف'),
     'showItemDiscount': ('Discount', 'الخصم'),
     'showTotal': ('Total', 'الإجمالي'),
     'showWarranty': ('Warranty', 'الضمان'),
@@ -594,6 +602,10 @@ class ReceiptLayoutParams {
         return fallback('Tax', 'الضريبة',
             resolvedArabic: labels?.tax,
             resolvedEnglish: englishResolved(labels?.taxDefault));
+      case 'showRowTotalTaxHeader':
+        return fallback('Row Total Tax', 'إجمالي ضريبة الصنف',
+            resolvedArabic: labels?.rowTotalTax,
+            resolvedEnglish: englishResolved(labels?.rowTotalTaxDefault));
       case 'showTotal':
         return fallback('Total', 'الإجمالي',
             resolvedArabic: labels?.total,

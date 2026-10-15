@@ -147,7 +147,7 @@ void main() {
   });
 
   testWidgets(
-      'every theme carries all 61 keys through EN, AR and bilingual params',
+      'every theme carries all configuration keys through EN, AR and bilingual params',
       (tester) async {
     late BuildContext context;
     await tester.pumpWidget(

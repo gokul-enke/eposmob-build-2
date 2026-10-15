@@ -46,11 +46,11 @@ void main() {
   });
 
   group('Bill configuration contract', () {
-    test('contains the complete supplied 61-key Bill contract', () {
-      expect(ReceiptConfigurationContract.canonicalBillKeys.length, 61);
+    test('contains the complete supplied 62-key Bill contract', () {
+      expect(ReceiptConfigurationContract.canonicalBillKeys.length, 62);
       expect(
         ReceiptConfigurationContract.canonicalBillKeys.toSet().length,
-        61,
+        62,
       );
     });
 

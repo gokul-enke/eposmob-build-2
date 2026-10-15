@@ -1320,7 +1320,6 @@ class StockProvider extends ChangeNotifier {
     required String retailPrice,
     required String mrp,
     required String purchasePrice,
-    String? quantity,
     required String rack,
     required String accessToken,
   }) async {
@@ -1339,14 +1338,10 @@ class StockProvider extends ChangeNotifier {
         'purchase_price': purchasePrice,
         'rack': rack,
       };
-      if (quantity != null && quantity.trim().isNotEmpty) {
-        payload['quantity'] = quantity.trim();
-      }
 
       debugPrint('🚀 [StockProvider.updateStockDetails] REQUEST START');
       debugPrint('   URL: $url');
       debugPrint('   STOCK ID: $stockId');
-      debugPrint('   QUANTITY INCLUDED: ${payload.containsKey('quantity')}');
       debugPrint('   PAYLOAD: ${jsonEncode(payload)}');
 
       final response = await http.post(
@@ -1374,7 +1369,6 @@ class StockProvider extends ChangeNotifier {
             retailPrice: retailPrice,
             mrp: mrp,
             purchasePrice: purchasePrice,
-            quantity: quantity,
             rack: rack,
           );
           debugPrint(
@@ -1401,7 +1395,6 @@ class StockProvider extends ChangeNotifier {
     required String retailPrice,
     required String mrp,
     required String purchasePrice,
-    required String? quantity,
     required String rack,
   }) {
     final stockJson = responseStock is Map<String, dynamic>
@@ -1409,8 +1402,7 @@ class StockProvider extends ChangeNotifier {
         : responseStock is Map
             ? Map<String, dynamic>.from(responseStock)
             : <String, dynamic>{};
-    final updatedQuantity =
-        _parseNullableDouble(stockJson['quantity'] ?? quantity);
+    final updatedQuantity = _parseNullableDouble(stockJson['quantity']);
     final updatedRetailPrice =
         stockJson['retail_price']?.toString() ?? retailPrice;
     final updatedMrp = stockJson['mrp']?.toString() ?? mrp;

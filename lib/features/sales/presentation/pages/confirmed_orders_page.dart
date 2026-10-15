@@ -1,25 +1,31 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:provider/provider.dart';
 
 import '../commands/confirm_and_delete_local_sale.dart';
 import '../commands/confirm_and_dismiss_local_sale.dart';
+import '../commands/confirm_and_remove_local_sales.dart';
 import '../commands/confirm_and_sync_local_sales.dart';
+import '../commands/confirm_day_close_with_unsynced_sales.dart';
 import '../commands/edit_local_sale_request.dart';
 import '../commands/local_sales_services.dart';
 import '../commands/print_local_sale.dart';
 import '../commands/show_local_sale_details.dart';
 import '../commands/show_local_sale_sync_log.dart';
+import '../commands/update_local_sale_identity.dart';
 import '../widgets/local_orders/local_sale_attention_card.dart';
-import '../widgets/local_orders/local_sales_header.dart';
 
 enum _AttentionFilter { all, needsReview, rejected, notSent }
 
 class ConfirmedOrdersPage extends StatefulWidget {
   const ConfirmedOrdersPage({super.key});
+
+  static const filterToggleKey = ValueKey('attention-filter-toggle');
 
   @override
   State<ConfirmedOrdersPage> createState() => _ConfirmedOrdersPageState();
@@ -30,6 +36,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
   final Set<String> _selectedIds = {};
   final _search = TextEditingController();
   _AttentionFilter _filter = _AttentionFilter.all;
+  bool _showFilters = true;
   bool _batchActive = false;
   bool _sending = false;
   int _completed = 0;
@@ -49,14 +56,6 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
     super.dispose();
   }
 
-  List<SavedOrder> _attentionOrders(
-          LocalProductProvider provider, LocalSaleSyncService sync) =>
-      provider.confirmedOrders.where((order) {
-        final record = sync.recordFor(order.id);
-        return record?.state != LocalSaleSyncState.synced &&
-            record?.isDismissed != true;
-      }).toList();
-
   bool _matchesFilter(_AttentionFilter filter, LocalSaleSyncRecord? record) =>
       switch (filter) {
         _AttentionFilter.all => true,
@@ -68,10 +67,11 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
           record == null || record.state == LocalSaleSyncState.queued,
       };
 
-  bool _matchesSearch(SavedOrder order) {
+  bool _matchesSearch(SavedOrder order, LocalSaleSyncRecord? record) {
     final query = _search.text.trim().toLowerCase();
     return query.isEmpty ||
         order.orderNumber.toLowerCase().contains(query) ||
+        localSaleReceiptNumber(order, record).toLowerCase().contains(query) ||
         (order.customerName?.toLowerCase().contains(query) ?? false);
   }
 
@@ -128,120 +128,127 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: AppColors.surface,
         body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1680),
-              child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
-                  builder: (context, provider, sync, _) {
-                final busy = _batchActive || sync.isBatchSyncing;
-                final orders = _attentionOrders(provider, sync);
-                final counts = {
-                  for (final filter in _AttentionFilter.values)
-                    filter: orders
-                        .where((order) =>
-                            _matchesFilter(filter, sync.recordFor(order.id)))
-                        .length,
-                };
-                final visible = orders
+          child: Consumer2<LocalProductProvider, LocalSaleSyncService>(
+              builder: (context, provider, sync, _) {
+            final busy = _batchActive || sync.isBatchSyncing;
+            final orders = localSalesNeedingSync(provider, sync);
+            final counts = {
+              for (final filter in _AttentionFilter.values)
+                filter: orders
                     .where((order) =>
-                        _matchesFilter(_filter, sync.recordFor(order.id)) &&
-                        _matchesSearch(order))
-                    .toList();
-                final narrowed = _filter != _AttentionFilter.all ||
-                    _search.text.trim().isNotEmpty;
-                final eligible =
-                    visible.where((order) => _canSync(order, sync)).toList();
-                final eligibleIds = eligible.map((order) => order.id).toSet();
-                // Selection follows what is on screen so a hidden order is
-                // never synced by surprise.
-                _selectedIds.retainAll(visible.map((order) => order.id));
-                final selected = eligible
-                    .where((order) => _selectedIds.contains(order.id))
-                    .toList();
-                final allSelected =
-                    eligible.isNotEmpty && selected.length == eligible.length;
-                return LayoutBuilder(builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 600;
-                  final padding = compact ? 16.0 : 24.0;
-                  return CustomScrollView(
-                      key: const ValueKey('confirmed-orders-scroll'),
-                      slivers: [
-                        SliverPadding(
-                          padding:
-                              EdgeInsets.fromLTRB(padding, padding, padding, 0),
-                          sliver: SliverToBoxAdapter(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  LocalSalesHeader(visibleCount: orders.length),
-                                  if (orders.isNotEmpty) ...[
-                                    const SizedBox(height: 20),
-                                    _buildToolbar(
-                                      compact: compact,
-                                      busy: busy,
-                                      counts: counts,
-                                      eligible: eligible,
-                                      eligibleIds: eligibleIds,
-                                      selected: selected,
-                                      allSelected: allSelected,
-                                      narrowed: narrowed,
-                                    ),
-                                  ],
-                                  if (_sending) _buildProgress(),
-                                  if (_batchResult != null ||
-                                      _batchError != null)
-                                    _buildResultBanner(),
-                                  const SizedBox(height: 20),
-                                ]),
-                          ),
+                        _matchesFilter(filter, sync.recordFor(order.id)))
+                    .length,
+            };
+            final visible = orders
+                .where((order) =>
+                    _matchesFilter(_filter, sync.recordFor(order.id)) &&
+                    _matchesSearch(order, sync.recordFor(order.id)))
+                .toList();
+            final eligible =
+                visible.where((order) => _canSync(order, sync)).toList();
+            final eligibleIds = eligible.map((order) => order.id).toSet();
+            // Selection follows what is on screen so a hidden order is
+            // never synced by surprise.
+            _selectedIds.retainAll(visible.map((order) => order.id));
+            final selected = eligible
+                .where((order) => _selectedIds.contains(order.id))
+                .toList();
+            final allSelected =
+                eligible.isNotEmpty && selected.length == eligible.length;
+            final mobile = MediaQuery.sizeOf(context).width <
+                ListLayoutBreakpoints.mobileBelow;
+            final padding = mobile ? AppSpacing.md : AppSpacing.xl;
+            final gap = mobile ? AppSpacing.md : AppSpacing.lg;
+            return LayoutBuilder(builder: (context, constraints) {
+              // Same centred content width as the other listing pages.
+              final side = math.max(
+                  padding,
+                  (constraints.maxWidth -
+                          ListLayoutBreakpoints.maxContentWidth) /
+                      2);
+              final contentWidth = constraints.maxWidth - side * 2;
+              return CustomScrollView(
+                  key: const ValueKey('confirmed-orders-scroll'),
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(side, padding, side, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildHeader(
+                                  busy: busy,
+                                  total: orders.length,
+                                  eligible: eligible),
+                              if (orders.isNotEmpty) ...[
+                                // Kept in the tree while hidden so the search
+                                // and status keep applying.
+                                Visibility(
+                                  visible: _showFilters,
+                                  maintainState: true,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(top: gap),
+                                    child: _buildFilters(mobile, counts),
+                                  ),
+                                ),
+                                SizedBox(height: gap),
+                                _buildSelectionBar(
+                                  busy: busy,
+                                  eligible: eligible,
+                                  eligibleIds: eligibleIds,
+                                  selected: selected,
+                                  allSelected: allSelected,
+                                ),
+                              ],
+                              if (_sending) _buildProgress(),
+                              if (_batchResult != null || _batchError != null)
+                                _buildResultBanner(),
+                              SizedBox(height: gap),
+                            ]),
+                      ),
+                    ),
+                    if (visible.isEmpty)
+                      SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Padding(
+                              padding: EdgeInsets.all(padding),
+                              child: Center(
+                                child: orders.isEmpty
+                                    ? const AppEmptyState(
+                                        icon: Icons.cloud_done_outlined,
+                                        title: 'No sales need sync attention.',
+                                        subtitle:
+                                            'Synced orders are available in Sales.')
+                                    : AppEmptyState(
+                                        icon: Icons.filter_alt_off_outlined,
+                                        title: 'No orders match this view.',
+                                        subtitle:
+                                            'Try another status or clear the search.',
+                                        action: AppOutlinedButton(
+                                            key: const ValueKey(
+                                                'reset-order-filters'),
+                                            label: 'Show all orders',
+                                            icon: Icons.restart_alt_rounded,
+                                            onPressed: _resetFilters)),
+                              )))
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(side, 0, side, padding),
+                        sliver: SliverMasonryGrid.count(
+                          crossAxisCount:
+                              (contentWidth / 360).floor().clamp(1, 4),
+                          mainAxisSpacing: AppSpacing.lg,
+                          crossAxisSpacing: AppSpacing.lg,
+                          childCount: visible.length,
+                          itemBuilder: (context, index) => _buildCard(
+                              visible[index], sync, busy, eligibleIds),
                         ),
-                        if (visible.isEmpty)
-                          SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Padding(
-                                  padding: EdgeInsets.all(padding),
-                                  child: orders.isEmpty
-                                      ? const _EmptyState(
-                                          icon: Icons.cloud_done_outlined,
-                                          color: Color(0xFF16764A),
-                                          title: 'No sales need sync attention.',
-                                          subtitle:
-                                              'Synced orders are available in Sales.')
-                                      : _EmptyState(
-                                          icon: Icons.filter_alt_off_outlined,
-                                          color: const Color(0xFF64748B),
-                                          title: 'No orders match this view.',
-                                          subtitle:
-                                              'Try another status or clear the search.',
-                                          action: TextButton(
-                                              key: const ValueKey(
-                                                  'reset-order-filters'),
-                                              onPressed: _resetFilters,
-                                              child: const Text(
-                                                  'Show all orders')))))
-                        else
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
-                                padding, 0, padding, padding),
-                            sliver: SliverMasonryGrid.count(
-                              crossAxisCount:
-                                  ((constraints.maxWidth - padding * 2) / 360)
-                                      .floor()
-                                      .clamp(1, 4),
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              childCount: visible.length,
-                              itemBuilder: (context, index) => _buildCard(
-                                  visible[index], sync, busy, eligibleIds),
-                            ),
-                          ),
-                      ]);
-                });
-              }),
-            ),
-          ),
+                      ),
+                  ]);
+            });
+          }),
         ),
       );
 
@@ -250,171 +257,171 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
         _search.clear();
       });
 
-  Widget _buildToolbar({
-    required bool compact,
+  bool get _filtered =>
+      _filter != _AttentionFilter.all || _search.text.trim().isNotEmpty;
+
+  Widget _buildHeader({
     required bool busy,
-    required Map<_AttentionFilter, int> counts,
+    required int total,
     required List<SavedOrder> eligible,
-    required Set<String> eligibleIds,
-    required List<SavedOrder> selected,
-    required bool allSelected,
-    required bool narrowed,
-  }) {
-    final search = SizedBox(
-      width: compact ? double.infinity : 280,
-      height: 44,
-      child: TextField(
-        key: const ValueKey('search-attention-orders'),
-        controller: _search,
-        onChanged: (_) => setState(() {}),
-        textInputAction: TextInputAction.search,
-        style: const TextStyle(fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Search order or customer',
-          hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-          prefixIcon: const Icon(Icons.search, size: 20),
-          suffixIcon: _search.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Clear search',
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => setState(_search.clear)),
-          isDense: true,
-          filled: true,
-          fillColor: const Color(0xFFF8FAFC),
-          contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        ),
-      ),
-    );
+  }) =>
+      PageHeader(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sync attention',
+        subtitle: switch (total) {
+          0 => 'Every order on this device has reached the server.',
+          1 => '1 order on this device has not reached the server.',
+          _ => '$total orders on this device have not reached the server.',
+        },
+        actions: [
+          if (total > 0)
+            HeaderAction.filters(
+              key: ConfirmedOrdersPage.filterToggleKey,
+              showFilters: _showFilters,
+              showLabel: 'Show filters',
+              hideLabel: 'Hide filters',
+              badge: !_showFilters && _filtered,
+              onPressed: () => setState(() => _showFilters = !_showFilters),
+            ),
+        ],
+        primaryActions: [
+          if (total > 0)
+            AppPrimaryButton(
+              key: const ValueKey('sync-all-orders'),
+              label: _filtered
+                  ? 'Sync shown (${eligible.length})'
+                  : 'Sync all (${eligible.length})',
+              icon: Icons.cloud_upload_outlined,
+              onPressed:
+                  busy || eligible.isEmpty ? null : () => _syncOrders(eligible),
+            ),
+        ],
+      );
+
+  /// The shared search/filter panel; a collapsible tile on phones.
+  Widget _buildFilters(bool mobile, Map<_AttentionFilter, int> counts) {
     const labels = {
       _AttentionFilter.all: 'All',
       _AttentionFilter.needsReview: 'Needs review',
       _AttentionFilter.rejected: 'Rejected',
       _AttentionFilter.notSent: 'Not sent',
     };
-    final chips = [
-      for (final filter in _AttentionFilter.values)
-        if (filter == _AttentionFilter.all || counts[filter]! > 0)
-          ChoiceChip(
-            key: ValueKey('filter-${filter.name}'),
-            label: Text('${labels[filter]} · ${counts[filter]}'),
-            selected: _filter == filter,
-            showCheckmark: false,
-            onSelected: (_) => setState(() => _filter = filter),
-            labelStyle: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _filter == filter
-                    ? ColorManager.kPrimaryColor
-                    : const Color(0xFF475569)),
-            selectedColor: const Color(0xFFE8F1FD),
-            backgroundColor: Colors.white,
-            side: BorderSide(
-                color: _filter == filter
-                    ? ColorManager.kPrimaryColor
-                    : const Color(0xFFE2E8F0)),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-          ),
-    ];
-    // One swipeable row on phones keeps the first order above the fold.
-    final filters = compact
-        ? SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final chip in chips)
-                Padding(padding: const EdgeInsets.only(right: 8), child: chip),
-            ]))
-        : Wrap(spacing: 8, runSpacing: 8, children: chips);
-    final actions = Wrap(
-        spacing: 12,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            Checkbox(
-                key: const ValueKey('select-all-orders'),
-                tristate: true,
-                value: selected.isEmpty
-                    ? false
-                    : allSelected
-                        ? true
-                        : null,
-                semanticLabel: 'Select all orders ready to sync',
-                onChanged: busy || eligible.isEmpty
-                    ? null
-                    : (_) => setState(() {
-                          if (allSelected) {
-                            _selectedIds.clear();
-                          } else {
-                            _selectedIds.addAll(eligibleIds);
-                          }
-                        })),
-            Text('${selected.length} selected',
-                style: const TextStyle(
-                    color: Color(0xFF334155),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600)),
-          ]),
-          if (selected.isNotEmpty)
-            TextButton(
-                key: const ValueKey('clear-order-selection'),
-                onPressed: busy ? null : () => setState(_selectedIds.clear),
-                child: const Text('Clear')),
-          FilledButton.icon(
-              key: const ValueKey('sync-selected-orders'),
-              onPressed:
-                  busy || selected.isEmpty ? null : () => _syncOrders(selected),
-              icon: const Icon(Icons.sync, size: 19),
-              label: Text('Sync selected (${selected.length})'),
-              style: FilledButton.styleFrom(
-                  backgroundColor: ColorManager.kPrimaryColor,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 44))),
-          OutlinedButton.icon(
-              key: const ValueKey('sync-all-orders'),
-              onPressed:
-                  busy || eligible.isEmpty ? null : () => _syncOrders(eligible),
-              icon: const Icon(Icons.cloud_upload_outlined, size: 19),
-              label: Text(narrowed
-                  ? 'Sync shown (${eligible.length})'
-                  : 'Sync all (${eligible.length})'),
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: ColorManager.kPrimaryColor,
-                  side: const BorderSide(color: ColorManager.kPrimaryColor),
-                  minimumSize: const Size(0, 44))),
-        ]);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          borderRadius: BorderRadius.circular(12)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (compact) ...[
-          search,
-          const SizedBox(height: 10),
-          filters,
-        ] else
-          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Expanded(child: filters),
-            const SizedBox(width: 12),
-            search,
-          ]),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 10),
-          child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+    final panel = FilterPanel(
+      title: 'Find orders',
+      hint: 'Search by receipt no. or customer, or pick a status.',
+      resetLabel: 'Reset',
+      embeddedResetLabel: 'Reset filters',
+      onSearch: () => setState(() {}),
+      onReset: _resetFilters,
+      fields: [
+        TextFilterField(
+          controller: _search,
+          label: 'Search',
+          hint: 'Receipt no. or customer',
+          icon: Icons.search_rounded,
         ),
-        actions,
-      ]),
+        DropdownFilterField<_AttentionFilter>(
+          label: 'Status',
+          icon: Icons.flag_outlined,
+          value: _filter,
+          options: [
+            for (final filter in _AttentionFilter.values)
+              // Statuses with no orders are hidden unless selected.
+              if (filter == _AttentionFilter.all ||
+                  counts[filter]! > 0 ||
+                  filter == _filter)
+                FilterOption(filter, '${labels[filter]} (${counts[filter]})'),
+          ],
+          onChanged: (value) =>
+              setState(() => _filter = value ?? _AttentionFilter.all),
+        ),
+      ],
     );
+    if (!mobile) return panel;
+    return CollapsibleFilterTile(
+      title: 'Search and filters',
+      collapsedSubtitle: 'Find an order by receipt no., customer or status',
+      expandedSubtitle: 'Hide search and filters',
+      child: panel.embedded(),
+    );
+  }
+
+  Widget _buildSelectionBar({
+    required bool busy,
+    required List<SavedOrder> eligible,
+    required Set<String> eligibleIds,
+    required List<SavedOrder> selected,
+    required bool allSelected,
+  }) =>
+      AppSurface(
+        shadow: false,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        child: Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Checkbox(
+                    key: const ValueKey('select-all-orders'),
+                    tristate: true,
+                    value: selected.isEmpty
+                        ? false
+                        : allSelected
+                            ? true
+                            : null,
+                    semanticLabel: 'Select all orders ready to sync',
+                    onChanged: busy || eligible.isEmpty
+                        ? null
+                        : (_) => setState(() {
+                              if (allSelected) {
+                                _selectedIds.clear();
+                              } else {
+                                _selectedIds.addAll(eligibleIds);
+                              }
+                            })),
+                Text('${selected.length} selected', style: AppTextStyles.value),
+              ]),
+              if (selected.isNotEmpty)
+                TextButton(
+                    key: const ValueKey('clear-order-selection'),
+                    onPressed: busy ? null : () => setState(_selectedIds.clear),
+                    child: const Text('Clear')),
+              AppOutlinedButton(
+                  key: const ValueKey('sync-selected-orders'),
+                  label: 'Sync selected (${selected.length})',
+                  icon: Icons.sync,
+                  onPressed: busy || selected.isEmpty
+                      ? null
+                      : () => _syncOrders(selected)),
+              Builder(builder: (context) {
+                final removable = selected
+                    .where((order) =>
+                        localSaleCanRemove(_services.sync.recordFor(order.id)))
+                    .length;
+                return AppOutlinedButton(
+                    key: const ValueKey('remove-selected-orders'),
+                    label: 'Remove selected ($removable)',
+                    icon: Icons.delete_outline,
+                    foreground: AppColors.red,
+                    onPressed: busy || removable == 0
+                        ? null
+                        : () => _removeOrders(selected));
+              }),
+            ]),
+      );
+
+  Future<void> _removeOrders(List<SavedOrder> orders) async {
+    if (_batchActive) return;
+    setState(() => _batchActive = true);
+    try {
+      final removed =
+          await confirmAndRemoveLocalSales(context, orders, _services);
+      if (mounted) setState(() => _selectedIds.removeAll(removed));
+    } finally {
+      if (mounted) setState(() => _batchActive = false);
+    }
   }
 
   Widget _buildProgress() => Container(
@@ -474,7 +481,8 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
         Icon(icon, size: 20, color: color),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title,
                 style: TextStyle(
                     color: color, fontSize: 13, fontWeight: FontWeight.w700)),
@@ -499,60 +507,37 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
   }
 
   Widget _buildCard(SavedOrder order, LocalSaleSyncService sync, bool busy,
-          Set<String> eligibleIds) =>
-      LocalSaleAttentionCard(
-        key: ValueKey('attention-order-${order.id}'),
-        order: order,
-        syncRecord: sync.recordFor(order.id),
-        currency: _services.settings.appSettings?.currency ?? 'INR',
-        selected: _selectedIds.contains(order.id),
-        actionsEnabled: !busy && !sync.isSubmitting(order.id),
-        onSelectionChanged: busy || !eligibleIds.contains(order.id)
-            ? null
-            : (value) => setState(() {
-                  if (value) {
-                    _selectedIds.add(order.id);
-                  } else {
-                    _selectedIds.remove(order.id);
-                  }
-                }),
-        onView: () => showLocalSaleDetails(context, order, _services),
-        onSync: () => _syncOrders([order]),
-        onEdit: () => editLocalSaleRequest(context, order, _services),
-        onDismiss: () => confirmAndDismissLocalSale(context, order, _services),
-        onDelete: () => confirmAndDeleteLocalSale(context, order, _services),
-        onLog: () => showLocalSaleSyncLog(context, order.id, _services),
-        onPrint: () => printLocalSale(context, order, _services),
-      );
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState(
-      {required this.icon,
-      required this.color,
-      required this.title,
-      required this.subtitle,
-      this.action});
-
-  final IconData icon;
-  final Color color;
-  final String title, subtitle;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 52, color: color),
-            const SizedBox(height: 16),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text(subtitle,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-                textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 12), action!],
-          ]);
+      Set<String> eligibleIds) {
+    final record = sync.recordFor(order.id);
+    return LocalSaleAttentionCard(
+      key: ValueKey('attention-order-${order.id}'),
+      order: order,
+      syncRecord: record,
+      currency: _services.settings.appSettings?.currency ?? 'INR',
+      receiptNumber: localSaleReceiptNumber(order, record),
+      issuedAt: localSaleIssuedAt(order, record),
+      onSaleDetailsChanged: ({receiptNumber, issuedAt}) =>
+          updateLocalSaleIdentity(context, order, _services,
+              receiptNumber: receiptNumber, issuedAt: issuedAt),
+      selected: _selectedIds.contains(order.id),
+      actionsEnabled: !busy && !sync.isSubmitting(order.id),
+      submitting: sync.isSubmitting(order.id),
+      onSelectionChanged: busy || !eligibleIds.contains(order.id)
+          ? null
+          : (value) => setState(() {
+                if (value) {
+                  _selectedIds.add(order.id);
+                } else {
+                  _selectedIds.remove(order.id);
+                }
+              }),
+      onView: () => showLocalSaleDetails(context, order, _services),
+      onSync: () => _syncOrders([order]),
+      onEdit: () => editLocalSaleRequest(context, order, _services),
+      onDismiss: () => confirmAndDismissLocalSale(context, order, _services),
+      onDelete: () => confirmAndDeleteLocalSale(context, order, _services),
+      onLog: () => showLocalSaleSyncLog(context, order.id, _services),
+      onPrint: () => printLocalSale(context, order, _services),
+    );
+  }
 }

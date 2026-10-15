@@ -960,6 +960,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
       'showRateExcTax': 1.2,
       'showUnit': 0.8,
       'showTaxHeader': 1.1,
+      'showRowTotalTaxHeader': 1.1,
       'showTotal': 1.5,
     };
     final warranty = params.warrantyLabel;
@@ -983,9 +984,10 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
           ),
         );
 
-    // Item name: one run per language line so neither script reorders the
-    // other; right-aligned when the name carries Arabic. The warranty label
-    // prints under the name.
+    // Item name: English left and Arabic right on one line when both fit,
+    // else one run per language line so neither script reorders the other;
+    // right-aligned when the name carries Arabic. The warranty label prints
+    // under the name.
     pw.Widget nameCell(ReceiptItemLine line) {
       final arabicName = line.nameLines.any(pdfHasArabic);
       final textAlign = arabicName ? pw.TextAlign.right : pw.TextAlign.left;
@@ -996,11 +998,21 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               ? pw.CrossAxisAlignment.end
               : pw.CrossAxisAlignment.start,
           children: [
-            for (final name in line.nameLines)
-              pdfText(name,
-                  style: bodyStyle,
-                  textAlign: textAlign,
-                  textDirection: pdfTextDirectionOf(name)),
+            pdfBilingualName(line.nameLines,
+                style: bodyStyle,
+                twoLines: pw.Column(
+                  mainAxisSize: pw.MainAxisSize.min,
+                  crossAxisAlignment: arabicName
+                      ? pw.CrossAxisAlignment.end
+                      : pw.CrossAxisAlignment.start,
+                  children: [
+                    for (final name in line.nameLines)
+                      pdfText(name,
+                          style: bodyStyle,
+                          textAlign: textAlign,
+                          textDirection: pdfTextDirectionOf(name)),
+                  ],
+                )),
             if (line.hasWarranty && warranty.isNotEmpty)
               pdfText(warranty,
                   style: bodyStyle,

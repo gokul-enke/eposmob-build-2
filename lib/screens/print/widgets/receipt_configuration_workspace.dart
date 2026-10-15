@@ -139,6 +139,7 @@ class _ReceiptConfigurationWorkspaceState
         'showRateExcTax',
         'showUnit',
         'showTaxHeader',
+        'showRowTotalTaxHeader',
         'showTotal',
         'showItemsCount',
         'showQuantityCount',

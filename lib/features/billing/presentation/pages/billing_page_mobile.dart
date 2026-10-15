@@ -106,6 +106,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
   late final TextEditingController _quotationInlineNameController;
   late final TextEditingController _quotationInlinePhoneController;
+  late final TextEditingController _quotationTermsController;
 
   VoidCallback? _cartChangeListener;
 
@@ -159,6 +160,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     super.initState();
     _quotationInlineNameController = TextEditingController();
     _quotationInlinePhoneController = TextEditingController();
+    _quotationTermsController = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
 
     if (Get.isRegistered<SideBarController>()) {
@@ -551,6 +553,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _tabController.dispose();
     _quotationInlineNameController.dispose();
     _quotationInlinePhoneController.dispose();
+    _quotationTermsController.dispose();
 
     // Remove listeners
     try {
@@ -1061,6 +1064,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         expiryDate: _quotationExpiryDate,
         inlineCustomerName: _quotationInlineNameController.text,
         inlineCustomerPhone: _quotationInlinePhoneController.text,
+        terms: _quotationTermsController.text,
       );
       if (!mounted) return;
 
@@ -1087,6 +1091,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _quotationExpiryDate = now.add(const Duration(days: 30));
         _quotationInlineNameController.clear();
         _quotationInlinePhoneController.clear();
+        _quotationTermsController.clear();
       });
       setState(() {
         _controller.clearCartData(context);
@@ -1306,6 +1311,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                           _quotationInlineNameController,
                       quotationInlinePhoneController:
                           _quotationInlinePhoneController,
+                      quotationTermsController: _quotationTermsController,
                       onQuotationInlineCustomerChanged:
                           _handleQuotationInlineCustomerChanged,
                       isSavingOrder: _isSavingOrder,

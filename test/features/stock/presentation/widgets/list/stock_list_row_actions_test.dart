@@ -22,12 +22,12 @@ void main() {
               body: StockListRowActions(
                   isMobile: mobile,
                   stock: stock,
-                  onEdit: (s) => record('edit', s),
                   onView: (s) => record('view', s),
                   onAdjust: (s) => record('adjust', s),
                   onMove: (s) => record('move', s),
                   onWithdraw: (s) => record('withdraw', s)))));
-      await tester.tap(find.byIcon(Icons.edit));
+      // Stock edit is disabled for now.
+      expect(find.byIcon(Icons.edit), findsNothing);
       await tester.tap(find.byIcon(Icons.visibility));
       for (final action in ['adjust', 'move', 'withdraw']) {
         await tester.tap(find.byType(PopupMenuButton<String>));
@@ -36,7 +36,7 @@ void main() {
             (w) => w is PopupMenuItem<String> && w.value == action));
         await tester.pumpAndSettle();
       }
-      expect(calls, ['edit', 'view', 'adjust', 'move', 'withdraw']);
+      expect(calls, ['view', 'adjust', 'move', 'withdraw']);
       await tester.pumpWidget(const SizedBox.shrink());
       Get.reset();
     });

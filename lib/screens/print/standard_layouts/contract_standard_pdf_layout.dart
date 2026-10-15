@@ -357,16 +357,38 @@ class ContractStandardPdfRenderer {
     }
     final lines = params.itemLines;
     final warranty = params.warrantyLabel;
+    const columnFlex = <String, double>{
+      'showSLNumber': 0.6,
+      'showParticulars': 3,
+      'showMRP': 1,
+      'showQty': 0.8,
+      'showRate': 1.2,
+      'showRateExcTax': 1.2,
+      'showUnit': 0.8,
+      'showTaxHeader': 1.1,
+      'showRowTotalTaxHeader': 1.1,
+      'showItemDiscount': 1,
+      'showTotal': 1.5,
+    };
 
     pw.Widget valueCell(ReceiptItemLine line, String key) {
       if (key == 'showParticulars') {
-        return _cellLines(
-          [
-            ...line.nameLines,
-            if (line.hasWarranty && warranty.isNotEmpty) warranty,
-          ],
-          fonts.small,
-          align: _pageRtl ? pw.TextAlign.right : pw.TextAlign.left,
+        final align = _pageRtl ? pw.TextAlign.right : pw.TextAlign.left;
+        // English left / Arabic right on one line when both fit the cell.
+        return pw.Padding(
+          padding: const pw.EdgeInsets.all(3),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pdfBilingualName(line.nameLines,
+                  style: fonts.small,
+                  twoLines: _cellLines(line.nameLines, fonts.small,
+                      align: align, padding: pw.EdgeInsets.zero)),
+              if (line.hasWarranty && warranty.isNotEmpty)
+                _cellLines([warranty], fonts.small,
+                    align: align, padding: pw.EdgeInsets.zero),
+            ],
+          ),
         );
       }
       return _cellLines(
@@ -417,7 +439,7 @@ class ContractStandardPdfRenderer {
         border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
         columnWidths: {
           for (var i = 0; i < ordered.length; i++)
-            i: pw.FlexColumnWidth(ordered[i].key == 'showParticulars' ? 3 : 1),
+            i: pw.FlexColumnWidth(columnFlex[ordered[i].key] ?? 1),
         },
         children: tableRows,
       ),
@@ -857,10 +879,11 @@ class ContractStandardPdfRenderer {
 
   /// Table cell with one Text per line (item names, two-line headers).
   pw.Widget _cellLines(List<String> lines, pw.TextStyle style,
-      {pw.TextAlign? align}) {
+      {pw.TextAlign? align,
+      pw.EdgeInsets padding = const pw.EdgeInsets.all(3)}) {
     final visible = lines.where((line) => line.trim().isNotEmpty).toList();
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(3),
+      padding: padding,
       child: pw.Column(
         // Column cross-axis start/end follow the page direction.
         crossAxisAlignment: switch (align) {

@@ -16,6 +16,10 @@ class QuotationCheckoutSection extends StatefulWidget {
   final VoidCallback onInlineCustomerChanged;
   final VoidCallback? onSelectCustomer;
 
+  /// Quotation terms; printed instead of the document configuration terms
+  /// when filled in.
+  final TextEditingController? termsController;
+
   const QuotationCheckoutSection({
     super.key,
     required this.quotationDate,
@@ -26,6 +30,7 @@ class QuotationCheckoutSection extends StatefulWidget {
     required this.inlinePhoneController,
     required this.onInlineCustomerChanged,
     this.onSelectCustomer,
+    this.termsController,
   });
 
   @override
@@ -168,6 +173,17 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
               ),
             ],
           ),
+          if (widget.termsController != null) ...[
+            const SizedBox(height: 12),
+            _InlineField(
+              label: 'checkout_modal.label_quotation_terms'.tr,
+              controller: widget.termsController!,
+              hintText: 'checkout_modal.hint_quotation_terms'.tr,
+              keyboardType: TextInputType.multiline,
+              minLines: 2,
+              maxLines: 4,
+            ),
+          ],
         ],
       ),
     );
@@ -180,6 +196,8 @@ class _InlineField extends StatelessWidget {
   final String hintText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final int minLines;
+  final int maxLines;
 
   const _InlineField({
     required this.label,
@@ -187,6 +205,8 @@ class _InlineField extends StatelessWidget {
     required this.hintText,
     this.keyboardType,
     this.onChanged,
+    this.minLines = 1,
+    this.maxLines = 1,
   });
 
   @override
@@ -207,6 +227,8 @@ class _InlineField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          minLines: minLines,
+          maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hintText,
             isDense: true,

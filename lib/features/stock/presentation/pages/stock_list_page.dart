@@ -8,7 +8,8 @@ import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/models/list_stock.dart';
-import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
+// Stock edit disabled for now (only used by _showEditStockModal).
+// import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -20,7 +21,8 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/product/widgets/adjust_stock_modal.dart';
 import 'package:pos_machine/screens/product/widgets/move_stock_modal.dart';
 import 'package:pos_machine/screens/product/widgets/withdraw_stock_modal.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+// Stock edit disabled for now.
+// import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 import '../navigation/stock_navigation.dart';
 import '../state/stock_list_controller.dart';
@@ -180,7 +182,8 @@ class _StockListPageState extends State<StockListPage> {
       StockListRowActions(
           isMobile: isMobile,
           stock: stock,
-          onEdit: _showEditStockModal,
+          // Stock edit disabled for now.
+          // onEdit: _showEditStockModal,
           onView: _showStockDetails,
           onAdjust: _showAdjustStockModal,
           onMove: _showMoveStockModal,
@@ -366,28 +369,28 @@ class _StockListPageState extends State<StockListPage> {
     );
   }
 
-  void _showEditStockModal(ListStockModelData stock) {
-    if (stock.stockId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'stock.edit_missing_id'.tr,
-      );
-      return;
-    }
-
-    showEditStockDialog(
-      context: context,
-      stockId: stock.stockId!,
-      title: 'stock.edit_stock_title'
-          .trParams({'productName': stock.productName ?? ''}),
-      initialRetailPrice: stock.retailPrice ?? '',
-      initialMrp: stock.mrp ?? '',
-      initialPurchasePrice: stock.purchaseRate ?? '',
-      showPurchasePrice: _canViewPurchasePrice(),
-      initialQuantity: stock.qty?.toString() ?? '0',
-      initialRack: stock.rack ?? '',
-    );
-  }
+  // Stock edit disabled for now.
+  // void _showEditStockModal(ListStockModelData stock) {
+  //   if (stock.stockId == null) {
+  //     showScaffoldError(
+  //       context: context,
+  //       message: 'stock.edit_missing_id'.tr,
+  //     );
+  //     return;
+  //   }
+  //
+  //   showEditStockDialog(
+  //     context: context,
+  //     stockId: stock.stockId!,
+  //     title: 'stock.edit_stock_title'
+  //         .trParams({'productName': stock.productName ?? ''}),
+  //     initialRetailPrice: stock.retailPrice ?? '',
+  //     initialMrp: stock.mrp ?? '',
+  //     initialPurchasePrice: stock.purchaseRate ?? '',
+  //     showPurchasePrice: _canViewPurchasePrice(),
+  //     initialRack: stock.rack ?? '',
+  //   );
+  // }
 
   void _showAdjustStockModal(ListStockModelData stock) {
     debugPrint(

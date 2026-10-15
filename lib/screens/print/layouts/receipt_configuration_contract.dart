@@ -23,8 +23,8 @@ extension ReceiptLanguageModeX on ReceiptLanguageMode {
 
 /// Shared document-configuration semantics for every receipt theme.
 ///
-/// The supplied Bill response contains 61 display keys. A few newer renderer
-/// names are aliases for keys still used by older API responses; resolution is
+/// The supplied Bill response includes independent unit and row-tax columns.
+/// A few renderer names are aliases for keys still used by older API responses; resolution is
 /// centralized here so a theme cannot accidentally implement a different
 /// contract.
 class ReceiptConfigurationContract {
@@ -83,6 +83,7 @@ class ReceiptConfigurationContract {
     'showSwiftCode',
     'showTax',
     'showTaxHeader',
+    'showRowTotalTaxHeader',
     'showTel',
     'showTermsConditions',
     'showThankYouMessage',
