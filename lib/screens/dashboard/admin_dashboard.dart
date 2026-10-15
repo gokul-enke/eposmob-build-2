@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
+import '../../helpers/dashboard_permissions.dart';
 import '../../models/dashboard.dart';
 import '../../models/dashboard_api.dart';
 import '../../providers/dashboard_provider.dart';
@@ -19,6 +20,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/dashboard_responsive.dart';
+import 'widgets/dashboard_additional_widgets.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -202,20 +204,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     _buildHeader(size),
                     const SizedBox(height: 20),
                     _buildSupplierOverview(),
-                    if (canShowPurchaseCosts) ...[
+                    if (canShowPurchaseCosts &&
+                        _can(DashboardPermissions.widget('suppliers_purchase_graph'))) ...[
                       const SizedBox(height: 20),
                       _buildSuppliersPurchaseGraph(),
                     ],
-                    const SizedBox(height: 20),
-                    _buildSupplierTransactionsGraph(),
-                    const SizedBox(height: 20),
-                    _buildSupplierCreditBalanceGraph(),
+                    if (_can(DashboardPermissions.widget('supplier_transactions_graph'))) ...[
+                      const SizedBox(height: 20),
+                      _buildSupplierTransactionsGraph(),
+                    ],
+                    if (_can(DashboardPermissions.widget('supplier_credit_balance'))) ...[
+                      const SizedBox(height: 20),
+                      _buildSupplierCreditBalanceGraph(),
+                    ],
+                    const DashboardAdditionalWidgets(supplierOnly: true),
                   ],
                 ),
               ),
             )),
     );
   }
+
+  bool _can(String permission) => canSeeDashboardItem(context, permission);
 
   Widget _buildHeader(Size size) {
     return Padding(
@@ -271,6 +281,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildSupplierOverview() {
+    final showTotalSuppliers =
+        _can(DashboardPermissions.field('suppliers_overview', 'suppliers.total_suppliers'));
+    final showNewSuppliers =
+        _can(DashboardPermissions.field('suppliers_overview', 'suppliers.new_suppliers'));
     return Column(
       children: [
         DashboardSectionHeader(
@@ -345,14 +359,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
           ),
         ),
-        ResponsiveStatGrid(
-          cardHeight: 150,
-          maxColumns: 2,
-          cards: [
-            _buildSupplierCountCard(),
-            _buildNewSuppliersCard(),
-          ],
-        ),
+        // The header stays visible: its period dropdown drives the graphs below.
+        if (showTotalSuppliers || showNewSuppliers)
+          ResponsiveStatGrid(
+            cardHeight: 150,
+            maxColumns: 2,
+            cards: [
+              if (showTotalSuppliers) _buildSupplierCountCard(),
+              if (showNewSuppliers) _buildNewSuppliersCard(),
+            ],
+          ),
       ],
     );
   }

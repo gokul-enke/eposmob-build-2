@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../../components/build_container_box.dart';
+import '../../../helpers/dashboard_permissions.dart';
 import '../../../models/dashboard_api.dart';
 import '../../../providers/app_settings_provider.dart';
 import '../../../providers/auth_model.dart';
@@ -117,6 +118,12 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
     );
     if (!phase2Enabled) return const SizedBox.shrink();
 
+    final invoiceAllowed = _allowed(context, _invoiceFields);
+    final voucherAllowed = _allowed(context, _voucherFields);
+    if (!invoiceAllowed.contains(true) && !voucherAllowed.contains(true)) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 20),
       child: Column(
@@ -131,13 +138,13 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
               color: ColorManager.kPrimaryColor,
             ),
           ),
-          _buildContent(),
+          _buildContent(invoiceAllowed, voucherAllowed),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(List<bool> invoiceAllowed, List<bool> voucherAllowed) {
     if (_loading && _overview == null) {
       return _buildMessageCard(
         const Center(child: CircularProgressIndicator.adaptive()),
@@ -182,42 +189,68 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildGroupTitle('dashboard.zatca_overview.invoice_title'.tr),
-        ResponsiveStatGrid(
-          maxColumns: 4,
-          cards: _buildStatusCards(
-            success: overview.successZatca,
-            notSent: overview.notSent,
-            failed: overview.failed,
-            warning: overview.warning,
-            successSubtitle: 'dashboard.zatca_overview.success_subtitle'.tr,
-            notSentSubtitle: 'dashboard.zatca_overview.not_sent_subtitle'.tr,
-            failedSubtitle: 'dashboard.zatca_overview.failed_subtitle'.tr,
-            warningSubtitle: 'dashboard.zatca_overview.warning_subtitle'.tr,
+        if (invoiceAllowed.contains(true)) ...[
+          _buildGroupTitle('dashboard.zatca_overview.invoice_title'.tr),
+          ResponsiveStatGrid(
+            maxColumns: 4,
+            cards: _buildStatusCards(
+              allowed: invoiceAllowed,
+              success: overview.successZatca,
+              notSent: overview.notSent,
+              failed: overview.failed,
+              warning: overview.warning,
+              successSubtitle: 'dashboard.zatca_overview.success_subtitle'.tr,
+              notSentSubtitle: 'dashboard.zatca_overview.not_sent_subtitle'.tr,
+              failedSubtitle: 'dashboard.zatca_overview.failed_subtitle'.tr,
+              warningSubtitle: 'dashboard.zatca_overview.warning_subtitle'.tr,
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        _buildGroupTitle('dashboard.zatca_overview.voucher_title'.tr),
-        ResponsiveStatGrid(
-          maxColumns: 4,
-          cards: _buildStatusCards(
-            success: overview.voucherSuccess,
-            notSent: overview.voucherNotSent,
-            failed: overview.voucherFailed,
-            warning: overview.voucherWarning,
-            successSubtitle:
-                'dashboard.zatca_overview.voucher_success_subtitle'.tr,
-            notSentSubtitle:
-                'dashboard.zatca_overview.voucher_not_sent_subtitle'.tr,
-            failedSubtitle:
-                'dashboard.zatca_overview.voucher_failed_subtitle'.tr,
-            warningSubtitle:
-                'dashboard.zatca_overview.voucher_warning_subtitle'.tr,
+        ],
+        if (invoiceAllowed.contains(true) && voucherAllowed.contains(true))
+          const SizedBox(height: 18),
+        if (voucherAllowed.contains(true)) ...[
+          _buildGroupTitle('dashboard.zatca_overview.voucher_title'.tr),
+          ResponsiveStatGrid(
+            maxColumns: 4,
+            cards: _buildStatusCards(
+              allowed: voucherAllowed,
+              success: overview.voucherSuccess,
+              notSent: overview.voucherNotSent,
+              failed: overview.voucherFailed,
+              warning: overview.voucherWarning,
+              successSubtitle:
+                  'dashboard.zatca_overview.voucher_success_subtitle'.tr,
+              notSentSubtitle:
+                  'dashboard.zatca_overview.voucher_not_sent_subtitle'.tr,
+              failedSubtitle:
+                  'dashboard.zatca_overview.voucher_failed_subtitle'.tr,
+              warningSubtitle:
+                  'dashboard.zatca_overview.voucher_warning_subtitle'.tr,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
+
+  // Order matches the cards: success, not sent, failed, warning.
+  static const _invoiceFields = [
+    'success_zatca',
+    'not_sent',
+    'failed',
+    'warning',
+  ];
+  static const _voucherFields = [
+    'voucher_success',
+    'voucher_not_sent',
+    'voucher_failed',
+    'voucher_warning',
+  ];
+
+  List<bool> _allowed(BuildContext context, List<String> fields) => fields
+      .map((field) => canSeeDashboardItem(
+          context, DashboardPermissions.field('zatca_overview', field)))
+      .toList();
 
   Widget _buildGroupTitle(String title) {
     return Padding(
@@ -235,6 +268,7 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
   }
 
   List<Widget> _buildStatusCards({
+    required List<bool> allowed,
     required int success,
     required int notSent,
     required int failed,
@@ -245,38 +279,42 @@ class _ZatcaOverviewSectionState extends State<ZatcaOverviewSection> {
     required String warningSubtitle,
   }) {
     return [
-      DashboardStatCard(
-        title: 'dashboard.zatca_overview.success'.tr,
-        subtitle: successSubtitle,
-        value: '$success',
-        color: const Color(0xFF21A366),
-        icon: Icons.check_circle_outline_rounded,
-        showTrend: false,
-      ),
-      DashboardStatCard(
-        title: 'dashboard.zatca_overview.not_sent'.tr,
-        subtitle: notSentSubtitle,
-        value: '$notSent',
-        color: const Color(0xFF64748B),
-        icon: Icons.schedule_send_outlined,
-        showTrend: false,
-      ),
-      DashboardStatCard(
-        title: 'dashboard.zatca_overview.failed'.tr,
-        subtitle: failedSubtitle,
-        value: '$failed',
-        color: ColorManager.kRed,
-        icon: Icons.error_outline_rounded,
-        showTrend: false,
-      ),
-      DashboardStatCard(
-        title: 'dashboard.zatca_overview.warning'.tr,
-        subtitle: warningSubtitle,
-        value: '$warning',
-        color: const Color(0xFFE59A17),
-        icon: Icons.warning_amber_rounded,
-        showTrend: false,
-      ),
+      if (allowed[0])
+        DashboardStatCard(
+          title: 'dashboard.zatca_overview.success'.tr,
+          subtitle: successSubtitle,
+          value: '$success',
+          color: const Color(0xFF21A366),
+          icon: Icons.check_circle_outline_rounded,
+          showTrend: false,
+        ),
+      if (allowed[1])
+        DashboardStatCard(
+          title: 'dashboard.zatca_overview.not_sent'.tr,
+          subtitle: notSentSubtitle,
+          value: '$notSent',
+          color: const Color(0xFF64748B),
+          icon: Icons.schedule_send_outlined,
+          showTrend: false,
+        ),
+      if (allowed[2])
+        DashboardStatCard(
+          title: 'dashboard.zatca_overview.failed'.tr,
+          subtitle: failedSubtitle,
+          value: '$failed',
+          color: ColorManager.kRed,
+          icon: Icons.error_outline_rounded,
+          showTrend: false,
+        ),
+      if (allowed[3])
+        DashboardStatCard(
+          title: 'dashboard.zatca_overview.warning'.tr,
+          subtitle: warningSubtitle,
+          value: '$warning',
+          color: const Color(0xFFE59A17),
+          icon: Icons.warning_amber_rounded,
+          showTrend: false,
+        ),
     ];
   }
 

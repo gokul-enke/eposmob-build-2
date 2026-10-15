@@ -286,6 +286,12 @@ class APPUrl {
   static String get companyOverview =>
       '$baseURL/api/v1/dashboard/company-overview';
   static String get ordersGraph => '$baseURL/api/v1/dashboard/orders-graph';
+  static String get ordersWidget => '$baseURL/api/v1/dashboard/orders-widget';
+  static String get latestOrders => '$baseURL/api/v1/dashboard/latest-orders';
+  static String get customerTransactionsSummary =>
+      '$baseURL/api/v1/dashboard/customer-transactions-summary';
+  static String get suppliersGraph => '$baseURL/api/v1/dashboard/suppliers-graph';
+  static String get revenueStats => '$baseURL/api/v1/dashboard/revenue-stats';
   static String get customersGraph =>
       '$baseURL/api/v1/dashboard/customers-graph';
   static String get executivesOverview =>
