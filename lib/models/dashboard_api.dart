@@ -239,7 +239,10 @@ class CustomersPerMonth {
   factory CustomersPerMonth.fromJson(Map<String, dynamic> json) {
     // Add null safety checks
     final data = json as Map<String, dynamic>? ?? {};
-    final customersData = data['customers_per_month'] as List? ?? [];
+    // customers-graph currently sends its counts under `orders_per_month`.
+    final customersData = (data['customers_per_month'] ??
+            data['orders_per_month']) as List? ??
+        [];
 
     return CustomersPerMonth(
       customersPerMonth: customersData
@@ -264,7 +267,7 @@ class MonthlyData {
 
     return MonthlyData(
       month: data['month'] as String? ?? '',
-      count: data['count'] as int? ?? 0,
+      count: _parseInt(data['count']),
     );
   }
 }
@@ -281,10 +284,13 @@ class ExecutivesOverview {
   factory ExecutivesOverview.fromJson(Map<String, dynamic> json) {
     // Add null safety checks
     final data = json as Map<String, dynamic>? ?? {};
-    final executivesData = data['sales_executives_graph'] as List? ?? [];
+    // The API sends `sales_executive_graph`; keep the older plural key too.
+    final executivesData = (data['sales_executive_graph'] ??
+            data['sales_executives_graph']) as List? ??
+        [];
 
     return ExecutivesOverview(
-      totalExecutives: data['total_executives'] as int? ?? 0,
+      totalExecutives: _parseInt(data['total_executives']),
       salesExecutivesGraph: executivesData
           .map((item) =>
               SalesExecutiveGraph.fromJson(item as Map<String, dynamic>))
@@ -321,7 +327,7 @@ class SalesExecutiveGraph {
 
 class SalesData {
   final String date;
-  final int amount;
+  final double amount;
 
   SalesData({
     required this.date,
@@ -334,7 +340,8 @@ class SalesData {
 
     return SalesData(
       date: data['date'] as String? ?? '',
-      amount: data['amount'] as int? ?? 0,
+      // Sent as a decimal string, e.g. "12.000".
+      amount: _parseDouble(data['amount']),
     );
   }
 }
@@ -392,16 +399,25 @@ class GraphDataPoint {
 }
 
 class ZatcaOverview {
+  // The backend retains these legacy keys for invoice totals.
   final int successZatca;
   final int notSent;
   final int failed;
   final int warning;
+  final int voucherSuccess;
+  final int voucherNotSent;
+  final int voucherFailed;
+  final int voucherWarning;
 
   const ZatcaOverview({
     required this.successZatca,
     required this.notSent,
     required this.failed,
     required this.warning,
+    this.voucherSuccess = 0,
+    this.voucherNotSent = 0,
+    this.voucherFailed = 0,
+    this.voucherWarning = 0,
   });
 
   factory ZatcaOverview.fromJson(Map<String, dynamic> json) {
@@ -410,6 +426,10 @@ class ZatcaOverview {
       notSent: _parseInt(json['not_sent']),
       failed: _parseInt(json['failed']),
       warning: _parseInt(json['warning']),
+      voucherSuccess: _parseInt(json['voucher_success']),
+      voucherNotSent: _parseInt(json['voucher_not_sent']),
+      voucherFailed: _parseInt(json['voucher_failed']),
+      voucherWarning: _parseInt(json['voucher_warning']),
     );
   }
 }
@@ -729,6 +749,12 @@ class SalesStats {
       payments: responseData['payments'] as List? ?? [],
     );
   }
+
+  // Order counts per channel. The API sends `pos_order`, `web_order` and
+  // `kiosk_order`; "4"/"5"/"6" are the older keys.
+  double get posOrders => _parseDouble(data['pos_order'] ?? data['4']);
+  double get webOrders => _parseDouble(data['web_order'] ?? data['5']);
+  double get kioskOrders => _parseDouble(data['kiosk_order'] ?? data['6']);
 }
 
 class CustomerStats {
@@ -771,7 +797,7 @@ class ProductStats {
   final int taxableCategory;
   final int nonTaxableCategory;
   final int productsInStock;
-  final int totalProductsStockQty;
+  final double totalProductsStockQty;
   final int lowStock;
 
   ProductStats({
@@ -795,21 +821,21 @@ class ProductStats {
   factory ProductStats.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>? ?? {};
     return ProductStats(
-      totalProducts: data['total_products'] as int? ?? 0,
-      activeProducts: data['active_products'] as int? ?? 0,
-      inactiveProducts: data['inactive_products'] as int? ?? 0,
-      sellableProducts: data['sellable_products'] as int? ?? 0,
-      purchasableProducts: data['purchasable_products'] as int? ?? 0,
-      taxableProducts: data['taxable_products'] as int? ?? 0,
-      nonTaxableProducts: data['non_taxable_products'] as int? ?? 0,
-      totalCategory: data['total_category'] as int? ?? 0,
-      sellableCategory: data['sellable_category'] as int? ?? 0,
-      purchasableCategory: data['purchasable_category'] as int? ?? 0,
-      taxableCategory: data['taxable_category'] as int? ?? 0,
-      nonTaxableCategory: data['non_taxable_category'] as int? ?? 0,
-      productsInStock: data['products_in_stock'] as int? ?? 0,
-      totalProductsStockQty: data['total_products_stock_qty'] as int? ?? 0,
-      lowStock: data['low_stock'] as int? ?? 0,
+      totalProducts: _parseInt(data['total_products']),
+      activeProducts: _parseInt(data['active_products']),
+      inactiveProducts: _parseInt(data['inactive_products']),
+      sellableProducts: _parseInt(data['sellable_products']),
+      purchasableProducts: _parseInt(data['purchasable_products']),
+      taxableProducts: _parseInt(data['taxable_products']),
+      nonTaxableProducts: _parseInt(data['non_taxable_products']),
+      totalCategory: _parseInt(data['total_category']),
+      sellableCategory: _parseInt(data['sellable_category']),
+      purchasableCategory: _parseInt(data['purchasable_category']),
+      taxableCategory: _parseInt(data['taxable_category']),
+      nonTaxableCategory: _parseInt(data['non_taxable_category']),
+      productsInStock: _parseInt(data['products_in_stock']),
+      totalProductsStockQty: _parseDouble(data['total_products_stock_qty']),
+      lowStock: _parseInt(data['low_stock']),
     );
   }
 }

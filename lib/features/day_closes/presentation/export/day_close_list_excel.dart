@@ -5,16 +5,22 @@ import 'package:pos_machine/services/list_excel_export_service.dart';
 import '../widgets/day_close_list_rows.dart';
 
 Future<File> exportDayCloseList(List<DailySalesCloseData> rows, String currency,
-        {Directory? outputDirectory}) =>
+        {Directory? outputDirectory,
+        String fileNamePrefix = 'daily-sales-closes',
+        bool includeExecutiveId = false}) =>
     ListExcelExportService.export<DailySalesCloseData>(
         items: rows,
-        fileNamePrefix: 'daily-sales-closes',
+        fileNamePrefix: fileNamePrefix,
         sheetName: 'Daily Sales Closes',
         outputDirectory: outputDirectory,
         columns: [
           ListExportColumn(
               label: 'daily_sales_close.list_id'.tr,
               value: (r, _) => '${r.id}'),
+          if (includeExecutiveId)
+            ListExportColumn(
+                label: 'daily_sales_close.admin_executive_id'.tr,
+                value: (r, _) => '${r.salesExecutive!.id}'),
           ListExportColumn(
               label: 'daily_sales_close.sales_executive'.tr,
               value: (r, _) => r.salesExecutive?.name ?? ''),
