@@ -73,6 +73,24 @@ void main() {
     expect(calls, [1, 2]);
     expect(rows.single.id, 71);
   });
+  test(
+      'accepts the exact pagination safety boundary and rejects larger declarations',
+      () async {
+    final rows = await fetchSupplierReportDetailsSnapshot(
+        (page) async => detailResponse(
+            page: page, last: 1000, total: 1000, groups: [detailGroup(page)]),
+        query);
+    expect(rows.single.id, 71);
+    final calls = <int>[];
+    await expectLater(
+        fetchSupplierReportDetailsSnapshot((page) async {
+          calls.add(page);
+          return detailResponse(
+              page: page, last: 1001, total: 1001, groups: [detailGroup(page)]);
+        }, query),
+        throwsFormatException);
+    expect(calls, [1]);
+  });
   for (final legacy in [true, false]) {
     test(
         'complete single grouped/legacy snapshot $legacy keeps blank payment and exact amount',

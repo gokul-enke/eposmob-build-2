@@ -121,6 +121,7 @@ Future<List<SupplierTransaction>> fetchSupplierReportDetailsSnapshot(
         : null;
     if (current != requested ||
         pages < requested ||
+        pages > 1000 ||
         (size != null && size < 1)) {
       throw const FormatException('Invalid supplier transaction pagination.');
     }
