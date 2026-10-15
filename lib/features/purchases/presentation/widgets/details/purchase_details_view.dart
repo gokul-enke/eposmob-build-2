@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:pos_machine/features/purchases/domain/models/list_purchase.dart';
+import 'package:pos_machine/features/purchases/domain/purchase_order_totals.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';

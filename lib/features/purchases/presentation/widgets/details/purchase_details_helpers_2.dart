@@ -182,13 +182,24 @@ class _PurchaseViewData {
         (raw['items'] as List?) ?? (raw['purchase_items'] as List?) ?? [];
     final amountTotal = _DisplayFormatter.toDouble(raw['amount_total']);
     final discountAmount = _DisplayFormatter.toDouble(raw['discount']);
+    // A partially received order is payable only for its received lines,
+    // matching what the receive form charged.
+    final receivedGross =
+        partiallyReceivedPurchaseGross(rawItems.whereType<Map>());
+    final grossAmount = receivedGross ?? amountTotal + discountAmount;
+    final netPayable = receivedGross == null
+        ? amountTotal
+        : PurchaseOrderTotals(
+            grossAmount: receivedGross,
+            discountAmount: discountAmount,
+          ).netPayable;
 
     return _PurchaseViewData(
       voucherNumber: '${raw['voucher_number'] ?? raw['id'] ?? '-'}',
       purchaseDate: _DisplayFormatter.asText(raw['purchase_date']),
-      amountTotal: amountTotal.toString(),
+      amountTotal: netPayable.toString(),
       discountAmount: discountAmount.toString(),
-      grossAmount: (amountTotal + discountAmount).toString(),
+      grossAmount: grossAmount.toString(),
       storeName: _DisplayFormatter.entityName(raw['store']) ??
           purchaseProvider
               .storeName(_DisplayFormatter.toInt(raw['store_id'])) ??

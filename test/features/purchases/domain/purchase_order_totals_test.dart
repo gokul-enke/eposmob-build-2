@@ -123,4 +123,45 @@ void main() {
       );
     });
   });
+
+  group('partiallyReceivedPurchaseGross', () {
+    test('sums only received lines when some lines are received', () {
+      final gross = partiallyReceivedPurchaseGross([
+        {'status': 'Y', 'quantity': '1', 'unit_price': '2', 'total_price': '2'},
+        {'status': 'N', 'quantity': '1', 'unit_price': '3', 'total_price': '3'},
+        {'status': 'pending', 'quantity': '1', 'unit_price': '16'},
+      ]);
+
+      expect(gross, 2);
+    });
+
+    test('falls back to quantity times unit price without a total', () {
+      final gross = partiallyReceivedPurchaseGross([
+        {'status': 'received', 'quantity': '3', 'unit_price': '2.5'},
+        {'status': 'N', 'quantity': '1', 'unit_price': '10'},
+      ]);
+
+      expect(gross, 7.5);
+    });
+
+    test('returns null when every line is received', () {
+      expect(
+        partiallyReceivedPurchaseGross([
+          {'status': 'Y', 'total_price': '2'},
+          {'status': 'FULLY_RECEIVED', 'total_price': '3'},
+        ]),
+        isNull,
+      );
+    });
+
+    test('returns null when no line is received', () {
+      expect(
+        partiallyReceivedPurchaseGross([
+          {'status': 'N', 'total_price': '2'},
+          {'status': null, 'total_price': '3'},
+        ]),
+        isNull,
+      );
+    });
+  });
 }
