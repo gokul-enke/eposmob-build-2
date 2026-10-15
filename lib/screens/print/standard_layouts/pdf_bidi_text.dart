@@ -72,6 +72,44 @@ pw.Widget pdfReceiptLine(
       }));
 }
 
+/// Bilingual item name (one Arabic line and one Latin line): English on the
+/// left and Arabic on the right of a single line when both fit the cell
+/// width; otherwise [twoLines], the layout's own stacked rendering. Any other
+/// name shape (one language, attributes only) returns [twoLines] unchanged.
+pw.Widget pdfBilingualName(
+  List<String> nameLines, {
+  required pw.Widget twoLines,
+  pw.TextStyle? style,
+  double gap = 6,
+}) {
+  final names = nameLines.where((name) => name.trim().isNotEmpty).toList();
+  if (names.length != 2) return twoLines;
+  final arabicName = names.firstWhere(pdfHasArabic, orElse: () => '');
+  final englishName =
+      names.firstWhere((name) => !pdfHasArabic(name), orElse: () => '');
+  if (arabicName.isEmpty || englishName.isEmpty) return twoLines;
+
+  final english =
+      pdfText(englishName, style: style, textDirection: pw.TextDirection.ltr);
+  final arabic = pdfText(arabicName, style: style);
+  return pw.Directionality(
+      textDirection: pw.TextDirection.ltr,
+      child: pw.LayoutBuilder(builder: (context, constraints) {
+        final width = constraints?.maxWidth ?? double.infinity;
+        const unbounded = pw.BoxConstraints();
+        english.layout(context, unbounded);
+        arabic.layout(context, unbounded);
+        if (english.box!.width + gap + arabic.box!.width > width) {
+          return twoLines;
+        }
+        return pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [english, pw.SizedBox(width: gap), arabic],
+        );
+      }));
+}
+
 pw.Widget pdfReceiptParts(
   ReceiptLabelParts parts, {
   pw.TextStyle? style,

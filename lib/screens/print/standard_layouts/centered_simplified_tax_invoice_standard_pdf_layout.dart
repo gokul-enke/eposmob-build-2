@@ -910,11 +910,22 @@ class CenteredSimplifiedTaxInvoiceStandardPdfLayout
               ? pw.CrossAxisAlignment.end
               : pw.CrossAxisAlignment.start,
           children: [
-            for (final name in line.nameLines)
-              pdfText(name,
-                  style: bodyStyle,
-                  textAlign: textAlign,
-                  textDirection: pdfTextDirectionOf(name)),
+            // English left / Arabic right on one line when both fit.
+            pdfBilingualName(line.nameLines,
+                style: bodyStyle,
+                twoLines: pw.Column(
+                  mainAxisSize: pw.MainAxisSize.min,
+                  crossAxisAlignment: alignRight
+                      ? pw.CrossAxisAlignment.end
+                      : pw.CrossAxisAlignment.start,
+                  children: [
+                    for (final name in line.nameLines)
+                      pdfText(name,
+                          style: bodyStyle,
+                          textAlign: textAlign,
+                          textDirection: pdfTextDirectionOf(name)),
+                  ],
+                )),
             if (line.hasWarranty && warranty.isNotEmpty)
               pdfText(warranty, style: bodyStyle, textAlign: textAlign),
           ],

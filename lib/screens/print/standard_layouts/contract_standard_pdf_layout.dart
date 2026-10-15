@@ -373,13 +373,22 @@ class ContractStandardPdfRenderer {
 
     pw.Widget valueCell(ReceiptItemLine line, String key) {
       if (key == 'showParticulars') {
-        return _cellLines(
-          [
-            ...line.nameLines,
-            if (line.hasWarranty && warranty.isNotEmpty) warranty,
-          ],
-          fonts.small,
-          align: _pageRtl ? pw.TextAlign.right : pw.TextAlign.left,
+        final align = _pageRtl ? pw.TextAlign.right : pw.TextAlign.left;
+        // English left / Arabic right on one line when both fit the cell.
+        return pw.Padding(
+          padding: const pw.EdgeInsets.all(3),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pdfBilingualName(line.nameLines,
+                  style: fonts.small,
+                  twoLines: _cellLines(line.nameLines, fonts.small,
+                      align: align, padding: pw.EdgeInsets.zero)),
+              if (line.hasWarranty && warranty.isNotEmpty)
+                _cellLines([warranty], fonts.small,
+                    align: align, padding: pw.EdgeInsets.zero),
+            ],
+          ),
         );
       }
       return _cellLines(
@@ -870,10 +879,11 @@ class ContractStandardPdfRenderer {
 
   /// Table cell with one Text per line (item names, two-line headers).
   pw.Widget _cellLines(List<String> lines, pw.TextStyle style,
-      {pw.TextAlign? align}) {
+      {pw.TextAlign? align,
+      pw.EdgeInsets padding = const pw.EdgeInsets.all(3)}) {
     final visible = lines.where((line) => line.trim().isNotEmpty).toList();
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(3),
+      padding: padding,
       child: pw.Column(
         // Column cross-axis start/end follow the page direction.
         crossAxisAlignment: switch (align) {
