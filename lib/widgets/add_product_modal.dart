@@ -219,6 +219,11 @@ class _AddProductWithBarcodeModalState
     _suppliersRequested = true;
     try {
       await supplierProvider.fetchSuppliers(accessToken: accessToken);
+      // fetchSuppliers swallows most errors and leaves the list empty; allow
+      // a retry the next time an opening quantity is entered.
+      if (supplierProvider.allSuppliers?.isEmpty ?? true) {
+        _suppliersRequested = false;
+      }
     } catch (e) {
       _suppliersRequested = false;
       debugPrint('⚠️ fetchSuppliers failed: $e');
