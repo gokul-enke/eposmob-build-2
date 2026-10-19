@@ -645,16 +645,15 @@ class InvoiceProvider extends ChangeNotifier {
       debugPrint(
           "After ZATCA status filter: ${filteredInvoices.length} invoices match '$filterZatcaStatus'");
     }
-    //     if (filterOrderNumber != null && filterOrderNumber.isNotEmpty) {
-    //   filteredInvoices = filteredInvoices.where((invoice) {
-    //     // Assuming you have an orderNumber field in your Invoice model
-    //     // If not, you'll need to add it to the model first
-    //     return invoice.orderNumber != null &&
-    //            invoice.orderNumber.toLowerCase().contains(filterOrderNumber.toLowerCase());
-    //   }).toList();
-    //   debugPrint(
-    //       "After order number filter: ${filteredInvoices.length} invoices match '$filterOrderNumber'");
-    // }
+    // The search box takes either the order number or the offline receipt
+    // number, so match both.
+    if (filterOrderNumber != null && filterOrderNumber.isNotEmpty) {
+      final needle = filterOrderNumber.toLowerCase();
+      filteredInvoices = filteredInvoices.where((invoice) {
+        return [invoice.orderNumber, invoice.receiptNumber]
+            .any((v) => v != null && v.toLowerCase().contains(needle));
+      }).toList();
+    }
     // Apply phone filter
     if (filterPhone != null && filterPhone.isNotEmpty) {
       filteredInvoices = filteredInvoices.where((invoice) {
@@ -875,6 +874,8 @@ class InvoiceProvider extends ChangeNotifier {
         userId: inv.userId,
         customerId: inv.customerId,
         invoiceNumber: inv.invoiceNumber,
+        orderNumber: inv.orderNumber,
+        receiptNumber: inv.receiptNumber,
         type: inv.type,
         companyId: inv.companyId,
         amount: inv.amount,
@@ -1660,6 +1661,7 @@ class InvoiceProvider extends ChangeNotifier {
     required String accessToken,
     String? name,
     String? invoiceNumber,
+    String? orderNumber,
     String? phone,
     String? fromDate,
     String? toDate,
@@ -1673,6 +1675,7 @@ class InvoiceProvider extends ChangeNotifier {
         accessToken: accessToken,
         name: name,
         invoiceNumber: invoiceNumber,
+        orderNumber: orderNumber,
         phone: phone,
         fromDate: fromDate,
         toDate: toDate,

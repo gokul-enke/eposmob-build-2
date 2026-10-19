@@ -61,6 +61,10 @@ class Invoice {
   final int customerId;
   final int? transactionId;
   final String invoiceNumber;
+
+  /// The source order's number and offline receipt number; null when the
+  /// invoice has no order or the API leaves them out.
+  final String? orderNumber, receiptNumber;
   final String type;
   final int companyId;
   final String amount;
@@ -88,6 +92,8 @@ class Invoice {
     required this.customerId,
     this.transactionId,
     required this.invoiceNumber,
+    this.orderNumber,
+    this.receiptNumber,
     required this.type,
     required this.companyId,
     required this.amount,
@@ -184,12 +190,19 @@ class Invoice {
       resolvedZatcaStatus = 'success';
     }
 
+    String? optionalText(dynamic value) {
+      final text = value?.toString().trim();
+      return text == null || text.isEmpty ? null : text;
+    }
+
     return Invoice(
       id: json['id'] ?? 0,
       userId: json['user_id'],
       customerId: json['customer_id'] ?? 0,
       transactionId: json['transaction_id'],
       invoiceNumber: json['invoice_number'] ?? '',
+      orderNumber: optionalText(json['order_number']),
+      receiptNumber: optionalText(json['receipt_number']),
       type: json['type'] ?? '',
       companyId: json['company_id'] ?? 0,
       amount: json['amount'] ?? '0.00',

@@ -17,6 +17,7 @@ import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
+import 'package:pos_machine/features/invoices/presentation/widgets/invoice_list_filters.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 
 /// Records the file factory the screen hands to the export instead of
@@ -64,6 +65,8 @@ Map<String, dynamic> row(int id) => {
       'invoice_date': '2026-10-01',
       'due_date': '2026-11-01',
       'type': 'order',
+      if (id == 1) 'order_number': 'ORD-004785',
+      if (id == 1) 'receipt_number': '2-11-261015-0010',
       'customer': {
         'user': {'name': 'Test Customer', 'phone': '0012345'}
       }
@@ -153,7 +156,10 @@ class _Provider extends InvoiceProvider {
     filters.add({
       'name': name,
       'invoiceNumber': invoiceNumber,
+      'orderNumber': orderNumber,
       'phone': phone,
+      'fromDate': fromDate,
+      'toDate': toDate,
       'status': status,
       'zatcaStatus': zatcaStatus
     });
@@ -178,6 +184,7 @@ class _Provider extends InvoiceProvider {
       {required String accessToken,
       String? name,
       String? invoiceNumber,
+      String? orderNumber,
       String? phone,
       String? fromDate,
       String? toDate,
@@ -189,6 +196,7 @@ class _Provider extends InvoiceProvider {
     exportFilters = {
       'name': name,
       'invoiceNumber': invoiceNumber,
+      'orderNumber': orderNumber,
       'phone': phone,
       'status': status,
       'zatcaStatus': zatcaStatus
@@ -229,6 +237,7 @@ void main() {
         phone: '0012345',
         status: 'paid',
         zatcaStatus: 'NOT SENT',
+        orderNumber: ' ORD-004785 ',
         fromDate: '01/10/2026',
         toDate: '2026-10-31 23:59:00',
         onProgress: (page, total) => progress.add('$page/$total'),
@@ -246,6 +255,8 @@ void main() {
       expect(
           request.url.queryParameters, containsPair('invoice_number', '000'));
       expect(request.url.queryParameters, containsPair('phone', '0012345'));
+      expect(request.url.queryParameters,
+          containsPair('order_number', 'ORD-004785'));
       expect(request.url.queryParameters, containsPair('status', 'paid'));
       expect(request.url.queryParameters,
           containsPair('zatca_status', 'not_sent'));
@@ -388,7 +399,8 @@ void main() {
           await tester.tap(find.text('invoice.show_filters'.tr));
           await tester.pumpAndSettle();
         }
-        expect(find.byType(TextField), findsNWidgets(5));
+        expect(find.byType(TextField), findsNWidgets(6));
+        expect(find.byKey(InvoiceListFilters.todayKey), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
@@ -483,7 +495,8 @@ void main() {
         Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single.rows;
     expect(rows.length, 3);
     expect(rows[1][0]!.value, TextCellValue('0001'));
-    expect(rows[1][1]!.value, const DoubleCellValue(12.125));
+    expect(rows[1][1]!.value, TextCellValue('2-11-261015-0010'));
+    expect(rows[1][2]!.value, const DoubleCellValue(12.125));
     expect(provider.exportFilters!['invoiceNumber'], '000');
     expect(find.text('1 records selected'), findsOneWidget);
     await tester.tap(find.text('Sync Selected'));
@@ -496,6 +509,69 @@ void main() {
     await tester.pumpAndSettle();
     expect(provider.currentPage, 2);
     expect(find.text('0 records selected'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('list request sends the order / offline receipt number', () async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      return http.Response(jsonEncode(response(1, last: 1, total: 1)), 200);
+    });
+    await InvoiceProvider().listAllInvoices(
+        accessToken: 'token', orderNumber: ' ORD-004785 ', client: client);
+    expect(requests.single.queryParameters,
+        containsPair('order_number', 'ORD-004785'));
+    requests.clear();
+    await InvoiceProvider().listAllInvoices(accessToken: 'token', client: client);
+    expect(requests.single.queryParameters.containsKey('order_number'), false);
+  });
+
+  testWidgets('order number field, Today toggle and receipt column',
+      (tester) async {
+    final provider = await mount(tester, const Size(1440, 900), false);
+    expect(find.text('Offline Receipt No.'), findsOneWidget);
+    expect(find.text('2-11-261015-0010'), findsOneWidget);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Order / Offline Receipt No.'),
+        'ORD-004785');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(provider.filters.last['orderNumber'], 'ORD-004785');
+
+    await tester.tap(find.byKey(InvoiceListFilters.todayKey));
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    expect(provider.filters.last['fromDate'], '$day 00:00:00');
+    expect(provider.filters.last['toDate'], '$day 23:59:59');
+    expect(provider.filters.last['orderNumber'], 'ORD-004785');
+    expect(tester.widget<Switch>(find.byKey(InvoiceListFilters.todayKey)).value,
+        true);
+
+    await tester.tap(find.byKey(InvoiceListFilters.todayKey));
+    await tester.pumpAndSettle();
+    expect(provider.filters.last['fromDate'], isEmpty);
+    expect(provider.filters.last['toDate'], isEmpty);
+    expect(tester.widget<Switch>(find.byKey(InvoiceListFilters.todayKey)).value,
+        false);
+
+    await tester.tap(find.byKey(InvoiceListFilters.todayKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('list.reset'.tr));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(find.byKey(InvoiceListFilters.todayKey)).value,
+        false);
+    expect(
+        tester
+            .widget<TextField>(find
+                .widgetWithText(TextField, 'Order / Offline Receipt No.')
+                .first)
+            .controller!
+            .text,
+        isEmpty);
     expect(tester.takeException(), isNull);
   });
 }

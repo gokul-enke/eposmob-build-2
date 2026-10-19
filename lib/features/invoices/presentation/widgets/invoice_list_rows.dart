@@ -84,6 +84,10 @@ class InvoiceListRows {
               value: InvoiceListLabels.orDash(invoice.invoiceDate)),
         ]),
         InfoRow(
+            label: 'invoice.col_offline_receipt'.tr,
+            value: InvoiceListLabels.orDash(invoice.receiptNumber ?? ''),
+            selectable: true),
+        InfoRow(
             label: 'invoice.field_due_date'.tr,
             value: InvoiceListLabels.orDash(invoice.dueDate)),
         InfoRow(
@@ -107,15 +111,21 @@ class InvoiceListRows {
               cellBuilder: (v, _) => TableCells.widget(_selection(v))),
         TableColumnDef(
             label: 'invoice.field_invoice_number'.tr,
-            flex: 1.7,
+            flex: 2.0,
             cellBuilder: (v, _) => _reference(v)),
+        TableColumnDef(
+            label: 'invoice.col_offline_receipt'.tr,
+            flex: 1.4,
+            cellBuilder: (v, _) =>
+                TableCells.text(InvoiceListLabels.orDash(v.receiptNumber ?? ''),
+                    selectable: true)),
         TableColumnDef(
             label: 'invoice.col_amount'.tr,
             cellBuilder: (v, _) =>
                 TableCells.text(InvoiceListLabels.orDash(v.amount))),
         TableColumnDef(
             label: 'invoice.col_name'.tr,
-            flex: 1.8,
+            flex: 1.5,
             cellBuilder: (v, _) => TableCells.avatarName(
                 name: InvoiceListLabels.orDash(v.customer.user.name),
                 avatar: _avatar(v, 36))),

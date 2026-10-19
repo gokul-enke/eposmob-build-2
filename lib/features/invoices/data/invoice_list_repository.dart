@@ -13,6 +13,7 @@ class InvoiceListRepository {
   void apply(InvoiceListQuery query) => provider.applyFilters(
       name: query.name,
       invoiceNumber: query.invoiceNumber,
+      orderNumber: query.orderNumber,
       phone: query.phone,
       fromDate: query.fromDate,
       toDate: query.toDate,
@@ -29,6 +30,7 @@ class InvoiceListRepository {
           accessToken: token,
           name: query.name,
           invoiceNumber: query.invoiceNumber,
+          orderNumber: query.orderNumber,
           phone: query.phone,
           fromDate: query.fromDate,
           toDate: query.toDate,
