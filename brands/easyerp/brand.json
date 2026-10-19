@@ -1,0 +1,14 @@
+{
+  "BRAND_ID": "easyerp",
+  "BRAND_NAME": "Easy Erp",
+  "BRAND_TITLE": "EASY ERP",
+  "BRAND_COMPANY": "com.enke",
+  "BRAND_PRODUCT_NAME": "pos_machine_easyerp",
+  "BRAND_PUBLISHER": "ENKE",
+  "BRAND_URL": "https://enke.ae/",
+  "BRAND_EXE_NAME": "easyerp.exe",
+  "BRAND_INSTALLER_NAME": "easyerp",
+  "BRAND_APP_ID": "B156AA90-02B7-4556-BC61-96B9C828DE53",
+  "BRAND_LOGO_ASSET": "assets/brands/easyerp/logo.png",
+  "BRAND_ICON_ASSET": "assets/brands/easyerp/icon.png"
+}

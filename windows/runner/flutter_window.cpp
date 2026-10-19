@@ -4,6 +4,7 @@
 #include <flutter/standard_method_codec.h>
 #include <flutter/method_result_functions.h>
 #include "app_restart.h"
+#include "brand_config.h"
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -20,7 +21,7 @@ bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
   }
-  SetPropW(GetHandle(), L"CLOUDPOS.ApplicationWindow", reinterpret_cast<HANDLE>(1));
+  SetPropW(GetHandle(), BRAND_INSTANCE_KEY L".ApplicationWindow", reinterpret_cast<HANDLE>(1));
 
   RECT frame = GetClientArea();
 
@@ -53,7 +54,7 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    SetPropW(GetHandle(), L"CLOUDPOS.ReadyWindow", reinterpret_cast<HANDLE>(1));
+    SetPropW(GetHandle(), BRAND_INSTANCE_KEY L".ReadyWindow", reinterpret_cast<HANDLE>(1));
     if (!startup_ || !startup_->cancelled()) this->Show();
     if (startup_) startup_->Close();
   });
@@ -71,8 +72,8 @@ void FlutterWindow::OnDestroy() {
   if (restart_helper_) CloseHandle(restart_helper_);
   restart_helper_ = nullptr;
   restart_result_.reset();
-  RemovePropW(GetHandle(), L"CLOUDPOS.ReadyWindow");
-  RemovePropW(GetHandle(), L"CLOUDPOS.ApplicationWindow");
+  RemovePropW(GetHandle(), BRAND_INSTANCE_KEY L".ReadyWindow");
+  RemovePropW(GetHandle(), BRAND_INSTANCE_KEY L".ApplicationWindow");
   restart_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -113,7 +114,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       restart_helper_ = nullptr;
       if (restart_result_) {
         restart_result_->Error("restart_incomplete",
-            "CloudPOS was not restarted. Close other copies and try again.");
+            BRAND_NAME_A " was not restarted. Close other copies and try again.");
         restart_result_.reset();
       }
     }

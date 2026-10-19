@@ -1174,15 +1174,8 @@ class StandardReceiptLayout implements ReceiptLayout {
         final arabicText = displayConfig?['showSLNumber']?.visible == true
             ? '$slNumber. $productNameArabic'
             : productNameArabic;
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(arabicText, weight: 1.0, align: TextAlign.right),
-        ]));
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(productName,
-              weight: 1.0,
-              align: TextAlign.left,
-              textDirection: TextDirection.ltr),
-        ]));
+        // One line when both names fit, otherwise Arabic above English.
+        rows.add(BilingualNameRow(arabic: arabicText, english: productName));
       } else {
         final itemText = displayConfig?['showSLNumber']?.visible == true
             ? '$slNumber. $productName'

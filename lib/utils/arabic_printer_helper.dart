@@ -279,6 +279,86 @@ class ReceiptTableRow extends ReceiptRow {
   }
 }
 
+/// Bilingual item name. When both names fit side by side at full size they
+/// share one line (English on the left, Arabic on the right); otherwise the
+/// Arabic name prints above the English name, each shrinking to fit its own
+/// line exactly like a single-column [ReceiptTableRow].
+class BilingualNameRow extends ReceiptRow {
+  BilingualNameRow({required this.arabic, required this.english});
+
+  final String arabic;
+  final String english;
+
+  /// Minimum blank space kept between the two names on a shared line.
+  static double gapFor(double fontSize) => fontSize;
+
+  late final List<ReceiptTableRow> _stacked = [
+    ReceiptTableRow(
+        [ReceiptTableColumn(arabic, weight: 1.0, align: TextAlign.right)]),
+    ReceiptTableRow([
+      ReceiptTableColumn(english,
+          weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
+    ]),
+  ];
+
+  TextPainter _painter(String text, double fontSize, TextDirection direction) =>
+      TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: fontSize,
+            fontFamily: ArabicPrinterHelper.fontFamily,
+          ),
+        ),
+        textDirection: direction,
+        maxLines: 1,
+      )..layout();
+
+  /// Both painters when the names fit on one line, otherwise null.
+  (TextPainter, TextPainter)? _inline(double width, double fontSize) {
+    if (arabic.contains('\n') || english.contains('\n')) return null;
+    final en = _painter(english.trim(), fontSize, TextDirection.ltr);
+    final ar = _painter(arabic.trim(), fontSize, TextDirection.rtl);
+    return en.width + gapFor(fontSize) + ar.width <= width ? (en, ar) : null;
+  }
+
+  /// Whether this row prints both names on a single line at [width].
+  bool isSingleLine(double width, double fontSize) =>
+      _inline(width, fontSize) != null;
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    final inline = _inline(width, fontSize);
+    if (inline != null) {
+      final (en, ar) = inline;
+      return (en.height > ar.height ? en.height : ar.height) + 10;
+    }
+    return _stacked.fold(
+        0.0,
+        (sum, row) =>
+            sum + row.calculateHeight(width, fontSize, textDirection));
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final inline = _inline(width, fontSize);
+    if (inline != null) {
+      final (en, ar) = inline;
+      en.paint(canvas, Offset(0, y + 5));
+      ar.paint(canvas, Offset(width - ar.width, y + 5));
+      return;
+    }
+    var rowY = y;
+    for (final row in _stacked) {
+      row.render(canvas, rowY, width, fontSize, textDirection);
+      rowY += row.calculateHeight(width, fontSize, textDirection);
+    }
+  }
+}
+
 class ReceiptTableColumn {
   final ReceiptTextLine? field;
   FieldTextRow get fieldRow => FieldTextRow(field!,

@@ -1,5 +1,7 @@
 #include "app_restart.h"
 
+#include "brand_config.h"
+
 #include <windows.h>
 #include <tlhelp32.h>
 #include <cerrno>
@@ -65,7 +67,7 @@ BOOL CALLBACK RequestClose(HWND window, LPARAM parameter) {
     if (target.pid == pid &&
         WaitForSingleObject(target.process.get(), 0) == WAIT_TIMEOUT) {
       // Only the Flutter application window knows how to drain Dart storage.
-      if (GetPropW(window, L"CLOUDPOS.ApplicationWindow")) {
+      if (GetPropW(window, BRAND_INSTANCE_KEY L".ApplicationWindow")) {
         PostMessageW(window, CloudPosPrepareRestartMessage(), 0, 0);
       }
       break;
@@ -75,20 +77,20 @@ BOOL CALLBACK RequestClose(HWND window, LPARAM parameter) {
 }
 
 int Fail(const wchar_t* message) {
-  MessageBoxW(nullptr, message, L"CloudPOS restart", MB_OK | MB_ICONERROR);
+  MessageBoxW(nullptr, message, BRAND_NAME L" restart", MB_OK | MB_ICONERROR);
   return EXIT_FAILURE;
 }
 
 int Restart(DWORD parent_pid, ULONGLONG parent_created) {
   OwnedHandle restart_lock(CreateMutexW(nullptr, TRUE,
-      L"Local\\CLOUDPOS.RestartInProgress"));
-  if (!restart_lock) return Fail(L"Couldn't prepare a restart. Close CloudPOS and open it again.");
+      L"Local\\" BRAND_INSTANCE_KEY L".RestartInProgress"));
+  if (!restart_lock) return Fail(L"Couldn't prepare a restart. Close " BRAND_NAME L" and open it again.");
   if (GetLastError() == ERROR_ALREADY_EXISTS) return EXIT_SUCCESS;
 
   const auto path = ImagePath(GetCurrentProcess());
   DWORD session = 0;
   if (path.empty() || !ProcessIdToSessionId(GetCurrentProcessId(), &session)) {
-    return Fail(L"Couldn't identify this installation. Close CloudPOS and open it again.");
+    return Fail(L"Couldn't identify this installation. Close " BRAND_NAME L" and open it again.");
   }
   // Pin the requesting process by handle and creation time, not PID alone.
   OwnedHandle parent(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
@@ -97,19 +99,19 @@ int Restart(DWORD parent_pid, ULONGLONG parent_created) {
   if (!parent || !ProcessIdToSessionId(parent_pid, &parent_session) ||
       parent_session != session || CreatedAt(parent.get()) != parent_created ||
       _wcsicmp(ImagePath(parent.get()).c_str(), path.c_str()) != 0) {
-    return Fail(L"The original CloudPOS process could not be verified. No processes were stopped.");
+    return Fail(L"The original " BRAND_NAME L" process could not be verified. No processes were stopped.");
   }
 
   std::vector<Target> targets;
   targets.push_back({parent_pid, std::move(parent)});
   OwnedHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
   if (snapshot.get() == INVALID_HANDLE_VALUE) {
-    return Fail(L"Couldn't check running CloudPOS copies. No processes were stopped.");
+    return Fail(L"Couldn't check running " BRAND_NAME L" copies. No processes were stopped.");
   }
   PROCESSENTRY32W entry{};
   entry.dwSize = sizeof(entry);
   if (!Process32FirstW(snapshot.get(), &entry)) {
-    return Fail(L"Couldn't check running CloudPOS copies. No processes were stopped.");
+    return Fail(L"Couldn't check running " BRAND_NAME L" copies. No processes were stopped.");
   }
   do {
     const DWORD pid = entry.th32ProcessID;
@@ -121,7 +123,7 @@ int Restart(DWORD parent_pid, ULONGLONG parent_created) {
     OwnedHandle process(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION |
         SYNCHRONIZE | PROCESS_TERMINATE, FALSE, pid));
     if (!process) {
-      return Fail(L"Windows wouldn't allow a CloudPOS copy to close. Close that copy manually and try again.");
+      return Fail(L"Windows wouldn't allow a " BRAND_NAME L" copy to close. Close that copy manually and try again.");
     }
     const auto created = CreatedAt(query.get());
     if (created == 0 || CreatedAt(process.get()) != created) continue;
@@ -137,11 +139,11 @@ int Restart(DWORD parent_pid, ULONGLONG parent_created) {
     if (WaitForSingleObject(target.process.get(), remaining) == WAIT_OBJECT_0) continue;
     if (!force_approved) {
       const int choice = MessageBoxW(nullptr,
-          L"A CloudPOS copy has not finished closing safely.\n\n"
+          L"A " BRAND_NAME L" copy has not finished closing safely.\n\n"
           L"Force restarting may lose unsaved changes or interrupt saved data. "
           L"Choose No to leave it running and close it normally.\n\n"
-          L"Force close the remaining CloudPOS copies and restart?",
-          L"CloudPOS needs attention", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+          L"Force close the remaining " BRAND_NAME L" copies and restart?",
+          BRAND_NAME L" needs attention", MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
       if (choice != IDYES) return EXIT_FAILURE;
       force_approved = true;
     }
@@ -149,15 +151,15 @@ int Restart(DWORD parent_pid, ULONGLONG parent_created) {
     // reach this fallback. Never kill by a generic process name or child tree.
     if (!TerminateProcess(target.process.get(), EXIT_FAILURE) &&
         WaitForSingleObject(target.process.get(), 0) != WAIT_OBJECT_0) {
-      return Fail(L"A CloudPOS process could not be stopped. Close it manually, then open CloudPOS again.");
+      return Fail(L"A " BRAND_NAME L" process could not be stopped. Close it manually, then open " BRAND_NAME L" again.");
     }
     if (WaitForSingleObject(target.process.get(), kExitMs) != WAIT_OBJECT_0) {
-      return Fail(L"CloudPOS is still closing. A new copy was not started. Wait a moment, then open CloudPOS again.");
+      return Fail(BRAND_NAME L" is still closing. A new copy was not started. Wait a moment, then open " BRAND_NAME L" again.");
     }
   }
   // The OS has now released each exited process's files and instance mutex.
   return Launch(path, L"") ? EXIT_SUCCESS : Fail(
-      L"CloudPOS closed, but Windows couldn't reopen it. Please use your CloudPOS shortcut.");
+      BRAND_NAME L" closed, but Windows couldn't reopen it. Please use your " BRAND_NAME L" shortcut.");
 }
 
 bool ParseNumber(const std::string& text, unsigned long long* value) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_language_sheet.dart';
 import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -42,7 +43,7 @@ class KioskHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(KioskRadius.control),
             ),
             child: Image.asset(
-              'assets/logo/cloudposlogo.png',
+              BrandConfig.logoAsset,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.storefront_rounded,

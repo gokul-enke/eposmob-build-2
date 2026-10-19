@@ -92,6 +92,7 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_pr
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_lifecycle.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
+import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/config/sentry_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -589,10 +590,10 @@ class StorageLockedException implements Exception {
   final Object cause;
 
   @override
-  String toString() =>
+  String toString() => BrandConfig.apply(
       'Another copy of CLOUDPOS still has the "$boxName" storage open. '
       'Close it, or end every cloudpos.exe task in Task Manager, then open '
-      'CLOUDPOS again. ($cause)';
+      'CLOUDPOS again. ($cause)');
 }
 
 /// Opens [boxName] with three kinds of recovery:
@@ -802,7 +803,7 @@ class StartupFailureApp extends StatelessWidget {
 
   String get _details {
     final buffer = StringBuffer()
-      ..writeln('CLOUDPOS failed to start.')
+      ..writeln(BrandConfig.apply('CLOUDPOS failed to start.'))
       ..writeln()
       ..writeln('Error: $error');
     if (warnings.isNotEmpty) {
@@ -820,7 +821,7 @@ class StartupFailureApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CLOUDPOS',
+      title: BrandConfig.title,
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -835,18 +836,20 @@ class StartupFailureApp extends StatelessWidget {
                   const Icon(Icons.error_outline,
                       size: 48, color: Colors.redAccent),
                   const SizedBox(height: 16),
-                  const Text(
-                    'CLOUDPOS could not start',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  Text(
+                    BrandConfig.apply('CLOUDPOS could not start'),
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'If CLOUDPOS is already running, close it — or end the '
-                    'cloudpos.exe task — and open it again. If the local '
-                    'storage is large or the disk is slow, wait a minute '
-                    'before retrying. If this keeps happening, send the '
-                    'details below to support.',
-                    style: TextStyle(fontSize: 14, height: 1.4),
+                  Text(
+                    BrandConfig.apply(
+                        'If CLOUDPOS is already running, close it — or end the '
+                        'cloudpos.exe task — and open it again. If the local '
+                        'storage is large or the disk is slow, wait a minute '
+                        'before retrying. If this keeps happening, send the '
+                        'details below to support.'),
+                    style: const TextStyle(fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -1013,7 +1016,7 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: [
                       SentryNavigatorObserver(),
                     ],
-                    title: 'CLOUDPOS',
+                    title: BrandConfig.title,
                     theme: _buildAppTheme(focusHighlightProvider.enabled),
                     translations:
                         AppTranslations(LocalizationService.translations),

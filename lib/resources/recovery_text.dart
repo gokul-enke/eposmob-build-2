@@ -1,10 +1,13 @@
+import 'package:pos_machine/config/brand_config.dart';
+
 import 'localization_service.dart';
 
 /// Built-in recovery copy remains readable even before translation assets load.
-String recoveryText(String text) =>
+/// Keys stay in CloudPOS wording; the brand name is swapped in afterwards.
+String recoveryText(String text) => BrandConfig.apply(
     LocalizationService.locale.languageCode == 'ar'
         ? (_arabic[text] ?? text)
-        : text;
+        : text);
 
 const _arabic = <String, String>{
   'Refresh stock from server': 'تحديث المخزون من الخادم',

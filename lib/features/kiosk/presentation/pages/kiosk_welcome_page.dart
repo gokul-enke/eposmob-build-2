@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_home_page.dart';
@@ -100,7 +101,7 @@ class _WelcomeTopBar extends StatelessWidget {
             border: Border.all(color: const Color(0xFFE3EAF4)),
           ),
           child: Image.asset(
-            'assets/logo/cloudposlogo.png',
+            BrandConfig.logoAsset,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Icon(
               Icons.storefront_rounded,

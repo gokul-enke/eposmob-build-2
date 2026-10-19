@@ -159,6 +159,8 @@ flutter:
     - assets/icons/
     - assets/images/
     - assets/logo/
+    # White-label brand logos; one line per brand (see brands/README.md).
+    - assets/brands/easyerp/
     - lib/resources/i18n/
     - assets/html/
     - .env

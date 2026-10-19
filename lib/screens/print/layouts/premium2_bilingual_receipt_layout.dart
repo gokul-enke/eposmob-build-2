@@ -1488,26 +1488,17 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
         // Show Arabic name (line 1) and English name (line 2) when available
         String itemText = '';
         if (productNameArabic.isNotEmpty) {
-          // Bilingual: Arabic on line 1, English on line 2
+          // Bilingual: one line when both names fit, otherwise Arabic on
+          // line 1 and the indented English name on line 2.
           if (displayConfig?['showSLNumber']?.visible == true) {
             itemText = '$slNumber. $productNameArabic';
           } else {
             itemText = productNameArabic;
           }
-          rows.add(ReceiptTableRow([
-            ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
-          ]));
-
-          // Add English name on second line
           String englishText = displayConfig?['showSLNumber']?.visible == true
               ? '     $productName'
               : '  $productName';
-          rows.add(ReceiptTableRow([
-            ReceiptTableColumn(englishText,
-                weight: 1.0,
-                align: TextAlign.left,
-                textDirection: TextDirection.ltr),
-          ]));
+          rows.add(BilingualNameRow(arabic: itemText, english: englishText));
         } else {
           // Fallback to single name (English or Arabic). Some clients only
           // populate the English name field but store Arabic text in it, so

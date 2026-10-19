@@ -81,6 +81,10 @@ List<Map<String, dynamic>> _renderedRows(
     if (row is MultiLineReceiptTableRow) {
       result['text'] = row.columns.map((column) => column.text).toList();
     }
+    if (row is BilingualNameRow) {
+      result['text'] = [row.arabic, row.english];
+      result['single_line'] = row.isSingleLine(width, fontSize);
+    }
     if (row is SarAmountRow) result['text'] = [row.label, row.amount];
     if (row is StandardBoxedTotalsRow) {
       result['text'] = row.items.where((item) => !item.isSeparator)
