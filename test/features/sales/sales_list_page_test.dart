@@ -191,6 +191,51 @@ void main() {
       }
     }
   }
+  for (final online in [false, true]) {
+    testWidgets(
+        'Min/Max Amount typed in the page are sent, swapped if inverted, online=$online',
+        (tester) async {
+      final source = PageSource();
+      await mount(tester, source, isOnlineSales: online);
+      Finder field(String key) => find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.labelText == key.tr);
+      await tester.enterText(field('sales.min_amount'), '50');
+      await tester.enterText(field('sales.max_amount'), '10');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      final params = source.queries.last.parameters(1, null);
+      expect(params['filter_min_amount'], '10');
+      expect(params['filter_max_amount'], '50');
+      expect(params.containsKey('filter_online_sales'), online);
+      expect(source.pages.last, 1);
+    });
+
+    testWidgets('orders table shows the Payment Status column, online=$online',
+        (tester) async {
+      await mount(tester, PageSource(), isOnlineSales: online);
+      expect(find.text('sales.payment_status_filter'.tr), findsWidgets);
+      expect(find.text('sales.payment_paid'.tr), findsWidgets);
+    });
+  }
+  for (final locale in ['en', 'ar', 'ml']) {
+    for (final online in [false, true]) {
+      testWidgets(
+          'Payment Status filter sends raw code in $locale online=$online',
+          (tester) async {
+        final source = PageSource();
+        await mount(tester, source, locale: locale, isOnlineSales: online);
+        final label = 'sales.payment_paid'.tr;
+        expect(label, isNot('sales.payment_paid'));
+        await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+        expect(source.queries.last.paymentStatus, 'paid');
+        expect(source.queries.last.isOnlineSales, online);
+        expect(source.pages.last, 1);
+      });
+    }
+  }
   for (final locale in ['en', 'ar', 'ml']) {
     for (final online in [false, true]) {
       testWidgets('Delivered filter keeps raw status in $locale online=$online',
@@ -213,7 +258,7 @@ void main() {
             create: (_) async => file);
         final label = 'sales.status_delivered'.tr;
         expect(label, isNot('sales.status_delivered'));
-        await tester.tap(find.byType(DropdownButtonFormField<String>));
+        await tester.tap(find.byType(DropdownButtonFormField<String>).first);
         await tester.pumpAndSettle();
         await tester.tap(find.text(label).last);
         await tester.pumpAndSettle();

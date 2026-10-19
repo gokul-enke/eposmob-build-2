@@ -41,6 +41,18 @@ FilterPanel salesListFilters(SalesListController controller) => FilterPanel(
             hint: 'sales.price'.tr,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             icon: Icons.payments_outlined),
+        TextFilterField(
+            controller: controller.minAmount,
+            label: 'sales.min_amount'.tr,
+            hint: 'sales.min_amount'.tr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            icon: Icons.south_rounded),
+        TextFilterField(
+            controller: controller.maxAmount,
+            label: 'sales.max_amount'.tr,
+            hint: 'sales.max_amount'.tr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            icon: Icons.north_rounded),
         CustomFilterField(
             child: SalesDateFilter(
                 label: 'sales.from_date'.tr,
@@ -78,6 +90,19 @@ FilterPanel salesListFilters(SalesListController controller) => FilterPanel(
             ],
             onChanged: (value) {
               controller.status = value ?? 'all';
+              controller.search();
+            }),
+        DropdownFilterField<String>(
+            label: 'sales.payment_status_filter'.tr,
+            value: controller.paymentStatus,
+            icon: Icons.account_balance_wallet_outlined,
+            options: [
+              for (final code in ['all', 'pending', 'paid', 'refunded'])
+                FilterOption(code,
+                    code == 'all' ? 'common.all'.tr : 'sales.payment_$code'.tr)
+            ],
+            onChanged: (value) {
+              controller.paymentStatus = value ?? 'all';
               controller.search();
             }),
         CustomFilterField(

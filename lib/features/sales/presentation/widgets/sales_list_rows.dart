@@ -23,6 +23,17 @@ Widget salesStatus(ListOrderModelData row) => AppBadge(
       'pending' => AppBadgeTone.warning,
       _ => AppBadgeTone.neutral,
     });
+Widget salesPaymentStatus(ListOrderModelData row) {
+  final code = row.paymentStatusCode;
+  return AppBadge(
+      label: 'sales.payment_$code'.tr,
+      tone: switch (code) {
+        'paid' => AppBadgeTone.success,
+        'refunded' => AppBadgeTone.neutral,
+        _ => AppBadgeTone.warning,
+      });
+}
+
 Widget _text(String text) => Text(text,
     style: AppTextStyles.body, maxLines: 2, overflow: TextOverflow.ellipsis);
 Widget _order(ListOrderModelData row, ValueChanged<ListOrderModelData> copy) =>
@@ -79,6 +90,10 @@ List<TableColumnDef<ListOrderModelData>> salesListColumns(
           flex: 1.2,
           cellBuilder: (row, _) => TableCells.widget(salesStatus(row))),
       TableColumnDef(
+          label: 'sales.payment_status_filter'.tr,
+          flex: 1.0,
+          cellBuilder: (row, _) => TableCells.widget(salesPaymentStatus(row))),
+      TableColumnDef(
           label: 'general.action'.tr,
           flex: 1.5,
           cellBuilder: (row, _) => TableCells.widget(actions(row))),
@@ -106,7 +121,8 @@ Widget salesListCard(ListOrderModelData row, Widget actions,
           _text('${row.cartItems?.length ?? 0} ${"sales.items_col".tr}'),
           _text(
               '$currency ${AmountHelper.formatAmount(row.grantTotal ?? 0.0)}'),
-          salesStatus(row)
+          salesStatus(row),
+          salesPaymentStatus(row)
         ]),
         const SizedBox(height: 12),
         actions
