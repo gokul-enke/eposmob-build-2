@@ -4172,6 +4172,8 @@
     "phone_hint": "ഫോൺ നമ്പർ",
     "email_hint": "ഇമെയിൽ",
     "receipt_no_hint": "രസീത് ഇല്ല.",
+    "order_or_offline_receipt": "ഓർഡർ / ഓഫ്‌ലൈൻ രസീത് നമ്പർ",
+    "col_offline_receipt": "ഓഫ്‌ലൈൻ രസീത് നമ്പർ",
     "reference_no_hint": "റഫറൻസ് ഇല്ല.",
     "name_hint": "പേര്",
     "auth_token_missing": "ഓതന്റിക്കേഷൻ ടോക്കൺ ഇല്ല",

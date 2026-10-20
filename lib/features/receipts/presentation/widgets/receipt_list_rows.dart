@@ -73,6 +73,10 @@ class ReceiptListRows {
                 onPressed: () => onShare(r)),
           ]);
 
+  /// A receipt can pay several invoices, so it may have several numbers.
+  String _offlineNumbers(Receipt r) =>
+      _orDash(r.offlineReceiptNumbers.join(', '));
+
   Widget card(Receipt r) => AppListCard(
       title: _orDash(r.customer.user.name),
       leading: AppAvatar(
@@ -80,6 +84,10 @@ class ReceiptListRows {
       trailing: _status(r),
       body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _copyInfo('receipt.col_receipt_number'.tr, r.receiptNumber),
+        InfoRow(
+            label: 'receipt.col_offline_receipt'.tr,
+            value: _offlineNumbers(r),
+            selectable: true),
         InfoRow(label: 'receipt.field_amount'.tr, value: _orDash(r.amount)),
         _copyInfo('receipt.col_payment_reference'.tr, r.paymentReference),
         const SizedBox(height: AppSpacing.sm),
@@ -93,6 +101,11 @@ class ReceiptListRows {
             label: 'receipt.col_receipt_number'.tr,
             flex: 1.6,
             cellBuilder: (r, _) => _copyCell(r.receiptNumber)),
+        TableColumnDef(
+            label: 'receipt.col_offline_receipt'.tr,
+            flex: 1.5,
+            cellBuilder: (r, _) =>
+                TableCells.text(_offlineNumbers(r), selectable: true)),
         TableColumnDef(
             label: 'receipt.col_customer_name'.tr,
             flex: 1.8,

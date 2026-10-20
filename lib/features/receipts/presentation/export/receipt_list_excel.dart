@@ -16,6 +16,9 @@ Future<File> exportReceiptListExcel(List<Receipt> rows,
               label: 'receipt.col_receipt_number'.tr,
               value: (r, _) => r.receiptNumber),
           ListExportColumn(
+              label: 'receipt.col_offline_receipt'.tr,
+              value: (r, _) => r.offlineReceiptNumbers.join(', ')),
+          ListExportColumn(
               label: 'receipt.col_customer_name'.tr,
               value: (r, _) => r.customer.user.name),
           ListExportColumn(

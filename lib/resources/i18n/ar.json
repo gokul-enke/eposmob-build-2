@@ -4005,6 +4005,8 @@
     "phone_hint": "رقم الهاتف",
     "email_hint": "البريد الإلكتروني",
     "receipt_no_hint": "رقم الإيصال",
+    "order_or_offline_receipt": "رقم الطلب / الإيصال دون اتصال",
+    "col_offline_receipt": "رقم الإيصال دون اتصال",
     "reference_no_hint": "رقم المرجع",
     "name_hint": "الاسم",
     "auth_token_missing": "رمز المصادقة مفقود",

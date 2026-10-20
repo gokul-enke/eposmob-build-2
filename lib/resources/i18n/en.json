@@ -4172,6 +4172,8 @@
     "phone_hint": "Phone Number",
     "email_hint": "Email Address",
     "receipt_no_hint": "Receipt No.",
+    "order_or_offline_receipt": "Order / Offline Receipt No.",
+    "col_offline_receipt": "Offline Receipt No.",
     "reference_no_hint": "Reference No.",
     "name_hint": "Name",
     "auth_token_missing": "Authentication token is missing",

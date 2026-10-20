@@ -113,6 +113,7 @@ class InvoiceProvider extends ChangeNotifier {
   int _receiptItemsPerPage = 20;
   String? _receiptFilterName;
   String? _receiptFilterReceiptNumber;
+  String? _receiptFilterOrderNumber;
   String? _receiptFilterStatus;
   String? _receiptFilterPaymentReference;
   String? _receiptFilterPaymentMethod;
@@ -413,6 +414,7 @@ class InvoiceProvider extends ChangeNotifier {
         filterPaymentMethod: _receiptFilterPaymentMethod,
         filterPhone: _receiptfilterPhone,
         filterEmail: _receiptfilterEmail,
+        filterOrderNumber: _receiptFilterOrderNumber,
         page: page);
   }
 
@@ -458,6 +460,7 @@ class InvoiceProvider extends ChangeNotifier {
       String? paymentMethod,
       String? phone,
       String? email,
+      String? orderNumber,
       String? dateFrom,
       String? dateTo,
       int page = 1}) {
@@ -466,6 +469,7 @@ class InvoiceProvider extends ChangeNotifier {
     _receiptFilterPaymentReference = paymentReference;
     _receiptFilterPaymentMethod = paymentMethod;
     _receiptFilterReceiptNumber = receiptNumber;
+    _receiptFilterOrderNumber = orderNumber;
     _receiptfilterPhone = phone;
     _receiptfilterEmail = email;
     _receiptFilterDateFrom = dateFrom;
@@ -490,6 +494,7 @@ class InvoiceProvider extends ChangeNotifier {
           filterPaymentMethod: paymentMethod,
           filterPhone: phone,
           filterEmail: email,
+          filterOrderNumber: orderNumber,
           page: page);
     }
   }
@@ -540,6 +545,7 @@ class InvoiceProvider extends ChangeNotifier {
   void resetReceiptFilters() {
     _receiptFilterName = null;
     _receiptFilterReceiptNumber = null;
+    _receiptFilterOrderNumber = null;
     _receiptFilterStatus = null;
     _receiptFilterPaymentReference = null;
     _receiptFilterPaymentMethod = null;
@@ -725,6 +731,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? filterPaymentMethod,
     String? filterPhone,
     String? filterEmail,
+    String? filterOrderNumber,
   }) =>
       matchReceiptList(rows,
           filterName: filterName,
@@ -733,7 +740,8 @@ class InvoiceProvider extends ChangeNotifier {
           filterStatus: filterStatus,
           filterPaymentMethod: filterPaymentMethod,
           filterPhone: filterPhone,
-          filterEmail: filterEmail);
+          filterEmail: filterEmail,
+          filterOrderNumber: filterOrderNumber);
 
   void applyReceiptFiltersLocally(
       {String? filterName,
@@ -743,6 +751,7 @@ class InvoiceProvider extends ChangeNotifier {
       String? filterPaymentMethod,
       String? filterPhone,
       String? filterEmail,
+      String? filterOrderNumber,
       int page = 1}) {
     debugPrint(
         "applyReceiptFiltersLocally: filterName=$filterName, page=$page");
@@ -764,7 +773,8 @@ class InvoiceProvider extends ChangeNotifier {
         filterStatus: filterStatus,
         filterPaymentMethod: filterPaymentMethod,
         filterPhone: filterPhone,
-        filterEmail: filterEmail);
+        filterEmail: filterEmail,
+        filterOrderNumber: filterOrderNumber);
 
     // Update total pages
     _receiptTotalPages =
@@ -2018,6 +2028,7 @@ class InvoiceProvider extends ChangeNotifier {
     String? fromDate,
     String? toDate,
     String? status,
+    String? orderNumber,
     void Function(int page, int totalPages)? onProgress,
     http.Client? client,
     Duration requestTimeout = const Duration(seconds: 30),
@@ -2036,7 +2047,8 @@ class InvoiceProvider extends ChangeNotifier {
         filterStatus: _normalizeOptionalFilter(status),
         filterPaymentMethod: _normalizeOptionalFilter(paymentMethod),
         filterPhone: _normalizeOptionalFilter(phone),
-        filterEmail: _normalizeOptionalFilter(email));
+        filterEmail: _normalizeOptionalFilter(email),
+        filterOrderNumber: _normalizeOptionalFilter(orderNumber));
   }
 
   Future<({List<receipt_list.Receipt> items, Map<String, dynamic> data})>
@@ -2097,6 +2109,7 @@ class InvoiceProvider extends ChangeNotifier {
             filterPaymentMethod: _receiptFilterPaymentMethod,
             filterPhone: _receiptfilterPhone,
             filterEmail: _receiptfilterEmail,
+            filterOrderNumber: _receiptFilterOrderNumber,
             page: _receiptCurrentPage);
         return {'status': 'success', 'data': snapshot.data};
       } catch (error) {
@@ -2165,6 +2178,7 @@ class InvoiceProvider extends ChangeNotifier {
           filterPaymentMethod: _receiptFilterPaymentMethod,
           filterPhone: _receiptfilterPhone,
           filterEmail: _receiptfilterEmail,
+          filterOrderNumber: _receiptFilterOrderNumber,
           page: _receiptCurrentPage,
         );
         _receiptData = receiptResponse.data;

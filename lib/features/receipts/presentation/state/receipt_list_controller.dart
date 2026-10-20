@@ -14,6 +14,7 @@ class ReceiptListController extends ChangeNotifier {
   late final SearchDebouncer search;
   final name = TextEditingController(),
       receiptNumber = TextEditingController(),
+      orderNumber = TextEditingController(),
       paymentReference = TextEditingController(),
       phone = TextEditingController(),
       email = TextEditingController(),
@@ -22,10 +23,20 @@ class ReceiptListController extends ChangeNotifier {
   String? status, paymentMethod;
   bool initialized = false, _disposed = false;
   List<TextEditingController> get inputs =>
-      [receiptNumber, paymentReference, name, phone, email, fromDate, toDate];
+      [
+        receiptNumber,
+        orderNumber,
+        paymentReference,
+        name,
+        phone,
+        email,
+        fromDate,
+        toDate
+      ];
   ReceiptListQuery get query => ReceiptListQuery(
       name: name.text,
       receiptNumber: receiptNumber.text,
+      orderNumber: orderNumber.text,
       paymentReference: paymentReference.text,
       phone: phone.text,
       email: email.text,
