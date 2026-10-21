@@ -1,4 +1,4 @@
-import 'package:pos_machine/screens/transactions/receipt_list/receipt_row_actions.dart';
+import 'package:pos_machine/features/receipts/presentation/state/receipt_details_action.dart';
 import '../../data/receipt_list_repository.dart';
 import '../state/receipt_list_controller.dart';
 import '../widgets/receipt_list_filters.dart';
@@ -22,7 +22,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/screens/transactions/create_receipt_modal.dart';
+import 'package:pos_machine/features/receipts/presentation/widgets/receipt_create_dialog.dart';
 import 'package:pos_machine/screens/transactions/widgets/share_helper.dart';
 
 /// The receipts list: header, filters, table/cards and pagination, built on
