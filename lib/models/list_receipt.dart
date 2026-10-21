@@ -40,6 +40,10 @@ class ReceiptPayment {
   DateTime createdAt;
   DateTime updatedAt;
 
+  /// Order / offline receipt number of the paid invoice's order, when the
+  /// API sends them.
+  String? orderNumber, offlineReceiptNumber;
+
   ReceiptPayment({
     required this.id,
     required this.receiptId,
@@ -53,6 +57,8 @@ class ReceiptPayment {
     this.updatedBy,
     required this.createdAt,
     required this.updatedAt,
+    this.orderNumber,
+    this.offlineReceiptNumber,
   });
 
   factory ReceiptPayment.fromJson(Map<String, dynamic> json) {
@@ -71,6 +77,8 @@ class ReceiptPayment {
           json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: DateTime.parse(
           json['updated_at'] ?? DateTime.now().toIso8601String()),
+      orderNumber: _optionalText(json['order_number']),
+      offlineReceiptNumber: _optionalText(json['offline_receipt_number']),
     );
   }
 }
@@ -152,6 +160,9 @@ class Receipt {
   Customer customer;
   List<ReceiptPayment> receiptPayments;
 
+  /// Receipt-level order / offline receipt number, when the API sends them.
+  String? orderNumber, offlineReceiptNumber;
+
   Receipt({
     required this.id,
     required this.receiptNumber,
@@ -167,6 +178,8 @@ class Receipt {
     required this.company,
     required this.customer,
     required this.receiptPayments,
+    this.orderNumber,
+    this.offlineReceiptNumber,
   });
 
   factory Receipt.fromJson(Map<String, dynamic> json) {
@@ -191,8 +204,24 @@ class Receipt {
       company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer'] ?? {}),
       receiptPayments: payments,
+      orderNumber: _optionalText(json['order_number']),
+      offlineReceiptNumber: _optionalText(json['offline_receipt_number']),
     );
   }
+
+  /// Every order number linked to this receipt (receipt level and per
+  /// payment), without duplicates.
+  List<String> get orderNumbers => _unique(
+      [orderNumber, for (final p in receiptPayments) p.orderNumber]);
+
+  /// Every offline receipt number linked to this receipt, without duplicates.
+  List<String> get offlineReceiptNumbers => _unique([
+        offlineReceiptNumber,
+        for (final p in receiptPayments) p.offlineReceiptNumber
+      ]);
+
+  static List<String> _unique(Iterable<String?> values) =>
+      {for (final v in values) if (v != null) v}.toList();
 
   /// Receipts may omit the summary method and provide it on payment rows.
   List<String> get paymentMethods {
@@ -379,4 +408,10 @@ class PageLink {
       active: json['active'],
     );
   }
+}
+
+/// Trimmed text, or null when missing or blank.
+String? _optionalText(dynamic value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }

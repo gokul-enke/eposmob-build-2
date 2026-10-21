@@ -35,5 +35,8 @@ Future<File> exportSalesListExcel(List<ListOrderModelData> rows,
                 ListExcelExportService.numericValue(row.grantTotal)),
         ListExportColumn(
             label: 'sales.status'.tr, value: (row, _) => row.status),
+        ListExportColumn(
+            label: 'sales.payment_status_filter'.tr,
+            value: (row, _) => 'sales.payment_${row.paymentStatusCode}'.tr),
       ],
     );

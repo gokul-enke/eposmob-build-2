@@ -62,6 +62,8 @@ class ReceiptListFilters {
           fields: [
             _text(controller.receiptNumber, 'receipt.receipt_no_hint'.tr,
                 Icons.receipt_long_outlined),
+            _text(controller.orderNumber, 'receipt.order_or_offline_receipt'.tr,
+                Icons.numbers_rounded),
             _text(controller.paymentReference, 'receipt.reference_no_hint'.tr,
                 Icons.tag_outlined),
             _text(

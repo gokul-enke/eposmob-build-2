@@ -8,14 +8,18 @@ import '../../domain/invoice_list_query.dart';
 /// Shared provider request-generation guards remain the source of truth for
 /// visible rows because existing invoice actions update that same state.
 class InvoiceListController extends ChangeNotifier {
-  InvoiceListController(this.repository, {required this.readToken}) {
+  InvoiceListController(this.repository,
+      {required this.readToken, DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now {
     search = SearchDebouncer(apply, delay: const Duration(milliseconds: 350));
   }
   final InvoiceListRepository repository;
   final String? Function() readToken;
+  final DateTime Function() _clock;
   late final SearchDebouncer search;
   final name = TextEditingController(),
       invoiceNumber = TextEditingController(),
+      orderNumber = TextEditingController(),
       phone = TextEditingController(),
       fromDate = TextEditingController(),
       toDate = TextEditingController();
@@ -23,10 +27,11 @@ class InvoiceListController extends ChangeNotifier {
   String? status, zatcaStatus;
   bool initialized = false, _disposed = false;
   List<TextEditingController> get inputs =>
-      [invoiceNumber, name, phone, fromDate, toDate];
+      [invoiceNumber, orderNumber, name, phone, fromDate, toDate];
   InvoiceListQuery get query => InvoiceListQuery(
       name: name.text,
       invoiceNumber: invoiceNumber.text,
+      orderNumber: orderNumber.text,
       phone: phone.text,
       fromDate: fromDate.text,
       toDate: toDate.text,
@@ -54,6 +59,29 @@ class InvoiceListController extends ChangeNotifier {
     selectedIds.clear();
     repository.apply(query);
     notifyListeners();
+  }
+
+  /// True while From/To hold exactly today's full-day range, so editing
+  /// either date by hand turns the toggle off by itself.
+  bool get isToday {
+    final today = invoiceTodayRange(_clock());
+    return fromDate.text == today.from && toDate.text == today.to;
+  }
+
+  /// On: From/To become today's full day. Off: both dates are cleared.
+  /// Either way the list reloads immediately.
+  void setToday(bool on) {
+    if (_disposed) return;
+    search.cancel();
+    if (on) {
+      final today = invoiceTodayRange(_clock());
+      fromDate.text = today.from;
+      toDate.text = today.to;
+    } else {
+      fromDate.clear();
+      toDate.clear();
+    }
+    apply();
   }
 
   void clearSelection() {

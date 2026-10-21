@@ -149,10 +149,12 @@ class _Provider extends InvoiceProvider {
       String? email,
       String? dateFrom,
       String? dateTo,
+      String? orderNumber,
       int page = 1}) {
     lastFilters = {
       'name': name,
       'number': receiptNumber,
+      'order': orderNumber,
       'reference': paymentReference,
       'status': receiptStatus,
       'method': paymentMethod,
@@ -177,12 +179,14 @@ class _Provider extends InvoiceProvider {
       String? fromDate,
       String? toDate,
       String? status,
+      String? orderNumber,
       void Function(int, int)? onProgress,
       http.Client? client,
       Duration requestTimeout = const Duration(seconds: 30)}) async {
     exported = {
       'name': name,
       'number': receiptNumber,
+      'order': orderNumber,
       'reference': paymentReference,
       'status': status,
       'method': paymentMethod,
@@ -645,7 +649,7 @@ void main() {
         expect(find.byKey(ReceiptListScreen.filterToggleKey), findsOneWidget);
       }
       expect(find.byKey(ReceiptListScreen.filtersKey), findsOneWidget);
-      expect(find.byType(TextField), findsNWidgets(7));
+      expect(find.byType(TextField), findsNWidgets(8));
       expect(find.byType(DropdownButtonFormField<String?>), findsNWidgets(2));
       expect(tester.takeException(), isNull);
     });
@@ -684,7 +688,9 @@ void main() {
       (tester) async {
     final (p, export) = await mount(tester, const Size(1440, 900));
     await tester.enterText(find.byType(TextField).at(0), '000');
-    await tester.enterText(find.byType(TextField).at(1), 'REF');
+    // Boxes: receipt no., order / offline receipt no., reference no., ...
+    await tester.enterText(find.byType(TextField).at(1), '2-11');
+    await tester.enterText(find.byType(TextField).at(2), 'REF');
     final dir = await tester.runAsync(
         () => Directory.systemTemp.createTemp('receipt-export-test-'));
     addTearDown(() => dir!.deleteSync(recursive: true));
@@ -698,13 +704,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(p.exported!['number'], '000');
     expect(p.exported!['reference'], 'REF');
+    expect(p.exported!['order'], '2-11');
     expect(p.lastFilters!['number'], '000');
     final rows =
         Excel.decodeBytes(file!.readAsBytesSync()).tables.values.single.rows;
     expect(rows.length, 3);
     expect(rows[1][0]!.value, TextCellValue('0001'));
-    expect(rows[1][4]!.value, const DoubleCellValue(12.125));
-    expect(rows[1][9]!.value, TextCellValue('Cash'));
+    // Column 1 is the new Offline Receipt No. (empty in this fixture).
+    expect(rows[1][5]!.value, const DoubleCellValue(12.125));
+    expect(rows[1][10]!.value, TextCellValue('Cash'));
     await tester.tap(find.widgetWithText(OutlinedButton, 'View'));
     await tester.pumpAndSettle();
     expect(find.text('receipt.receipt_details_title'.tr), findsOneWidget);
