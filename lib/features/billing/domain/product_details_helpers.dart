@@ -44,6 +44,14 @@ String formatProductDetailsNumeric(dynamic value) {
   return parsed % 1 == 0 ? parsed.toInt().toString() : parsed.toString();
 }
 
+/// The SKU to send when saving a product edit: null (leave it alone) when it
+/// was not changed, so a save never clears an SKU that did not load here;
+/// an empty string clears it.
+String? editedSkuForApi({String? original, required String edited}) {
+  final trimmed = edited.trim();
+  return trimmed == (original?.trim() ?? '') ? null : trimmed;
+}
+
 num? productAvailableQuantity(GetProduct product) {
   final stocks = product.stock;
   if (stocks == null) return null;

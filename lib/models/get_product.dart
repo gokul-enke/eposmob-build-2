@@ -377,7 +377,8 @@ class GetProduct {
           if (raw is int) return raw;
           return int.tryParse(raw.toString());
         })(),
-        sku: json["sku"],
+        // A numeric SKU (e.g. from the SKU generator) is kept as text.
+        sku: json["sku"]?.toString(),
         offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
         hsnCode: json["hsn_code"],

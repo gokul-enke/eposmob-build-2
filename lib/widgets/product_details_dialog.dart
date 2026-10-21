@@ -849,9 +849,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         // server as null to clear it, rather than being omitted from the body.
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
-        // Only an edited SKU is sent, so a product whose SKU did not load
-        // here is never cleared by an unrelated save.
-        sku: updatedSku == (product.sku?.trim() ?? '') ? null : updatedSku,
+        sku: editedSkuForApi(original: product.sku, edited: updatedSku),
         accessToken: accessToken,
       );
 
