@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import '../../data/invoice_list_repository.dart';
+import '../../domain/invoice_list_query.dart';
 import '../state/invoice_list_controller.dart';
 import '../export/invoice_list_excel.dart';
 import '../widgets/invoice_list_rows.dart';
@@ -275,7 +275,7 @@ class _InvoiceListPageState extends State<InvoiceListPage>
         resolvedTime.minute,
       );
       final formattedDateTime =
-          DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+          invoiceFilterDateTimeFormat.format(fullDateTime);
       setState(() {
         if (isFromDate) {
           dateFromController.text = formattedDateTime;
@@ -335,11 +335,13 @@ class _InvoiceListPageState extends State<InvoiceListPage>
       InvoiceListFilters(
           panelKey: InvoiceListPage.filtersKey,
           invoiceNumberController: invoiceNumberController,
+          orderNumberController: _list.orderNumber,
           searchTextController: searchTextController,
           phoneController: phoneController,
           showZatca: showZatca,
           selectedStatus: selectedStatus,
           selectedZatcaStatus: selectedZatcaStatus,
+          isToday: _list.isToday,
           statusOptions: provider.getStatusOptions(),
           zatcaOptions: provider.getZatcaStatusOptions(),
           fromField: _dateFilter(true),
@@ -356,7 +358,8 @@ class _InvoiceListPageState extends State<InvoiceListPage>
             setState(() => selectedZatcaStatus = v);
             _list.search.cancel();
             searchInvoices();
-          });
+          },
+          onTodayChanged: (on) => setState(() => _list.setToday(on)));
 
   // ------------------------------------------------------------ list cells
 

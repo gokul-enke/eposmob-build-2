@@ -12,6 +12,7 @@ class InfoRow extends StatelessWidget {
     this.icon,
     this.valueColor,
     this.trailing,
+    this.selectable = false,
   });
 
   final String label;
@@ -19,6 +20,13 @@ class InfoRow extends StatelessWidget {
   final IconData? icon;
   final Color? valueColor;
   final Widget? trailing;
+
+  /// Lets users drag to select and copy the value.
+  final bool selectable;
+
+  TextStyle get _valueStyle => AppTextStyles.value.copyWith(
+        color: valueColor ?? AppColors.heading,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +45,10 @@ class InfoRow extends StatelessWidget {
               children: [
                 Text(label, style: AppTextStyles.label),
                 const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: AppTextStyles.value.copyWith(
-                    color: valueColor ?? AppColors.heading,
-                  ),
-                ),
+                if (selectable)
+                  SelectableText(value, style: _valueStyle)
+                else
+                  Text(value, style: _valueStyle),
               ],
             ),
           ),

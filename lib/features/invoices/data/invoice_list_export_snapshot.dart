@@ -11,6 +11,7 @@ Future<List<Invoice>> fetchInvoiceListExport({
   required String accessToken,
   String? name,
   String? invoiceNumber,
+  String? orderNumber,
   String? phone,
   String? fromDate,
   String? toDate,
@@ -42,6 +43,7 @@ Future<List<Invoice>> fetchInvoiceListExport({
   add('date_to', formatInvoiceApiDate(toDate));
   add('status', status);
   add('zatca_status', mapInvoiceZatcaStatusToApi(zatcaStatus));
+  add('order_number', orderNumber);
   final headers = {'Authorization': 'Bearer $accessToken', 'X-Tenant': tenant};
   final items = <Invoice>[];
   final ids = <int>{};

@@ -56,6 +56,7 @@ class FakeProvider extends InvoiceProvider {
     applied.add({
       'name': name,
       'invoiceNumber': invoiceNumber,
+      'orderNumber': orderNumber,
       'phone': phone,
       'fromDate': fromDate,
       'toDate': toDate,
@@ -83,6 +84,7 @@ class FakeProvider extends InvoiceProvider {
       {required String accessToken,
       String? name,
       String? invoiceNumber,
+      String? orderNumber,
       String? phone,
       String? fromDate,
       String? toDate,
@@ -95,6 +97,7 @@ class FakeProvider extends InvoiceProvider {
     applied.add({
       'name': name,
       'invoiceNumber': invoiceNumber,
+      'orderNumber': orderNumber,
       'phone': phone,
       'fromDate': fromDate,
       'toDate': toDate,
@@ -256,5 +259,99 @@ void main() {
     await expectLater(c.export(showZatca: true), throwsStateError);
     expect(p.loads, 0);
     expect(p.exports, 0);
+  });
+
+  test('order number is applied, exported and cleared by reset', () async {
+    final p = FakeProvider();
+    final c = InvoiceListController(InvoiceListRepository(p),
+        readToken: () => 'token');
+    addTearDown(c.dispose);
+    expect(c.query.isActive, false);
+    c.orderNumber.text = 'ORD-004785';
+    expect(c.query.isActive, true);
+    c.apply();
+    expect(p.applied.last['orderNumber'], 'ORD-004785');
+    await c.export(showZatca: false);
+    expect(p.applied.last['orderNumber'], 'ORD-004785');
+    c.reset();
+    expect(c.orderNumber.text, isEmpty);
+    expect(c.query.isActive, false);
+  });
+
+  test('Today toggle fills today, follows manual edits and clears', () {
+    final p = FakeProvider();
+    var now = DateTime(2026, 3, 7, 15, 30);
+    final c = InvoiceListController(InvoiceListRepository(p),
+        readToken: () => 'token', clock: () => now);
+    addTearDown(c.dispose);
+    expect(c.isToday, false);
+    c.setToday(true);
+    expect(c.fromDate.text, '2026-03-07 00:00:00');
+    expect(c.toDate.text, '2026-03-07 23:59:59');
+    expect(c.isToday, true);
+    expect(p.applied.last['fromDate'], '2026-03-07 00:00:00');
+    expect(p.applied.last['toDate'], '2026-03-07 23:59:59');
+
+    // A date picked by hand turns the toggle off without touching the other.
+    c.fromDate.text = '2026-03-01 00:00:00';
+    expect(c.isToday, false);
+    expect(c.toDate.text, '2026-03-07 23:59:59');
+
+    c.setToday(true);
+    // After midnight yesterday's range no longer counts as Today.
+    now = DateTime(2026, 3, 8, 0, 1);
+    expect(c.isToday, false);
+
+    c.setToday(false);
+    expect(c.fromDate.text, isEmpty);
+    expect(c.toDate.text, isEmpty);
+    expect(p.applied.last['fromDate'], '');
+    expect(p.applied.last['toDate'], '');
+
+    c.setToday(true);
+    c.reset();
+    expect(c.isToday, false);
+    expect(c.query.isActive, false);
+  });
+
+  test('Today toggle cancels a pending typed search', () {
+    final p = FakeProvider();
+    final c = InvoiceListController(InvoiceListRepository(p),
+        readToken: () => 'token', clock: () => DateTime(2026, 1, 2));
+    addTearDown(c.dispose);
+    c.name.text = 'typed';
+    c.search.schedule();
+    c.setToday(true);
+    expect(p.applied.length, 1);
+    expect(p.applied.single['name'], 'typed');
+  });
+
+  test('invoice parses order and offline receipt numbers', () {
+    Map<String, dynamic> json(Map<String, dynamic> extra) => {
+          'id': 1,
+          'invoice_number': 'INV-1',
+          'customer': {
+            'user': {'name': 'A'}
+          },
+          ...extra,
+        };
+    final full = Invoice.fromJson(json({
+      'order_number': 'ORD-004785',
+      'receipt_number': '2-11-261015-0010',
+    }));
+    expect(full.orderNumber, 'ORD-004785');
+    expect(full.receiptNumber, '2-11-261015-0010');
+
+    final missing = Invoice.fromJson(json({}));
+    expect(missing.orderNumber, isNull);
+    expect(missing.receiptNumber, isNull);
+
+    final blank = Invoice.fromJson(
+        json({'order_number': null, 'receipt_number': '  '}));
+    expect(blank.orderNumber, isNull);
+    expect(blank.receiptNumber, isNull);
+
+    final numeric = Invoice.fromJson(json({'receipt_number': 12345}));
+    expect(numeric.receiptNumber, '12345');
   });
 }

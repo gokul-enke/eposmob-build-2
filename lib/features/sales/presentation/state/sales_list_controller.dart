@@ -15,10 +15,12 @@ class SalesListController extends ChangeNotifier {
   final phone = TextEditingController();
   final email = TextEditingController();
   final price = TextEditingController();
+  final minAmount = TextEditingController();
+  final maxAmount = TextEditingController();
   DateTime? from, until, businessDate;
   int? storeId;
   bool isOnlineSales;
-  String status = 'all';
+  String status = 'all', paymentStatus = 'all';
   bool loading = false, showFilters = true, _disposed = false;
   Object? error;
   int _generation = 0, requestedPage = 1;
@@ -33,6 +35,9 @@ class SalesListController extends ChangeNotifier {
       email: email.text,
       price: price.text,
       status: status,
+      paymentStatus: paymentStatus,
+      minAmount: minAmount.text,
+      maxAmount: maxAmount.text,
       from: from,
       until: until,
       businessDate: businessDate,
@@ -131,11 +136,15 @@ class SalesListController extends ChangeNotifier {
     notify();
   }
 
+  List<TextEditingController> get _textFields =>
+      [number, customer, phone, email, price, minAmount, maxAmount];
+
   void clearFilters() {
-    for (final field in [number, customer, phone, email, price]) {
+    for (final field in _textFields) {
       field.clear();
     }
     status = 'all';
+    paymentStatus = 'all';
     from = null;
     until = null;
     businessDate = null;
@@ -152,7 +161,7 @@ class SalesListController extends ChangeNotifier {
     _disposed = true;
     _generation++;
     _timer?.cancel();
-    for (final field in [number, customer, phone, email, price]) {
+    for (final field in _textFields) {
       field.dispose();
     }
     super.dispose();

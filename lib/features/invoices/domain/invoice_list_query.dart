@@ -1,18 +1,22 @@
+import 'package:intl/intl.dart';
+
 /// Raw controls captured together. API normalization remains compatible with
 /// InvoiceProvider so existing consumers and backend parameters do not change.
 class InvoiceListQuery {
   const InvoiceListQuery(
       {this.name = '',
       this.invoiceNumber = '',
+      this.orderNumber = '',
       this.phone = '',
       this.fromDate = '',
       this.toDate = '',
       this.status,
       this.zatcaStatus});
-  final String name, invoiceNumber, phone, fromDate, toDate;
+  final String name, invoiceNumber, orderNumber, phone, fromDate, toDate;
   final String? status, zatcaStatus;
   bool get isActive =>
-      [name, invoiceNumber, phone, fromDate, toDate].any((s) => s.isNotEmpty) ||
+      [name, invoiceNumber, orderNumber, phone, fromDate, toDate]
+          .any((s) => s.isNotEmpty) ||
       status != null ||
       zatcaStatus != null;
 }
@@ -23,6 +27,20 @@ String? normalizeInvoiceFilter(String? value) {
     return null;
   }
   return normalized;
+}
+
+/// Text format the From/To date fields hold; the picker and Today share it.
+final invoiceFilterDateTimeFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+
+/// The Today toggle's range, in the same text format the date pickers write.
+/// The toggle reads as on only while both fields hold exactly this range.
+({String from, String to}) invoiceTodayRange(DateTime now) {
+  final start = DateTime(now.year, now.month, now.day);
+  final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+  return (
+    from: invoiceFilterDateTimeFormat.format(start),
+    to: invoiceFilterDateTimeFormat.format(end),
+  );
 }
 
 String? formatInvoiceApiDate(String? value) {

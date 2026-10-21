@@ -15,20 +15,25 @@ abstract final class TableCells {
     Color? color,
     FontWeight weight = FontWeight.w500,
     TextAlign align = TextAlign.left,
+    bool selectable = false,
   }) {
+    final style = TextStyle(
+      color: color ?? AppColors.body,
+      fontSize: 13,
+      fontWeight: weight,
+    );
     return Padding(
       padding: _padding,
-      child: Text(
-        value,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: align,
-        style: TextStyle(
-          color: color ?? AppColors.body,
-          fontSize: 13,
-          fontWeight: weight,
-        ),
-      ),
+      // Selectable cells let users drag to select and copy the value.
+      child: selectable
+          ? SelectableText(value, maxLines: 1, textAlign: align, style: style)
+          : Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: align,
+              style: style,
+            ),
     );
   }
 

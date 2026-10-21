@@ -10,6 +10,7 @@ class ReceiptListRepository {
   void apply(ReceiptListQuery q) => provider.applyReceiptFilters(
       name: q.name.trim(),
       receiptNumber: q.receiptNumber,
+      orderNumber: q.orderNumber,
       paymentReference: q.paymentReference,
       receiptStatus: q.status,
       phone: q.phone,
@@ -26,6 +27,7 @@ class ReceiptListRepository {
           accessToken: token,
           name: q.name,
           receiptNumber: q.receiptNumber,
+          orderNumber: q.orderNumber,
           paymentReference: q.paymentReference,
           phone: q.phone,
           email: q.email,

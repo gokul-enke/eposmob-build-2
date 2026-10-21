@@ -129,6 +129,16 @@ class ListOrderModelData {
     return [value.toString()];
   }
 
+  /// Payment status as the admin panel shows it: `paid`, `refunded`, or
+  /// `pending` (which also covers empty, `unpaid`, `partial` and
+  /// `partially_paid`).
+  String get paymentStatusCode =>
+      switch (paymentStatus?.trim().toLowerCase()) {
+        'paid' => 'paid',
+        'refunded' => 'refunded',
+        _ => 'pending',
+      };
+
   bool get isUnpaidCod {
     // Only a purely COD order can skip refund details. If COD appears alongside
     // another method, that paid portion may still need to be refunded.
