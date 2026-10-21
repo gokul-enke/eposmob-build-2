@@ -1,11 +1,13 @@
 name: Claude Code Review
 
-# Reviews each pull request once (when opened, reopened or marked ready)
-# and posts findings as inline comments. Uses the Claude subscription
-# token in the CLAUDE_CODE_OAUTH_TOKEN secret, not API/extra-usage billing.
+# Reviews each pull request into staging, stable or live once (when opened,
+# reopened or marked ready) and posts findings as inline comments. Uses the
+# Claude subscription token in the CLAUDE_CODE_OAUTH_TOKEN secret, not
+# API/extra-usage billing.
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
+    branches: [staging, stable, live]
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
