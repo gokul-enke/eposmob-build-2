@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
-import 'package:pos_machine/screens/transactions/supplier_transactions/supplier_ledger_row_actions.dart';
+import '../state/supplier_ledger_details_action.dart';
 import '../../data/supplier_ledger_repository.dart';
 import '../state/supplier_ledger_list_controller.dart';
 import '../widgets/supplier_ledger_filters.dart';
