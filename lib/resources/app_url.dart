@@ -26,7 +26,8 @@ class APPUrl {
       '$baseURL/api/v1/category/list-category?type=purchasable';
   static String get getRawCategoryListUrl =>
       '$baseURL/api/v1/category/list-category';
-  static String get viewCategoryListUrl => '$baseURL/api/v1/category-details';
+  static String categoryDetailsBySlug(String slug) =>
+      '$baseURL/api/v1/category/slug/${Uri.encodeComponent(slug)}';
   static String get addCategoryUrl => '$baseURL/api/v1/category/add-category';
   static String get editCategoryUrl => '$baseURL/api/v1/category/edit-category';
   static String get fetchCategoryProps =>

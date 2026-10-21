@@ -29,6 +29,7 @@ class DirectoryProvider extends CategoryProvider {
   Future<void> Function()? loader, viewer;
   final scopes = <CategoryListScope>[];
   final viewed = <int>[];
+  final viewedSlugs = <String>[];
   @override
   List<Category> get allCategories => List.of(entries);
   @override
@@ -39,8 +40,10 @@ class DirectoryProvider extends CategoryProvider {
   }
 
   @override
-  Future<void> viewCategoryApi({required int categoryId}) async {
+  Future<void> viewCategoryApi(
+      {required int categoryId, required String slug}) async {
     viewed.add(categoryId);
+    viewedSlugs.add(slug);
     await viewer?.call();
   }
 
@@ -151,6 +154,7 @@ void main() {
     edit();
     await tester.pump();
     expect(provider.viewed, [1]);
+    expect(provider.viewedSlugs, ['category-0']);
     expect(provider.getEditCategoryId, 1);
     pending.complete();
     await tester.pumpAndSettle();
