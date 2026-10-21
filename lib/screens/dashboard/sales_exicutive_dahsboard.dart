@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/dashboard_permissions.dart';
 import '../../models/dashboard.dart';
 import '../../models/dashboard_api.dart';
 import '../../providers/dashboard_provider.dart';
@@ -18,6 +19,7 @@ import '../../providers/app_settings_provider.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/dashboard_responsive.dart';
+import 'widgets/dashboard_additional_widgets.dart';
 import 'widgets/zatca_failed_alert.dart';
 import 'widgets/zatca_overview_section.dart';
 
@@ -54,7 +56,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
   // Cache for different periods
   Map<String, DashBoardModelData> cachedDashboardData = {};
-  Map<String, DashboardOverview> cachedOverviewData = {};
   Map<String, TotalSales> cachedTotalSales = {};
   bool isInitialLoading = true;
 
@@ -86,21 +87,8 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Future<void> fetchDataForPeriod(String period) async {
     debugPrint('=== FETCHING DATA FOR PERIOD: $period ===');
 
-    // Check if data is already cached
-    if (cachedDashboardData.containsKey(period) &&
-        cachedOverviewData.containsKey(period)) {
-      debugPrint('Using cached data for period: $period');
-      setState(() {
-        dashBoardModelData = cachedDashboardData[period];
-        totalSales = cachedTotalSales[period];
-        dashboardOverview = cachedOverviewData[period];
-        value = period;
-      });
-      return;
-    }
-
-    // Data not cached, fetch it
-    debugPrint('Data not cached for period: $period. Fetching from API...');
+    // Always refetch: the sales graph, customer stats and executives overview
+    // depend on the period, so reusing a cached overview would show stale data.
     try {
       setState(() {
         isInitialLoading = true;
@@ -159,7 +147,6 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           }
         }
 
-        // Fetch new dashboard overview data (Removed due to backend issue)
         final dashboardProvider = DashboardProvider();
 
         // Define local variables for fetched data
@@ -170,6 +157,15 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         SalesGraph? graph;
         CustomerStats? customerStats;
         ProductStats? productStats;
+        ExecutivesOverview? executives;
+
+        try {
+          overview = await dashboardProvider
+              .fetchDashboardOverview(accessToken, startDate, endDate)
+              .timeout(const Duration(seconds: 15));
+        } catch (e) {
+          debugPrint('Dashboard overview failed: $e');
+        }
 
         try {
           ordersPerMonth = await dashboardProvider
@@ -226,18 +222,27 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
           debugPrint('Product stats failed: $e');
         }
 
+        try {
+          executives = await dashboardProvider
+              .fetchExecutivesOverview(accessToken, startDate, endDate)
+              .timeout(const Duration(seconds: 15));
+        } catch (e) {
+          debugPrint('Executives overview failed: $e');
+        }
+
         // Update state with the newly fetched data
         if (mounted) {
           setState(() {
             dashBoardModelData = cachedDashboardData[period];
             totalSales = cachedTotalSales[period];
-            dashboardOverview = overview; // Will be null
+            dashboardOverview = overview;
             ordersPerMonthData = ordersPerMonth;
             customersPerMonthData = customersPerMonth;
             salesStats = stats;
             this.executiveSalesGraph = graph;
             this.customerStats = customerStats;
             this.productStats = productStats;
+            executivesOverview = executives;
             value = period;
             isInitialLoading = false;
             isLoading = false;
@@ -315,6 +320,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     _buildSalesCards(),
                     const SizedBox(height: 20),
                     _buildCompanyAccountOverview(),
+                    _buildActivityOverview(),
                     ZatcaOverviewSection(period: value),
                     const SizedBox(height: 20),
                     _buildSalesExecutiveAccountOverview(),
@@ -324,10 +330,15 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     _buildCustomersBySalesExecutive(),
                     const SizedBox(height: 20),
                     _buildProductOverview(),
+                    _buildCategoryOverview(),
                     const SizedBox(height: 20),
                     _buildWorksTeam(),
                     const SizedBox(height: 20),
                     _buildSalesGraphByPeriod(),
+                    _buildOrdersCustomersSection(),
+                    _buildSalesStatsSection(),
+                    _buildExecutivesOverviewSection(),
+                    const DashboardAdditionalWidgets(),
                     const SizedBox(height: 20),
                     // _buildAdditionalStats(),
                     // const SizedBox(height: 20),
@@ -339,6 +350,10 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
             )),
     );
   }
+
+  bool _can(String permission) => canSeeDashboardItem(context, permission);
+
+  bool _canAny(List<String> permissions) => permissions.any(_can);
 
   Widget _buildHeader(Size size) {
     final bool isCompactHeader = size.width < 700;
@@ -564,6 +579,15 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildCompanyAccountOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('company_overview', 'bank_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'cash_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'revenue.total_sales'),
+      DashboardPermissions.field('company_overview', 'customers.total_customers'),
+      DashboardPermissions.field('company_overview', 'orders.total_orders'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     debugPrint(
         'Building Company Account Overview. Data available: ${dashboardOverview != null}');
     if (dashboardOverview != null) {
@@ -600,30 +624,35 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         DashboardSectionHeader(title: "dashboard.sections.company_overview".tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('company_overview', 'bank_account.received_amount')))
             _buildCompanyAccountCard(
                 "dashboard.cards.bank_account".tr,
                 "dashboard.cards.bank_account_sub".tr,
                 bankAccountValue,
                 ColorManager.kPrimaryColor,
                 Icons.account_balance),
+            if (_can(DashboardPermissions.field('company_overview', 'cash_account.received_amount')))
             _buildCompanyAccountCard(
                 "dashboard.cards.cash_account".tr,
                 "dashboard.cards.cash_account_sub".tr,
                 cashAccountValue,
                 ColorManager.kMagentha,
                 Icons.account_balance_wallet),
+            if (_can(DashboardPermissions.field('company_overview', 'revenue.total_sales')))
             _buildCompanyAccountCard(
                 "dashboard.cards.total_revenue".tr,
                 "dashboard.cards.total_revenue_sub".tr,
                 revenueValue,
                 ColorManager.kOrange,
                 Icons.trending_up),
+            if (_can(DashboardPermissions.field('company_overview', 'customers.total_customers')))
             _buildCompanyAccountCard(
                 "dashboard.cards.total_customers".tr,
                 "dashboard.cards.total_customers_sub".tr,
                 customersValue,
                 ColorManager.kBlue,
                 Icons.people),
+            if (_can(DashboardPermissions.field('company_overview', 'orders.total_orders')))
             _buildCompanyAccountCard(
                 "dashboard.cards.total_orders".tr,
                 "dashboard.cards.total_orders_sub".tr,
@@ -637,6 +666,14 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildSalesExecutiveAccountOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('company_overview', 'cash_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'cash_account.sent_amount'),
+      DashboardPermissions.field('company_overview', 'bank_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'bank_account.sent_amount'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     debugPrint(
         'Building Sales Executive Account Overview. Data available: ${dashboardOverview != null}');
 
@@ -662,24 +699,28 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
         DashboardSectionHeader(title: "dashboard.sections.your_overview".tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('company_overview', 'cash_account.received_amount')))
             _buildCompanyAccountCard(
                 "dashboard.accounts.cash_received".tr,
                 "dashboard.accounts.cash_received_sub".tr,
                 cashReceivedValue,
                 ColorManager.kPrimaryColor,
                 Icons.call_received),
+            if (_can(DashboardPermissions.field('company_overview', 'cash_account.sent_amount')))
             _buildCompanyAccountCard(
                 "dashboard.accounts.cash_sent".tr,
                 "dashboard.accounts.cash_sent_sub".tr,
                 cashSentValue,
                 ColorManager.kMagentha,
                 Icons.call_made),
+            if (_can(DashboardPermissions.field('company_overview', 'bank_account.received_amount')))
             _buildCompanyAccountCard(
                 "dashboard.accounts.bank_received".tr,
                 "dashboard.accounts.bank_received_sub".tr,
                 bankReceivedValue,
                 ColorManager.kOrange,
                 Icons.account_balance),
+            if (_can(DashboardPermissions.field('company_overview', 'bank_account.sent_amount')))
             _buildCompanyAccountCard(
                 "dashboard.accounts.bank_sent".tr,
                 "dashboard.accounts.bank_sent_sub".tr,
@@ -693,6 +734,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildAllSalesOfSalesExecutive() {
+    if (!_can(DashboardPermissions.field('company_overview', 'revenue.total_sales'))) return const SizedBox.shrink();
     debugPrint(
         'Building Sales Performance. Data available: ${dashboardOverview != null}');
 
@@ -795,6 +837,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildSalesGraphByPeriod() {
+    if (!_can(DashboardPermissions.widget('executive_sales_graph'))) return const SizedBox.shrink();
     debugPrint(
         'Building Sales Graph. Data available: ${executiveSalesGraph != null}');
     if (executiveSalesGraph != null) {
@@ -893,11 +936,20 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildCustomersBySalesExecutive() {
+    if (!_canAny([
+      DashboardPermissions.field('customer_stats', 'total_customers'),
+      DashboardPermissions.field('customer_stats', 'debit_customers'),
+      DashboardPermissions.field('customer_stats', 'credit_customers'),
+      DashboardPermissions.field('customer_stats', 'crucial_customers'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         DashboardSectionHeader(title: "dashboard.customers.title".tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('customer_stats', 'total_customers')))
             _buildCompanyAccountCard(
                 "dashboard.cards.total_customers".tr,
                 "dashboard.customer_stats.total_sub".tr,
@@ -906,6 +958,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.people),
+            if (_can(DashboardPermissions.field('customer_stats', 'debit_customers')))
             _buildCompanyAccountCard(
                 "dashboard.customer_stats.debit".tr,
                 "dashboard.customer_stats.debit_sub".tr,
@@ -914,6 +967,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     : "0",
                 ColorManager.kMagentha,
                 Icons.money_off),
+            if (_can(DashboardPermissions.field('customer_stats', 'credit_customers')))
             _buildCompanyAccountCard(
                 "dashboard.customer_stats.credit".tr,
                 "dashboard.customer_stats.credit_sub".tr,
@@ -922,6 +976,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                     : "0",
                 ColorManager.kOrange,
                 Icons.account_balance_wallet),
+            if (_can(DashboardPermissions.field('customer_stats', 'crucial_customers')))
             _buildCompanyAccountCard(
                 "dashboard.customer_stats.crucial".tr,
                 "dashboard.customer_stats.crucial_sub".tr,
@@ -937,44 +992,323 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildProductOverview() {
+    final stats = productStats;
+    String count(int? value) => '${value ?? 0}';
+    Widget? card(String field, String title, String subtitle, String value,
+        Color color, IconData icon) {
+      if (!_can(DashboardPermissions.field('products_stats', field))) {
+        return null;
+      }
+      return _buildCompanyAccountCard(title, subtitle, value, color, icon);
+    }
+
+    final cards = [
+      card('total_products', "dashboard.products.total_products".tr,
+          "dashboard.product_stats.total_sub".tr, count(stats?.totalProducts),
+          ColorManager.kPrimaryColor, Icons.inventory),
+      card('active_products', "dashboard.product_stats.active".tr,
+          "dashboard.product_stats.active_sub".tr,
+          count(stats?.activeProducts), ColorManager.kMagentha,
+          Icons.check_circle),
+      card('low_stock', "dashboard.product_stats.low_stock".tr,
+          "dashboard.product_stats.low_stock_sub".tr, count(stats?.lowStock),
+          ColorManager.kOrange, Icons.warning),
+      card(
+          'total_products_stock_qty',
+          "dashboard.product_stats.total_stock_qty".tr,
+          "dashboard.product_stats.total_stock_qty_sub".tr,
+          stats != null
+              ? NumberFormat('#,##,###.##').format(stats.totalProductsStockQty)
+              : "0",
+          ColorManager.kBlue,
+          Icons.inventory_2),
+      card('inactive_products', "dashboard.more.inactive_products".tr,
+          "dashboard.more.inactive_products_sub".tr,
+          count(stats?.inactiveProducts), ColorManager.kRed, Icons.block),
+      card('sellable_products', "company_admin.card_sellable_products".tr,
+          "dashboard.more.sellable_products_sub".tr,
+          count(stats?.sellableProducts), ColorManager.kGreen, Icons.sell),
+      card('purchasable_products', "dashboard.more.purchasable_products".tr,
+          "dashboard.more.purchasable_products_sub".tr,
+          count(stats?.purchasableProducts), ColorManager.kPrimaryColor,
+          Icons.shopping_basket),
+      card('taxable_products', "dashboard.more.taxable_products".tr,
+          "dashboard.more.taxable_products_sub".tr,
+          count(stats?.taxableProducts), ColorManager.kMagentha,
+          Icons.receipt),
+      card('non_taxable_products', "dashboard.more.non_taxable_products".tr,
+          "dashboard.more.non_taxable_products_sub".tr,
+          count(stats?.nonTaxableProducts), ColorManager.kOrange,
+          Icons.receipt_long),
+      card('products_in_stock', "dashboard.more.products_in_stock".tr,
+          "dashboard.more.products_in_stock_sub".tr,
+          count(stats?.productsInStock), ColorManager.kBlue,
+          Icons.inventory_2_outlined),
+    ].whereType<Widget>().toList();
+    if (cards.isEmpty) return const SizedBox.shrink();
+
     return Column(
       children: [
         DashboardSectionHeader(title: "dashboard.products.title".tr),
-        ResponsiveStatGrid(
-          cards: [
-            _buildCompanyAccountCard(
-                "dashboard.products.total_products".tr,
-                "dashboard.product_stats.total_sub".tr,
-                productStats != null
-                    ? productStats!.totalProducts.toString()
-                    : "0",
-                ColorManager.kPrimaryColor,
-                Icons.inventory),
-            _buildCompanyAccountCard(
-                "dashboard.product_stats.active".tr,
-                "dashboard.product_stats.active_sub".tr,
-                productStats != null
-                    ? productStats!.activeProducts.toString()
-                    : "0",
-                ColorManager.kMagentha,
-                Icons.check_circle),
-            _buildCompanyAccountCard(
-                "dashboard.product_stats.low_stock".tr,
-                "dashboard.product_stats.low_stock_sub".tr,
-                productStats != null ? productStats!.lowStock.toString() : "0",
-                ColorManager.kOrange,
-                Icons.warning),
-            _buildCompanyAccountCard(
-                "dashboard.product_stats.total_stock_qty".tr,
-                "dashboard.product_stats.total_stock_qty_sub".tr,
-                productStats != null
-                    ? productStats!.totalProductsStockQty.toString()
-                    : "0",
-                ColorManager.kBlue,
-                Icons.inventory_2),
+        ResponsiveStatGrid(cards: cards),
+      ],
+    );
+  }
+
+  Widget _buildCategoryOverview() {
+    final stats = productStats;
+    String count(int? value) => '${value ?? 0}';
+    Widget? card(String field, String subtitle, int? value, Color color,
+        IconData icon) {
+      if (!_can(DashboardPermissions.field('products_stats', field))) {
+        return null;
+      }
+      return _buildCompanyAccountCard("dashboard.more.$field".tr, subtitle,
+          count(value), color, icon);
+    }
+
+    final cards = [
+      card('total_category', "dashboard.more.total_category_sub".tr,
+          stats?.totalCategory, ColorManager.kPrimaryColor, Icons.category),
+      card('sellable_category', "dashboard.more.sellable_category_sub".tr,
+          stats?.sellableCategory, ColorManager.kGreen, Icons.sell_outlined),
+      card('purchasable_category', "dashboard.more.purchasable_category_sub".tr,
+          stats?.purchasableCategory, ColorManager.kMagentha,
+          Icons.shopping_cart_outlined),
+      card('taxable_category', "dashboard.more.taxable_category_sub".tr,
+          stats?.taxableCategory, ColorManager.kOrange, Icons.percent),
+      card('non_taxable_category', "dashboard.more.non_taxable_category_sub".tr,
+          stats?.nonTaxableCategory, ColorManager.kBlue,
+          Icons.money_off_csred_outlined),
+    ].whereType<Widget>().toList();
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          DashboardSectionHeader(title: "dashboard.more.category_overview".tr),
+          ResponsiveStatGrid(cards: cards),
+        ],
+      ),
+    );
+  }
+
+  /// Company overview fields not covered by the account cards above.
+  Widget _buildActivityOverview() {
+    final overview = dashboardOverview;
+    Widget? card(String field, String key, int? value, Color color,
+        IconData icon) {
+      if (!_can(DashboardPermissions.field('company_overview', field))) {
+        return null;
+      }
+      return _buildCompanyAccountCard("dashboard.more.$key".tr,
+          "dashboard.more.${key}_sub".tr, '${value ?? 0}', color, icon);
+    }
+
+    final cards = [
+      card('products.total', 'catalog_products', overview?.products.total,
+          ColorManager.kPrimaryColor, Icons.inventory),
+      card('products.added_today', 'added_today',
+          overview?.products.addedToday, ColorManager.kGreen, Icons.today),
+      card('products.added_week', 'added_week', overview?.products.addedWeek,
+          ColorManager.kMagentha, Icons.date_range),
+      card('products.added_month', 'added_month',
+          overview?.products.addedMonth, ColorManager.kOrange,
+          Icons.calendar_month),
+      card('orders.new_orders', 'new_orders', overview?.orders.newOrders,
+          ColorManager.kBlue, Icons.add_shopping_cart),
+      card('customers.new_customers', 'new_customers',
+          overview?.customers.newCustomers, ColorManager.kPrimaryColor,
+          Icons.person_add),
+    ].whereType<Widget>().toList();
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          DashboardSectionHeader(title: "dashboard.more.activity_overview".tr),
+          ResponsiveStatGrid(cards: cards),
+        ],
+      ),
+    );
+  }
+
+  Widget _chartSection(String title, Widget chart, {Widget? trailing}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          DashboardSectionHeader(title: title, trailing: trailing),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: BuildBoxShadowContainer(
+              padding: const EdgeInsets.all(16),
+              height: 280,
+              circleRadius: 14,
+              blurRadius: 10,
+              offsetValue: const Offset(0, 3),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
+              child: chart,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _noChartData() => Center(
+        child: Text(
+          'dashboard.more.no_data'.tr,
+          style: buildCustomStyle(
+              FontWeightManager.medium, FontSize.s12, 0.10, Colors.grey[500]!),
+        ),
+      );
+
+  Widget _legendDot(Color color, String label) => Padding(
+        padding: const EdgeInsetsDirectional.only(start: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(label,
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                    0.10, ColorManager.textColor)),
           ],
         ),
-      ],
+      );
+
+  Widget _buildOrdersCustomersSection() {
+    final showOrders = _can(DashboardPermissions.widget('orders_graph'));
+    final showCustomers = _can(DashboardPermissions.widget('customers_graph'));
+    if (!showOrders && !showCustomers) return const SizedBox.shrink();
+    return _chartSection(
+      "dashboard.more.orders_customers".tr,
+      _buildOrdersCustomersChart(),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showOrders)
+            _legendDot(ColorManager.kPrimaryColor, "dashboard.more.orders".tr),
+          if (showCustomers)
+            _legendDot(ColorManager.kOrange, "dashboard.more.customers".tr),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalesStatsSection() {
+    if (!_can(DashboardPermissions.widget('sales_stats'))) {
+      return const SizedBox.shrink();
+    }
+    return _chartSection(
+        "dashboard.more.sales_by_channel".tr, _buildSalesStatsChart());
+  }
+
+  Widget _buildExecutivesOverviewSection() {
+    final showTotal = _can(
+        DashboardPermissions.field('executives_overview', 'total_executives'));
+    final showGraph = _can(DashboardPermissions.field(
+        'executives_overview', 'sales_executive_graph'));
+    if (!showTotal && !showGraph) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        children: [
+          if (showTotal) ...[
+            DashboardSectionHeader(
+                title: 'company_admin.section_exec_overview'.tr),
+            ResponsiveStatGrid(maxColumns: 2, cards: [
+              _buildCompanyAccountCard(
+                  'company_admin.card_total_executives'.tr,
+                  "dashboard.more.executives_sub".tr,
+                  '${executivesOverview?.totalExecutives ?? 0}',
+                  ColorManager.kPrimaryColor,
+                  Icons.group),
+            ]),
+          ],
+          if (showGraph)
+            _chartSection("dashboard.more.sales_per_executive".tr,
+                _buildExecutiveSalesBars()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExecutiveSalesBars() {
+    final executives = executivesOverview?.salesExecutivesGraph ??
+        const <SalesExecutiveGraph>[];
+    final totals = [
+      for (final executive in executives)
+        executive.sales.fold<double>(0, (sum, sale) => sum + sale.amount)
+    ];
+    if (totals.isEmpty || totals.every((total) => total == 0)) {
+      return _noChartData();
+    }
+    final maxY = totals.reduce((a, b) => a > b ? a : b) * 1.2;
+
+    return BarChart(
+      BarChartData(
+        minY: 0,
+        maxY: maxY,
+        gridData: FlGridData(show: true, drawVerticalLine: false),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 44,
+              getTitlesWidget: (value, meta) => Text(
+                NumberFormat.compact().format(value),
+                style: const TextStyle(fontSize: 10),
+              ),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= executives.length) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    executives[index].executiveName,
+                    style: const TextStyle(fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        barGroups: [
+          for (var i = 0; i < totals.length; i++)
+            BarChartGroupData(x: i, barRods: [
+              BarChartRodData(
+                toY: totals[i].toDouble(),
+                color: ColorManager.kPrimaryColor,
+                width: 16,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ]),
+        ],
+      ),
     );
   }
 
@@ -1163,15 +1497,22 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     );
   }
 
-  Widget _buildSalesOverviewChart() {
+  Widget _buildOrdersCustomersChart() {
     if (ordersPerMonthData != null &&
         ordersPerMonthData!.ordersPerMonth.isNotEmpty) {
+      // Month labels always come from the orders graph; each line follows
+      // its own permission.
       final orders = ordersPerMonthData!.ordersPerMonth;
-      final customers = customersPerMonthData?.customersPerMonth ?? [];
+      final showOrders = _can(DashboardPermissions.widget('orders_graph'));
+      final customers = _can(DashboardPermissions.widget('customers_graph'))
+          ? customersPerMonthData?.customersPerMonth ?? <MonthlyData>[]
+          : <MonthlyData>[];
 
       // Find max value across both datasets for Y scaling
-      int maxOrders =
-          orders.fold(0, (max, entry) => entry.count > max ? entry.count : max);
+      int maxOrders = showOrders
+          ? orders.fold(
+              0, (max, entry) => entry.count > max ? entry.count : max)
+          : 0;
       int maxCustomers = customers.fold(
           0, (max, entry) => entry.count > max ? entry.count : max);
       double maxYValue =
@@ -1207,9 +1548,14 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
+                    // One label per month; without this fl_chart also asks
+                    // for half steps, which repeated every month name.
+                    interval: 1,
                     getTitlesWidget: (value, meta) {
                       int index = value.toInt();
-                      if (index >= 0 && index < orders.length) {
+                      if (value == index &&
+                          index >= 0 &&
+                          index < orders.length) {
                         return Text(
                           orders[index].month,
                           style:
@@ -1230,6 +1576,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               maxY: maxYValue,
               lineBarsData: [
                 // Orders Line
+                if (showOrders)
                 LineChartBarData(
                   spots: orders.asMap().entries.map((entry) {
                     return FlSpot(
@@ -1267,14 +1614,14 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       );
     }
 
+    return _noChartData();
+  }
+
+  Widget _buildSalesStatsChart() {
     if (salesStats != null) {
-      final data = salesStats!.data;
-      final double posOrders =
-          double.tryParse(data["4"]?.toString() ?? "0") ?? 0.0;
-      final double webOrders =
-          double.tryParse(data["5"]?.toString() ?? "0") ?? 0.0;
-      final double kioskOrders =
-          double.tryParse(data["6"]?.toString() ?? "0") ?? 0.0;
+      final double posOrders = salesStats!.posOrders;
+      final double webOrders = salesStats!.webOrders;
+      final double kioskOrders = salesStats!.kioskOrders;
 
       final double maxVal =
           [posOrders, webOrders, kioskOrders].reduce((a, b) => a > b ? a : b);
@@ -1315,10 +1662,13 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 30,
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
+                    // Skip the label at the chart top; it overlaps the last step.
+                    getTitlesWidget: (value, meta) => value == meta.max
+                        ? const SizedBox.shrink()
+                        : Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
                   ),
                 ),
                 topTitles:
@@ -1372,6 +1722,11 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
       );
     }
 
+    return _noChartData();
+  }
+
+  // Previous fallback chart, kept for reference; not shown on the dashboard.
+  Widget _buildDefaultSalesChart() {
     if (graphData.isEmpty) {
       _generateDummyData();
     }

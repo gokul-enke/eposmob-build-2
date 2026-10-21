@@ -23,7 +23,8 @@ import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/widgets/edit_stock_dialog.dart';
+// Stock edit disabled for now.
+// import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
@@ -97,11 +98,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _unitController;
   late TextEditingController _priceController;
   late TextEditingController _mrpController;
-  late TextEditingController _quantityController;
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
   late TextEditingController _minMarginPriceController;
+  late TextEditingController _skuController;
+  bool _isGeneratingSku = false;
   late TextEditingController _rackController;
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
@@ -178,10 +180,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController = TextEditingController();
     _priceController = TextEditingController();
     _mrpController = TextEditingController();
-    _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
+    _skuController = TextEditingController();
     _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
     if (widget.product != null) {
@@ -554,7 +556,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.text = product.unit ?? '';
     _priceController.text = _valueToString(product.price?.price);
     _mrpController.text = _valueToString(product.mrp);
-    _quantityController.text = '';
     // 🔧 FIX: Revert to Tax Rate (Percentage) as requested
     // We display the static rate, no longer the calculated amount
     _taxController.text = _valueToString(product.totalTaxRate);
@@ -567,6 +568,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         _formatNumericString(product.minMarginPercentage);
     _minMarginPriceController.text =
         _formatNumericString(product.minMarginPrice);
+    _skuController.text = product.sku?.trim() ?? '';
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -728,10 +730,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedUnit = _unitController.text.trim();
     final String updatedPriceString = _priceController.text.trim();
     final String updatedMrpString = _mrpController.text.trim();
-    final String updatedQuantityString = _quantityController.text.trim();
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
     final String updatedMinMargin = _minMarginController.text.trim();
     final String updatedMinMarginPrice = _minMarginPriceController.text.trim();
+    final String updatedSku = _skuController.text.trim();
     final String updatedRack = _rackController.text.trim();
 
     final double priceForApi = updatedPriceString.isEmpty
@@ -750,9 +752,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ? double.tryParse(product.purchasePrice ?? '')
             : double.tryParse(updatedPurchasePrice))
         : double.tryParse(existingPurchasePrice ?? '');
-    final num? quantityForApi = updatedQuantityString.isEmpty
-        ? null
-        : num.tryParse(updatedQuantityString);
 
     final double updatedPriceValue = priceForApi;
     final double updatedMrpValue = mrpForApi;
@@ -795,7 +794,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     debugPrint('[EDIT_PRODUCT] form normalized '
         'nameLength=${updatedName.length}, slug="$updatedSlug", '
         'barcode="$updatedBarcode", unitId=$_selectedUnitId, '
-        'price=$priceForApi, mrp=$mrpForApi, quantity=$quantityForApi, '
+        'price=$priceForApi, mrp=$mrpForApi, '
         'categoryId=$resolvedCategoryId, saleUnits=${saleUnitsPayload?.length ?? 0}, '
         'variants=${variantsPayload?.length ?? 0}');
 
@@ -843,7 +842,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: purchasePriceForApi,
         categoryId: resolvedCategoryId,
         rackNumber: rackForApi,
-        quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         variants: variantsPayload,
         saleUnits: saleUnitsPayload,
@@ -851,6 +849,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         // server as null to clear it, rather than being omitted from the body.
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
+        sku: editedSkuForApi(original: product.sku, edited: updatedSku),
         accessToken: accessToken,
       );
 
@@ -998,6 +997,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             (updatedMinMargin.isEmpty
                 ? product.minMarginPercentage
                 : num.tryParse(updatedMinMargin) ?? updatedMinMargin),
+        sku: serverProduct?.sku ?? updatedSku,
         minMarginPrice: serverProduct?.minMarginPrice ??
             (updatedMinMarginPrice.isEmpty
                 ? product.minMarginPrice
@@ -1086,11 +1086,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _unitController.dispose();
     _priceController.dispose();
     _mrpController.dispose();
-    _quantityController.dispose();
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _minMarginController.dispose();
     _minMarginPriceController.dispose();
+    _skuController.dispose();
     _rackController.dispose();
     for (final controller in _languageNameControllers.values) {
       controller.dispose();
@@ -1626,8 +1626,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           _formatNumericString(product.minMarginPrice).isNotEmpty
               ? '$currency ${_formatNumericString(product.minMarginPrice)}'
               : 'product.na'.tr),
-      _buildDetailRow('product_detail.sku'.tr,
-          product.sku ?? 'product_detail.not_available'.tr),
+      _buildDetailRow(
+          'product_detail.sku'.tr,
+          (product.sku?.trim().isNotEmpty ?? false)
+              ? product.sku!.trim()
+              : 'product_detail.not_available'.tr),
     ];
 
     final metaRows = <Widget>[
@@ -1989,7 +1992,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             _buildStockTableHeader(
                                 'product_detail.expiry_date'.tr),
                             _buildStockTableHeader('product_detail.rack'.tr),
-                            _buildStockTableHeader('product.action'.tr),
+                            // Stock edit disabled for now.
+                            // _buildStockTableHeader('product.action'.tr),
                           ],
                         ),
                         ...stockRows.asMap().entries.map((entry) {
@@ -2057,10 +2061,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                   stock.expiryDate ?? 'product.na'.tr),
                               _buildStockTableCell(
                                   stock.rack ?? 'product.na'.tr),
-                              _buildRackTableCell(
-                                stock,
-                                canEditProduct: canEditProduct,
-                              ),
+                              // Stock edit disabled for now.
+                              // _buildRackTableCell(
+                              //   stock,
+                              //   canEditProduct: canEditProduct,
+                              // ),
                             ],
                           );
                         }),
@@ -2519,6 +2524,50 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  /// Fills an empty SKU from the backend's SKU generator.
+  Future<void> _generateSku() async {
+    if (_isGeneratingSku) return;
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'product_detail.auth_token_missing_full'.tr,
+      );
+      return;
+    }
+    final gridSelectionProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    setState(() => _isGeneratingSku = true);
+    try {
+      final sku =
+          await gridSelectionProvider.generateSku(accessToken: accessToken);
+      if (!mounted) return;
+      if (sku != null) {
+        // Text typed while the request ran wins over the generated SKU.
+        if (_skuController.text.trim().isEmpty) _skuController.text = sku;
+        showScaffold(
+          context: context,
+          message: 'product_form.sku_generated_success'.tr,
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingSku = false);
+    }
+  }
+
   Future<void> _generateSaleUnitBarcode(TextEditingController target) async {
     final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
     if (token.isEmpty) return;
@@ -2756,6 +2805,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             final double fieldHeight = size.height * 0.05;
 
             Widget spacing() => const SizedBox(width: horizontalGap);
+            final bool showMrpField = !widget.useBillingProductPermissions ||
+                context.watch<AppSettingsProvider>().appSettings?.showMrpPos ==
+                    true;
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -2906,29 +2958,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: fieldWidth,
-                          child: buildColumnWidgetForTextFields(
-                            controller: _quantityController,
-                            size: size,
-                            title: 'product_detail.quantity'.tr,
-                            hintText: 'product_detail.enter_quantity'.tr,
-                            width: fieldWidth,
-                            height: fieldHeight,
-                            margin: EdgeInsets.zero,
-                            readOnly: false,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: false,
-                            ),
-                          ),
-                        ),
-                        if (!widget.useBillingProductPermissions ||
-                            context
-                                    .watch<AppSettingsProvider>()
-                                    .appSettings
-                                    ?.showMrpPos ==
-                                true) ...[
-                          spacing(),
+                        if (showMrpField) ...[
                           SizedBox(
                             width: fieldWidth,
                             child: buildColumnWidgetForTextFields(
@@ -2947,7 +2977,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                         ],
                         if (_canViewPurchasePrice(context)) ...[
-                          spacing(),
+                          if (showMrpField) spacing(),
                           SizedBox(
                             width: fieldWidth,
                             child: buildColumnWidgetForTextFields(
@@ -3029,7 +3059,71 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                         ),
                         spacing(),
-                        SizedBox(width: fieldWidth),
+                        SizedBox(
+                          width: fieldWidth,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _skuController,
+                            builder: (context, value, _) => Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: buildColumnWidgetForTextFields(
+                                    controller: _skuController,
+                                    size: size,
+                                    title: 'product_detail.sku'.tr,
+                                    hintText: 'general.optional'.tr,
+                                    width: double.infinity,
+                                    height: fieldHeight,
+                                    margin: EdgeInsets.zero,
+                                    readOnly: false,
+                                  ),
+                                ),
+                                // Offered only while empty, so a set SKU is
+                                // never replaced by one click.
+                                if (value.text.trim().isEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: fieldHeight,
+                                    width: fieldHeight,
+                                    child: Tooltip(
+                                      message: 'product_form.generate_sku'.tr,
+                                      child: ElevatedButton(
+                                        key: const ValueKey(
+                                            'product-details-generate-sku'),
+                                        onPressed: _isGeneratingSku
+                                            ? null
+                                            : _generateSku,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              ColorManager.kPrimaryColor,
+                                          padding: EdgeInsets.zero,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: _isGeneratingSku
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(Colors.white),
+                                                ),
+                                              )
+                                            : const Icon(Icons.refresh,
+                                                size: 18, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -3076,7 +3170,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       110,
       110,
       72,
-      72,
+      // 72, // Action column (stock edit disabled for now).
     ];
     return {
       for (var index = 0; index < widths.length; index++)
@@ -3140,78 +3234,76 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildRackTableCell(
-    Stock stock, {
-    required bool canEditProduct,
-  }) {
-    final bool canEdit = canEditProduct && stock.id != null;
-
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-        child: Center(
-          child: InkWell(
-            onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              height: 28,
-              width: 28,
-              decoration: BoxDecoration(
-                color:
-                    canEdit ? ColorManager.kPrimaryColor : Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(
-                Icons.edit,
-                size: 14,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEditStockRowModal(Stock stock) {
-    if (stock.id == null) {
-      showScaffoldError(
-        context: context,
-        message: 'stock.edit_missing_id'.tr,
-      );
-      return;
-    }
-
-    showEditStockDialog(
-      context: context,
-      stockId: stock.id!,
-      title: 'stock.edit_stock'.tr,
-      initialRetailPrice: stock.price ?? '',
-      initialMrp: stock.mrp ?? '',
-      showMrp: !widget.useBillingProductPermissions ||
-          context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
-      initialPurchasePrice: stock.purchasePrice ?? '',
-      showPurchasePrice: _canViewPurchasePrice(context),
-      initialQuantity: stock.quantity?.toString() ?? '0',
-      initialRack: stock.rack ?? '',
-      onSuccess: (result) async {
-        final num? updatedQty = num.tryParse(result.quantity) ?? stock.quantity;
-        if (!mounted) return;
-        setState(() {
-          _editedStockRows[stock.id!] = stock.copyWith(
-            quantity: updatedQty,
-            price: result.retailPrice,
-            mrp: result.mrp,
-            purchasePrice: _canViewPurchasePrice(context)
-                ? result.purchasePrice
-                : stock.purchasePrice,
-            rack: result.rack,
-          );
-        });
-      },
-    );
-  }
+  // Stock edit disabled for now.
+  // Widget _buildRackTableCell(
+  //   Stock stock, {
+  //   required bool canEditProduct,
+  // }) {
+  //   final bool canEdit = canEditProduct && stock.id != null;
+  //
+  //   return TableCell(
+  //     verticalAlignment: TableCellVerticalAlignment.middle,
+  //     child: Padding(
+  //       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+  //       child: Center(
+  //         child: InkWell(
+  //           onTap: canEdit ? () => _showEditStockRowModal(stock) : null,
+  //           borderRadius: BorderRadius.circular(6),
+  //           child: Container(
+  //             height: 28,
+  //             width: 28,
+  //             decoration: BoxDecoration(
+  //               color:
+  //                   canEdit ? ColorManager.kPrimaryColor : Colors.grey.shade400,
+  //               borderRadius: BorderRadius.circular(6),
+  //             ),
+  //             child: const Icon(
+  //               Icons.edit,
+  //               size: 14,
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+  //
+  // void _showEditStockRowModal(Stock stock) {
+  //   if (stock.id == null) {
+  //     showScaffoldError(
+  //       context: context,
+  //       message: 'stock.edit_missing_id'.tr,
+  //     );
+  //     return;
+  //   }
+  //
+  //   showEditStockDialog(
+  //     context: context,
+  //     stockId: stock.id!,
+  //     title: 'stock.edit_stock'.tr,
+  //     initialRetailPrice: stock.price ?? '',
+  //     initialMrp: stock.mrp ?? '',
+  //     showMrp: !widget.useBillingProductPermissions ||
+  //         context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
+  //     initialPurchasePrice: stock.purchasePrice ?? '',
+  //     showPurchasePrice: _canViewPurchasePrice(context),
+  //     initialRack: stock.rack ?? '',
+  //     onSuccess: (result) async {
+  //       if (!mounted) return;
+  //       setState(() {
+  //         _editedStockRows[stock.id!] = stock.copyWith(
+  //           price: result.retailPrice,
+  //           mrp: result.mrp,
+  //           purchasePrice: _canViewPurchasePrice(context)
+  //               ? result.purchasePrice
+  //               : stock.purchasePrice,
+  //           rack: result.rack,
+  //         );
+  //       });
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {

@@ -115,6 +115,23 @@ class CategoryProvider extends ChangeNotifier {
   List<Category> get purchasableCategories =>
       List<Category>.from(_scopeCaches[CategoryListScope.purchasable]!.items);
 
+  /// Looks up category metadata independently of the current search/filter.
+  Category? findCategoryById(int? id) {
+    if (id == null || id <= 0) return null;
+    for (final categories in [
+      _scopeCaches[CategoryListScope.sellable]!.items,
+      _scopeCaches[CategoryListScope.all]!.items,
+      _originalCategoryList,
+      categoryListWithoutQuery,
+      categoryList,
+    ]) {
+      for (final category in categories ?? const <Category>[]) {
+        if (category.categoryId == id) return category;
+      }
+    }
+    return null;
+  }
+
   List<Category> categoriesFor(CategoryListScope scope) {
     return List<Category>.from(_scopeCaches[scope]!.items);
   }
@@ -602,12 +619,16 @@ class CategoryProvider extends ChangeNotifier {
     );
   }
 
-  //          *********************** VIEW  CATEGORY USING CATEGORY ID API ***************************************************
+  //          *********************** VIEW CATEGORY USING SLUG API ***************************************************
 
-  Future<void> viewCategoryApi({required int categoryId}) async {
+  Future<void> viewCategoryApi(
+      {required int categoryId, required String slug}) async {
     // debugPrint("VIEW  CATEGORY ");
 
-    final url = Uri.parse("${APPUrl.viewCategoryListUrl}?id=$categoryId");
+    if (slug.trim().isEmpty) {
+      throw const FormatException('Category slug is missing');
+    }
+    final url = Uri.parse(APPUrl.categoryDetailsBySlug(slug));
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -623,7 +644,9 @@ class CategoryProvider extends ChangeNotifier {
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final updatedUrl = url.replace(queryParameters: queryParams);
+    final updatedUrl = queryParams.isEmpty
+        ? url
+        : url.replace(queryParameters: queryParams);
 
     try {
       final response = await http.get(updatedUrl, headers: {
@@ -637,7 +660,12 @@ class CategoryProvider extends ChangeNotifier {
         ViewCategoryModel viewCategoryModel =
             ViewCategoryModel.fromJson(jsonData);
 
-        viewCategory = viewCategoryModel.data;
+        final details = viewCategoryModel.data;
+        if (details == null || details.id != categoryId) {
+          throw const FormatException(
+              'Category details do not match the selection');
+        }
+        viewCategory = details;
 
         notifyListeners();
       } else {

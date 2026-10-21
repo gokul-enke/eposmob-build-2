@@ -25,6 +25,7 @@ import 'pdf_builders/invoice_template_pdf_builder.dart';
 import 'pdf_builders/receipt_template_pdf_builder.dart';
 import 'pdf_builders/customer_voucher_template_pdf_builder.dart';
 import 'pdf_builders/supplier_voucher_template_pdf_builder.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Reusable helper to share invoices and receipts.
 class ShareHelper {
@@ -101,8 +102,8 @@ class ShareHelper {
                 ListTile(
                   leading: const CircleAvatar(
                     radius: 18,
-                    backgroundColor: Color(0x1A1E88E5),
-                    child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                    backgroundColor: ColorManager.kBlue1E88E5a1A,
+                    child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                   ),
                   title: Text(
                     (customerEmail != null && customerEmail.isNotEmpty)
@@ -598,8 +599,8 @@ class ShareHelper {
                 ListTile(
                   leading: const CircleAvatar(
                     radius: 18,
-                    backgroundColor: Color(0x1A1E88E5),
-                    child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                    backgroundColor: ColorManager.kBlue1E88E5a1A,
+                    child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                   ),
                   title: Text('share_helper.opt_share_email'.tr),
                   onTap: () async {
@@ -1041,8 +1042,8 @@ class ShareHelper {
                 ListTile(
                   leading: const CircleAvatar(
                     radius: 18,
-                    backgroundColor: Color(0x1A1E88E5),
-                    child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                    backgroundColor: ColorManager.kBlue1E88E5a1A,
+                    child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                   ),
                   title: Text(
                     (voucher.customer.user.email != null &&
@@ -1434,8 +1435,8 @@ class ShareHelper {
                 ListTile(
                   leading: const CircleAvatar(
                     radius: 18,
-                    backgroundColor: Color(0x1A1E88E5),
-                    child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                    backgroundColor: ColorManager.kBlue1E88E5a1A,
+                    child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                   ),
                   title: Text(
                     voucher.supplier.email.isNotEmpty

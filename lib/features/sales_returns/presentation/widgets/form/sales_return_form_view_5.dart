@@ -67,12 +67,12 @@ extension _FormSection5 on SalesReturnFormSections {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
+                      color: ColorManager.kBrandBlue100,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       Icons.shopping_cart,
-                      color: Colors.blue.shade700,
+                      color: ColorManager.kBrandBlue700,
                       size: 20,
                     ),
                   ),
@@ -83,7 +83,7 @@ extension _FormSection5 on SalesReturnFormSections {
                       FontWeightManager.semiBold,
                       FontSize.s14,
                       0.25,
-                      Colors.blue.shade700,
+                      ColorManager.kBrandBlue700,
                     ),
                   ),
                 ],

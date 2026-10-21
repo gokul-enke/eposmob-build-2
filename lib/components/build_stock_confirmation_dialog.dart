@@ -691,7 +691,7 @@ class _StockConfirmationDialogState extends State<StockConfirmationDialog> {
                   'billing.total_items',
                   '${widget.itemCount}',
                   Icons.inventory_2_outlined,
-                  Colors.blue,
+                  ColorManager.kBrandBlue,
                 ),
               ),
               const SizedBox(width: 8),

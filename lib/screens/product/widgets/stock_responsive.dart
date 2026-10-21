@@ -237,10 +237,10 @@ class _StockPageButton extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-              color: onPressed != null ? Colors.blue : Colors.grey,
+              color: onPressed != null ? ColorManager.kBrandBlue : Colors.grey,
               fontSize: 12,
               decoration: onPressed != null ? TextDecoration.underline : null,
-              decorationColor: Colors.blue,
+              decorationColor: ColorManager.kBrandBlue,
             ),
           ),
         ),

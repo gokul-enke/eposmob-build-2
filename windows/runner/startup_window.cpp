@@ -1,8 +1,9 @@
 #include "startup_window.h"
 #include "resource.h"
+#include "brand_config.h"
 
 namespace {
-constexpr wchar_t kClass[] = L"CLOUDPOS_STARTUP_WINDOW";
+constexpr wchar_t kClass[] = BRAND_INSTANCE_KEY L"_STARTUP_WINDOW";
 constexpr UINT kCloseSplash = WM_APP + 21;
 
 // GetDpiForWindow/GetDpiForSystem only exist on Windows 10 1607+. Importing
@@ -68,13 +69,13 @@ void StartupWindow::Run() {
   const UINT dpi = GetSystemDpiCompat();
   const int width = MulDiv(480, static_cast<int>(dpi), 96);
   const int height = MulDiv(300, static_cast<int>(dpi), 96);
-  HWND window = CreateWindowW(kClass, L"CLOUDPOS", WS_OVERLAPPED | WS_CAPTION |
+  HWND window = CreateWindowW(kClass, BRAND_TITLE, WS_OVERLAPPED | WS_CAPTION |
       WS_SYSMENU | WS_MINIMIZEBOX, (GetSystemMetrics(SM_CXSCREEN) - width) / 2,
       (GetSystemMetrics(SM_CYSCREEN) - height) / 2, width, height,
       nullptr, nullptr, wc.hInstance, this);
   window_.store(window);
   if (window) {
-    SetPropW(window, L"CLOUDPOS.ApplicationWindow", reinterpret_cast<HANDLE>(1));
+    SetPropW(window, BRAND_INSTANCE_KEY L".ApplicationWindow", reinterpret_cast<HANDLE>(1));
     ShowWindow(window, SW_SHOWNORMAL);
     // A launcher can supply SW_HIDE in STARTUPINFO, overriding the first
     // ShowWindow call. CloudPOS always acknowledges an interactive launch.
@@ -121,9 +122,9 @@ LRESULT CALLBACK StartupWindow::WindowProc(HWND window, UINT message,
           FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
           CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
       HGDIOBJ previous = SelectObject(dc, font);
-      SetTextColor(dc, RGB(25, 103, 210));
-      const wchar_t* text = self && self->cancelled() ? L"Closing CloudPOS..."
-          : L"Opening CloudPOS...\nPlease wait while the app starts.";
+      SetTextColor(dc, BRAND_SPLASH_TEXT_RGB);
+      const wchar_t* text = self && self->cancelled() ? L"Closing " BRAND_NAME L"..."
+          : L"Opening " BRAND_NAME L"...\nPlease wait while the app starts.";
       DrawTextW(dc, text, -1, &rect, DT_CENTER | DT_WORDBREAK);
       SelectObject(dc, previous);
       DeleteObject(font);
@@ -141,7 +142,7 @@ LRESULT CALLBACK StartupWindow::WindowProc(HWND window, UINT message,
       DestroyWindow(window);
       return 0;
     case WM_DESTROY:
-      RemovePropW(window, L"CLOUDPOS.ApplicationWindow");
+      RemovePropW(window, BRAND_INSTANCE_KEY L".ApplicationWindow");
       PostQuitMessage(0);
       return 0;
     default:

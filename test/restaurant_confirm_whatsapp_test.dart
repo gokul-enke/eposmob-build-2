@@ -46,7 +46,7 @@ void main() {
     final body = panel.substring(
         start, panel.indexOf('void showCurrentCartConfirmAndWhatsappFromParent'));
     expect(body, contains('await _confirmCurrentCart(\n'
-        '        printBill: !whatsappReceipt,\n'
+        '        printBill: printBill && !whatsappReceipt,\n'
         '        whatsappReceipt: whatsappReceipt,'));
   });
 }

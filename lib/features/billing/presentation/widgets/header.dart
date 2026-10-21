@@ -215,12 +215,12 @@ class _SelectedCustomerDetails extends StatelessWidget {
               decoration: BoxDecoration(
                 color: displayCustomerType == 'B2B'
                     ? Colors.green.shade50
-                    : Colors.blue.shade50,
+                    : ColorManager.kBrandBlue50,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: displayCustomerType == 'B2B'
                       ? Colors.green.shade300
-                      : Colors.blue.shade300,
+                      : ColorManager.kBrandBlue300,
                 ),
               ),
               child: Text(
@@ -231,7 +231,7 @@ class _SelectedCustomerDetails extends StatelessWidget {
                   0.15,
                   displayCustomerType == 'B2B'
                       ? Colors.green.shade700
-                      : Colors.blue.shade700,
+                      : ColorManager.kBrandBlue700,
                 ),
               ),
             ),

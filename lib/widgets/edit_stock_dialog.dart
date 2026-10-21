@@ -18,14 +18,12 @@ class EditStockDialogResult {
   final String retailPrice;
   final String mrp;
   final String purchasePrice;
-  final String quantity;
   final String rack;
 
   const EditStockDialogResult({
     required this.retailPrice,
     required this.mrp,
     required this.purchasePrice,
-    required this.quantity,
     required this.rack,
   });
 }
@@ -39,7 +37,6 @@ Future<bool> showEditStockDialog({
   bool showMrp = true,
   required String initialPurchasePrice,
   bool showPurchasePrice = false,
-  required String initialQuantity,
   required String initialRack,
   Future<void> Function(EditStockDialogResult result)? onSuccess,
 }) async {
@@ -48,7 +45,6 @@ Future<bool> showEditStockDialog({
   final mrpController = TextEditingController(text: initialMrp);
   final purchasePriceController =
       TextEditingController(text: initialPurchasePrice);
-  final quantityController = TextEditingController(text: initialQuantity);
   final rackController = TextEditingController(text: initialRack);
 
   Map<String, String> rackMap = {};
@@ -162,10 +158,10 @@ Future<bool> showEditStockDialog({
                                   ],
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  if (showPurchasePrice) ...[
+                              if (showPurchasePrice) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
                                     Expanded(
                                       child: _buildEditableField(
                                         'product_detail.purchase_price'.tr,
@@ -173,15 +169,10 @@ Future<bool> showEditStockDialog({
                                       ),
                                     ),
                                     const SizedBox(width: 12),
+                                    const Expanded(child: SizedBox.shrink()),
                                   ],
-                                  Expanded(
-                                    child: _buildEditableField(
-                                      'stock.quantity'.tr,
-                                      quantityController,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                               const SizedBox(height: 12),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,19 +291,9 @@ Future<bool> showEditStockDialog({
                                       selectedRackId!.trim().isNotEmpty)
                                   ? selectedRackId!.trim()
                                   : rackController.text.trim();
-                              final quantityInput =
-                                  quantityController.text.trim();
-                              final initialQuantityNormalized =
-                                  initialQuantity.trim();
-                              final String? payloadQuantity =
-                                  (quantityInput.isEmpty ||
-                                          quantityInput ==
-                                              initialQuantityNormalized)
-                                      ? null
-                                      : quantityInput;
 
                               debugPrint(
-                                  '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, qtyIncluded=${payloadQuantity != null}, qtyValue=${payloadQuantity ?? "<omitted>"}, rack=$payloadRack');
+                                  '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, rack=$payloadRack');
 
                               final bool success =
                                   await Provider.of<StockProvider>(
@@ -327,7 +308,6 @@ Future<bool> showEditStockDialog({
                                 purchasePrice: showPurchasePrice
                                     ? purchasePriceController.text.trim()
                                     : initialPurchasePrice,
-                                quantity: payloadQuantity,
                                 rack: payloadRack,
                                 accessToken: accessToken,
                               );
@@ -354,7 +334,6 @@ Future<bool> showEditStockDialog({
                                   purchasePrice: showPurchasePrice
                                       ? purchasePriceController.text.trim()
                                       : initialPurchasePrice,
-                                  quantity: quantityController.text.trim(),
                                   rack: payloadRack,
                                 );
                                 debugPrint(
@@ -407,7 +386,6 @@ Future<bool> showEditStockDialog({
                                       purchasePrice: showPurchasePrice
                                           ? purchasePriceController.text.trim()
                                           : initialPurchasePrice,
-                                      quantity: quantityController.text.trim(),
                                       rack: rackController.text.trim(),
                                     ),
                                   );
@@ -461,7 +439,6 @@ Future<bool> showEditStockDialog({
   retailPriceController.dispose();
   mrpController.dispose();
   purchasePriceController.dispose();
-  quantityController.dispose();
   rackController.dispose();
 
   return result;

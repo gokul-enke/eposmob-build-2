@@ -1,3 +1,5 @@
+import 'package:pos_machine/config/brand_config.dart';
+
 const String imagePath = 'assets/images';
 const String iconPath = 'assets/icons';
 const String logoPath = 'assets/logo';
@@ -5,7 +7,7 @@ const String logoPath = 'assets/logo';
 class ImageAssets {
   //---------------------------Side Menu Icons-------------------------------------------
   static const String posLogo = '$iconPath/pos-terminal-icon.svg';
-  static const String posImageLogo = '$logoPath/cloudposlogo.png';
+  static const String posImageLogo = BrandConfig.logoAsset;
   static const String homeIcon = '$iconPath/icon-home.svg';
   static const String dashBoardIcon = '$iconPath/widget-icon.svg';
   static const String saleIcon = '$iconPath/sale-tag-line-icon.svg';

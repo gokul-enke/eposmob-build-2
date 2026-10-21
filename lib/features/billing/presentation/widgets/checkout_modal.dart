@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart'; // Re-enabled for .tr translations
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -97,6 +98,7 @@ class CheckoutModal extends StatefulWidget {
   final String? quotationCustomerPhone;
   final DateTime? initialQuotationDate;
   final DateTime? initialQuotationExpiryDate;
+  final String? initialQuotationTerms;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
@@ -106,7 +108,7 @@ class CheckoutModal extends StatefulWidget {
     String? initialPhone,
   }) onAddNewCustomer;
   final Function(String couponCode, bool isApplied, double flatDiscount,
-      double percentageDiscount) onDiscountApplied;
+      double percentageDiscount, {DiscountData? coupon}) onDiscountApplied;
 
   final Function(String method, String methodId, String carNo, String comment,
       String? date, String? time, String address)? onDeliveryUpdated;
@@ -135,6 +137,7 @@ class CheckoutModal extends StatefulWidget {
       Map<String, String>? extraMethodValues}) onPaymentUpdated;
   final Function(DateTime quotationDate, DateTime expiryDate)?
       onQuotationDatesUpdated;
+  final ValueChanged<String>? onQuotationTermsUpdated;
 
   final Future<void> Function() onConfirmOrder;
 
@@ -200,6 +203,7 @@ class CheckoutModal extends StatefulWidget {
     this.quotationCustomerPhone,
     this.initialQuotationDate,
     this.initialQuotationExpiryDate,
+    this.initialQuotationTerms,
     required this.onCustomerSelected,
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
@@ -208,6 +212,7 @@ class CheckoutModal extends StatefulWidget {
     this.onDeliveryAddressDetailsUpdated,
     required this.onPaymentUpdated,
     this.onQuotationDatesUpdated,
+    this.onQuotationTermsUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
     this.onConfirmAndWhatsapp,
@@ -240,6 +245,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   final TextEditingController _customerSearchController =
       TextEditingController();
   final TextEditingController _quotationCustomerNameController =
+      TextEditingController();
+  final TextEditingController _quotationTermsController =
       TextEditingController();
   final TextEditingController _quotationCustomerPhoneController =
       TextEditingController();
@@ -420,6 +427,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
       _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
     }
+    _quotationTermsController.text = widget.initialQuotationTerms ?? '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
@@ -547,6 +555,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _customerSearchController.dispose();
     _quotationCustomerNameController.dispose();
     _quotationCustomerPhoneController.dispose();
+    _quotationTermsController.dispose();
     _customerSearchFocusNode.dispose();
     _customerSearchClearFocusNode.dispose();
     _quotationCustomerNameFocusNode.dispose();
@@ -1200,7 +1209,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _quoteOnlyCustomerForCreation != null;
 
   void _handleDiscountUpdate(
-      String code, bool applied, double flat, double percent) {
+      String code, bool applied, double flat, double percent, {DiscountData? coupon}) {
     // Unfocus to prevent "FocusNode used after disposed" errors
     FocusScope.of(context).unfocus();
 
@@ -1210,7 +1219,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _localFlatDiscount = flat;
       _localPercentageDiscount = percent;
     });
-    widget.onDiscountApplied(code, applied, flat, percent);
+    widget.onDiscountApplied(code, applied, flat, percent, coupon: coupon);
   }
 
   void _handlePaymentUpdate(
@@ -1468,7 +1477,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildStepIndicator(int stepIndex, String label, IconData icon,
       {required bool isActive, required bool isCompleted}) {
-    final primaryColor = const Color(0xFF2563EB);
+    final primaryColor = ColorManager.kBlue2563EB;
     final successColor = const Color(0xFF059669);
     final neutralColor = Colors.grey.shade400;
 
@@ -1541,7 +1550,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       height: 4,
       width: 40,
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+        color: isActive ? ColorManager.kBlue2563EB : const Color(0xFFE2E8F0),
         borderRadius: BorderRadius.circular(2),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -1886,8 +1895,72 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ),
             ],
           ),
+          SizedBox(height: compact ? 8 : 12),
+          _buildQuotationTermsField(),
         ],
       ),
+    );
+  }
+
+  /// Terms typed here print on the quotation instead of the document
+  /// configuration's terms. Left empty, the configured terms still print.
+  Widget _buildQuotationTermsField() {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'checkout_modal.label_quotation_terms'.tr,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 14,
+            vertical: compact ? 8 : 10,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: ColorManager.kBlueDDE7F3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: _quotationTermsController,
+            minLines: 2,
+            maxLines: 4,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            onChanged: (value) => widget.onQuotationTermsUpdated?.call(value),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              hintText: 'checkout_modal.hint_quotation_terms'.tr,
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF9CA3AF),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2040,7 +2113,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFDDE7F3)),
+            border: Border.all(color: ColorManager.kBlueDDE7F3),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -2111,12 +2184,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
               padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFDDE7F3)),
+                border: Border.all(color: ColorManager.kBlueDDE7F3),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.calendar_today_outlined,
-                      size: 18, color: Color(0xFF2563EB)),
+                      size: 18, color: ColorManager.kBlue2563EB),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -2229,13 +2302,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF2563EB).withOpacity(0.1)
+                      ? ColorManager.kBlue2563EB.withOpacity(0.1)
                       : Colors.white,
                   border: Border.all(
                     color: isKeyboardFocused
                         ? const Color(0xFFF59E0B)
                         : (isSelected
-                            ? const Color(0xFF2563EB)
+                            ? ColorManager.kBlue2563EB
                             : Colors.grey.shade200),
                     width: (isKeyboardFocused || isSelected) ? 2 : 1,
                   ),
@@ -2248,7 +2321,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       height: _isDenseCheckout ? 24 : 28,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF2563EB)
+                            ? ColorManager.kBlue2563EB
                             : Colors.grey.shade300,
                         shape: BoxShape.circle,
                       ),
@@ -2331,7 +2404,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     if (isSelected)
                       Icon(
                         Icons.check_circle,
-                        color: const Color(0xFF2563EB),
+                        color: ColorManager.kBlue2563EB,
                         size: _isDenseCheckout ? 18 : 24,
                       ),
                   ],
@@ -2417,10 +2490,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         vertical: compact ? 2 : 3,
       ),
       decoration: BoxDecoration(
-        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        color: isB2B ? Colors.green.shade50 : ColorManager.kBrandBlue50,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+          color: isB2B ? Colors.green.shade300 : ColorManager.kBrandBlue300,
         ),
       ),
       child: Text(
@@ -2428,7 +2501,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         style: TextStyle(
           fontSize: compact ? 10 : 11,
           fontWeight: FontWeight.w600,
-          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
+          color: isB2B ? Colors.green.shade700 : ColorManager.kBrandBlue700,
         ),
       ),
     );
@@ -3052,7 +3125,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             showShadow: false,
                             fullWidth: true,
                             onCouponAction: (code, applied,
-                                {flatDiscount, percentageDiscount}) {
+                                {flatDiscount, percentageDiscount, coupon}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
                               final newPercentageDiscount =
                                   percentageDiscount ?? 0.0;
@@ -3084,7 +3157,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               );
 
                               _handleDiscountUpdate(code, applied,
-                                  newFlatDiscount, newPercentageDiscount);
+                                  newFlatDiscount, newPercentageDiscount, coupon: coupon);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -3148,7 +3221,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             showShadow: false,
                             fullWidth: true,
                             onCouponAction: (code, applied,
-                                {flatDiscount, percentageDiscount}) {
+                                {flatDiscount, percentageDiscount, coupon}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
                               final newPercentageDiscount =
                                   percentageDiscount ?? 0.0;
@@ -3180,7 +3253,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               );
 
                               _handleDiscountUpdate(code, applied,
-                                  newFlatDiscount, newPercentageDiscount);
+                                  newFlatDiscount, newPercentageDiscount, coupon: coupon);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -3960,10 +4033,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+                  child: Icon(icon, color: ColorManager.kBlue2563EB, size: 22),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -4025,7 +4098,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 onPressed: canDone ? _closeSelectionOnlyModal : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: ColorManager.kBlue2563EB,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -4144,10 +4217,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       width: double.infinity,
                       fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                       boxColor: _canConfirmOrPrint
-                          ? const Color(0xFF2563EB)
+                          ? ColorManager.kBlue2563EB
                           : Colors.grey.shade400,
                       borderColor: _canConfirmOrPrint
-                          ? const Color(0xFF2563EB)
+                          ? ColorManager.kBlue2563EB
                           : Colors.grey.shade400,
                       radius: 12,
                     ),
@@ -4207,10 +4280,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     width: double.infinity,
                     fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                     boxColor: isNextEnabled
-                        ? const Color(0xFF2563EB)
+                        ? ColorManager.kBlue2563EB
                         : Colors.grey.shade400,
                     borderColor: isNextEnabled
-                        ? const Color(0xFF2563EB)
+                        ? ColorManager.kBlue2563EB
                         : Colors.grey.shade400,
                     radius: 12,
                   ),
@@ -4337,10 +4410,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
               ),
               _buildSummaryRow(
-                  'billing.total_payable'.tr, effectiveTotal, const Color(0xFF2563EB),
+                  'billing.total_payable'.tr, effectiveTotal, ColorManager.kBlue2563EB,
                   isBold: true,
                   large: true,
-                  labelColor: const Color(0xFF2563EB)),
+                  labelColor: ColorManager.kBlue2563EB),
               if (_localSelectedCustomer != null && !isDefaultCustomer) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildSummaryRow(
@@ -4540,6 +4613,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       orderSummaryCard,
+                      if (widget.isQuotationMode) ...[
+                        const SizedBox(height: 12),
+                        _buildQuotationTermsField(),
+                      ],
                     ],
                   ),
                 ),
@@ -4583,14 +4660,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
         color: isCurrentStep
-            ? const Color(0xFF2563EB)
+            ? ColorManager.kBlue2563EB
             : isCompleted
                 ? const Color(0xFFF0FDF4)
                 : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrentStep
-              ? const Color(0xFF1D4ED8)
+              ? ColorManager.kBlue1D4ED8
               : isCompleted
                   ? const Color(0xFF22C55E)
                   : const Color(0xFFE2E8F0),
@@ -4599,7 +4676,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         boxShadow: [
           BoxShadow(
             color: isCurrentStep
-                ? const Color(0xFF2563EB).withOpacity(0.2)
+                ? ColorManager.kBlue2563EB.withOpacity(0.2)
                 : isCompleted
                     ? const Color(0xFF22C55E).withOpacity(0.05)
                     : Colors.black.withOpacity(0.03),
@@ -4750,7 +4827,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         fontWeight: FontWeight.w800,
                         color: isCurrentStep
                             ? Colors.white
-                            : const Color(0xFF2563EB),
+                            : ColorManager.kBlue2563EB,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -4788,7 +4865,7 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
   final double initialPercentageDiscount;
   final bool isCouponApplied;
   final Function(String, bool,
-      {double? flatDiscount, double? percentageDiscount}) onCouponAction;
+      {double? flatDiscount, double? percentageDiscount, DiscountData? coupon}) onCouponAction;
   final bool showAsDialog;
   final bool showSkipButton;
   final VoidCallback? onSkip;
@@ -4817,119 +4894,19 @@ class RestaurantCouponModalWrapper extends StatefulWidget {
 
 class _RestaurantCouponModalWrapperState
     extends State<RestaurantCouponModalWrapper> {
-  late MockLocalProductProvider _mockProvider;
-
   @override
-  void initState() {
-    super.initState();
-    _mockProvider = MockLocalProductProvider(
-      orderSubTotal: widget.orderSubTotal,
-      initialFlatDiscount: widget.initialFlatDiscount,
-      initialPercentageDiscount: widget.initialPercentageDiscount,
-      initialCouponCode: widget.initialCouponCode,
-    );
-  }
-
-  @override
-  void didUpdateWidget(RestaurantCouponModalWrapper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialFlatDiscount != oldWidget.initialFlatDiscount ||
-        widget.initialPercentageDiscount !=
-            oldWidget.initialPercentageDiscount ||
-        widget.initialCouponCode != oldWidget.initialCouponCode ||
-        widget.orderSubTotal != oldWidget.orderSubTotal) {
-      // Update mock provider when props change (handling local state updates from parent)
-      _mockProvider.updateValues(
-        orderSubTotal: widget.orderSubTotal,
-        flatDiscount: widget.initialFlatDiscount,
-        percentageDiscount: widget.initialPercentageDiscount,
-        couponCode: widget.initialCouponCode,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LocalProductProvider>.value(
-      value: _mockProvider,
-      child: CouponModal(
-        subTotal: widget.orderSubTotal,
-        initialCouponCode: widget.initialCouponCode,
-        initialFlatDiscount: widget.initialFlatDiscount,
-        initialPercentageDiscount: widget.initialPercentageDiscount,
-        isCouponApplied: widget.isCouponApplied,
-        onCouponAction: widget.onCouponAction,
-        closeOnApply: false,
-        showAsDialog: widget.showAsDialog,
-        showSkipButton: widget.showSkipButton,
-        onSkip: widget.onSkip,
-        showShadow: widget.showShadow,
-        fullWidth: widget.fullWidth,
-      ),
-    );
-  }
-}
-
-// Mock LocalProductProvider that provides the interface needed by CouponModal
-class MockLocalProductProvider extends LocalProductProvider {
-  double _orderSubTotal; // Changed from final to mutable
-  double _flatDiscount;
-  double _percentageDiscount;
-  // ignore: unused_field
-  String _couponCode;
-
-  MockLocalProductProvider({
-    required double orderSubTotal,
-    required double initialFlatDiscount,
-    required double initialPercentageDiscount,
-    required String initialCouponCode,
-  })  : _orderSubTotal = orderSubTotal,
-        _flatDiscount = initialFlatDiscount,
-        _percentageDiscount = initialPercentageDiscount,
-        _couponCode = initialCouponCode;
-
-  void updateValues({
-    required double orderSubTotal,
-    required double flatDiscount,
-    required double percentageDiscount,
-    required String couponCode,
-  }) {
-    _orderSubTotal = orderSubTotal;
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    _couponCode = couponCode;
-    notifyListeners();
-  }
-
-  @override
-  Map<String, double> getCurrentDiscount() {
-    return {
-      'flatDiscount': _flatDiscount,
-      'percentageDiscount': _percentageDiscount,
-    };
-  }
-
-  @override
-  PriceSummary? get priceSummary {
-    final discount =
-        (_flatDiscount + (_orderSubTotal * _percentageDiscount / 100));
-    return PriceSummary(
-      originalSubTotal: _orderSubTotal,
-      subTotal: _orderSubTotal,
-      discount: discount,
-      totalTax: 0.0,
-      netPayable: _orderSubTotal - discount,
-      netTotal: _orderSubTotal - discount,
-    );
-  }
-
-  @override
-  void applyDiscount({
-    required double flatDiscount,
-    required double percentageDiscount,
-  }) {
-    _flatDiscount = flatDiscount;
-    _percentageDiscount = percentageDiscount;
-    notifyListeners();
-  }
+  Widget build(BuildContext context) => CouponModal(
+    subTotal: widget.orderSubTotal,
+    initialCouponCode: widget.initialCouponCode,
+    initialFlatDiscount: widget.initialFlatDiscount,
+    initialPercentageDiscount: widget.initialPercentageDiscount,
+    isCouponApplied: widget.isCouponApplied,
+    onCouponAction: widget.onCouponAction,
+    closeOnApply: false,
+    showAsDialog: widget.showAsDialog,
+    showSkipButton: widget.showSkipButton,
+    onSkip: widget.onSkip,
+    showShadow: widget.showShadow,
+    fullWidth: widget.fullWidth,
+  );
 }

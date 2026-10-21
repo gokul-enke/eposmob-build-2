@@ -7,6 +7,8 @@ import 'package:cross_file/cross_file.dart';
 import 'package:whatsapp_bot_flutter/whatsapp_bot_flutter.dart';
 import '../controllers/whatsapp_controller.dart';
 import '../helpers/date_helper.dart';
+import 'package:pos_machine/config/brand_config.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class WhatsappProvider extends ChangeNotifier {
   final WhatsappController _whatsappController = Get.put(WhatsappController(), permanent: true);
@@ -184,7 +186,7 @@ class WhatsappProvider extends ChangeNotifier {
       debugPrint('✅ File bytes loaded: ${fileBytes.length} bytes');
 
       // Prepare caption and filename
-      final finalCaption = caption ?? 'Invoice PDF from CloudPOS';
+      final finalCaption = caption ?? 'Invoice PDF from ${BrandConfig.name}';
       
       // CRITICAL FIX: Use enhanced filename cleaning to prevent .doc extension
       final fileName = _cleanFileNameForWhatsApp(pdfFile.path);
@@ -275,7 +277,7 @@ class WhatsappProvider extends ChangeNotifier {
           final pdfSuccess = await sendPDFFile(
             phoneNumber: phoneNumber,
             pdfFile: pdfFile,
-            caption: message.isNotEmpty ? message : 'Invoice PDF from CloudPOS',
+            caption: message.isNotEmpty ? message : 'Invoice PDF from ${BrandConfig.name}',
             showSuccessMessage: false, // We'll handle success message here
           );
           
@@ -435,7 +437,7 @@ We appreciate your business!
 
     message += '\n\n📧 For any questions, please contact our support team.';
     message += '\n\n---';
-    message += '\n🏢 Powered by CloudPOS';
+    message += '\n🏢 Powered by ${BrandConfig.name}';
     message += '\n🤖 Sent via WhatsApp Bot Integration';
 
     return message;
@@ -709,7 +711,7 @@ We appreciate your business!
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.blue[700]),
+            Icon(Icons.info_outline, color: ColorManager.kBrandBlue700),
             const SizedBox(width: 8),
             Text('ui_chrome.whatsapp_bot_limitation'.tr),
           ],

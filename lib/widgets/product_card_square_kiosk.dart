@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/get_product.dart';
+import 'product_image.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 
 class ProductCardSquare extends StatelessWidget {
+  final GetProduct product;
   final String? imageUrlPath;
   final String price;
   final String title;
@@ -23,6 +25,7 @@ class ProductCardSquare extends StatelessWidget {
 
   const ProductCardSquare({
     super.key,
+    required this.product,
     this.imageUrlPath,
     required this.price,
     required this.title,
@@ -71,22 +74,14 @@ class ProductCardSquare extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10, top: 10),
             alignment: Alignment.center,
             height: 100,
-
-            child: file.isEmpty
-                ? Container()
-                : Container(
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: Colors.white),
-                    child: Image.network(
-                      file,
-                      fit: BoxFit.cover,
-                    ),
-                  ), //
-            //  Image.network(
-            //   fileType,
-            // ),
-            // Image.asset(imageUrlPath),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: ProductImage(
+                product: product,
+                placeholder:
+                    const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+              ),
+            ),
           ),
           SizedBox(
             height: 15,

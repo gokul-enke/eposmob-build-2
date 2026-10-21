@@ -14,6 +14,7 @@ import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class WeighMachineExportPage extends StatefulWidget {
   const WeighMachineExportPage({super.key});
@@ -401,7 +402,7 @@ class _WeighMachineExportPageState extends State<WeighMachineExportPage> {
       return WeighEmptyState(
         icon: Icons.inventory_2_outlined,
         title: 'No products yet',
-        message: 'Sync the catalog to load products from CloudPOS.',
+        message: 'Sync the catalog to load products from ${BrandConfig.name}.',
         actionLabel: 'Sync catalog',
         onAction: _running == null ? _syncCatalog : null,
       );

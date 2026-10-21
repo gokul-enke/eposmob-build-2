@@ -225,7 +225,7 @@ extension PurchaseOrderFormViewOperations6 on PurchaseOrderFormView {
                 IconButton(
                   icon: Icon(
                     Icons.edit_outlined,
-                    color: canEdit ? Colors.blueAccent : Colors.grey,
+                    color: canEdit ? ColorManager.kBrandBlueAccent : Colors.grey,
                     size: 18,
                   ),
                   constraints: const BoxConstraints(minWidth: 30),

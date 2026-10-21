@@ -18,6 +18,7 @@ import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_thermal.dart';
 import 'package:pos_machine/screens/reports/supplier_transaction_report/supplier_transaction_report_print_standard.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class SupplierTransactionReportPrint extends StatefulWidget {
   final List<SupplierTransaction> cartItems;
@@ -66,7 +67,7 @@ class _SupplierTransactionReportPrintState
 
   DocumentConfig? _supplierStatementDocumentConfig;
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

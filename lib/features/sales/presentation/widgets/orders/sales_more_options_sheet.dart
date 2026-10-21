@@ -91,8 +91,8 @@ class SalesMoreOptionsSheet extends StatelessWidget {
             ListTile(
               leading: const CircleAvatar(
                 radius: 18,
-                backgroundColor: Color(0x1A1E88E5), // ~10% opacity blue
-                child: Icon(Icons.payment_outlined, color: Color(0xFF1E88E5)),
+                backgroundColor: ColorManager.kBlue1E88E5a1A, // ~10% opacity blue
+                child: Icon(Icons.payment_outlined, color: ColorManager.kBlue1E88E5),
               ),
               title: Text('sales.btn_change_payment_status'.tr),
               onTap: () async {

@@ -234,7 +234,7 @@ class _OrderListState extends State<OrderList> {
                           //     controller: mobileNumberTextController,
                           //     cursorHeight: 10,
                           //     cursorWidth: 1,
-                          //     cursorColor: Colors.blue,
+                          //     cursorColor: ColorManager.kBrandBlue,
                           //     decoration: const InputDecoration(
                           //         border: InputBorder.none),
                           //   ),

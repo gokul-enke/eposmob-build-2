@@ -23,6 +23,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_action_buttons.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/quotation_checkout_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/select_customer_page.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Mobile "Billing & Payment" tab. Pure layout/composition: each section is its
 /// own widget under `mobile/billing/`, and the action bar is
@@ -45,6 +46,7 @@ class MobileBillingTab extends StatefulWidget {
   final ValueChanged<DateTime>? onQuotationExpiryDateChanged;
   final TextEditingController? quotationInlineNameController;
   final TextEditingController? quotationInlinePhoneController;
+  final TextEditingController? quotationTermsController;
   final VoidCallback? onQuotationInlineCustomerChanged;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
@@ -69,6 +71,7 @@ class MobileBillingTab extends StatefulWidget {
     this.onQuotationExpiryDateChanged,
     this.quotationInlineNameController,
     this.quotationInlinePhoneController,
+    this.quotationTermsController,
     this.onQuotationInlineCustomerChanged,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
@@ -394,6 +397,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                       onInlineCustomerChanged:
                           widget.onQuotationInlineCustomerChanged ?? () {},
                       onSelectCustomer: () => _navigateToSelectCustomer(context),
+                      termsController: widget.quotationTermsController,
                     ),
                     const SizedBox(height: 12),
                   ] else ...[
@@ -481,7 +485,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                               fontFamily: 'Poppins',
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0066CC),
+                              color: ColorManager.kBlue0066CC,
                               letterSpacing: 0.1,
                             ),
                           ),

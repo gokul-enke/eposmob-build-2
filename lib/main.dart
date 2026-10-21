@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
@@ -92,6 +92,7 @@ import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_pr
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_lifecycle.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_provider.dart';
+import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/config/sentry_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -173,7 +174,8 @@ Future<void> _prepareForRestart() => _restartPreparation ??= () async {
       // network/printer operations: never pretend closing Hive alone drains those.
       if (_appReady) {
         throw StateError(
-            'This CloudPOS copy is active. Close it normally first.');
+            BrandConfig.apply(
+            'This CloudPOS copy is active. Close it normally first.'));
       }
       await _startupWork.stopAndDrain();
       await _startupProducts?.flushPersistence();
@@ -589,10 +591,10 @@ class StorageLockedException implements Exception {
   final Object cause;
 
   @override
-  String toString() =>
+  String toString() => BrandConfig.apply(
       'Another copy of CLOUDPOS still has the "$boxName" storage open. '
       'Close it, or end every cloudpos.exe task in Task Manager, then open '
-      'CLOUDPOS again. ($cause)';
+      'CLOUDPOS again. ($cause)');
 }
 
 /// Opens [boxName] with three kinds of recovery:
@@ -802,7 +804,7 @@ class StartupFailureApp extends StatelessWidget {
 
   String get _details {
     final buffer = StringBuffer()
-      ..writeln('CLOUDPOS failed to start.')
+      ..writeln(BrandConfig.apply('CLOUDPOS failed to start.'))
       ..writeln()
       ..writeln('Error: $error');
     if (warnings.isNotEmpty) {
@@ -820,7 +822,8 @@ class StartupFailureApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CLOUDPOS',
+      title: BrandConfig.title,
+      theme: ThemeData(colorScheme: ColorManager.brandColorScheme),
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -835,18 +838,20 @@ class StartupFailureApp extends StatelessWidget {
                   const Icon(Icons.error_outline,
                       size: 48, color: Colors.redAccent),
                   const SizedBox(height: 16),
-                  const Text(
-                    'CLOUDPOS could not start',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  Text(
+                    BrandConfig.apply('CLOUDPOS could not start'),
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'If CLOUDPOS is already running, close it — or end the '
-                    'cloudpos.exe task — and open it again. If the local '
-                    'storage is large or the disk is slow, wait a minute '
-                    'before retrying. If this keeps happening, send the '
-                    'details below to support.',
-                    style: TextStyle(fontSize: 14, height: 1.4),
+                  Text(
+                    BrandConfig.apply(
+                        'If CLOUDPOS is already running, close it — or end the '
+                        'cloudpos.exe task — and open it again. If the local '
+                        'storage is large or the disk is slow, wait a minute '
+                        'before retrying. If this keeps happening, send the '
+                        'details below to support.'),
+                    style: const TextStyle(fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -1013,7 +1018,7 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: [
                       SentryNavigatorObserver(),
                     ],
-                    title: 'CLOUDPOS',
+                    title: BrandConfig.title,
                     theme: _buildAppTheme(focusHighlightProvider.enabled),
                     translations:
                         AppTranslations(LocalizationService.translations),
@@ -1100,6 +1105,10 @@ ThemeData _buildAppTheme(bool focusHighlightEnabled) {
   }
 
   return ThemeData(
+    // White-label brands seed Material's own widgets (checkboxes, switches,
+    // progress, selection) from their palette. CloudPOS keeps its original
+    // default scheme so its look does not change.
+    colorScheme: ColorManager.brandColorScheme,
     // `focusColor` is what InkWell / InkResponse splash uses when its host
     // FocusNode has primary focus.
     focusColor: Colors.transparent,

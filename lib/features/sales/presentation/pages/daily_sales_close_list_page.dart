@@ -6,6 +6,7 @@ import 'package:pos_machine/features/sales/presentation/navigation/sales_navigat
 import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
 import 'package:provider/provider.dart';
 
+import '../commands/confirm_day_close_with_unsynced_sales.dart';
 import '../widgets/closing/day_close_modal.dart';
 import '../widgets/closing/open_shift_modal.dart';
 
@@ -28,10 +29,16 @@ class DailySalesCloseListPage extends StatelessWidget {
             context: context,
             barrierDismissible: false,
             builder: (_) => OpenShiftModal(onSuccess: onSuccess)),
-        onDayClose: (context, onSuccess, draft) => showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) =>
-                DayCloseModal(onSuccess: onSuccess, openDraft: draft)),
+        onDayClose: (context, onSuccess, draft) async {
+          if (!await confirmDayCloseWithUnsyncedSales(context) ||
+              !context.mounted) {
+            return;
+          }
+          await showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) =>
+                  DayCloseModal(onSuccess: onSuccess, openDraft: draft));
+        },
       );
 }

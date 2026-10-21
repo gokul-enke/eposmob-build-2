@@ -37,14 +37,14 @@ class LocalOrderPaymentInfo extends StatelessWidget {
               }
               methodWidgets.add(
                 Padding(
-                  padding: const EdgeInsets.only(left: 16.0, top: 4.0),
+                  padding: EdgeInsets.zero,
                   child: LocalOrderDetailInfoRow(
                       'confirmed_orders.payment_display'
                           .tr
                           .replaceAll('@name', displayName),
                       "$currency${amountValue.toStringAsFixed(2)}",
                       valueStyle: const TextStyle(
-                        color: Colors.green,
+                        color: Color(0xFF16764A),
                         fontWeight: FontWeight.w600,
                       ),
                       inputs: inputs),
@@ -59,9 +59,9 @@ class LocalOrderPaymentInfo extends StatelessWidget {
               Text(
                 "billing.payment_methods".tr,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -70,9 +70,9 @@ class LocalOrderPaymentInfo extends StatelessWidget {
               LocalOrderDetailInfoRow("billing.total_paid".tr,
                   "$currency${totalPaid.toStringAsFixed(2)}",
                   valueStyle: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    color: Color(0xFF16764A),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
                   inputs: inputs),
             ],
@@ -91,15 +91,15 @@ class LocalOrderPaymentInfo extends StatelessWidget {
         Text(
           "confirmed_orders.payment_method".tr,
           style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 8),
         LocalOrderDetailInfoRow("confirmed_orders.method".tr, displayName,
             valueStyle: const TextStyle(
-              color: Colors.green,
+              color: Color(0xFF16764A),
               fontWeight: FontWeight.w600,
             ),
             inputs: inputs),

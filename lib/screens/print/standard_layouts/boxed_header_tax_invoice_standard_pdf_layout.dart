@@ -932,6 +932,7 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       'showRateExcTax': 1.2,
       'showUnit': 0.8,
       'showTaxHeader': 1.1,
+      'showRowTotalTaxHeader': 1.1,
       'showTotal': 1.5,
     };
     final warranty = params.warrantyLabel;
@@ -959,15 +960,24 @@ class BoxedHeaderTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              for (final name in line.nameLines)
-                pw.Container(
-                  width: double.infinity,
-                  child: pdfText(name,
-                      style: bodyStyle,
-                      softWrap: true,
-                      textAlign: pw.TextAlign.left,
-                      textDirection: pdfTextDirectionOf(name)),
-                ),
+              // English left / Arabic right on one line when both fit.
+              pdfBilingualName(line.nameLines,
+                  style: bodyStyle,
+                  twoLines: pw.Column(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      for (final name in line.nameLines)
+                        pw.Container(
+                          width: double.infinity,
+                          child: pdfText(name,
+                              style: bodyStyle,
+                              softWrap: true,
+                              textAlign: pw.TextAlign.left,
+                              textDirection: pdfTextDirectionOf(name)),
+                        ),
+                    ],
+                  )),
               if (line.hasWarranty && warranty.isNotEmpty)
                 pdfText(warranty, style: bodyStyle),
             ],

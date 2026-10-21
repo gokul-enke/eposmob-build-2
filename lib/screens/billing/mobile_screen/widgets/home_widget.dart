@@ -441,7 +441,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             ElevatedButton.icon(
               onPressed: billingProvider.isLoadingAddItem ? null : _addItem,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[700],
+                backgroundColor: ColorManager.kBrandBlue700,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
                 shape: RoundedRectangleBorder(

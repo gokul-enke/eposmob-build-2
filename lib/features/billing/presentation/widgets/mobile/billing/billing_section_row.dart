@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Tappable, card-style summary row used on the mobile Billing tab in place
 /// of an accordion section. Shows a leading icon, a title, a value/subtitle
@@ -64,7 +65,7 @@ class BillingSectionRow extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: const Color(0xFF0066CC),
+                color: ColorManager.kBlue0066CC,
                 size: 22,
               ),
               const SizedBox(width: 12),
@@ -81,7 +82,7 @@ class BillingSectionRow extends StatelessWidget {
                         fontFamily: 'Poppins',
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0066CC),
+                        color: ColorManager.kBlue0066CC,
                         letterSpacing: 0.1,
                       ),
                     ),

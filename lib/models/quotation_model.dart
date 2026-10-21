@@ -151,6 +151,10 @@ class QuotationDetailsData {
   final String? deliveryMethod;
   final String? deliveryCharge;
   final String? comment;
+
+  /// Salesperson-entered terms for this quotation. When present, prints in
+  /// place of the document configuration's terms.
+  final String? terms;
   final int? invoiceId;
   final List<QuotationItem>? items;
 
@@ -172,6 +176,7 @@ class QuotationDetailsData {
     this.deliveryMethod,
     this.deliveryCharge,
     this.comment,
+    this.terms,
     this.invoiceId,
     this.items,
   });
@@ -205,8 +210,8 @@ class QuotationDetailsData {
             ...?customerDetailsMap,
             if (customerDetailsMap?['customer_id'] != null)
               'id': customerDetailsMap!['customer_id'],
-            for (final entry in customerMap?.entries ??
-                const <MapEntry<String, dynamic>>[])
+            for (final entry
+                in customerMap?.entries ?? const <MapEntry<String, dynamic>>[])
               if (entry.value != null) entry.key: entry.value,
             if (customerMap?['id'] == null &&
                 customerDetailsMap?['customer_id'] == null &&
@@ -251,6 +256,7 @@ class QuotationDetailsData {
       deliveryCharge:
           (json['delivery_charge'] ?? json['shipping_cost'])?.toString(),
       comment: (json['comment'] ?? json['note'])?.toString(),
+      terms: json['terms']?.toString(),
       invoiceId: json['invoice_id'],
       items: parsedItems,
     );
@@ -406,6 +412,9 @@ class QuotationItem {
   final String? quantity;
   final String? taxRate;
   final String? taxAmount;
+
+  /// Tax for one sale unit, used only by quotation row displays.
+  final String? taxAmountUnit;
   final String? totalPrice;
   final int? productStockId;
   final int? productSaleUnitId;
@@ -424,6 +433,7 @@ class QuotationItem {
     this.quantity,
     this.taxRate,
     this.taxAmount,
+    this.taxAmountUnit,
     this.totalPrice,
     this.productStockId,
     this.productSaleUnitId,
@@ -444,6 +454,7 @@ class QuotationItem {
       quantity: json['quantity']?.toString(),
       taxRate: json['tax_rate']?.toString(),
       taxAmount: json['tax_amount']?.toString(),
+      taxAmountUnit: json['tax_amount_unit']?.toString(),
       totalPrice: json['total_price']?.toString(),
       productStockId: _parseInt(json['product_stock_id'] ?? json['stock_id']),
       productSaleUnitId:

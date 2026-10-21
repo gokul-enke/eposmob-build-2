@@ -16,6 +16,9 @@ Future<File> exportInvoiceList(List<Invoice> items,
             label: 'invoice.field_invoice_number'.tr,
             value: (v, _) => v.invoiceNumber),
         ListExportColumn(
+            label: 'invoice.col_offline_receipt'.tr,
+            value: (v, _) => v.receiptNumber ?? ''),
+        ListExportColumn(
             label: 'invoice.col_amount'.tr,
             value: (v, _) => ListExcelExportService.numericValue(v.amount)),
         ListExportColumn(

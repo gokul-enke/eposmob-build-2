@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class DiningSelectionModal extends StatelessWidget {
   final List<TableModel> tables;
@@ -83,7 +84,7 @@ class DiningSelectionModal extends StatelessWidget {
           ),
           const Spacer(),
           _buildLegendItem('dining.available'.tr, const Color(0xFF111827)),
-          _buildLegendItem('dining.reserved'.tr, const Color(0xFF2563EB)),
+          _buildLegendItem('dining.reserved'.tr, ColorManager.kBlue2563EB),
           _buildLegendItem('dining.filled'.tr, const Color(0xFFCBD5E1)),
           _buildLegendItem('dining.available_soon'.tr, const Color(0xFFF2C94C)),
           IconButton(
@@ -165,7 +166,7 @@ class DiningSelectionModal extends StatelessWidget {
   Widget _buildTableTile(BuildContext context, TableModel table) {
     final isSelected = table.id == selectedTableId;
     final statusColor =
-        isSelected ? const Color(0xFF2563EB) : _statusColor(table.status);
+        isSelected ? ColorManager.kBlue2563EB : _statusColor(table.status);
     final textColor =
         _usesLightText(statusColor) ? Colors.white : const Color(0xFF111827);
     final isLongTable = table.capacity >= 6;
@@ -243,7 +244,7 @@ class DiningSelectionModal extends StatelessWidget {
       case TableStatus.occupied:
         return const Color(0xFFCBD5E1);
       case TableStatus.reserved:
-        return const Color(0xFF2563EB);
+        return ColorManager.kBlue2563EB;
       case TableStatus.cleaning:
       case TableStatus.maintenance:
         return const Color(0xFFF2C94C);
@@ -251,6 +252,6 @@ class DiningSelectionModal extends StatelessWidget {
   }
 
   bool _usesLightText(Color color) {
-    return color == const Color(0xFF111827) || color == const Color(0xFF2563EB);
+    return color == const Color(0xFF111827) || color == ColorManager.kBlue2563EB;
   }
 }

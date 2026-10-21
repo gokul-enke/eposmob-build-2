@@ -664,7 +664,7 @@ class _OrderListNewState extends State<OrderListNew> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.blueAccent),
+                        borderSide: const BorderSide(color: ColorManager.kBrandBlueAccent),
                       ),
                     ),
                   ),

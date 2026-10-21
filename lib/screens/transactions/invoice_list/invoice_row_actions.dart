@@ -817,12 +817,12 @@ mixin InvoiceRowActions<W extends StatefulWidget> on State<W> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.1),
+                            color: ColorManager.kBrandBlue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.warning_amber_rounded,
-                            color: Colors.blue,
+                            color: ColorManager.kBrandBlue,
                             size: 40,
                           ),
                         ),
@@ -895,7 +895,7 @@ mixin InvoiceRowActions<W extends StatefulWidget> on State<W> {
                         child: ElevatedButton(
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: ColorManager.kBrandBlue,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

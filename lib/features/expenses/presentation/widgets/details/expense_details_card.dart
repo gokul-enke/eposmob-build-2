@@ -73,7 +73,7 @@ Widget expenseDetailsCard({
                 children: [
                   Expanded(
                     child: expenseDetailItemWithBadge('expense.category'.tr,
-                        displayCategory, Colors.blue.shade50, Colors.blue),
+                        displayCategory, ColorManager.kBrandBlue50, ColorManager.kBrandBlue),
                   ),
                   Expanded(
                     child: expenseDetailItem(
@@ -96,8 +96,8 @@ Widget expenseDetailsCard({
                     child: expenseDetailItemWithBadge(
                         'expense.payment_method'.tr,
                         displayPaymentMethod,
-                        Colors.blue.shade50,
-                        Colors.blue),
+                        ColorManager.kBrandBlue50,
+                        ColorManager.kBrandBlue),
                   ),
                   Expanded(
                     child: expenseDetailItemWithBadge(

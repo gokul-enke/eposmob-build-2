@@ -11,6 +11,7 @@ import 'package:pos_machine/features/subscription/presentation/subscription_stat
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class SubscriptionActionGuard {
   const SubscriptionActionGuard._();
@@ -203,7 +204,7 @@ class SubscriptionActionGuard {
     final companyName = prefs.getString('company_name')?.trim();
     return _SubscriptionBranding(
       companyName:
-          companyName == null || companyName.isEmpty ? 'CloudPOS' : companyName,
+          companyName == null || companyName.isEmpty ? BrandConfig.name : companyName,
       logoFilePath: adminSettings?.logoFilePath,
       logoUrl: adminSettings?.logoUrl,
     );

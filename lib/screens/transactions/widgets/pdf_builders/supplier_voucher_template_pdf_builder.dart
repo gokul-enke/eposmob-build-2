@@ -8,6 +8,7 @@ import '../../../../models/document_configurations.dart';
 import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dart';
 import '../../../../helpers/date_helper.dart';
 import '../../../../helpers/number_to_words_helper.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Builds an A4 PDF that matches the Supplier Voucher template design.
 ///
@@ -27,7 +28,7 @@ class SupplierVoucherTemplatePdfBuilder {
     try {
       // ── Parse accent color ──────────────────────────────────────────────
       final PdfColor accentColor = _parseHexColor(
-        config.accentColor ?? '#3C92F5', // Default voucher accent color is blue
+        config.accentColor ?? ColorManager.primaryHex, // Default: brand primary
       );
 
       // ── Header info ───────────────────────────────────────────
@@ -628,7 +629,7 @@ class SupplierVoucherTemplatePdfBuilder {
       final int value = int.parse(hex, radix: 16);
       return PdfColor.fromInt(value);
     } catch (_) {
-      return const PdfColor.fromInt(0xFF3C92F5); // default accent
+      return PdfColor.fromInt(ColorManager.kPrimaryColor.toARGB32()); // default accent
     }
   }
 

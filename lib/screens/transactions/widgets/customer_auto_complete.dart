@@ -239,7 +239,7 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                       ),
                       decoration: BoxDecoration(
                         color:
-                            isHighlighted ? Colors.blue.shade50 : Colors.white,
+                            isHighlighted ? ColorManager.kBrandBlue50 : Colors.white,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: ListTile(
@@ -255,7 +255,7 @@ class _CustomerAutocompleteState extends State<CustomerAutocomplete> {
                           style: TextStyle(
                             fontSize: 11,
                             color: isHighlighted
-                                ? Colors.blue.shade800
+                                ? ColorManager.kBrandBlue800
                                 : Colors.black87,
                             fontWeight: isHighlighted
                                 ? FontWeight.w500

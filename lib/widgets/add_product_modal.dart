@@ -15,6 +15,8 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/features/purchases/presentation/state/purchase_provider.dart';
+import 'package:pos_machine/features/suppliers/domain/models/supplier.dart';
+import 'package:pos_machine/features/suppliers/presentation/state/supplier_provider.dart';
 import 'package:pos_machine/helpers/purchase_price_permission.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
@@ -83,12 +85,15 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productItemCodeController =
       TextEditingController();
+  final TextEditingController _productSkuController = TextEditingController();
   final TextEditingController _productMinMarginController =
       TextEditingController();
   final TextEditingController _productMinMarginPriceController =
       TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
+      TextEditingController();
+  final TextEditingController _supplierSearchController =
       TextEditingController();
   final TextEditingController _baseConversionRateController =
       TextEditingController(text: '1');
@@ -109,15 +114,23 @@ class _AddProductWithBarcodeModalState
   final FocusNode _minMarginPriceFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _supplierFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
+  final FocusNode _skuFocusNode = FocusNode();
+  final FocusNode _generateSkuFocusNode = FocusNode();
 
   bool isLoading = false;
   bool isSaveAndCreateLoading = false;
   bool isBarcodeGenerating = false;
+  bool isSkuGenerating = false;
   bool _isCheckingDuplicateBarcode = false;
   String? _confirmedDuplicateBarcode;
   String? selectedUnit;
   Category? selectedCategory;
+  // Optional supplier for the opening stock; only offered when quantity > 0.
+  Supplier? _selectedSupplier;
+  bool _suppliersRequested = false;
+  bool _hasOpeningQuantity = false;
   bool isValidatedOnce = false;
   bool _showAdvancedOptions = false;
   bool _showSaleUnitValidation = false;
@@ -141,6 +154,7 @@ class _AddProductWithBarcodeModalState
     super.initState();
 
     _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
+    _productQuantityController.addListener(_handleQuantityChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -180,6 +194,46 @@ class _AddProductWithBarcodeModalState
     }
   }
 
+  void _handleQuantityChange() {
+    final hasQuantity =
+        (num.tryParse(_productQuantityController.text.trim()) ?? 0) > 0;
+    if (hasQuantity == _hasOpeningQuantity) return;
+    setState(() {
+      _hasOpeningQuantity = hasQuantity;
+      if (!hasQuantity) {
+        _selectedSupplier = null;
+        _supplierSearchController.clear();
+      }
+    });
+    if (hasQuantity) _fetchSuppliers();
+  }
+
+  Future<void> _fetchSuppliers() async {
+    if (_suppliersRequested) return;
+    final supplierProvider = Provider.of<SupplierProvider>(
+      context,
+      listen: false,
+    );
+    if (supplierProvider.allSuppliers?.isNotEmpty ?? false) return;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) return;
+
+    _suppliersRequested = true;
+    try {
+      await supplierProvider.fetchSuppliers(accessToken: accessToken);
+      // fetchSuppliers swallows most errors and leaves the list empty; allow
+      // a retry the next time an opening quantity is entered.
+      if (supplierProvider.allSuppliers?.isEmpty ?? true) {
+        _suppliersRequested = false;
+      }
+    } catch (e) {
+      _suppliersRequested = false;
+      debugPrint('⚠️ fetchSuppliers failed: $e');
+    }
+  }
+
   void _retryFetchVariantProperties() {
     _variantPropertiesRequested = false;
     _fetchVariantProperties();
@@ -197,6 +251,7 @@ class _AddProductWithBarcodeModalState
       _itemCodeFocusNode,
       _minMarginFocusNode,
       _minMarginPriceFocusNode,
+      _skuFocusNode,
       _unitFocusNode,
       _categoryFocusNode,
     ];
@@ -1137,10 +1192,12 @@ class _AddProductWithBarcodeModalState
     _productSellingPriceController.dispose();
     _productPurchasePriceController.dispose();
     _productItemCodeController.dispose();
+    _productSkuController.dispose();
     _productMinMarginController.dispose();
     _productMinMarginPriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+    _supplierSearchController.dispose();
     _baseConversionRateController.dispose();
 
     for (final controller in _languageNameControllers.values) {
@@ -1168,8 +1225,11 @@ class _AddProductWithBarcodeModalState
     _minMarginFocusNode.dispose();
     _minMarginPriceFocusNode.dispose();
     _unitFocusNode.dispose();
+    _supplierFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
+    _skuFocusNode.dispose();
+    _generateSkuFocusNode.dispose();
 
     isLoading = false;
     isSaveAndCreateLoading = false;
@@ -1310,6 +1370,48 @@ class _AddProductWithBarcodeModalState
           _translateButtonFocusNodes[language.id]?.requestFocus();
         }
       });
+    }
+  }
+
+  /// Fills the SKU field from the backend's SKU generator.
+  Future<void> generateSku() async {
+    if (isSkuGenerating) return;
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    if (accessToken == null || accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'product_form.auth_token_missing'.tr,
+      );
+      return;
+    }
+    final gridSelectionProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    setState(() => isSkuGenerating = true);
+    try {
+      final sku =
+          await gridSelectionProvider.generateSku(accessToken: accessToken);
+      if (!mounted) return;
+      if (sku != null) {
+        setState(() => _productSkuController.text = sku);
+        showScaffold(
+          context: context,
+          message: 'product_form.sku_generated_success'.tr,
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isSkuGenerating = false);
     }
   }
 
@@ -1615,9 +1717,23 @@ class _AddProductWithBarcodeModalState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Expanded(child: SizedBox()),
+                      Expanded(child: _buildSkuField(size)),
                     ],
                   ),
+                  // Row 5: Supplier, only when there is opening stock.
+                  if (_hasOpeningQuantity) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildSupplierDropdown(size)),
+                        const SizedBox(width: 8),
+                        const Expanded(child: SizedBox()),
+                        const SizedBox(width: 8),
+                        const Expanded(child: SizedBox()),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   if (multiSaleUnitEnabled && _showAdvancedOptions) ...[
                     _buildAdvancedOptionsSection(size, unitList),
@@ -1898,6 +2014,101 @@ class _AddProductWithBarcodeModalState
 
   // Barcode field with generate button
   Widget _buildBarcodeField(Size size) {
+    return _buildGeneratedCodeField(
+      size,
+      label: 'product.barcode'.tr,
+      isRequired: true,
+      controller: _productBarcodeController,
+      focusNode: _barcodeFocusNode,
+      generateFocusNode: _generateBarcodeFocusNode,
+      generating: isBarcodeGenerating,
+      readOnly: widget.barcode != null,
+      onGenerate: widget.barcode != null ? null : generateBarcode,
+      onChanged: (_) {
+        if (_confirmedDuplicateBarcode != null) {
+          setState(() {
+            _confirmedDuplicateBarcode = null;
+          });
+        }
+      },
+      onSubmitted: (_) async {
+        final canContinue = await _ensureBarcodeDuplicateConfirmed();
+        if (!mounted || !canContinue) {
+          return;
+        }
+        FocusScope.of(context).nextFocus();
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'product_form.required'.tr;
+        }
+        return null;
+      },
+    );
+  }
+
+  /// Optional SKU with the same generate button as the barcode.
+  Widget _buildSkuField(Size size) {
+    return _buildGeneratedCodeField(
+      size,
+      label: 'product_form.sku'.tr,
+      isRequired: false,
+      controller: _productSkuController,
+      focusNode: _skuFocusNode,
+      generateFocusNode: _generateSkuFocusNode,
+      generating: isSkuGenerating,
+      onGenerate: generateSku,
+      generateTooltip: 'product_form.generate_sku'.tr,
+    );
+  }
+
+  /// Label, text input and a square "generate" button, shared by the
+  /// Barcode and SKU fields.
+  Widget _buildGeneratedCodeField(
+    Size size, {
+    required String label,
+    required bool isRequired,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required FocusNode generateFocusNode,
+    required bool generating,
+    required Future<void> Function()? onGenerate,
+    bool readOnly = false,
+    String? generateTooltip,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
+    FormFieldValidator<String>? validator,
+  }) {
+    final button = SizedBox(
+      height: size.height * 0.048,
+      width: size.height * 0.048,
+      child: ElevatedButton(
+        focusNode: generateFocusNode,
+        onPressed: onGenerate == null
+            ? null
+            : () async {
+                _unfocusAllExcept(null);
+                generateFocusNode.requestFocus();
+                await onGenerate();
+                if (mounted) {
+                  generateFocusNode.requestFocus();
+                }
+              },
+        style: _buildSquareActionButtonStyle(),
+        child: generating
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.white,
+                  ),
+                ),
+              )
+            : const Icon(Icons.refresh, size: 18, color: Colors.white),
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1905,7 +2116,7 @@ class _AddProductWithBarcodeModalState
           TextSpan(
             children: [
               TextSpan(
-                text: 'product.barcode'.tr,
+                text: label,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s12,
@@ -1913,15 +2124,16 @@ class _AddProductWithBarcodeModalState
                   Colors.black.withOpacity(0.6),
                 ),
               ),
-              TextSpan(
-                text: ' *',
-                style: buildCustomStyle(
-                  FontWeightManager.regular,
-                  FontSize.s12,
-                  0.27,
-                  Colors.red,
+              if (isRequired)
+                TextSpan(
+                  text: ' *',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    Colors.red,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1937,39 +2149,22 @@ class _AddProductWithBarcodeModalState
                 height: size.height * 0.048,
                 width: double.infinity,
                 child: TextFormField(
-                  controller: _productBarcodeController,
-                  focusNode: _barcodeFocusNode,
-                  readOnly: widget.barcode != null,
+                  controller: controller,
+                  focusNode: focusNode,
+                  readOnly: readOnly,
                   textInputAction: TextInputAction.next,
-                  onChanged: (_) {
-                    if (_confirmedDuplicateBarcode != null) {
-                      setState(() {
-                        _confirmedDuplicateBarcode = null;
-                      });
-                    }
-                  },
-                  onFieldSubmitted: (_) async {
-                    final canContinue =
-                        await _ensureBarcodeDuplicateConfirmed();
-                    if (!mounted || !canContinue) {
-                      return;
-                    }
-                    FocusScope.of(context).nextFocus();
-                  },
+                  onChanged: onChanged,
+                  onFieldSubmitted: onSubmitted ??
+                      (_) => FocusScope.of(context).nextFocus(),
                   cursorColor: ColorManager.kPrimaryColor,
                   onTap: () {
-                    _unfocusAllExcept(_barcodeFocusNode);
+                    _unfocusAllExcept(focusNode);
                   },
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'product_form.required'.tr;
-                    }
-                    return null;
-                  },
+                  validator: validator,
                   style: buildCustomStyle(
                     FontWeightManager.medium,
                     FontSize.s11,
@@ -1980,36 +2175,9 @@ class _AddProductWithBarcodeModalState
               ),
             ),
             const SizedBox(width: 8),
-            SizedBox(
-              height: size.height * 0.048,
-              width: size.height * 0.048,
-              child: ElevatedButton(
-                focusNode: _generateBarcodeFocusNode,
-                onPressed: widget.barcode != null
-                    ? null
-                    : () async {
-                        _unfocusAllExcept(null);
-                        _generateBarcodeFocusNode.requestFocus();
-                        await generateBarcode();
-                        if (mounted) {
-                          _generateBarcodeFocusNode.requestFocus();
-                        }
-                      },
-                style: _buildSquareActionButtonStyle(),
-                child: isBarcodeGenerating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Icon(Icons.refresh, size: 18, color: Colors.white),
-              ),
-            ),
+            generateTooltip == null
+                ? button
+                : Tooltip(message: generateTooltip, child: button),
           ],
         ),
       ],
@@ -2257,6 +2425,49 @@ class _AddProductWithBarcodeModalState
               style: TextStyle(color: Colors.red[700], fontSize: 11),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildSupplierDropdown(Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'product_form.supplier'.tr,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Consumer<SupplierProvider>(
+          builder: (context, supplierProvider, child) {
+            final suppliers = supplierProvider.allSuppliers ?? const [];
+            final selected = _selectedSupplier == null
+                ? null
+                : suppliers
+                    .where((s) => s.id == _selectedSupplier!.id)
+                    .firstOrNull;
+            return CustomDropDownWithSearch<Supplier>(
+              focusNode: _supplierFocusNode,
+              title: '',
+              hintText: 'product_form.select_supplier'.tr,
+              value: selected,
+              height: size.height * 0.048,
+              margin: EdgeInsets.zero,
+              items: suppliers,
+              onChanged: (Supplier? supplier) {
+                setState(() => _selectedSupplier = supplier);
+              },
+              displayText: (supplier) => supplier.name,
+              searchController: _supplierSearchController,
+              autofocus: false,
+            );
+          },
+        ),
       ],
     );
   }
@@ -2949,6 +3160,7 @@ class _AddProductWithBarcodeModalState
           mrp: _productMRPController.text,
           unit: selectedUnit!,
           quantity: _productQuantityController.text,
+          supplierId: _hasOpeningQuantity ? _selectedSupplier?.id : null,
           barcode: _productBarcodeController.text,
           accessToken: accessToken ?? "",
           purchasePrice: _canViewPurchasePrice()
@@ -2963,6 +3175,7 @@ class _AddProductWithBarcodeModalState
                   : '1',
           itemCode:
               itemCodeEnabled ? _productItemCodeController.text.trim() : null,
+          sku: _productSkuController.text.trim(),
           minMarginPercentage:
               _productMinMarginController.text.trim().isNotEmpty
                   ? _productMinMarginController.text.trim()
@@ -3070,6 +3283,7 @@ class _AddProductWithBarcodeModalState
     _productSellingPriceController.clear();
     _productPurchasePriceController.clear();
     _productItemCodeController.clear();
+    _productSkuController.clear();
     _productMinMarginController.clear();
     _productMinMarginPriceController.clear();
     _baseConversionRateController.text = '1';
@@ -3082,6 +3296,8 @@ class _AddProductWithBarcodeModalState
       _confirmedDuplicateBarcode = null;
       selectedUnit = null;
       selectedCategory = null;
+      _selectedSupplier = null;
+      _supplierSearchController.clear();
       isValidatedOnce = false;
       _showAdvancedOptions = false;
       _showSaleUnitValidation = false;

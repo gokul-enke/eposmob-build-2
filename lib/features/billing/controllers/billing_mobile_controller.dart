@@ -780,8 +780,9 @@ class BillingMobileController {
       Provider.of<BillingProvider>(context, listen: false)
           .hasAnyPaymentSelected();
 
-  /// Prepares default customer, payment, and delivery for direct confirm/save & print
-  /// when [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.
+  /// Prepares default customer, payment, and delivery for direct confirmation
+  /// when [AppSettings.skipCheckoutOnConfirm] or
+  /// [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.
   /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` /
   /// `_saveAndPrintWithoutCheckoutModal` prep steps.
   Future<void> prepareDirectConfirmAndPrint(BuildContext context) async {
@@ -1279,6 +1280,7 @@ class BillingMobileController {
     required DateTime expiryDate,
     required String inlineCustomerName,
     required String inlineCustomerPhone,
+    String terms = '',
   }) async {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
@@ -1351,6 +1353,7 @@ class BillingMobileController {
         expiryDate: expiryDate,
         discount: discountValue,
         comment: billingProvider.commentController.text,
+        terms: terms,
         cartItems: localProductProvider.cartItems,
       );
 

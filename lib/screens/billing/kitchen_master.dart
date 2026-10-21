@@ -11,6 +11,7 @@ import '../../providers/auth_model.dart';
 import '../../providers/delivery_methods_provider.dart';
 import '../../models/cart_item_status.dart';
 import '../../helpers/date_helper.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import '../../screens/print/print_kot.dart'; // Add KOT Print Page import
 
 enum OrderStatus { all, pending, preparing, ready, served }
@@ -23,9 +24,9 @@ enum MobileView { orderList, orderDetails }
 Color _getStatusColor(OrderStatus status) {
   switch (status) {
     case OrderStatus.all:
-      return const Color(0xFF2563EB); // Blue
+      return ColorManager.kBlue2563EB; // Blue
     case OrderStatus.pending:
-      return const Color(0xFF2563EB); // Blue (Ready To Cook)
+      return ColorManager.kBlue2563EB; // Blue (Ready To Cook)
     case OrderStatus.preparing:
       return const Color(0xFFD97706); // Orange
     case OrderStatus.ready:
@@ -38,9 +39,9 @@ Color _getStatusColor(OrderStatus status) {
 Color _getItemStatusColor(ItemStatus status) {
   switch (status) {
     case ItemStatus.pending:
-      return const Color(0xFF2563EB); // Blue (Ready To Cook)
+      return ColorManager.kBlue2563EB; // Blue (Ready To Cook)
     case ItemStatus.preparing:
-      return const Color(0xFF2563EB); // Blue
+      return ColorManager.kBlue2563EB; // Blue
     case ItemStatus.ready:
       return const Color(0xFF059669); // Green
     case ItemStatus.served:
@@ -856,7 +857,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: isSmallScreen
           ? AppBar(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: ColorManager.kBlue2563EB,
               elevation: 0,
               title: Text(
                 'kitchen.kitchen_orders'.tr,
@@ -1089,7 +1090,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
                   icon: const Icon(Icons.refresh),
                   label: Text('kitchen.refresh_orders'.tr),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: ColorManager.kBlue2563EB,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -1173,7 +1174,7 @@ class _KitchenMasterState extends State<KitchenMaster> {
               'kitchen.status_preparing'.tr,
               stats['preparing'].toString(),
               Icons.local_fire_department,
-              const Color(0xFF2563EB),
+              ColorManager.kBlue2563EB,
             ),
             _buildStatCard(
               'kitchen.ready_to_serve'.tr,
@@ -2211,14 +2212,14 @@ class _ExpandableOrderCardState extends State<_ExpandableOrderCard> {
                               ? 'kitchen.view_less'.tr
                               : '${'kitchen.view_more_prefix'.tr}${order.items.length - 4}${'kitchen.view_more_suffix'.tr}',
                           style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s11, 0.21, const Color(0xFF2563EB)),
+                              FontSize.s11, 0.21, ColorManager.kBlue2563EB),
                         ),
                         Icon(
                           _isExpanded
                               ? Icons.keyboard_arrow_up
                               : Icons.keyboard_arrow_down,
                           size: 16,
-                          color: const Color(0xFF2563EB),
+                          color: ColorManager.kBlue2563EB,
                         ),
                       ],
                     ),
@@ -2352,7 +2353,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF2563EB).withOpacity(0.05),
+                  ColorManager.kBlue2563EB.withOpacity(0.05),
                   Colors.transparent,
                 ],
                 begin: Alignment.topLeft,
@@ -2370,12 +2371,12 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.assignment,
-                    color: Color(0xFF2563EB),
+                    color: ColorManager.kBlue2563EB,
                     size: 20,
                   ),
                 ),
@@ -2390,13 +2391,13 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     selectedOrder != null ? 'kitchen.one_selected'.tr : 'kitchen.none_selected'.tr,
                     style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s12, 0.21, const Color(0xFF2563EB)),
+                        FontSize.s12, 0.21, ColorManager.kBlue2563EB),
                   ),
                 ),
               ],
@@ -2680,13 +2681,13 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '${cookingTime.inMinutes}${'kitchen.minutes_suffix'.tr}',
                     style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s10, 0.21, const Color(0xFF2563EB)),
+                        FontSize.s10, 0.21, ColorManager.kBlue2563EB),
                   ),
                 ),
             ],
@@ -2925,7 +2926,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
                 Expanded(
                   child: _buildStatusButton(
                     'kitchen.start_fallback'.tr,
-                    const Color(0xFF2563EB),
+                    ColorManager.kBlue2563EB,
                     item.status == ItemStatus.pending,
                     false, // Not loading for fallback buttons
                     () => widget.onItemStatusChanged(
@@ -3065,7 +3066,7 @@ class _OrderDetailsPanelState extends State<_OrderDetailsPanel> {
   Color _getStatusButtonColor(String statusValue) {
     switch (statusValue.toUpperCase()) {
       case 'START':
-        return const Color(0xFF2563EB); // Blue - Start Cooking (Ready To Cook)
+        return ColorManager.kBlue2563EB; // Blue - Start Cooking (Ready To Cook)
       case 'READY':
         return const Color(0xFFD97706); // Orange - actionable preparing state
       case 'SERVED':
@@ -3202,7 +3203,7 @@ class _KitchenStatsPanel extends StatelessWidget {
           child: _buildStatCard(
             'kitchen.cooking'.tr,
             stats['preparing'].toString(),
-            const Color(0xFF2563EB),
+            ColorManager.kBlue2563EB,
             Icons.local_fire_department,
             true,
           ),
@@ -3241,7 +3242,7 @@ class _KitchenStatsPanel extends StatelessWidget {
               child: _buildStatCard(
                 'kitchen.status_preparing'.tr,
                 stats['preparing'].toString(),
-                const Color(0xFF2563EB),
+                ColorManager.kBlue2563EB,
                 Icons.local_fire_department,
                 false,
               ),
@@ -3336,10 +3337,10 @@ class _KitchenStatsPanel extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF2563EB).withOpacity(0.3),
+                      color: ColorManager.kBlue2563EB.withOpacity(0.3),
                     ),
                   ),
                   child: Row(
@@ -3347,14 +3348,14 @@ class _KitchenStatsPanel extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.refresh,
-                        color: Color(0xFF2563EB),
+                        color: ColorManager.kBlue2563EB,
                         size: 18,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'kitchen.refresh_orders'.tr,
                         style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s12, 0.21, const Color(0xFF2563EB)),
+                            FontSize.s12, 0.21, ColorManager.kBlue2563EB),
                       ),
                     ],
                   ),

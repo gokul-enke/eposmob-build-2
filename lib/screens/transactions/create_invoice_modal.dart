@@ -469,7 +469,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.blueAccent, // Or use your brand color
+            color: ColorManager.kBrandBlueAccent, // Or use your brand color
           ),
         ),
       ],
@@ -1234,6 +1234,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                             context: context,
                             builder: (context) => CouponModal(
                               subTotal: _netTotal + _totalTax,
+                                      couponLines: [for (final card in _invoiceItemCards)
+                                        (productId: null, categoryId: null,
+                                         total: double.tryParse(card.totalController.text) ?? 0,
+                                         hasOffer: false)],
                               initialFlatDiscount: _discount,
                               initialPercentageDiscount: _discountPercentage,
                               initialCouponCode: _couponCode,
@@ -1244,6 +1248,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                     shouldApply, {
                                     double? flatDiscount,
                                     double? percentageDiscount,
+                                            coupon,
                                   }) async {
                                     if (shouldApply) {
                                       setState(() {
@@ -1287,7 +1292,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               const Icon(
                                 Icons.discount_outlined,
                                 size: 18,
-                                color: Colors.blue,
+                                color: ColorManager.kBrandBlue,
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -1296,7 +1301,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                   FontWeightManager.medium,
                                   FontSize.s14,
                                   0.14,
-                                  Colors.blue,
+                                  ColorManager.kBrandBlue,
                                 ),
                               ),
                             ],
@@ -1410,6 +1415,10 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                     context: context,
                                     builder: (context) => CouponModal(
                                       subTotal: _netTotal + _totalTax,
+                                      couponLines: [for (final card in _invoiceItemCards)
+                                        (productId: null, categoryId: null,
+                                         total: double.tryParse(card.totalController.text) ?? 0,
+                                         hasOffer: false)],
                                       initialFlatDiscount: _discount,
                                       initialPercentageDiscount:
                                           _discountPercentage,
@@ -1421,6 +1430,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                             shouldApply, {
                                             double? flatDiscount,
                                             double? percentageDiscount,
+                                            coupon,
                                           }) async {
                                             if (shouldApply) {
                                               setState(() {
@@ -1476,7 +1486,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                       const Icon(
                                         Icons.discount_outlined,
                                         size: 18,
-                                        color: Colors.blue,
+                                        color: ColorManager.kBrandBlue,
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
@@ -1485,7 +1495,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                           FontWeightManager.medium,
                                           FontSize.s14,
                                           0.14,
-                                          Colors.blue,
+                                          ColorManager.kBrandBlue,
                                         ),
                                       ),
                                     ],

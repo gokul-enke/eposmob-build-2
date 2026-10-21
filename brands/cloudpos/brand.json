@@ -1,0 +1,21 @@
+{
+  "BRAND_ID": "cloudpos",
+  "BRAND_NAME": "CloudPOS",
+  "BRAND_TITLE": "CLOUDPOS",
+  "BRAND_COMPANY": "com.enke",
+  "BRAND_PRODUCT_NAME": "pos_machine",
+  "BRAND_PUBLISHER": "ENKE",
+  "BRAND_URL": "https://enke.ae/",
+  "BRAND_WEBSITE": "https://cloudposai.com",
+  "BRAND_EXE_NAME": "cloudpos.exe",
+  "BRAND_INSTALLER_NAME": "cloudpos",
+  "BRAND_APP_ID": "5A15344D-601E-49CD-AD46-C2F1C2B21F3D",
+  "BRAND_LOGO_ASSET": "assets/logo/cloudposlogo.png",
+  "BRAND_ICON_ASSET": "assets/logo/cloudpos-icon.png",
+  "BRAND_PRIMARY_COLOR": "0xFF3C92F5",
+  "BRAND_ACCENT_COLOR": "0xFF5B8EE9",
+  "BRAND_SECONDARY_COLOR": "0xFFF5F6FC",
+  "BRAND_BG_LIGHT_COLOR": "0xFFF2F4FC",
+  "BRAND_BG_DARK_COLOR": "0xFFEBEDFA",
+  "BRAND_SPLASH_TEXT_COLOR": "0xFF1967D2"
+}

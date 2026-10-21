@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 
 /// Standard top chrome for mobile bottom sheets: drag handle, optional
 /// thumbnail, title + subtitle, and a close button.
@@ -76,7 +78,7 @@ class MobileSheetHeader extends StatelessWidget {
               if (onClose != null)
                 IconButton(
                   icon: const Icon(Icons.close),
-                tooltip: closeTooltip ?? 'general.close'.tr,
+                  tooltip: closeTooltip ?? 'general.close'.tr,
                   onPressed: onClose,
                 ),
             ],
@@ -100,41 +102,22 @@ class MobileSheetHeader extends StatelessWidget {
   }
 }
 
-/// Builds a square product thumbnail that prefers the primary attachment image
-/// and falls back to an initials avatar. Returns `null` when no thumbnail is
-/// wanted (e.g. callers may pass their own widget to [MobileSheetHeader]).
-Widget? buildProductThumbnail({
-  required String? productName,
-  required List<dynamic>? attachments,
+/// Builds a product/category thumbnail, with an initials avatar as placeholder.
+Widget buildProductThumbnail({
+  required GetProduct product,
   double size = 44,
 }) {
-  String? imageUrl;
-  if (attachments != null && attachments.isNotEmpty) {
-    for (final attachment in attachments) {
-      final path = attachment?.filePath;
-      final isPrimary = attachment?.isPrimary == 1;
-      if (isPrimary && path != null && path.isNotEmpty) {
-        imageUrl = path;
-        break;
-      }
-    }
-    imageUrl ??= attachments.first?.filePath;
-  }
-
-  final initials = _initials(productName ?? '');
+  final initials = _initials(product.productName ?? '');
 
   return ClipRRect(
     borderRadius: BorderRadius.circular(10),
     child: SizedBox(
       width: size,
       height: size,
-      child: (imageUrl != null && imageUrl.isNotEmpty)
-          ? Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _initialsAvatar(initials, size),
-            )
-          : _initialsAvatar(initials, size),
+      child: ProductImage(
+        product: product,
+        placeholder: _initialsAvatar(initials, size),
+      ),
     ),
   );
 }
@@ -142,7 +125,8 @@ Widget? buildProductThumbnail({
 String _initials(String name) {
   final trimmed = name.trim();
   if (trimmed.isEmpty) return '?';
-  final parts = trimmed.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts =
+      trimmed.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts[0].characters.first.toUpperCase();
   return '${parts[0].characters.first}${parts[1].characters.first}'

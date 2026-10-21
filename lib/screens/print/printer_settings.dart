@@ -92,6 +92,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   String _localizedThemeName(Map<String, String> theme) {
     final id = theme['id'] ?? '';
+    // Quotations share the invoice layouts; show a quotation label when one
+    // exists so the dropdown doesn't call them "Tax Invoice".
+    if (selectedSettingsType == 'Quotation') {
+      final quotationKey = 'printer_settings.quotation_theme_$id';
+      final quotationName = quotationKey.tr;
+      if (quotationName != quotationKey) return quotationName;
+    }
     final key = 'printer_settings.theme_$id';
     final translated = key.tr;
     return translated == key ? (theme['name'] ?? id) : translated;

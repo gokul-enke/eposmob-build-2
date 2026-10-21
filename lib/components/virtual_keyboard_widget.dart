@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:virtual_keyboard_custom_layout/virtual_keyboard_custom_layout.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class VirtualKeyboardWidget extends StatefulWidget {
   final TextEditingController controller;
@@ -235,8 +236,8 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
               bodyLarge: TextStyle(fontWeight: FontWeight.w600),
               bodyMedium: TextStyle(fontWeight: FontWeight.w600),
             ),
-            splashColor: Colors.blue.withAlpha(90),
-            highlightColor: Colors.blue.withAlpha(90),
+            splashColor: ColorManager.kBrandBlue.withAlpha(90),
+            highlightColor: ColorManager.kBrandBlue.withAlpha(90),
             // Set canvas color for containers
             canvasColor: Colors.white,
           ),
@@ -407,7 +408,7 @@ class _VirtualKeyboardWidgetState extends State<VirtualKeyboardWidget> {
                                       onPressed:
                                           widget.onConfirm ?? widget.onClose,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue[600],
+                                        backgroundColor: ColorManager.kBrandBlue600,
                                         foregroundColor: Colors.white,
                                         elevation: 1,
                                         shape: RoundedRectangleBorder(
@@ -693,7 +694,7 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.8),
+                        color: ColorManager.kBrandBlue.withOpacity(0.8),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(8),
                           bottomRight: Radius.circular(16),

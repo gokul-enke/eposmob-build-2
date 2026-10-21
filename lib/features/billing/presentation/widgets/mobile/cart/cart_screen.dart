@@ -10,6 +10,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/pos_security_k
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Height of [MobileBottomNav] container plus its SafeArea minimum bottom inset.
 const double kMobileBottomNavClearance = 76;
@@ -204,7 +205,7 @@ class _AddMoreItemsButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: const Color(0xFF2E69C8),
+              color: ColorManager.kBlue2E69C8,
               width: 1.2,
             ),
           ),
@@ -212,13 +213,13 @@ class _AddMoreItemsButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add, color: Color(0xFF2E69C8), size: 18),
+              Icon(Icons.add, color: ColorManager.kBlue2E69C8, size: 18),
               SizedBox(width: 6),
               Text(
                 'Add More Items',
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  color: Color(0xFF2E69C8),
+                  color: ColorManager.kBlue2E69C8,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),

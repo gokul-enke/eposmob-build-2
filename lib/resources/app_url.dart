@@ -26,7 +26,8 @@ class APPUrl {
       '$baseURL/api/v1/category/list-category?type=purchasable';
   static String get getRawCategoryListUrl =>
       '$baseURL/api/v1/category/list-category';
-  static String get viewCategoryListUrl => '$baseURL/api/v1/category-details';
+  static String categoryDetailsBySlug(String slug) =>
+      '$baseURL/api/v1/category/slug/${Uri.encodeComponent(slug)}';
   static String get addCategoryUrl => '$baseURL/api/v1/category/add-category';
   static String get editCategoryUrl => '$baseURL/api/v1/category/edit-category';
   static String get fetchCategoryProps =>
@@ -275,6 +276,7 @@ class APPUrl {
       '$baseURL/api/v1/cart/update-cart-item-status';
   static String get generateBarcode =>
       '$baseURL/api/v1/product/generate-barcode';
+  static String get generateSku => '$baseURL/api/v1/product/generate-sku';
   static String get updateAllOrderItemsStatus =>
       '$baseURL/api/v1/order/update-order-items-status';
 
@@ -286,6 +288,12 @@ class APPUrl {
   static String get companyOverview =>
       '$baseURL/api/v1/dashboard/company-overview';
   static String get ordersGraph => '$baseURL/api/v1/dashboard/orders-graph';
+  static String get ordersWidget => '$baseURL/api/v1/dashboard/orders-widget';
+  static String get latestOrders => '$baseURL/api/v1/dashboard/latest-orders';
+  static String get customerTransactionsSummary =>
+      '$baseURL/api/v1/dashboard/customer-transactions-summary';
+  static String get suppliersGraph => '$baseURL/api/v1/dashboard/suppliers-graph';
+  static String get revenueStats => '$baseURL/api/v1/dashboard/revenue-stats';
   static String get customersGraph =>
       '$baseURL/api/v1/dashboard/customers-graph';
   static String get executivesOverview =>

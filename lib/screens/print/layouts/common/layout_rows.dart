@@ -347,9 +347,10 @@ class MultiLineReceiptTableRow extends ReceiptRow {
   final List<ReceiptTableColumn> columns;
   final int? maxLines;
 
-  // Adjacent RTL labels otherwise touch when both cells align to their edge.
+  // Keep the default RTL gutter, but honor the smaller explicit padding used
+  // by dense thermal tables so their headings have room to fit.
   double _padding(ReceiptTableColumn col) =>
-      math.max(4.0, col.horizontalPadding);
+      col.horizontalPadding > 0 ? math.max(1.5, col.horizontalPadding) : 4.0;
 
   MultiLineReceiptTableRow(this.columns, {this.maxLines = 2});
 

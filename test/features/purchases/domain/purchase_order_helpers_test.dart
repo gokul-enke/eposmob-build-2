@@ -35,6 +35,29 @@ void main() {
     });
   });
 
+  group('purchase order already-received errors', () {
+    test('recognizes the receive endpoint already-received message', () {
+      expect(
+        isAlreadyReceivedPurchaseOrderError({
+          'success': false,
+          'message': 'Item 123 has already been received.',
+        }, 'Item 123 has already been received.'),
+        isTrue,
+      );
+    });
+
+    test('ignores unrelated validation errors', () {
+      expect(
+        isAlreadyReceivedPurchaseOrderError({
+          'errors': {
+            'quantity': ['Invalid quantity'],
+          },
+        }, 'Invalid quantity'),
+        isFalse,
+      );
+    });
+  });
+
   group('purchase order purchase-unit matching', () {
     final box = SaleUnit(id: 1, unitName: 'Box', conversionRate: '12');
     final caseUnit = SaleUnit(id: 2, unitName: 'Case', conversionRate: '12');

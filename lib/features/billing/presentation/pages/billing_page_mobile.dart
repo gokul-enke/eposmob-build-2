@@ -75,6 +75,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
 
+  bool get _skipCheckoutOnConfirm =>
+      !_isQuotationPage &&
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
+
   bool get _skipCheckoutOnConfirmAndPrint {
     if (_isQuotationPage) return false;
     return Provider.of<AppSettingsProvider>(context, listen: false)
@@ -101,6 +106,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
   late final TextEditingController _quotationInlineNameController;
   late final TextEditingController _quotationInlinePhoneController;
+  late final TextEditingController _quotationTermsController;
 
   VoidCallback? _cartChangeListener;
 
@@ -154,6 +160,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     super.initState();
     _quotationInlineNameController = TextEditingController();
     _quotationInlinePhoneController = TextEditingController();
+    _quotationTermsController = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
 
     if (Get.isRegistered<SideBarController>()) {
@@ -546,6 +553,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _tabController.dispose();
     _quotationInlineNameController.dispose();
     _quotationInlinePhoneController.dispose();
+    _quotationTermsController.dispose();
 
     // Remove listeners
     try {
@@ -896,6 +904,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
                 false)
             : _showConfirmOrderButton)) return;
 
+    if (!whatsappReceipt && _skipCheckoutOnConfirm) {
+      billingDebugLog(
+        'SKIP_CHECKOUT_ON_CONFIRM enabled -> direct confirm',
+      );
+      await _controller.prepareDirectConfirmAndPrint(context);
+      if (!mounted) return;
+      setState(() {});
+    }
+
     if (!_isCustomerSatisfiedForCheckout()) {
       showScaffoldError(
           context: context, message: BillingMobileErrorMessages.selectCustomer);
@@ -1047,6 +1064,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         expiryDate: _quotationExpiryDate,
         inlineCustomerName: _quotationInlineNameController.text,
         inlineCustomerPhone: _quotationInlinePhoneController.text,
+        terms: _quotationTermsController.text,
       );
       if (!mounted) return;
 
@@ -1073,6 +1091,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _quotationExpiryDate = now.add(const Duration(days: 30));
         _quotationInlineNameController.clear();
         _quotationInlinePhoneController.clear();
+        _quotationTermsController.clear();
       });
       setState(() {
         _controller.clearCartData(context);
@@ -1292,6 +1311,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                           _quotationInlineNameController,
                       quotationInlinePhoneController:
                           _quotationInlinePhoneController,
+                      quotationTermsController: _quotationTermsController,
                       onQuotationInlineCustomerChanged:
                           _handleQuotationInlineCustomerChanged,
                       isSavingOrder: _isSavingOrder,

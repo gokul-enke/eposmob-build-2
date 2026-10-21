@@ -502,9 +502,9 @@ class _BuildMultiSelectDropDownWithSearchState<T>
               children: widget.selectedItems.map((item) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: ColorManager.kBrandBlue50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.blue.shade200),
+                    border: Border.all(color: ColorManager.kBrandBlue200),
                   ),
                   child: IntrinsicWidth(
                     child: Row(
@@ -517,7 +517,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
                             widget.displayText(item),
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.blue.shade800,
+                              color: ColorManager.kBrandBlue800,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -529,7 +529,7 @@ class _BuildMultiSelectDropDownWithSearchState<T>
                             child: Icon(
                               Icons.close,
                               size: 14,
-                              color: Colors.blue.shade600,
+                              color: ColorManager.kBrandBlue600,
                             ),
                           ),
                         ),
@@ -794,13 +794,13 @@ class _MultiSelectDropdownOverlayState<T>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: ColorManager.kBrandBlue50,
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(7),
                         bottomRight: Radius.circular(7),
                       ),
                       border: Border(
-                        top: BorderSide(color: Colors.blue.withOpacity(0.2)),
+                        top: BorderSide(color: ColorManager.kBrandBlue.withOpacity(0.2)),
                       ),
                     ),
                     child: Row(
@@ -810,7 +810,7 @@ class _MultiSelectDropdownOverlayState<T>
                           "${widget.selectedItems.length} item${widget.selectedItems.length != 1 ? 's' : ''} selected",
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.blue.shade800,
+                            color: ColorManager.kBrandBlue800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -823,7 +823,7 @@ class _MultiSelectDropdownOverlayState<T>
                             'general.clear_all'.tr,
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.blue.shade600,
+                              color: ColorManager.kBrandBlue600,
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
                             ),
@@ -854,7 +854,7 @@ class _MultiSelectDropdownOverlayState<T>
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.blue.shade600,
+                  ColorManager.kBrandBlue600,
                 ),
               ),
             ),
@@ -991,7 +991,7 @@ class _MultiSelectDropdownItemState<T>
           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
             color: isHighlighted
-                ? Colors.blue.shade50
+                ? ColorManager.kBrandBlue50
                 : widget.isSelected
                     ? Colors.green.shade50
                     : Colors.white,
@@ -999,7 +999,7 @@ class _MultiSelectDropdownItemState<T>
             border: widget.isSelected
                 ? Border.all(color: Colors.green.shade200)
                 : isHighlighted
-                    ? Border.all(color: Colors.blue.shade200)
+                    ? Border.all(color: ColorManager.kBrandBlue200)
                     : null,
           ),
           child: Padding(
@@ -1040,7 +1040,7 @@ class _MultiSelectDropdownItemState<T>
                       color: widget.isSelected
                           ? Colors.green.shade800
                           : isHighlighted
-                              ? Colors.blue.shade800
+                              ? ColorManager.kBrandBlue800
                               : Colors.black87,
                       fontWeight: widget.isSelected || isHighlighted
                           ? FontWeight.w600

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
@@ -153,6 +155,15 @@ class CheckoutService {
     final storeId = Provider.of<StoreSessionProvider>(context, listen: false)
         .activeStore
         ?.storeId;
+    final deliveryCharge = resolveDeliveryCharge(context);
+    final grandTotal = BillingTotals.effectiveOrderTotal(
+      baseTotal: priceSummary.netTotal,
+      deliveryCharge: deliveryCharge,
+      priceRoundOff: Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.priceRoundOff ==
+          true,
+    );
     return OrderSubmissionPayload(
       items: localProducts.buildOrderItemsPayload(),
       clientSaleId: receiptIdentity.clientSaleId,
@@ -166,10 +177,8 @@ class CheckoutService {
       paymentMethods: billingProvider.getSelectedPaymentMethodsForApi(),
       paidMethods: billingProvider.getPaidMethods(),
       balanceAmount: billingProvider.balanceAmount.toString(),
-      couponId: billingProvider.isCouponApplied &&
-              billingProvider.coupenCodeTextController.text.trim().isNotEmpty
-          ? billingProvider.coupenCodeTextController.text.trim()
-          : null,
+      couponId: localProducts.appliedCoupon?.id.toString(),
+      couponCode: billingProvider.isCouponApplied ? billingProvider.coupenCodeTextController.text.trim() : null,
       comment: billingProvider.commentController.text.trim().isNotEmpty
           ? billingProvider.commentController.text.trim()
           : null,
@@ -183,8 +192,10 @@ class CheckoutService {
       deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
       deliveryTime: billingProvider.deliveryTime,
       flatDiscount: priceSummary.flatDiscount,
-      percentageDiscount: priceSummary.percentageDiscount,
+      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary.discount,
+      grandTotal: grandTotal,
+      roundOff: grandTotal - priceSummary.netTotal - deliveryCharge,
       toCustomerCredit: billingProvider.toCustomerCreditEnabled,
       creditSaleAmount: billingProvider.creditSaleAmount,
       address: billingProvider.orderAddress.trim().isNotEmpty
@@ -297,6 +308,7 @@ class CheckoutService {
     if (!await SubscriptionActionGuard.ensureOrderSubmissionAllowed(context)) {
       return null;
     }
+    if (!ensureCouponValidForCheckout(context, localProducts)) return null;
     if (!_validateFinalCheckout(
       billingProvider: billingProvider,
       showErrors: true,

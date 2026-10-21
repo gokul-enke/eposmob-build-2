@@ -14,7 +14,7 @@ abstract final class WeighUiColors {
   static const heading = Color(0xFF202223);
   static const body = Color(0xFF4A4A4A);
   static const muted = Color(0xFF6D7175);
-  static const softBlue = Color(0xFFEBF3FF);
+  static const softBlue = ColorManager.kBlueEBF3FF;
   static const softGreen = Color(0xFFE3F1DF);
   static const green = Color(0xFF2C6E49);
   static const softAmber = Color(0xFFFFF4E0);

@@ -10,13 +10,15 @@
 #include "utils.h"
 #include "startup_window.h"
 #include "app_restart.h"
+#include "brand_config.h"
 
 namespace {
 
 // Session-scoped, so two Windows users on the same machine (or two RDP
-// sessions) can still each run their own till.
+// sessions) can still each run their own till. Per brand, so two brands can
+// run side by side: each has its own data folder.
 constexpr wchar_t kSingleInstanceMutexName[] =
-    L"Local\\CLOUDPOS.EposMob.SingleInstance";
+    L"Local\\" BRAND_INSTANCE_KEY L".EposMob.SingleInstance";
 
 // The window class every Flutter Windows runner registers. Matching on the
 // class alone would also match other Flutter apps, so we additionally require
@@ -46,13 +48,13 @@ BOOL CALLBACK FindExistingInstanceWindow(HWND hwnd, LPARAM lparam) {
   // During engine startup the real runner exists but has not painted. Focus
   // the visible splash instead; never reveal a blank runner prematurely.
   if (!::IsWindowVisible(hwnd) &&
-      ::GetPropW(hwnd, L"CLOUDPOS.ReadyWindow") == nullptr) return TRUE;
+      ::GetPropW(hwnd, BRAND_INSTANCE_KEY L".ReadyWindow") == nullptr) return TRUE;
 
   wchar_t class_name[256];
   if (::GetClassNameW(hwnd, class_name, ARRAYSIZE(class_name)) == 0) {
     return TRUE;
   }
-  const bool cloudpos_window = ::GetPropW(hwnd, L"CLOUDPOS.ApplicationWindow") != nullptr;
+  const bool cloudpos_window = ::GetPropW(hwnd, BRAND_INSTANCE_KEY L".ApplicationWindow") != nullptr;
   if (!cloudpos_window && ::wcscmp(class_name, kFlutterWindowClassName) != 0) {
     return TRUE;
   }
@@ -134,7 +136,7 @@ void PromptVCRuntimeInstall() {
       L"Redistributable to run.\n\n"
       L"Would you like to open the download page to install it?\n\n"
       L"After installing, please restart the application.",
-      L"CLOUDPOS - Missing Dependency",
+      BRAND_TITLE L" - Missing Dependency",
       MB_YESNO | MB_ICONWARNING);
 
   if (result == IDYES) {
@@ -181,10 +183,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         if (!focused) ::Sleep(100);
       }
       if (!focused) {
-        MessageBoxW(nullptr, L"CloudPOS is already starting or running.\n\n"
+        MessageBoxW(nullptr, BRAND_NAME L" is already starting or running.\n\n"
             L"We couldn't bring its window forward. Wait a moment and try "
-            L"opening CloudPOS again. If this continues, contact support.",
-            L"CLOUDPOS", MB_OK | MB_ICONINFORMATION);
+            L"opening " BRAND_NAME L" again. If this continues, contact support.",
+            BRAND_TITLE, MB_OK | MB_ICONINFORMATION);
       }
       if (single_instance_mutex != nullptr) {
         ::CloseHandle(single_instance_mutex);
@@ -211,7 +213,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project, &startup);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"CLOUDPOS", origin, size)) {
+  if (!window.Create(BRAND_TITLE, origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Quotation date pickers and inline new-customer fields for mobile quotation
 /// billing. Mirrors desktop checkout modal `_buildQuotationDatesPanel`.
@@ -16,6 +17,10 @@ class QuotationCheckoutSection extends StatefulWidget {
   final VoidCallback onInlineCustomerChanged;
   final VoidCallback? onSelectCustomer;
 
+  /// Quotation terms; printed instead of the document configuration terms
+  /// when filled in.
+  final TextEditingController? termsController;
+
   const QuotationCheckoutSection({
     super.key,
     required this.quotationDate,
@@ -26,6 +31,7 @@ class QuotationCheckoutSection extends StatefulWidget {
     required this.inlinePhoneController,
     required this.onInlineCustomerChanged,
     this.onSelectCustomer,
+    this.termsController,
   });
 
   @override
@@ -168,6 +174,17 @@ class _QuotationCheckoutSectionState extends State<QuotationCheckoutSection> {
               ),
             ],
           ),
+          if (widget.termsController != null) ...[
+            const SizedBox(height: 12),
+            _InlineField(
+              label: 'checkout_modal.label_quotation_terms'.tr,
+              controller: widget.termsController!,
+              hintText: 'checkout_modal.hint_quotation_terms'.tr,
+              keyboardType: TextInputType.multiline,
+              minLines: 2,
+              maxLines: 4,
+            ),
+          ],
         ],
       ),
     );
@@ -180,6 +197,8 @@ class _InlineField extends StatelessWidget {
   final String hintText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final int minLines;
+  final int maxLines;
 
   const _InlineField({
     required this.label,
@@ -187,6 +206,8 @@ class _InlineField extends StatelessWidget {
     required this.hintText,
     this.keyboardType,
     this.onChanged,
+    this.minLines = 1,
+    this.maxLines = 1,
   });
 
   @override
@@ -207,6 +228,8 @@ class _InlineField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          minLines: minLines,
+          maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hintText,
             isDense: true,
@@ -214,11 +237,11 @@ class _InlineField extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F3)),
+              borderSide: const BorderSide(color: ColorManager.kBlueDDE7F3),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F3)),
+              borderSide: const BorderSide(color: ColorManager.kBlueDDE7F3),
             ),
           ),
         ),
@@ -263,12 +286,12 @@ class _DateField extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFDDE7F3)),
+                border: Border.all(color: ColorManager.kBlueDDE7F3),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.calendar_today_outlined,
-                      size: 16, color: Color(0xFF2563EB)),
+                      size: 16, color: ColorManager.kBlue2563EB),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

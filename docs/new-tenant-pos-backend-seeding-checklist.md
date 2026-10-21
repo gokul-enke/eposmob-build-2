@@ -468,6 +468,7 @@ The following is the conservative Retail Starter seed.
 | `KOT_BILL_ALLOWED_FOR_DINE_IN` | `false` | `""` | Restaurant feature | Allows KOT + Bill for table orders. |
 | `PINELAB_PAYMENT` | `false` | `""` | Terminal feature | Requires `ONLINE` payment behavior and device integration. |
 | `SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT` | `false` | `""` | Recommended initial value | Keep false until defaults are proven. |
+| `SKIP_CHECKOUT_ON_CONFIRM` | `false` | `""` | Recommended initial value | Plain Confirm Order uses defaults without checkout; independent of Confirm & Print. |
 | `COMPULSORY_DAY_CLOSE_REGISTER` | `false` | `""` | Feature | Adds pending day-close dependency. |
 | `PRODUCT_VARIANT_ENABLED` | `false` | `""` | Feature | Requires complete variant and variant-stock data. |
 | `MULTI_SALE_UNIT_ENABLED` | `true` | `""` | Feature | Requires complete sale-unit conversion and pricing. |
@@ -514,6 +515,7 @@ Replace placeholders before seeding:
     {"code":"KOT_BILL_ALLOWED_FOR_DINE_IN","status":false,"value":""},
     {"code":"PINELAB_PAYMENT","status":false,"value":""},
     {"code":"SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT","status":false,"value":""},
+    {"code":"SKIP_CHECKOUT_ON_CONFIRM","status":false,"value":""},
     {"code":"COMPULSORY_DAY_CLOSE_REGISTER","status":false,"value":""},
     {"code":"PRODUCT_VARIANT_ENABLED","status":false,"value":""},
     {"code":"MULTI_SALE_UNIT_ENABLED","status":true,"value":""},

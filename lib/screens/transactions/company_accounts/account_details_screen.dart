@@ -278,7 +278,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                             ? Colors.green
                             : account.accountStatus.toLowerCase() == 'debit'
                                 ? Colors.red
-                                : Colors.blue,
+                                : ColorManager.kBrandBlue,
                         size: 18,
                       ),
                       const SizedBox(width: 6),
@@ -614,13 +614,13 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: ColorManager.kBrandBlue.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text.toUpperCase(),
         style: const TextStyle(
-          color: Colors.blue,
+          color: ColorManager.kBrandBlue,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
@@ -690,8 +690,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       backgroundColor = Colors.red.withOpacity(0.1);
       textColor = Colors.red;
     } else {
-      backgroundColor = Colors.blue.withOpacity(0.1);
-      textColor = Colors.blue;
+      backgroundColor = ColorManager.kBrandBlue.withOpacity(0.1);
+      textColor = ColorManager.kBrandBlue;
     }
 
     return Center(

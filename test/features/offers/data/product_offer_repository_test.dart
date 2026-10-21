@@ -153,11 +153,12 @@ void main() {
     expect(timers, isEmpty);
   });
 
-  test('turning POS_OFFERS on downloads offers, then syncs deltas', () async {
+  test('every refresh downloads the full catalog and removes absent offers',
+      () async {
     final urls = <Uri>[];
     final repo = repository([
       http.Response(body(), 200),
-      http.Response(body(offerIds: [], removed: [9]), 200),
+      http.Response(body(offerIds: []), 200),
     ], urls);
 
     await repo.applySetting(enabled: true, storeId: 1);
@@ -165,7 +166,7 @@ void main() {
     expect(repo.catalog.offers.keys, [9]);
 
     expect(await repo.refresh(), isTrue);
-    expect(urls.last.queryParameters['since'], '2026-10-06T12:00:00.000Z');
+    expect(urls.last.queryParameters.containsKey('since'), isFalse);
     expect(repo.catalog.offers, isEmpty);
   });
 
@@ -197,6 +198,22 @@ void main() {
     expect(restarted.catalog.offers.keys, [9]);
   });
 
+  test('settings refresh recovers an enabled empty cache with a stale cursor',
+      () async {
+    await const ProductOfferCache().save(
+      ProductOfferCatalog(enabled: true, storeId: 1, lastSyncedAt: now),
+      tenant: ProductOfferCache.tenantFingerprint('tenant'),
+    );
+    final urls = <Uri>[];
+    final repo = repository([
+      http.Response(body(offerIds: [28]), 200)
+    ], urls);
+    await repo.applySetting(enabled: true, storeId: 1);
+    expect(urls.single.queryParameters.containsKey('since'), isFalse);
+    expect(repo.catalog.offers.keys, [28]);
+    repo.dispose();
+  });
+
   test('the cache survives closing and reopening the Hive box', () async {
     final urls = <Uri>[];
     final repo = repository([http.Response(body(), 200)], urls);
@@ -211,6 +228,103 @@ void main() {
     expect(restarted.catalog.lastSyncedAt, now);
   });
 
+  test('every refresh repairs a populated cache missing unchanged offers',
+      () async {
+    final initial = repository([http.Response(body(), 200)], <Uri>[]);
+    await initial.applySetting(enabled: true, storeId: 1);
+    initial.dispose();
+
+    final urls = <Uri>[];
+    final restarted = repository([
+      http.Response(body(offerIds: [9, 28]), 200),
+      http.Response(body(offerIds: [9, 28]), 200),
+    ], urls);
+    await restarted.loadCached();
+    expect(restarted.catalog.offers.keys, [9]);
+    await restarted.refresh();
+    expect(urls.first.queryParameters.containsKey('since'), isFalse);
+    expect(restarted.catalog.offers.keys, [9, 28]);
+    // Simulate losing one entry during this session, while the cursor and
+    // another offer survive. Ordinary refresh must recover the missing rule.
+    restarted.debugSetCatalog(restarted.catalog.copyWith(offers: {
+      9: restarted.catalog.offers[9]!,
+    }));
+    await restarted.refresh();
+    expect(urls.last.queryParameters.containsKey('since'), isFalse);
+    expect(restarted.catalog.offers.keys, [9, 28]);
+    restarted.dispose();
+  });
+
+  test('automatic refresh rebuilds an empty cache without a settings fetch',
+      () async {
+    final urls = <Uri>[];
+    final repo = repository([
+      http.Response(body(), 200),
+      http.Response(body(offerIds: [], removed: [9]), 200),
+      http.Response('unavailable', 503),
+      http.Response(body(offerIds: [28]), 200),
+      http.Response(body(offerIds: [28]), 200),
+    ], urls);
+    await repo.applySetting(enabled: true, storeId: 1);
+    await repo.refresh();
+    expect(repo.catalog.offers, isEmpty);
+    expect(repo.catalog.lastSyncedAt, now);
+    expect(await repo.refresh(), isFalse);
+    expect(urls[2].queryParameters.containsKey('since'), isFalse);
+    await until(() => timers.isNotEmpty);
+    timers.single.fire();
+    await until(() => repo.catalog.offers.containsKey(28));
+    expect(urls[3].queryParameters.containsKey('since'), isFalse);
+    await repo.refresh();
+    expect(urls.last.queryParameters.containsKey('since'), isFalse);
+    expect(repo.catalog.offers.keys, [28]);
+    repo.dispose();
+  });
+
+  test('returning to a cached store rebuilds its offer baseline', () async {
+    final urls = <Uri>[];
+    final repo = repository([
+      http.Response(body(), 200),
+      http.Response(body(offerIds: [10]), 200),
+      http.Response(body(offerIds: [9, 28]), 200),
+    ], urls);
+    await repo.applySetting(enabled: true, storeId: 1);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('active_store_id', 2);
+    await repo.applySetting(enabled: true, storeId: 2);
+    expect(repo.catalog.offers.keys, [10]);
+    await prefs.setInt('active_store_id', 1);
+    await repo.refresh();
+    expect(urls.last.queryParameters['store_id'], '1');
+    expect(urls.last.queryParameters.containsKey('since'), isFalse);
+    expect(repo.catalog.offers.keys, [9, 28]);
+    repo.dispose();
+  });
+
+  test('failed startup rebuild retains cached prices and retries the full list',
+      () async {
+    final initial = repository([http.Response(body(), 200)], <Uri>[]);
+    await initial.applySetting(enabled: true, storeId: 1);
+    initial.dispose();
+
+    final urls = <Uri>[];
+    final restarted = repository([
+      http.Response('unavailable', 503),
+      http.Response(body(offerIds: [9, 28]), 200),
+    ], urls);
+    await restarted.loadCached();
+    expect(await restarted.refresh(), isFalse);
+    expect(restarted.catalog.offers.keys, [9]);
+    expect(restarted.catalog.lastSyncedAt, now);
+    await until(() => timers.isNotEmpty);
+    timers.single.fire();
+    await until(() => restarted.catalog.offers.containsKey(28));
+    expect(urls, hasLength(2));
+    expect(
+        urls.every((url) => !url.queryParameters.containsKey('since')), isTrue);
+    restarted.dispose();
+  });
+
   test('a failed sync keeps the cached offers and reports false', () async {
     final urls = <Uri>[];
     final repo = repository([
@@ -223,7 +337,9 @@ void main() {
     expect(repo.catalog.offers.keys, [9]);
   });
 
-  test('a missing endpoint does not retry automatically and manual sync can recover', () async {
+  test(
+      'a missing endpoint does not retry automatically and manual sync can recover',
+      () async {
     final urls = <Uri>[];
     final repo = repository([
       http.Response('Not found', 404),
@@ -237,7 +353,9 @@ void main() {
     repo.dispose();
   });
 
-  test('identical offer sync advances cursor without notifying pricing listeners', () async {
+  test(
+      'identical offer sync advances cursor without notifying pricing listeners',
+      () async {
     final urls = <Uri>[];
     final repo = repository([
       http.Response(body(), 200),
@@ -249,7 +367,8 @@ void main() {
     repo.addListener(() => notifications++);
     expect(await repo.refresh(), true);
     expect(notifications, 0);
-    expect(repo.catalog.lastSyncedAt, now.add(const Duration(milliseconds: 500)));
+    expect(
+        repo.catalog.lastSyncedAt, now.add(const Duration(milliseconds: 500)));
     expect(await repo.refresh(), true);
     expect(notifications, 1);
     repo.dispose();
@@ -612,7 +731,8 @@ void main() {
     );
   });
 
-  test('a stale missing endpoint does not suppress the new session retry', () async {
+  test('a stale missing endpoint does not suppress the new session retry',
+      () async {
     final oldResponse = Completer<http.Response>();
     final newResponse = Completer<http.Response>();
     var requests = 0;

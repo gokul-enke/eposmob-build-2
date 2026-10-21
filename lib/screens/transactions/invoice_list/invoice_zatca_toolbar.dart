@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// ZATCA bulk-sync bar above the invoice table: Sync ALL / Failed / Not
 /// sent / Selected on the left, the selection count with Select page and
@@ -53,10 +54,10 @@ class InvoiceZatcaToolbar extends StatelessWidget {
       runSpacing: AppSpacing.sm,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _sync('all', 'invoice.sync_all_button'.tr, Colors.blueAccent),
+        _sync('all', 'invoice.sync_all_button'.tr, ColorManager.kBrandBlueAccent),
         _sync('failed', 'invoice.sync_failed_button'.tr, Colors.redAccent),
         _sync('not_sent', 'invoice.sync_not_send_button'.tr, Colors.orange),
-        _sync('selected', 'invoice.sync_selected_button'.tr, Colors.blueAccent),
+        _sync('selected', 'invoice.sync_selected_button'.tr, ColorManager.kBrandBlueAccent),
       ],
     );
     final selectionActions = Wrap(

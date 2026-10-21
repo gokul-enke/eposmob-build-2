@@ -548,90 +548,61 @@ class GridSelectionProvider extends ChangeNotifier {
     }
   }
 
-  //          *********************** GENERATE BARCODE API ***************************************************
+  //          *********************** GENERATE BARCODE / SKU API ***************************************************
 
+  /// `{status: success, data: {barcode: ...}}` from the barcode generator, or
+  /// `{status: failed, message: ...}` when the request fails.
   Future<Map<String, dynamic>?> generateBarcodeAPI(
-      {required String accessToken}) async {
-    // Debug: Print request details
-    debugPrint('=== GENERATE BARCODE API REQUEST ===');
-    debugPrint('URL: ${APPUrl.generateBarcode}');
-    debugPrint('Method: GET');
-    debugPrint(
-        'Access Token: ${accessToken.isNotEmpty ? "Present" : "Missing"}');
-    debugPrint('==========================================');
+          {required String accessToken}) =>
+      _generateProductCodeAPI(
+          url: APPUrl.generateBarcode, accessToken: accessToken);
 
+  /// `{status: success, data: {sku: ...}}` from the SKU generator, or
+  /// `{status: failed, message: ...}` when the request fails.
+  Future<Map<String, dynamic>?> generateSkuAPI({required String accessToken}) =>
+      _generateProductCodeAPI(url: APPUrl.generateSku, accessToken: accessToken);
+
+  /// A new SKU from the backend, or null when it could not be generated.
+  Future<String?> generateSku({required String accessToken}) async {
+    final result = await generateSkuAPI(accessToken: accessToken);
+    final data = result?['data'];
+    final sku = data is Map ? data['sku']?.toString().trim() ?? '' : '';
+    return result?['status'] == 'success' && sku.isNotEmpty ? sku : null;
+  }
+
+  /// Shared GET for the product code generators, scoped to the active store.
+  Future<Map<String, dynamic>?> _generateProductCodeAPI(
+      {required String url, required String accessToken}) async {
     final Map<String, dynamic> error = {
       'status': "failed",
       'message': "Something went wrong, Please try Again!"
     };
 
-    // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('=== API KEY ERROR ===');
-      debugPrint('API key not found in SharedPreferences');
-      debugPrint('=====================');
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Build URL with store_id parameter
-    final Map<String, String> queryParams = {};
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-    final url = Uri.parse(APPUrl.generateBarcode)
-        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-
-    // Debug: Print headers
-    Map<String, String> headers = {
-      'Authorization': 'Bearer $accessToken',
-      'Content-Type': 'application/json',
-      'X-Tenant': apiKey,
-    };
-    debugPrint('Headers: $headers');
+    final uri = Uri.parse(url).replace(
+        queryParameters: activeStoreId == null
+            ? null
+            : {'store_id': activeStoreId.toString()});
 
     try {
-      final response = await http.get(url, headers: headers);
-
-      // Debug: Print response details
-      debugPrint('=== GENERATE BARCODE API RESPONSE ===');
-      debugPrint('Status Code: ${response.statusCode}');
-      debugPrint('Response Headers: ${response.headers}');
-      debugPrint('Response Body: ${response.body}');
-      debugPrint('=======================================');
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-
-        // Debug: Print parsed response data
-        debugPrint('=== PARSED RESPONSE DATA ===');
-        debugPrint('Full Response: $responseData');
-        debugPrint('Status: ${responseData['status']}');
-        debugPrint('Message: ${responseData['message']}');
-        debugPrint('Data: ${responseData['data']}');
-
-        if (responseData['data'] != null &&
-            responseData['data']['barcode'] != null) {
-          debugPrint('Generated Barcode: ${responseData['data']['barcode']}');
-        }
-        debugPrint('============================');
-
-        return responseData;
-      } else {
-        debugPrint('=== HTTP ERROR ===');
-        debugPrint('Status Code: ${response.statusCode}');
-        debugPrint('Response Body: ${response.body}');
-        debugPrint('==================');
-        return error;
-      }
+      final response = await http.get(uri, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      });
+      debugPrint('Generate code ${uri.path}: ${response.statusCode}');
+      if (response.statusCode != 200) return error;
+      final decoded = json.decode(response.body);
+      return decoded is Map<String, dynamic> ? decoded : error;
     } catch (e) {
-      debugPrint('=== EXCEPTION ERROR ===');
-      debugPrint('Exception Type: ${e.runtimeType}');
-      debugPrint('Exception Message: ${e.toString()}');
-      debugPrint('======================');
+      debugPrint('Generate code ${uri.path} failed: ${e.runtimeType}');
       return error;
     }
   }
@@ -644,6 +615,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String sellingPrice,
     required String mrp,
     required String quantity,
+    int? supplierId,
     required String unit,
     required String barcode,
     required String accessToken,
@@ -653,6 +625,7 @@ class GridSelectionProvider extends ChangeNotifier {
     List<Map<String, dynamic>>? variants,
     String? conversionRateBase,
     String? itemCode,
+    String? sku,
     String? minMarginPercentage,
     String? minMarginPrice,
   }) async {
@@ -668,8 +641,17 @@ class GridSelectionProvider extends ChangeNotifier {
       'conversion_rate_base': num.parse(conversionRateBase ?? '1'),
     };
 
+    if (supplierId != null) {
+      apiBodyData['supplier_id'] = supplierId;
+    }
+
     if (itemCode != null && itemCode.isNotEmpty) {
       apiBodyData['item_code'] = itemCode;
+    }
+
+    final trimmedSku = sku?.trim() ?? '';
+    if (trimmedSku.isNotEmpty) {
+      apiBodyData['sku'] = trimmedSku;
     }
 
     if (minMarginPercentage != null && minMarginPercentage.isNotEmpty) {
@@ -714,6 +696,9 @@ class GridSelectionProvider extends ChangeNotifier {
       final response =
           await http.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
+        // Laravel then reports errors as JSON (with a message) instead of an
+        // HTML error page.
+        'Accept': 'application/json',
         'Authorization': 'Bearer $accessToken',
         'X-Tenant': apiKey,
       });

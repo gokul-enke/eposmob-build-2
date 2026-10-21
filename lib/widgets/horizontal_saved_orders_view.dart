@@ -429,7 +429,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                             .printSavedOrder(context, order);
                       },
                       icon: const Icon(Icons.print, size: 20),
-                      color: Colors.blue,
+                      color: ColorManager.kBrandBlue,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),

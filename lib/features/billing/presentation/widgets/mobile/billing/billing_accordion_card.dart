@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class BillingAccordionCard extends StatefulWidget {
   final String title;
@@ -78,7 +79,7 @@ class _BillingAccordionCardState extends State<BillingAccordionCard> {
                         fontFamily: 'Poppins',
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0066CC),
+                        color: ColorManager.kBlue0066CC,
                         letterSpacing: 0.1,
                       ),
                     ),

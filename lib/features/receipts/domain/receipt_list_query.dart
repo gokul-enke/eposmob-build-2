@@ -5,6 +5,7 @@ class ReceiptListQuery {
   const ReceiptListQuery(
       {this.name = '',
       this.receiptNumber = '',
+      this.orderNumber = '',
       this.paymentReference = '',
       this.phone = '',
       this.email = '',
@@ -14,6 +15,7 @@ class ReceiptListQuery {
       this.paymentMethod});
   final String name,
       receiptNumber,
+      orderNumber,
       paymentReference,
       phone,
       email,
@@ -21,8 +23,16 @@ class ReceiptListQuery {
       toDate;
   final String? status, paymentMethod;
   bool get isActive =>
-      [name, receiptNumber, paymentReference, phone, email, fromDate, toDate]
-          .any((value) => value.isNotEmpty) ||
+      [
+        name,
+        receiptNumber,
+        orderNumber,
+        paymentReference,
+        phone,
+        email,
+        fromDate,
+        toDate
+      ].any((value) => value.isNotEmpty) ||
       status != null ||
       paymentMethod != null;
 }
@@ -75,12 +85,23 @@ List<Receipt> matchReceiptList(
   String? filterPaymentMethod,
   String? filterPhone,
   String? filterEmail,
+  String? filterOrderNumber,
 }) {
   bool contains(String value, String? filter) {
     final normalized = normalizeReceiptFilter(filter);
     return normalized == null ||
         value.toLowerCase().contains(normalized.toLowerCase());
   }
+
+  // Order / offline receipt numbers match like the backend's number search:
+  // partial, ignoring spaces and letter case.
+  String compact(String value) =>
+      value.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+  final orderFilter = normalizeReceiptFilter(filterOrderNumber);
+  bool matchesOrder(Receipt r) =>
+      orderFilter == null ||
+      [...r.orderNumbers, ...r.offlineReceiptNumbers]
+          .any((n) => compact(n).contains(compact(orderFilter)));
 
   bool equal(String value, String? filter) {
     final normalized = normalizeReceiptFilter(filter);
@@ -92,6 +113,7 @@ List<Receipt> matchReceiptList(
       .where((r) =>
           contains(r.customer.user.name, filterName) &&
           contains(r.receiptNumber, filterReceiptNumber) &&
+          matchesOrder(r) &&
           contains(r.paymentReference, filterPaymentReference) &&
           contains(r.customer.user.phone, filterPhone) &&
           contains(r.customer.user.email, filterEmail) &&

@@ -162,8 +162,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
             title: widget.product.productName ?? 'billing.select_variant'.tr,
             subtitle: 'billing.choose_variant_to_cart'.tr,
             thumbnail: buildProductThumbnail(
-              productName: widget.product.productName,
-              attachments: widget.product.attachment,
+              product: widget.product,
             ),
             onClose: () => Navigator.pop(context),
           ),

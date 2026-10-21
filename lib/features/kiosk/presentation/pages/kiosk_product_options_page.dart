@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/kiosk/presentation/models/kiosk_order_draft.dart';
 import 'package:pos_machine/features/kiosk/presentation/theme/kiosk_design_system.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_flow_scaffold.dart';
@@ -324,7 +324,6 @@ class _CompactProductSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
     final description = product.description?.toString().trim() ?? '';
 
     return KioskSurfaceCard(
@@ -339,14 +338,10 @@ class _CompactProductSummary extends StatelessWidget {
               height: 116,
               child: ColoredBox(
                 color: const Color(0xFFF3F6FA),
-                child: imageUrl == null
-                    ? const _ProductImageFallback()
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const _ProductImageFallback(),
-                      ),
+                child: ProductImage(
+                  product: product,
+                  placeholder: const _ProductImageFallback(),
+                ),
               ),
             ),
           ),
@@ -533,7 +528,6 @@ class _ProductOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
     final description = product.description?.toString().trim() ?? '';
 
     return KioskSurfaceCard(
@@ -548,21 +542,14 @@ class _ProductOverview extends StatelessWidget {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               child: ColoredBox(
                 color: const Color(0xFFF7F9FC),
-                child: imageUrl == null
-                    ? const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 78,
-                        color: ColorManager.kGreyColor,
-                      )
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.broken_image_outlined,
-                          size: 72,
-                          color: ColorManager.kGreyColor,
-                        ),
-                      ),
+                child: ProductImage(
+                  product: product,
+                  placeholder: const Icon(
+                    Icons.inventory_2_outlined,
+                    size: 78,
+                    color: ColorManager.kGreyColor,
+                  ),
+                ),
               ),
             ),
           ),

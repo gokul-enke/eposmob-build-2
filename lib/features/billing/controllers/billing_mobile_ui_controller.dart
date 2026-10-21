@@ -22,6 +22,7 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Consistent user-facing error and recovery copy for mobile billing flows.
 class BillingMobileErrorMessages {
@@ -1074,7 +1075,7 @@ class BillingMobileCouponController {
   ({String flat, String percent}) fieldValuesForSelectedDiscount(
     DiscountData discount,
   ) {
-    final isPercentage = discount.discountType.toLowerCase() == 'percent';
+    final isPercentage = ['percent', 'percentage'].contains(discount.discountType.toLowerCase());
     final value = formatDiscountFieldValue(discount.discountValue.toDouble());
     if (isPercentage) {
       return (flat: '', percent: value);
@@ -1083,6 +1084,7 @@ class BillingMobileCouponController {
   }
 
   double originalSubTotal(LocalProductProvider localProductProvider) {
+    localProductProvider.cartTotal;
     return localProductProvider.priceSummary?.originalSubTotal ??
         localProductProvider.cartTotal;
   }
@@ -1200,7 +1202,7 @@ class BillingMobileCouponController {
       percentageDiscountText: percentageDiscountText,
       originalSubTotal: subTotal,
     );
-    if (!inputValidation.isValid) {
+    if (selectedDiscount == null && !inputValidation.isValid) {
       return MobileApplyDiscountResult.failure(inputValidation.errorMessage);
     }
 
@@ -1215,6 +1217,10 @@ class BillingMobileCouponController {
       );
       if (!couponValidation.isValid) {
         return MobileApplyDiscountResult.failure(couponValidation.errorMessage);
+      }
+      final evaluation = localProductProvider.evaluateCoupon(selectedDiscount);
+      if (!evaluation.isValid) {
+        return MobileApplyDiscountResult.failure(evaluation.error);
       }
     }
 
@@ -1234,13 +1240,14 @@ class BillingMobileCouponController {
     localProductProvider.applyDiscount(
       flatDiscount: amounts.flat,
       percentageDiscount: amounts.percent,
+      coupon: selectedDiscount,
     );
 
     if (selectedDiscount != null) {
       billingProvider.setCouponApplied(
         true,
         code: selectedDiscount.couponCode,
-        discount: amounts.flat > 0 ? amounts.flat : amounts.percent,
+        discount: localProductProvider.priceSummary?.discount ?? 0,
       );
     } else {
       billingProvider.coupenCodeTextController.text = '';
@@ -2816,7 +2823,7 @@ class BillingMobileCustomerController {
 
   Color avatarColor(String initial) {
     const colors = [
-      Color(0xFF1D4ED8),
+      ColorManager.kBlue1D4ED8,
       Color(0xFF059669),
       Color(0xFFD97706),
       Color(0xFFDC2626),

@@ -8,15 +8,15 @@ class StockListRowActions extends StatelessWidget {
       {super.key,
       required this.isMobile,
       required this.stock,
-      required this.onEdit,
+      // Stock edit disabled for now.
+      // required this.onEdit,
       required this.onView,
       required this.onAdjust,
       required this.onMove,
       required this.onWithdraw});
   final bool isMobile;
   final ListStockModelData stock;
-  final void Function(ListStockModelData) onEdit,
-      onView,
+  final void Function(ListStockModelData) /* onEdit, */ onView,
       onAdjust,
       onMove,
       onWithdraw;
@@ -26,11 +26,12 @@ class StockListRowActions extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            AppOutlinedButton(
-                label: 'stock.edit'.tr,
-                icon: Icons.edit,
-                height: AppSizes.compactControl,
-                onPressed: () => onEdit(stock)),
+            // Stock edit disabled for now.
+            // AppOutlinedButton(
+            //     label: 'stock.edit'.tr,
+            //     icon: Icons.edit,
+            //     height: AppSizes.compactControl,
+            //     onPressed: () => onEdit(stock)),
             AppOutlinedButton(
                 label: 'stock.list_view'.tr,
                 icon: Icons.visibility,

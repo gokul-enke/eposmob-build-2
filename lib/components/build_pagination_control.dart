@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class PaginationControl extends StatelessWidget {
   final int currentPage;
@@ -58,10 +59,10 @@ class _PaginationButton extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(
-            color: Colors.blue,
+            color: ColorManager.kBrandBlue,
             fontSize: 12,
             decoration: TextDecoration.underline,
-            decorationColor: Colors.blue),
+            decorationColor: ColorManager.kBrandBlue),
       ),
     );
   }

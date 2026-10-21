@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:pos_machine/config/brand_config.dart';
 
 /// Tracks actual work, not the deadline futures presented to the UI. A timed-out
 /// Hive open may still own files, so shutdown must wait for its source future.
@@ -8,7 +9,8 @@ class StartupWorkTracker {
   bool get stopping => _stopping;
 
   void checkRunning() {
-    if (_stopping) throw StateError('CloudPOS is preparing to restart.');
+    if (_stopping) throw StateError(
+        BrandConfig.apply('CloudPOS is preparing to restart.'));
   }
 
   Future<T> run<T>(Future<T> Function() action) {

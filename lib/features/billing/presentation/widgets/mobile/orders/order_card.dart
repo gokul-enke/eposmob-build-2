@@ -139,7 +139,7 @@ class OrderCard extends StatelessWidget {
                 children: [
                   _OrderIconAction(
                     icon: Icons.print,
-                    color: Colors.blue,
+                    color: ColorManager.kBrandBlue,
                     onPressed: isLoadingOrder ? null : onPrint,
                     semanticLabel: 'billing.print_saved_order'.tr,
                   ),

@@ -10,6 +10,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/dashboard_permissions.dart';
 import '../../models/dashboard.dart';
 import '../../models/dashboard_api.dart';
 import '../../providers/dashboard_provider.dart';
@@ -18,6 +19,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/dashboard_responsive.dart';
+import 'widgets/dashboard_additional_widgets.dart';
 import 'widgets/zatca_failed_alert.dart';
 import 'widgets/zatca_overview_section.dart';
 
@@ -128,7 +130,13 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       ProductStats? productStats;
 
       // Try fetching each endpoint individually so one failure doesn't stop the whole load
-      // Note: We are using the main dashboard API for the core overview data.
+
+      try {
+        overview = await dashboardProvider.fetchDashboardOverview(
+            accessToken, startDate, endDate);
+      } catch (e) {
+        debugPrint('Dashboard overview failed: $e');
+      }
 
       try {
         ordersPerMonth = await dashboardProvider.fetchOrdersPerMonth(
@@ -176,9 +184,12 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           // Only set dummy data if no data has been successfully fetched from any endpoint
           if (dashBoardModelData == null &&
               salesStats == null &&
-              dashboardOverview == null) {
+              dashboardOverview == null &&
+              overview == null) {
             _setDummyDashboardData();
           }
+
+          if (overview != null) dashboardOverview = overview;
 
           if (ordersPerMonth != null) ordersPerMonthData = ordersPerMonth;
           if (customersPerMonth != null)
@@ -449,6 +460,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     _buildSalesExecutiveOverview(),
                     const SizedBox(height: 20),
                     _buildSalesOverview(),
+                    const DashboardAdditionalWidgets(),
                     const SizedBox(height: 20),
                     _buildWorksTeam(),
                     const SizedBox(height: 20),
@@ -463,6 +475,10 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             )),
     );
   }
+
+  bool _can(String permission) => canSeeDashboardItem(context, permission);
+
+  bool _canAny(List<String> permissions) => permissions.any(_can);
 
   Widget _buildHeader(Size size) {
     final bool isCompact = size.width < 700;
@@ -649,11 +665,21 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildCompanyAccountOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('company_overview', 'bank_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'cash_account.received_amount'),
+      DashboardPermissions.field('company_overview', 'revenue.total_sales'),
+      DashboardPermissions.field('company_overview', 'customers.total_customers'),
+      DashboardPermissions.field('company_overview', 'orders.total_orders'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         DashboardSectionHeader(title: 'company_admin.section_company_account_overview'.tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('company_overview', 'bank_account.received_amount')))
             _buildCompanyAccountCard(
                 'company_admin.card_bank_accounts'.tr,
                 'company_admin.card_bank_balance'.tr,
@@ -662,6 +688,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.account_balance),
+            if (_can(DashboardPermissions.field('company_overview', 'cash_account.received_amount')))
             _buildCompanyAccountCard(
                 'company_admin.card_cash_accounts'.tr,
                 'company_admin.card_cash_balance'.tr,
@@ -670,6 +697,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kMagentha,
                 Icons.account_balance_wallet),
+            if (_can(DashboardPermissions.field('company_overview', 'revenue.total_sales')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_revenue'.tr,
                 'company_admin.card_overall_revenue'.tr,
@@ -678,6 +706,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kOrange,
                 Icons.trending_up),
+            if (_can(DashboardPermissions.field('company_overview', 'customers.total_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_customers'.tr,
                 'company_admin.card_active_customers'.tr,
@@ -686,6 +715,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kBlue,
                 Icons.people),
+            if (_can(DashboardPermissions.field('company_overview', 'orders.total_orders')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_orders'.tr,
                 'company_admin.card_completed_orders'.tr,
@@ -701,11 +731,21 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildProductOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('products_stats', 'total_products'),
+      DashboardPermissions.field('products_stats', 'active_products'),
+      DashboardPermissions.field('products_stats', 'low_stock'),
+      DashboardPermissions.field('products_stats', 'total_products_stock_qty'),
+      DashboardPermissions.field('products_stats', 'sellable_products'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         DashboardSectionHeader(title: 'company_admin.section_product_overview'.tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('products_stats', 'total_products')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_products'.tr,
                 'company_admin.card_all_products'.tr,
@@ -716,6 +756,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                         : "0",
                 ColorManager.kPrimaryColor,
                 Icons.inventory),
+            if (_can(DashboardPermissions.field('products_stats', 'active_products')))
             _buildCompanyAccountCard(
                 'company_admin.card_active_products'.tr,
                 'company_admin.card_currently_selling'.tr,
@@ -724,20 +765,24 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kMagentha,
                 Icons.check_circle),
+            if (_can(DashboardPermissions.field('products_stats', 'low_stock')))
             _buildCompanyAccountCard(
                 'company_admin.card_low_stock'.tr,
                 'company_admin.card_needs_attention'.tr,
                 productStats != null ? productStats!.lowStock.toString() : "0",
                 ColorManager.kOrange,
                 Icons.warning),
+            if (_can(DashboardPermissions.field('products_stats', 'total_products_stock_qty')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_stock_qty'.tr,
                 'company_admin.card_overall_inventory'.tr,
                 productStats != null
-                    ? productStats!.totalProductsStockQty.toString()
+                    ? NumberFormat('#,##,###.##')
+                        .format(productStats!.totalProductsStockQty)
                     : "0",
                 ColorManager.kBlue,
                 Icons.inventory_2),
+            if (_can(DashboardPermissions.field('products_stats', 'sellable_products')))
             _buildCompanyAccountCard(
                 'company_admin.card_sellable_products'.tr,
                 'company_admin.card_ready_for_sale'.tr,
@@ -753,11 +798,18 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildSalesExecutiveOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('executives_overview', 'total_executives'),
+      DashboardPermissions.field('executives_overview', 'sales_executive_graph'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         DashboardSectionHeader(title: 'company_admin.section_exec_overview'.tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('executives_overview', 'total_executives')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_executives'.tr,
                 'company_admin.card_sales_executives'.tr,
@@ -766,11 +818,12 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kPrimaryColor,
                 Icons.group),
+            if (_can(DashboardPermissions.field('executives_overview', 'sales_executive_graph')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_sales'.tr,
                 'company_admin.card_overall_performance'.tr,
                 executivesOverview != null
-                    ? "${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold(0, (sum, executive) => sum + executive.sales.fold(0, (saleSum, sale) => saleSum + sale.amount)))}"
+                    ? "${NumberFormat('#,##,###').format(executivesOverview!.salesExecutivesGraph.fold<double>(0, (sum, executive) => sum + executive.sales.fold<double>(0, (saleSum, sale) => saleSum + sale.amount)))}"
                     : "0",
                 ColorManager.kMagentha,
                 Icons.check_circle),
@@ -802,6 +855,17 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       );
     }
 
+    final bool showExecutiveChart =
+        _can(DashboardPermissions.field('executives_overview', 'sales_executive_graph'));
+    // Sales Trend draws from one of these three sources; without any of them
+    // it would fall back to the ungated legacy graph or demo data.
+    final bool showSalesTrend = _canAny([
+      DashboardPermissions.widget('executive_sales_graph'),
+      DashboardPermissions.widget('orders_graph'),
+      DashboardPermissions.widget('sales_stats'),
+    ]);
+    if (!showExecutiveChart && !showSalesTrend) return const SizedBox.shrink();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isWide = constraints.maxWidth >= 900;
@@ -809,23 +873,30 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: chartCard(
-                    'company_admin.chart_exec_performance'.tr, _buildExecutiveSalesChart()),
-              ),
-              Expanded(
-                child: chartCard('company_admin.chart_sales_trend'.tr, _buildSalesOverviewChart()),
-              ),
+              if (showExecutiveChart)
+                Expanded(
+                  flex: 2,
+                  child: chartCard('company_admin.chart_exec_performance'.tr,
+                      _buildExecutiveSalesChart()),
+                ),
+              if (showSalesTrend)
+                Expanded(
+                  child: chartCard('company_admin.chart_sales_trend'.tr,
+                      _buildSalesOverviewChart()),
+                ),
             ],
           );
         }
         return Column(
           children: [
-            chartCard(
-                "Sales Executive Performance", _buildExecutiveSalesChart()),
-            const SizedBox(height: 20),
-            chartCard('company_admin.chart_sales_trend'.tr, _buildSalesOverviewChart()),
+            if (showExecutiveChart) ...[
+              chartCard(
+                  "Sales Executive Performance", _buildExecutiveSalesChart()),
+              if (showSalesTrend) const SizedBox(height: 20),
+            ],
+            if (showSalesTrend)
+              chartCard('company_admin.chart_sales_trend'.tr,
+                  _buildSalesOverviewChart()),
           ],
         );
       },
@@ -833,11 +904,21 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   }
 
   Widget _buildCustomerOverview() {
+    if (!_canAny([
+      DashboardPermissions.field('customer_stats', 'total_customers'),
+      DashboardPermissions.field('customer_stats', 'debit_customers'),
+      DashboardPermissions.field('customer_stats', 'credit_customers'),
+      DashboardPermissions.field('customer_stats', 'crucial_customers'),
+      DashboardPermissions.field('company_overview', 'customers.new_customers'),
+    ])) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         DashboardSectionHeader(title: 'company_admin.section_customer_overview'.tr),
         ResponsiveStatGrid(
           cards: [
+            if (_can(DashboardPermissions.field('customer_stats', 'total_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_total_customers'.tr,
                 'company_admin.card_all_customers'.tr,
@@ -848,6 +929,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                         : "0",
                 ColorManager.kPrimaryColor,
                 Icons.people),
+            if (_can(DashboardPermissions.field('customer_stats', 'debit_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_debit_customers'.tr,
                 'company_admin.card_pending_payments'.tr,
@@ -856,6 +938,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kMagentha,
                 Icons.money_off),
+            if (_can(DashboardPermissions.field('customer_stats', 'credit_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_credit_customers'.tr,
                 'company_admin.card_balance_available'.tr,
@@ -864,6 +947,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kOrange,
                 Icons.account_balance_wallet),
+            if (_can(DashboardPermissions.field('customer_stats', 'crucial_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_crucial_customers'.tr,
                 'company_admin.card_vvip_clients'.tr,
@@ -872,6 +956,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                     : "0",
                 ColorManager.kBlue,
                 Icons.star),
+            if (_can(DashboardPermissions.field('company_overview', 'customers.new_customers')))
             _buildCompanyAccountCard(
                 'company_admin.card_new_customers'.tr,
                 'company_admin.card_added_today'.tr,
@@ -1250,7 +1335,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
   Widget _buildSalesOverviewChart() {
     if (value != 'year' &&
         executiveSalesGraph != null &&
-        executiveSalesGraph!.salesGraph.isNotEmpty) {
+        executiveSalesGraph!.salesGraph.isNotEmpty &&
+        _can(DashboardPermissions.widget('executive_sales_graph'))) {
       final salesData = executiveSalesGraph!.salesGraph;
 
       // Find max value for Y scaling
@@ -1342,9 +1428,12 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
 
     if (ordersPerMonthData != null &&
         ordersPerMonthData!.ordersPerMonth.isNotEmpty &&
-        value == 'year') {
+        value == 'year' &&
+        _can(DashboardPermissions.widget('orders_graph'))) {
       final orders = ordersPerMonthData!.ordersPerMonth;
-      final customers = customersPerMonthData?.customersPerMonth ?? [];
+      final customers = _can(DashboardPermissions.widget('customers_graph'))
+          ? customersPerMonthData?.customersPerMonth ?? <MonthlyData>[]
+          : <MonthlyData>[];
 
       // Find max value across both datasets for Y scaling
       int maxOrders =
@@ -1444,14 +1533,10 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
       );
     }
 
-    if (salesStats != null) {
-      final data = salesStats!.data;
-      final double posOrders =
-          double.tryParse(data["4"]?.toString() ?? "0") ?? 0.0;
-      final double webOrders =
-          double.tryParse(data["5"]?.toString() ?? "0") ?? 0.0;
-      final double kioskOrders =
-          double.tryParse(data["6"]?.toString() ?? "0") ?? 0.0;
+    if (salesStats != null && _can(DashboardPermissions.widget('sales_stats'))) {
+      final double posOrders = salesStats!.posOrders;
+      final double webOrders = salesStats!.webOrders;
+      final double kioskOrders = salesStats!.kioskOrders;
 
       final double maxVal =
           [posOrders, webOrders, kioskOrders].reduce((a, b) => a > b ? a : b);
@@ -1492,10 +1577,13 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 30,
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
+                    // Skip the label at the chart top; it overlaps the last step.
+                    getTitlesWidget: (value, meta) => value == meta.max
+                        ? const SizedBox.shrink()
+                        : Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
                   ),
                 ),
                 topTitles:
@@ -1687,9 +1775,9 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
     double maxY = 0;
     if (executivesData.isNotEmpty) {
       // Calculate total sales for each executive
-      List<int> totalSales = executivesData
-          .map((executive) =>
-              executive.sales.fold(0, (sum, sale) => sum + sale.amount))
+      List<double> totalSales = executivesData
+          .map((executive) => executive.sales
+              .fold<double>(0, (sum, sale) => sum + sale.amount))
           .toList();
 
       maxY = totalSales.reduce((a, b) => a > b ? a : b).toDouble();
@@ -1714,9 +1802,9 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
                 tooltipMargin: 8,
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                   // Calculate total sales for this executive
-                  int totalSales = executivesData[groupIndex]
+                  double totalSales = executivesData[groupIndex]
                       .sales
-                      .fold(0, (sum, sale) => sum + sale.amount);
+                      .fold<double>(0, (sum, sale) => sum + sale.amount);
                   return BarTooltipItem(
                     '${NumberFormat('#,##,###').format(totalSales)}',
                     const TextStyle(
@@ -1770,8 +1858,8 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
             ),
             barGroups: executivesData.asMap().entries.map((entry) {
               // Calculate total sales for this executive
-              int totalSales =
-                  entry.value.sales.fold(0, (sum, sale) => sum + sale.amount);
+              double totalSales = entry.value.sales
+                  .fold<double>(0, (sum, sale) => sum + sale.amount);
               return BarChartGroupData(
                 x: entry.key,
                 barRods: [
@@ -1856,7 +1944,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               title: 'company_admin.reports'.tr,
               gradient: const LinearGradient(
                 colors: [
-                  Color(0xFF4facfe),
+                  ColorManager.kBlue4FACFE,
                   Color(0xFF00f2fe),
                 ],
                 begin: Alignment.topLeft,

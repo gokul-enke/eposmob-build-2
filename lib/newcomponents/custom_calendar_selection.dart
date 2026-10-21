@@ -488,13 +488,13 @@ class _CustomCalendarPickerTableCellState
                       overlayColor: WidgetStateProperty.resolveWith<Color?>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.hovered)) {
-                            return Colors.blue.shade50;
+                            return ColorManager.kBrandBlue50;
                           }
                           if (states.contains(WidgetState.focused)) {
-                            return Colors.blue.shade100;
+                            return ColorManager.kBrandBlue100;
                           }
                           if (states.contains(WidgetState.pressed)) {
-                            return Colors.blue.shade200;
+                            return ColorManager.kBrandBlue200;
                           }
                           return null;
                         },
@@ -539,13 +539,13 @@ class _CustomCalendarPickerTableCellState
           overlayColor: WidgetStateProperty.resolveWith<Color?>(
             (Set<WidgetState> states) {
               if (states.contains(WidgetState.hovered)) {
-                return Colors.blue.shade50;
+                return ColorManager.kBrandBlue50;
               }
               if (states.contains(WidgetState.focused)) {
-                return Colors.blue.shade100;
+                return ColorManager.kBrandBlue100;
               }
               if (states.contains(WidgetState.pressed)) {
-                return Colors.blue.shade200;
+                return ColorManager.kBrandBlue200;
               }
               return null;
             },

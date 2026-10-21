@@ -934,7 +934,7 @@ class _RealtimeLogEntry {
 }
 
 enum _RealtimeLogLevel {
-  info(Icons.info_outline, Color(0xFF1565C0)),
+  info(Icons.info_outline, ColorManager.kBlue1565C0),
   success(Icons.check_circle_outline, Color(0xFF2E7D32)),
   warning(Icons.warning_amber_outlined, Color(0xFFEF6C00)),
   error(Icons.error_outline, Color(0xFFC62828)),

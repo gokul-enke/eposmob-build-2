@@ -12,6 +12,7 @@ import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class ProductAutocomplete extends StatefulWidget {
   final Size size;
@@ -281,7 +282,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                       ),
                       decoration: BoxDecoration(
                         color:
-                            isHighlighted ? Colors.blue.shade50 : Colors.white,
+                            isHighlighted ? ColorManager.kBrandBlue50 : Colors.white,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Material(
@@ -300,7 +301,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                             style: TextStyle(
                               fontSize: 11,
                               color: isHighlighted
-                                  ? Colors.blue.shade800
+                                  ? ColorManager.kBrandBlue800
                                   : Colors.black87,
                               fontWeight: isHighlighted
                                   ? FontWeight.w500
@@ -315,7 +316,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: isHighlighted
-                                        ? Colors.blue.shade600
+                                        ? ColorManager.kBrandBlue600
                                         : Colors.grey.shade600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -333,7 +334,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: isHighlighted
-                                    ? Colors.blue.shade900
+                                    ? ColorManager.kBrandBlue900
                                     : Colors.black87,
                               ),
                             ),

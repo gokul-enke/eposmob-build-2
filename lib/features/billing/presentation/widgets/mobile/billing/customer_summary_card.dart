@@ -92,7 +92,7 @@ class CustomerSummaryCard extends StatelessWidget {
                             fontFamily: 'Poppins',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF0066CC),
+                            color: ColorManager.kBlue0066CC,
                           ),
                         ),
                       ),
@@ -184,10 +184,10 @@ class _CustomerTypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        color: isB2B ? Colors.green.shade50 : ColorManager.kBrandBlue50,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+          color: isB2B ? Colors.green.shade300 : ColorManager.kBrandBlue300,
         ),
       ),
       child: Text(
@@ -196,7 +196,7 @@ class _CustomerTypeBadge extends StatelessWidget {
           fontFamily: 'Poppins',
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
+          color: isB2B ? Colors.green.shade700 : ColorManager.kBrandBlue700,
         ),
       ),
     );

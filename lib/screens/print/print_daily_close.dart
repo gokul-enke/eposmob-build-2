@@ -13,6 +13,7 @@ import 'package:pos_machine/screens/print/daily_close_standard_printer.dart';
 import 'package:pos_machine/screens/print/daily_close_thermal_printer.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Daily Close Print Page
 /// Supports thermal (58mm/80mm) and standard (A4/A5) printing for Daily Sales Close Report
@@ -97,7 +98,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
   bool _isLoading = true;
   String selectedPaperSize = '80mm';
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

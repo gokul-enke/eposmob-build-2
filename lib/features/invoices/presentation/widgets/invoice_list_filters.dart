@@ -8,11 +8,13 @@ class InvoiceListFilters extends StatelessWidget {
       {super.key,
       required this.panelKey,
       required this.invoiceNumberController,
+      required this.orderNumberController,
       required this.searchTextController,
       required this.phoneController,
       required this.showZatca,
       required this.selectedStatus,
       required this.selectedZatcaStatus,
+      required this.isToday,
       required this.statusOptions,
       required this.zatcaOptions,
       required this.fromField,
@@ -21,17 +23,21 @@ class InvoiceListFilters extends StatelessWidget {
       required this.onSubmit,
       required this.onReset,
       required this.onStatusChanged,
-      required this.onZatcaChanged});
+      required this.onZatcaChanged,
+      required this.onTodayChanged});
+  static const todayKey = ValueKey('invoice-filter-today');
   final Key panelKey;
   final TextEditingController invoiceNumberController,
+      orderNumberController,
       searchTextController,
       phoneController;
-  final bool showZatca;
+  final bool showZatca, isToday;
   final String? selectedStatus, selectedZatcaStatus;
   final List<String> statusOptions, zatcaOptions;
   final FilterFieldDef fromField, toField;
   final VoidCallback onSearch, onSubmit, onReset;
   final ValueChanged<String?> onStatusChanged, onZatcaChanged;
+  final ValueChanged<bool> onTodayChanged;
   FilterFieldDef _textFilter(
           TextEditingController controller, String label, IconData icon,
           {TextInputType keyboardType = TextInputType.text}) =>
@@ -67,6 +73,8 @@ class InvoiceListFilters extends StatelessWidget {
           fields: [
             _textFilter(invoiceNumberController, 'invoice.invoice_no'.tr,
                 Icons.receipt_long_outlined),
+            _textFilter(orderNumberController,
+                'invoice.order_or_offline_receipt'.tr, Icons.tag_rounded),
             _textFilter(
                 searchTextController, 'invoice.name'.tr, Icons.person_outline),
             _textFilter(
@@ -91,6 +99,19 @@ class InvoiceListFilters extends StatelessWidget {
                 options: _options('invoice.all_status'.tr, statusOptions,
                     'All Status', selectedStatus, UiCodeLabels.status),
                 onChanged: onStatusChanged),
+            CustomFilterField(
+                child: InputDecorator(
+              decoration: AppInputDecoration.filter(
+                  label: 'invoice.today'.tr, icon: Icons.today_outlined),
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Switch(
+                    key: todayKey,
+                    value: isToday,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onChanged: onTodayChanged),
+              ),
+            )),
             fromField,
             toField,
           ]);

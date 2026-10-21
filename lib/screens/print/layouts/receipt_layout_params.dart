@@ -14,6 +14,7 @@ import 'package:pos_machine/services/receipt_identity_service.dart';
 import 'package:provider/provider.dart';
 import 'receipt_configuration_contract.dart';
 import '../thermal/thermal_paper_profile.dart';
+import '../receipt_line_discount.dart';
 
 /// Data class containing all parameters needed for receipt generation.
 /// This eliminates the need to pass many individual parameters to layout methods.
@@ -43,6 +44,9 @@ class ReceiptLayoutParams {
   final double? customerCurrentBalance;
   final double? paidAmount;
   final String? orderComment;
+  // Per-document terms (e.g. typed on a quotation). Replaces the document
+  // configuration's terms text when non-empty.
+  final String? termsOverride;
   final String? deliveryMethod;
   final String? deliveryPhone;
   final String? customerAlternatePhone;
@@ -99,6 +103,7 @@ class ReceiptLayoutParams {
     this.customerCurrentBalance,
     this.paidAmount,
     this.orderComment,
+    this.termsOverride,
     this.deliveryMethod,
     this.deliveryPhone,
     this.customerAlternatePhone,
@@ -139,8 +144,17 @@ class ReceiptLayoutParams {
 
   /// Get the display configuration options from the document config
   Map<String, DisplayOption>? get displayConfig {
-    final options = billDocumentConfig.displayConfiguration?.options;
-    if (options == null) return null;
+    final sourceOptions = billDocumentConfig.displayConfiguration?.options;
+    if (sourceOptions == null) return null;
+    // The current API names the table column showDiscountColumn. Keep the
+    // renderer's legacy key compatible and give the current key precedence.
+    // showDiscount remains the independent footer option.
+    final options = sourceOptions.containsKey('showDiscountColumn')
+        ? <String, DisplayOption>{
+            ...sourceOptions,
+            'showItemDiscount': sourceOptions['showDiscountColumn']!,
+          }
+        : sourceOptions;
     final titleOverride = documentTitleOverride?.trim();
 
     final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
@@ -408,10 +422,13 @@ class ReceiptLayoutParams {
     return '$prefix$printableOrderNumberComponent';
   }
 
-  /// Terms block: the text configured on `showTermsConditions`, falling back
-  /// to the document-level `terms`. Empty when the toggle is off.
+  /// Terms block: [termsOverride] when entered for this document, else the
+  /// text configured on `showTermsConditions`, falling back to the
+  /// document-level `terms`. Empty when the toggle is off.
   String get termsText {
     if (!isVisible('showTermsConditions')) return '';
+    final override = termsOverride?.trim() ?? '';
+    if (override.isNotEmpty) return override;
     final documentTerms = documentText(billDocumentConfig.terms);
     final text = labelFor(
       'showTermsConditions',
@@ -480,6 +497,8 @@ class ReceiptLayoutParams {
     'showRateExcTax': ('Rate Ex Tax', 'السعر بدون ضريبة'),
     'showUnit': ('Unit', 'الوحدة'),
     'showTaxHeader': ('Tax', 'الضريبة'),
+    'showRowTotalTaxHeader': ('Row Total Tax', 'إجمالي ضريبة الصنف'),
+    'showItemDiscount': ('Discount', 'الخصم'),
     'showTotal': ('Total', 'الإجمالي'),
     'showWarranty': ('Warranty', 'الضمان'),
     'showSubTotal': ('NET TOTAL (Exc Tax)', 'المجموع'),
@@ -583,6 +602,10 @@ class ReceiptLayoutParams {
         return fallback('Tax', 'الضريبة',
             resolvedArabic: labels?.tax,
             resolvedEnglish: englishResolved(labels?.taxDefault));
+      case 'showRowTotalTaxHeader':
+        return fallback('Row Total Tax', 'إجمالي ضريبة الصنف',
+            resolvedArabic: labels?.rowTotalTax,
+            resolvedEnglish: englishResolved(labels?.rowTotalTaxDefault));
       case 'showTotal':
         return fallback('Total', 'الإجمالي',
             resolvedArabic: labels?.total,
@@ -927,6 +950,13 @@ class ReceiptLayoutParams {
     }
     return [withAttributes(english)];
   }
+
+  /// An explicit switch controls the column independently of Particulars and
+  /// the footer. Older configurations show it when at least one row is discounted.
+  bool get showItemDiscountColumn =>
+      displayConfig?['showItemDiscount']?.visible ??
+      cartItems
+          .any((item) => ReceiptLineDiscount.fromItem(item).totalDiscount > 0);
 
   static String _variantText(dynamic raw) {
     var attributes = raw;

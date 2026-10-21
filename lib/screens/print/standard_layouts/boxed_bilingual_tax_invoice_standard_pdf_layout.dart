@@ -241,6 +241,9 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final customerRows = params.customerInfoRows;
     final commentText = params.commentText;
     final bankRows = params.bankDetailRows;
+    // Room the summary + signatures need at the bottom of a page before they
+    // move to a fresh page instead of splitting from each other.
+    final bottomBlockReserve = isA5 ? 160.0 : 220.0;
     final totalsRows = params.totalsRows;
     final wordsLines = params.isVisible('showAmountInWords')
         ? params.amountInWordsLines(params.netAmountValue, currency: currency)
@@ -426,10 +429,15 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           pdfReceiptLine(params.commentLine, style: infoStyle),
         pw.SizedBox(height: 5),
 
-        // Items table and the bank | QR | totals summary (sales only).
+        // Items table and the bank | QR | totals summary (sales only). The
+        // summary is pinned to the bottom of the last page together with the
+        // signatures: start a fresh page when too little room remains, then
+        // let the spacer absorb the free space above.
         if (!params.isReturnOnly) ...[
           _buildItemsTable(params, bodyBold, itemsHeaderAr, bodyStyle),
           pw.SizedBox(height: 5),
+          pw.NewPage(freeSpace: bottomBlockReserve),
+          pw.Spacer(),
           if (summaryBoxes.isNotEmpty) _boxRow(summaryBoxes),
           if (paymentRows.isNotEmpty ||
               balanceRows.isNotEmpty ||
@@ -462,6 +470,10 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           ..._buildFinalSummaryPdfSection(
               params, currency, font, fontBold, isA5),
         pw.SizedBox(height: 4),
+
+        // A return-only document has no totals box; pin its signatures to
+        // the bottom instead.
+        if (params.isReturnOnly) pw.Spacer(),
 
         // Terms, thank-you message, VAT and order-number footers.
         // One run per line: terms aligned to their own script, the
@@ -884,6 +896,7 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       'showRateExcTax': 1.4,
       'showUnit': 1.0,
       'showTaxHeader': 1.3,
+      'showRowTotalTaxHeader': 1.3,
       'showTotal': 1.6,
     };
     final lines = params.itemLines;
@@ -917,20 +930,29 @@ class BoxedBilingualTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           ),
         );
 
-    // Name lines in the shared order (Arabic above English on a bilingual
-    // document), each aligned to its own script, then the warranty label.
+    // Bilingual names print English left / Arabic right on one line when
+    // both fit; otherwise the shared order (Arabic above English), each
+    // aligned to its own script. The warranty label follows.
     pw.Widget nameCell(ReceiptItemLine line) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              for (final name in line.nameLines)
-                pdfText(name,
-                    style: bodyStyle,
-                    softWrap: true,
-                    textAlign: pdfHasArabic(name)
-                        ? pw.TextAlign.right
-                        : pw.TextAlign.left),
+              pdfBilingualName(line.nameLines,
+                  style: bodyStyle,
+                  twoLines: pw.Column(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                    children: [
+                      for (final name in line.nameLines)
+                        pdfText(name,
+                            style: bodyStyle,
+                            softWrap: true,
+                            textAlign: pdfHasArabic(name)
+                                ? pw.TextAlign.right
+                                : pw.TextAlign.left),
+                    ],
+                  )),
               if (line.hasWarranty && warranty.isNotEmpty)
                 pdfText(warranty, style: bodyStyle),
             ],

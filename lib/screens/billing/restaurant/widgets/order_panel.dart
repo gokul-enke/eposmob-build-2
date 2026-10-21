@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
@@ -23,6 +24,8 @@ import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/delivery_method_registry.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/models/item_discount_details.dart';
+import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/order_submission_payload.dart';
@@ -39,6 +42,8 @@ import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/screens/print/kot_print_helpers.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/services/local_first_sale_coordinator.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
@@ -194,6 +199,10 @@ class OrderPanelState extends State<OrderPanel> {
 
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
+
+  bool get _skipCheckoutOnConfirm =>
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
 
   bool get _skipCheckoutOnConfirmAndPrint {
     return Provider.of<AppSettingsProvider>(context, listen: false)
@@ -2006,6 +2015,7 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   void _showCouponModal() {
+    if (_selectedOrder != null) _syncOrderItemsWithLocalCart();
     // Calculate current order total for the modal
     double orderSubTotal = 0.0;
     if (_selectedOrder != null) {
@@ -2039,7 +2049,13 @@ class OrderPanelState extends State<OrderPanel> {
         initialPercentageDiscount: _percentageDiscount,
         isCouponApplied: _isCouponApplied,
         onCouponAction: (couponCode, isApplied,
-            {double? flatDiscount, double? percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount, coupon}) {
+          final localProducts = context.read<LocalProductProvider>();
+          localProducts.applyDiscount(
+            flatDiscount: flatDiscount ?? 0,
+            percentageDiscount: percentageDiscount ?? 0,
+            coupon: coupon,
+          );
           setState(() {
             _couponCode = couponCode;
             _isCouponApplied = isApplied;
@@ -2537,7 +2553,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
-      final couponCode = order['coupon_id'] ?? order['coupon_code'] ?? '';
+      final couponCode = (order['coupon_code'] ?? order['coupon_id'] ?? '').toString();
 
       setState(() {
         _flatDiscount = double.tryParse(flatDiscount?.toString() ?? '0') ?? 0.0;
@@ -2753,7 +2769,7 @@ class OrderPanelState extends State<OrderPanel> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
-          const primaryColor = Color(0xFF2563EB);
+          const primaryColor = ColorManager.kBlue2563EB;
           const textColor = Color(0xFF1E293B);
           final availableWidth = MediaQuery.sizeOf(context).width - 48;
           final dialogWidth = availableWidth.clamp(300.0, 480.0).toDouble();
@@ -2788,7 +2804,7 @@ class OrderPanelState extends State<OrderPanel> {
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: ColorManager.kBlueEFF6FF,
                             borderRadius: BorderRadius.circular(11),
                           ),
                           child: const Icon(Icons.chat_bubble_outline,
@@ -2887,7 +2903,7 @@ class OrderPanelState extends State<OrderPanel> {
                                                 horizontal: 10, vertical: 7),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? const Color(0xFFEFF6FF)
+                                                  ? ColorManager.kBlueEFF6FF
                                                   : const Color(0xFFF8FAFC),
                                               borderRadius:
                                                   BorderRadius.circular(10),
@@ -2932,8 +2948,7 @@ class OrderPanelState extends State<OrderPanel> {
                                                         FontSize.s12,
                                                         0.21,
                                                         isSelected
-                                                            ? const Color(
-                                                                0xFF1D4ED8)
+                                                            ? ColorManager.kBlue1D4ED8
                                                             : const Color(
                                                                 0xFF334155)),
                                                   ),
@@ -3442,7 +3457,7 @@ class OrderPanelState extends State<OrderPanel> {
           _buildSummaryRow(
             'order_panel.total_payable'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
+            color: ColorManager.kBlue3B82F6,
             isBold: true,
             large: true,
           ),
@@ -3708,13 +3723,13 @@ class OrderPanelState extends State<OrderPanel> {
                           setState(() => _showSavedOrdersView = true);
                         },
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF1D4ED8),
-                          backgroundColor: const Color(0xFFEFF6FF),
+                          foregroundColor: ColorManager.kBlue1D4ED8,
+                          backgroundColor: ColorManager.kBlueEFF6FF,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: Color(0xFFBFDBFE)),
+                            side: const BorderSide(color: ColorManager.kBlueBFDBFE),
                           ),
                         ),
                         icon: const Icon(Icons.receipt_long_rounded, size: 16),
@@ -3724,7 +3739,7 @@ class OrderPanelState extends State<OrderPanel> {
                               FontWeightManager.semiBold,
                               widget.isCompact ? FontSize.s11 : FontSize.s12,
                               0.21,
-                              const Color(0xFF1D4ED8)),
+                              ColorManager.kBlue1D4ED8),
                         ),
                       ),
                     ],
@@ -3931,7 +3946,7 @@ class OrderPanelState extends State<OrderPanel> {
             const SizedBox(height: 8),
             // Ongoing Orders Section (backend orders, independent scroll)
             _buildPanelHeader(
-                'restaurant.ongoing_orders'.tr, Icons.receipt, Colors.blue,
+                'restaurant.ongoing_orders'.tr, Icons.receipt, ColorManager.kBrandBlue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -4249,13 +4264,13 @@ class OrderPanelState extends State<OrderPanel> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.1),
+                              color: ColorManager.kBlue2563EB.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.print,
                               size: widget.isCompact ? 16 : 18,
-                              color: const Color(0xFF2563EB),
+                              color: ColorManager.kBlue2563EB,
                             ),
                           ),
                         ),
@@ -5097,7 +5112,7 @@ class OrderPanelState extends State<OrderPanel> {
       case 'PREPARING':
       case 'COOKING':
       case 'IN_PROGRESS':
-        return const Color(0xFF2563EB); // blue
+        return ColorManager.kBlue2563EB; // blue
       case 'READY':
         return const Color(0xFF059669); // green
       case 'SERVED':
@@ -5304,7 +5319,7 @@ class OrderPanelState extends State<OrderPanel> {
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
+                color: selected ? ColorManager.kBlue3B82F6 : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: focused ? const Color(0xFFF59E0B) : Colors.transparent,
@@ -5349,7 +5364,7 @@ class OrderPanelState extends State<OrderPanel> {
                       decoration: BoxDecoration(
                         color: selected
                             ? Colors.white.withOpacity(0.18)
-                            : const Color(0xFFEFF6FF),
+                            : ColorManager.kBlueEFF6FF,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -5358,7 +5373,7 @@ class OrderPanelState extends State<OrderPanel> {
                           FontWeightManager.bold,
                           FontSize.s10,
                           0.21,
-                          selected ? Colors.white : const Color(0xFF2563EB),
+                          selected ? Colors.white : ColorManager.kBlue2563EB,
                         ),
                       ),
                     ),
@@ -5384,7 +5399,7 @@ class OrderPanelState extends State<OrderPanel> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                const Color(0xFF3B82F6).withOpacity(0.05),
+                ColorManager.kBlue3B82F6.withOpacity(0.05),
                 Colors.transparent,
               ],
               begin: Alignment.topLeft,
@@ -5735,7 +5750,7 @@ class OrderPanelState extends State<OrderPanel> {
                                 : allItemsServed
                                     ? (_isLoadingConfirm
                                         ? const Color(0xFF94A3B8)
-                                        : const Color(0xFF2563EB))
+                                        : ColorManager.kBlue2563EB)
                                     : (_isMarkingServed
                                         ? const Color(0xFF94A3B8)
                                         : const Color(
@@ -5747,7 +5762,7 @@ class OrderPanelState extends State<OrderPanel> {
                                 ? [
                                     BoxShadow(
                                       color: (allItemsServed
-                                              ? const Color(0xFF2563EB)
+                                              ? ColorManager.kBlue2563EB
                                               : const Color(0xFF059669))
                                           .withOpacity(0.3),
                                       blurRadius: 8,
@@ -5878,7 +5893,7 @@ class OrderPanelState extends State<OrderPanel> {
           _buildSummaryRow(
             'order_panel.total_payable'.tr,
             '$currency ${finalOrderTotal.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
+            color: ColorManager.kBlue3B82F6,
             isBold: true,
             large: true,
           ),
@@ -6192,7 +6207,7 @@ class OrderPanelState extends State<OrderPanel> {
             }
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               _couponCode = code;
               _isCouponApplied = isApplied;
@@ -6212,6 +6227,7 @@ class OrderPanelState extends State<OrderPanel> {
             localProductProvider.applyDiscount(
               flatDiscount: _flatDiscount,
               percentageDiscount: _percentageDiscount,
+              coupon: coupon,
             );
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
@@ -6332,6 +6348,10 @@ class OrderPanelState extends State<OrderPanel> {
                   }
                 },
           onConfirmAndPrint: () async {
+            debugPrint(
+              '[Confirm&Print] Modal button: mode=$mode '
+              'forCurrentCart=$forCurrentCart',
+            );
             if (mode == CheckoutModalMode.selectionOnly) {
               Navigator.of(dialogContext).pop();
               return;
@@ -6404,6 +6424,12 @@ class OrderPanelState extends State<OrderPanel> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
+      final currentCoupon = localProductProvider.appliedCoupon;
+      final coupon = _isCouponApplied && _couponCode.isNotEmpty
+          ? (currentCoupon?.couponCode == _couponCode
+              ? currentCoupon
+              : context.read<DiscountProvider>().findDiscountByCode(_couponCode))
+          : null;
 
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Syncing order items with LocalProductProvider cart...');
@@ -6497,6 +6523,27 @@ class OrderPanelState extends State<OrderPanel> {
           variantAttributes: variantAttributes,
         );
 
+        // Keep the server's sale-time offer/manual reference when available.
+        // Eligibility and receipt notes must agree about this line's origin.
+        if (item['offer_id'] != null || item['discount_origin'] != null) {
+          final matching = localProductProvider.cartItems.where((line) =>
+              line.product.productId == productId &&
+              line.variantId == variantId && line.saleUnitId == saleUnitId &&
+              line.selectedStock?.id == selectedStock?.id);
+          if (matching.isNotEmpty) {
+            final line = matching.first;
+            line.offerId = item['discount_origin'] == 'manual'
+                ? null : int.tryParse(item['offer_id']?.toString() ?? '');
+            line.offerVersion = int.tryParse(item['offer_version']?.toString() ?? '');
+            line.offerDetails = ItemDiscountDetails.fromJson(item);
+            final standard = double.tryParse(item['standard_unit_price']?.toString() ?? '');
+            if (standard != null && standard.isFinite && standard >= 0) {
+              line.standardUnitPrice = standard / conversionRate;
+            }
+            line.isManualPriceOverride = item['discount_origin'] == 'manual';
+          }
+        }
+
         debugPrint(
             '   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
@@ -6505,7 +6552,11 @@ class OrderPanelState extends State<OrderPanel> {
       localProductProvider.applyDiscount(
         flatDiscount: _flatDiscount,
         percentageDiscount: _percentageDiscount,
+        coupon: coupon,
       );
+      final discounts = localProductProvider.getCurrentDiscount();
+      _flatDiscount = discounts['flatDiscount'] ?? 0;
+      _percentageDiscount = discounts['percentageDiscount'] ?? 0;
 
       debugPrint(
           'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order items synced with LocalProductProvider cart');
@@ -6918,7 +6969,10 @@ class OrderPanelState extends State<OrderPanel> {
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
 
-    if (order['cart_items'] != null) {
+    if (order['cart_items'] is List) {
+      return order['cart_items'];
+    }
+    if (order['cart_items'] is Map) {
       debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
         final items = order['cart_items']['cart_items'];
@@ -7313,92 +7367,27 @@ class OrderPanelState extends State<OrderPanel> {
     double? customerOldBalance,
     double? customerCurrentBalance,
   }) async {
-    final cartItems = <Map<String, dynamic>>[];
-    double totalMrp = 0.0;
-    double netTotal = 0.0;
-    double totalTax = 0.0;
-
-    for (final item in savedOrder.items) {
-      final itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
-      final itemPrice = item.price ?? item.product.price?.price ?? 0.0;
-      final itemTotalPrice = item.amounts.total;
-      final itemTax = item.amounts.tax;
-
-      totalMrp += itemMrp * item.quantity;
-      netTotal += itemTotalPrice;
-      totalTax += itemTax;
-
-      cartItems.add({
-        'productName': item.displayName,
-        'product_name': item.displayName,
-        'product_variant_id': item.variantId,
-        'variant_attributes': item.variantAttributes,
-        'mrp': itemMrp.toString(),
-        'quantity': item.quantity.toString(),
-        'product_unit': item.product.unit ?? '',
-        'unitPrice': itemPrice.toString(),
-        'totalPrice': itemTotalPrice.toString(),
-        'tax_amount': itemTax.toString(),
-      });
-    }
-
-    final youSaved = math.max(0.0, totalMrp - netTotal);
-    final netExcTax = netTotal - totalTax;
-    final storeSession =
-        Provider.of<StoreSessionProvider>(context, listen: false);
-    final storeName = storeSession.activeStore?.storeName ?? 'Store';
-    final parsedPayment =
-        PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
-    final paidAmount = double.tryParse(savedOrder.paidAmount ?? '0') ?? 0.0;
-    final savedAddress = savedOrder.address?.trim() ?? '';
-    final savedPincode = savedOrder.pincode?.trim() ?? '';
-    final printableAddress =
-        savedPincode.isEmpty || savedAddress.contains(savedPincode)
-            ? (savedAddress.isEmpty ? null : savedAddress)
-            : (savedAddress.isEmpty
-                ? savedPincode
-                : '$savedAddress, $savedPincode');
-
-    Future<bool> printOnce() {
-      return _printOrderDetailsWithFallback(
-        storeName: storeName,
-        cartItems: cartItems,
-        formattedTotal: savedOrder.total.toString(),
-        savedTotal: youSaved.toString(),
-        discountAmount: ((savedOrder.flatDiscount ?? 0.0) +
-                ((savedOrder.percentageDiscount ?? 0.0) > 0
-                    ? (savedOrder.total *
-                        (savedOrder.percentageDiscount ?? 0.0) /
-                        100)
-                    : 0.0))
-            .toString(),
-        orderDate: savedOrder.createdAt,
-        orderNumber: savedOrder.orderNumber,
-        isFromLocalStorage: true,
-        customerName: savedOrder.customerName,
-        customerPhone: savedOrder.customerPhone,
-        customerAddress: printableAddress,
-        customerOldBalance: customerOldBalance,
-        customerCurrentBalance: customerCurrentBalance,
-        paymentMethod:
-            parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
-        paymentBreakdown: parsedPayment?.paymentBreakdown,
-        paidAmount: paidAmount > 0 ? paidAmount : null,
-        customerAlternatePhone: savedOrder.alternatePhone,
-        customerVatNumber: savedOrder.customerVatNumber,
-        customerCrNumber: savedOrder.customerCrNumber,
-        customerType: savedOrder.customerType,
-        orderComment: savedOrder.comment,
-        deliveryMethod: savedOrder.deliveryMethod ?? _deliveryMethod,
-        isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
-        netExcTax: netExcTax.toString(),
-      );
-    }
-
-    final autoPrintSuccess = await printOnce();
-    await _maybePrintCustomerCopy(
-      canPrompt: autoPrintSuccess,
-      printAction: printOnce,
+    Future<bool> printOnce() => const PrintService().printSavedOrder(
+      context,
+      savedOrder,
+      customerOldBalance: customerOldBalance,
+      customerCurrentBalance: customerCurrentBalance,
+      fallbackDeliveryMethod: _deliveryMethod,
+    );
+    final billWatch = Stopwatch()..start();
+    debugPrint(
+      '[Confirm&Print] Bill: printing orderNumber=${savedOrder.orderNumber} '
+      'oldBalance=$customerOldBalance currentBalance=$customerCurrentBalance',
+    );
+    final success = await printOnce();
+    debugPrint(
+      '[Confirm&Print] Bill: ${success ? 'printed' : 'FAILED'} '
+      'in ${billWatch.elapsedMilliseconds}ms',
+    );
+    await _maybePrintCustomerCopy(canPrompt: success, printAction: printOnce);
+    debugPrint(
+      '[Confirm&Print] Bill: customer-copy step done at '
+      '${billWatch.elapsedMilliseconds}ms',
     );
   }
 
@@ -7428,6 +7417,24 @@ class OrderPanelState extends State<OrderPanel> {
     final showTableLabel = widget.tableId != null;
     final comment = savedOrder.comment?.trim();
 
+    final kotWatch = Stopwatch()..start();
+    // Mirrors KotPrintPage.autoPrint's lookup: it returns true without
+    // printing when this config is inactive, so log the state up front.
+    final docConfigProvider =
+        Provider.of<DocumentConfigProvider>(context, listen: false);
+    final kotConfig = docConfigProvider.getCachedConfig('Kitchen Order') ??
+        docConfigProvider.getCachedConfig('kitchen_order');
+    final kotConfigState = kotConfig == null
+        ? 'NOT LOADED (autoPrint will fail)'
+        : isKotDocumentConfigEnabled(kotConfig)
+            ? 'active'
+            : 'INACTIVE (autoPrint skips printing but returns true)';
+    debugPrint(
+      '[Confirm&Print] KOT: printing orderNumber=${savedOrder.orderNumber} '
+      'table="$tableName" showTableLabel=$showTableLabel '
+      'items=${printItems.length} hasComment=${comment?.isNotEmpty ?? false} '
+      'kotDocConfig=$kotConfigState',
+    );
     final success = await KotPrintPage.autoPrint(
       context,
       orderNumber: savedOrder.orderNumber,
@@ -7437,8 +7444,15 @@ class OrderPanelState extends State<OrderPanel> {
       items: printItems,
       comment: comment != null && comment.isNotEmpty ? comment : null,
     );
+    final kotPrinted =
+        success && kotConfig != null && isKotDocumentConfigEnabled(kotConfig);
+    debugPrint(
+      '[Confirm&Print] KOT: ${kotPrinted ? 'printed' : success ? 'NOT printed (KOT document config inactive)' : 'auto-print FAILED'} '
+      'in ${kotWatch.elapsedMilliseconds}ms',
+    );
 
     if (!success && mounted) {
+      debugPrint('[Confirm&Print] KOT: opening manual KOT print page');
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -7535,7 +7549,8 @@ class OrderPanelState extends State<OrderPanel> {
       paymentMethods: _getSelectedPaymentMethodsForApi(),
       paidMethods: _getPaidMethodsForApi(),
       balanceAmount: _balanceAmount.toString(),
-      couponId: _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
+      couponId: localProducts.appliedCoupon?.id.toString(),
+      couponCode: _isCouponApplied ? _couponCode : null,
       orderId: existingOrderId,
       comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
       deliveryMethodId: widget.tableId == null ? resolvedDeliveryMethodId : '',
@@ -7545,8 +7560,7 @@ class OrderPanelState extends State<OrderPanel> {
       deliveryDate: _deliveryDate,
       deliveryTime: _deliveryTime,
       flatDiscount: priceSummary?.flatDiscount ?? _flatDiscount,
-      percentageDiscount:
-          priceSummary?.percentageDiscount ?? _percentageDiscount,
+      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary?.discount,
       toCustomerCredit: _toCustomerCreditEnabled,
       creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
@@ -7612,6 +7626,12 @@ class OrderPanelState extends State<OrderPanel> {
     required bool printBill,
     bool whatsappReceipt = false,
   }) async {
+    final logTag = whatsappReceipt
+        ? '[Confirm&WhatsApp]'
+        : printBill
+            ? '[Confirm&Print]'
+            : '[ConfirmOrder]';
+    final confirmWatch = Stopwatch()..start();
     // Offline there is no send-to-kitchen, so a table or delivery order is
     // confirmed here too, as the removed offline Save & Print allowed.
     final isOffline =
@@ -7621,7 +7641,14 @@ class OrderPanelState extends State<OrderPanel> {
         _deliveryMethodId.trim().isNotEmpty;
     final isCounterBilling =
         widget.allowCounterBilling && widget.isCounterBillingMode;
+    debugPrint(
+      '$logTag Confirm cart: isOffline=$isOffline '
+      'isCounterBilling=$isCounterBilling '
+      'hasOfflineOrderContext=$hasOfflineOrderContext '
+      'tableId=${widget.tableId} deliveryMethodId=$_deliveryMethodId',
+    );
     if (!isCounterBilling && !(isOffline && hasOfflineOrderContext)) {
+      debugPrint('$logTag Abort: quick counter disabled and not offline order');
       showScaffoldError(
         context: context,
         message: 'restaurant.quick_counter_disabled'.tr,
@@ -7632,7 +7659,12 @@ class OrderPanelState extends State<OrderPanel> {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
+    if (!ensureCouponValidForCheckout(context, localProductProvider)) {
+      debugPrint('$logTag Abort: applied coupon is no longer valid');
+      return false;
+    }
     if (cartItems.isEmpty) {
+      debugPrint('$logTag Abort: cart is empty');
       showScaffoldError(
           context: context, message: 'restaurant.no_items_cart'.tr);
       return false;
@@ -7642,10 +7674,16 @@ class OrderPanelState extends State<OrderPanel> {
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
         (customerPhone == null || customerPhone.isEmpty)) {
+      debugPrint('$logTag Abort: no customer selected');
       showScaffoldError(
           context: context, message: 'restaurant.select_customer'.tr);
       return false;
     }
+    debugPrint(
+      '$logTag Validated: items=${cartItems.length} '
+      'customerId=${_selectedCustomer?.id ?? _selectedCustomerID} '
+      'customerPhone=$customerPhone',
+    );
 
     setState(() {
       _isLoadingConfirm = true;
@@ -7658,6 +7696,7 @@ class OrderPanelState extends State<OrderPanel> {
       if (ecommerceEnabled &&
           DeliveryMethodRegistry.requiresAddress(deliveryMethodForDraft) &&
           _deliveryPincode.trim().isEmpty) {
+        debugPrint('$logTag Abort: delivery pincode required');
         showScaffoldError(
           context: context,
           message: 'checkout_modal.msg_pincode_required'.tr,
@@ -7683,6 +7722,11 @@ class OrderPanelState extends State<OrderPanel> {
       }
       final receiptIdentity =
           await ReceiptIdentityService.instance.issue(storeId: storeId);
+      debugPrint(
+        '$logTag Receipt identity: storeId=$storeId '
+        'receiptNumber=${receiptIdentity.receiptNumber} '
+        'clientSaleId=${receiptIdentity.clientSaleId}',
+      );
       final payload = _buildRestaurantConfirmedPayload(
         localProductProvider,
         receiptIdentity,
@@ -7699,6 +7743,15 @@ class OrderPanelState extends State<OrderPanel> {
           Provider.of<AppSettingsProvider>(context, listen: false);
       final attemptServerSync =
           Provider.of<BillingProvider>(context, listen: false).hasInternet;
+      final enableKOTPrint =
+          appSettingsProvider.appSettings?.enableKOTPrint ?? true;
+      debugPrint(
+        '$logTag Submitting: mode=${appSettingsProvider.saleConfirmationMode} '
+        'attemptServerSync=$attemptServerSync printBill=$printBill '
+        'enableKOTPrint=$enableKOTPrint '
+        'total=${localProductProvider.priceSummary?.netTotal} '
+        'deliveryCharge=${_getDeliveryChargeForOrder()}',
+      );
 
       final result = await LocalFirstSaleCoordinator(
         LocalSaleSyncService.instance,
@@ -7738,14 +7791,23 @@ class OrderPanelState extends State<OrderPanel> {
         },
         printLocalReceipt: printBill
             ? (sale) async {
+                debugPrint(
+                  '$logTag Print step: orderNumber=${sale.orderNumber} '
+                  'localId=${sale.id} items=${sale.items.length}',
+                );
                 await _printOfflineSavedOrderBill(
                   sale,
                   customerOldBalance: receiptBalance.oldBalance,
                   customerCurrentBalance: receiptBalance.currentBalance,
                 );
-                if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+                if (enableKOTPrint) {
                   await _printOfflineSavedOrderKot(sale);
+                } else {
+                  debugPrint('$logTag KOT skipped: enableKOTPrint=false');
                 }
+                debugPrint(
+                  '$logTag Print step done at ${confirmWatch.elapsedMilliseconds}ms',
+                );
               }
             : null,
         withServerOrderNumber: (sale, number) => sale.withOrderNumber(number),
@@ -7766,18 +7828,28 @@ class OrderPanelState extends State<OrderPanel> {
         },
       );
 
+      debugPrint(
+        '$logTag Result in ${confirmWatch.elapsedMilliseconds}ms: '
+        'orderNumber=${result.localSale.orderNumber} '
+        'needsAttention=${result.needsAttention} '
+        'printError=${result.printError} message="${result.message}"',
+      );
       (result.needsAttention ? showScaffoldError : showScaffold)(
         context: context,
         message: result.message,
       );
       return true;
     } on OnlineSaleNotConfirmed catch (error) {
+      debugPrint(
+        '$logTag Not confirmed by server after '
+        '${confirmWatch.elapsedMilliseconds}ms: ${error.message}',
+      );
       if (mounted) {
         showScaffoldError(context: context, message: error.message);
       }
       return false;
-    } catch (e) {
-      debugPrint('Error confirming counter order: $e');
+    } catch (e, stackTrace) {
+      debugPrint('$logTag Error confirming counter order: $e\n$stackTrace');
       showScaffoldError(
         context: context,
         message: 'restaurant.failed_confirm_counter_order'
@@ -7826,6 +7898,7 @@ class OrderPanelState extends State<OrderPanel> {
       );
       return false;
     }
+    if (!ensureCouponValidForCheckout(context, localProducts)) return false;
     final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
     if (_selectedCustomerID == null &&
         _selectedCustomer?.id == null &&
@@ -8067,14 +8140,22 @@ class OrderPanelState extends State<OrderPanel> {
   /// With [whatsappReceipt] the sale is confirmed without printing and the
   /// backend sends the invoice on WhatsApp instead.
   Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal({
+    bool printBill = true,
     bool whatsappReceipt = false,
   }) async {
-    if (_isLoadingConfirm) return;
+    if (_isLoadingConfirm) {
+      debugPrint(
+        '[Confirm&Print] Direct confirm ignored: a confirm is already running',
+      );
+      return;
+    }
 
     debugPrint(
       whatsappReceipt
           ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & WhatsApp'
-          : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
+          : printBill
+              ? '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print'
+              : '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM enabled -> direct counter confirm',
     );
 
     _hydrateCustomerListFromProviderCache();
@@ -8090,6 +8171,15 @@ class OrderPanelState extends State<OrderPanel> {
       _hasOpenedPaymentModalOnce = true;
       _balanceAmount = _calculateBalanceAmount();
     });
+    if (printBill && !whatsappReceipt) {
+      debugPrint(
+        '[Confirm&Print] Defaults applied: deliveryMethod=$_deliveryMethod '
+        '($_deliveryMethodId) cash=$_isCashSelected:$_cashAmount '
+        'card=$_isCardSelected:$_cardAmount upi=$_isUpiSelected:$_upiAmount '
+        'cod=$_isCodSelected:$_codAmount debit=$_isDebitSelected:$_debitAmount '
+        'balance=$_balanceAmount',
+      );
+    }
 
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
@@ -8114,18 +8204,18 @@ class OrderPanelState extends State<OrderPanel> {
 
     widget.onCheckoutActionLoadingChanged?.call(
       isLoading: true,
-      printBill: !whatsappReceipt,
+      printBill: printBill && !whatsappReceipt,
       whatsappReceipt: whatsappReceipt,
     );
     try {
       await _confirmCurrentCart(
-        printBill: !whatsappReceipt,
+        printBill: printBill && !whatsappReceipt,
         whatsappReceipt: whatsappReceipt,
       );
     } finally {
       widget.onCheckoutActionLoadingChanged?.call(
         isLoading: false,
-        printBill: !whatsappReceipt,
+        printBill: printBill && !whatsappReceipt,
         whatsappReceipt: whatsappReceipt,
       );
       if (mounted) {
@@ -8154,12 +8244,23 @@ class OrderPanelState extends State<OrderPanel> {
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
+    if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) {
+      debugPrint('[Confirm&Print] Ignored: button disabled in app settings');
+      return;
+    }
 
+    debugPrint(
+      '[Confirm&Print] Start: skipCheckout=$_skipCheckoutOnConfirmAndPrint '
+      'cartItems=${Provider.of<LocalProductProvider>(context, listen: false).cartItems.length} '
+      'tableId=${widget.tableId} deliveryMethodId=$_deliveryMethodId '
+      'enableKOTPrint=${appSettings?.enableKOTPrint ?? true}',
+    );
     if (_skipCheckoutOnConfirmAndPrint) {
+      debugPrint('[Confirm&Print] Route: direct confirm (no checkout modal)');
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
+    debugPrint('[Confirm&Print] Route: opening checkout modal');
     showCheckoutFromParent(forCurrentCart: true);
   }
 
@@ -8167,22 +8268,39 @@ class OrderPanelState extends State<OrderPanel> {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!(appSettings?.showConfirmOrderButton ?? true)) return;
-    showCheckoutFromParent(forCurrentCart: true);
+    showCheckoutFromParent(
+      forCurrentCart: true,
+      allowSkipCheckoutOnConfirm: true,
+    );
   }
 
   /// Offline confirm entry point. Offline sales use the same offline-first
   /// confirmation as online ones, so they get a bill number and can be sent
   /// later from Confirmed Orders.
   ///
-  /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
-  /// checkout modal and confirms+prints with defaults. Step shortcuts (F5/F10)
+  /// When [allowSkipCheckout] is true and the corresponding confirm setting is
+  /// enabled, confirms with defaults and prints only when [printBill] is true.
+  /// Step shortcuts (F5/F10)
   /// should pass [allowSkipCheckout]: false so the modal still opens.
   void showOfflineConfirmCheckoutFromParent({
     int? initialStep,
     bool allowSkipCheckout = true,
+    bool printBill = true,
   }) {
-    if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
-      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
+    final skipCheckout = printBill
+        ? _skipCheckoutOnConfirmAndPrint
+        : _skipCheckoutOnConfirm;
+    if (printBill) {
+      debugPrint(
+        '[Confirm&Print] Offline start: skipCheckout=$skipCheckout '
+        'allowSkipCheckout=$allowSkipCheckout initialStep=$initialStep '
+        '-> ${allowSkipCheckout && skipCheckout ? 'direct confirm' : 'checkout modal'}',
+      );
+    }
+    if (allowSkipCheckout && skipCheckout) {
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal(
+        printBill: printBill,
+      ));
       return;
     }
     _showCheckoutModal(
@@ -8194,8 +8312,17 @@ class OrderPanelState extends State<OrderPanel> {
   void showCheckoutFromParent({
     bool? forCurrentCart,
     int? initialStep,
+    bool allowSkipCheckoutOnConfirm = false,
   }) {
     final useCurrentCart = forCurrentCart ?? _selectedOrder == null;
+    if (useCurrentCart &&
+        allowSkipCheckoutOnConfirm &&
+        _skipCheckoutOnConfirm) {
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal(
+        printBill: false,
+      ));
+      return;
+    }
     _showCheckoutModal(
       forCurrentCart: useCurrentCart,
       initialStep: initialStep ??

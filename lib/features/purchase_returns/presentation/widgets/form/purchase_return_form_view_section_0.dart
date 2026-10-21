@@ -101,9 +101,9 @@ extension _Section0 on PurchaseReturnFormView {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.03),
+        color: ColorManager.kBrandBlue.withOpacity(0.03),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.withOpacity(0.12)),
+        border: Border.all(color: ColorManager.kBrandBlue.withOpacity(0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

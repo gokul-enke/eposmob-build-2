@@ -239,7 +239,7 @@ void main() {
         ReceiptLanguageMode.english);
   });
 
-  testWidgets('all 61 keys obey strict visibility and aliases', (tester) async {
+  testWidgets('all 62 keys obey strict visibility and aliases', (tester) async {
     late BuildContext context;
     await tester.pumpWidget(_providerHarness(onContext: (value) {
       context = value;
@@ -268,9 +268,9 @@ void main() {
       options: _options(visible: false),
     );
 
-    expect(ReceiptConfigurationContract.canonicalBillKeys, hasLength(61));
+    expect(ReceiptConfigurationContract.canonicalBillKeys, hasLength(62));
     expect(
-        ReceiptConfigurationContract.canonicalBillKeys.toSet(), hasLength(61));
+        ReceiptConfigurationContract.canonicalBillKeys.toSet(), hasLength(62));
     for (final key in ReceiptConfigurationContract.canonicalBillKeys) {
       expect(missing.isVisible(key), isFalse, reason: 'missing/$key');
       expect(allVisible.isVisible(key), isTrue, reason: 'visible/$key');

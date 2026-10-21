@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -292,6 +293,7 @@ class BillingPageState extends State<BillingPage>
   double? _selectedDeliveryCharge;
   DateTime _quotationDate = DateTime.now();
   DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
+  String _quotationTerms = '';
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -326,6 +328,12 @@ class BillingPageState extends State<BillingPage>
   VoidCallback? _generalSettingsListener;
   VoidCallback? _deliveryMethodListener;
   VoidCallback? _paymentMethodListener;
+  SalesExecutiveProvider? _listenedSalesExecutiveProvider;
+  AuthModel? _listenedAuthModel;
+  LocalProductProvider? _listenedLocalProductProvider;
+  AppSettingsProvider? _listenedAppSettingsProvider;
+  GeneralSettingsProvider? _listenedGeneralSettingsProvider;
+  DeliveryMethodsProvider? _listenedDeliveryMethodsProvider;
 
   void _syncStockEnabledSetting() {
     if (!mounted) return;
@@ -449,10 +457,12 @@ class BillingPageState extends State<BillingPage>
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
+      _listenedSalesExecutiveProvider = salesExecutiveProvider;
 
       // Also listen for auth changes (more direct indicator of user switch)
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(_onUserSwitched);
+      _listenedAuthModel = authModel;
 
       // Listen for app settings changes
       final appSettingsProvider =
@@ -468,17 +478,20 @@ class BillingPageState extends State<BillingPage>
         _refreshTotalsAfterSettingsChange(appSettingsProvider);
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
+      _listenedAppSettingsProvider = appSettingsProvider;
 
       final generalSettingsProvider =
           Provider.of<GeneralSettingsProvider>(context, listen: false);
       _generalSettingsListener = _syncStockEnabledSetting;
       generalSettingsProvider.addListener(_generalSettingsListener!);
+      _listenedGeneralSettingsProvider = generalSettingsProvider;
       _syncStockEnabledSetting();
 
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
       localProductProvider.addListener(_onCartChanged);
+      _listenedLocalProductProvider = localProductProvider;
     });
 
     // Ensure UI updates when virtual keyboard edits the customer phone field
@@ -528,41 +541,24 @@ class BillingPageState extends State<BillingPage>
     _cartTableFocusNode.dispose();
     _customerScrollController.dispose();
 
-    // Remove sales executive listener
-    try {
-      final salesExecutiveProvider =
-          Provider.of<SalesExecutiveProvider>(context, listen: false);
-      salesExecutiveProvider.removeListener(_onSalesExecutiveChanged);
-
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.removeListener(_onUserSwitched);
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      localProductProvider.removeListener(_onCartChanged);
-
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final generalSettingsProvider =
-          Provider.of<GeneralSettingsProvider>(context, listen: false);
-      if (_appSettingsDebugListener != null) {
-        appSettingsProvider.removeListener(_appSettingsDebugListener!);
-      }
-      if (_generalSettingsListener != null) {
-        generalSettingsProvider.removeListener(_generalSettingsListener!);
-      }
-      if (_paymentMethodListener != null) {
-        appSettingsProvider.removeListener(_paymentMethodListener!);
-      }
-
-      final deliveryMethodsProvider =
-          Provider.of<DeliveryMethodsProvider>(context, listen: false);
-      if (_deliveryMethodListener != null) {
-        deliveryMethodsProvider.removeListener(_deliveryMethodListener!);
-        appSettingsProvider.removeListener(_deliveryMethodListener!);
-      }
-    } catch (e) {
-      debugPrint("Error removing listeners: $e");
+    // The context is deactivated here; remove listeners from their owners.
+    _listenedSalesExecutiveProvider?.removeListener(_onSalesExecutiveChanged);
+    _listenedAuthModel?.removeListener(_onUserSwitched);
+    _listenedLocalProductProvider?.removeListener(_onCartChanged);
+    if (_appSettingsDebugListener != null) {
+      _listenedAppSettingsProvider?.removeListener(_appSettingsDebugListener!);
+    }
+    if (_generalSettingsListener != null) {
+      _listenedGeneralSettingsProvider
+          ?.removeListener(_generalSettingsListener!);
+    }
+    if (_paymentMethodListener != null) {
+      _listenedAppSettingsProvider?.removeListener(_paymentMethodListener!);
+    }
+    if (_deliveryMethodListener != null) {
+      _listenedDeliveryMethodsProvider
+          ?.removeListener(_deliveryMethodListener!);
+      _listenedAppSettingsProvider?.removeListener(_deliveryMethodListener!);
     }
 
     super.dispose();
@@ -1344,12 +1340,8 @@ class BillingPageState extends State<BillingPage>
         debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
         _clearCartManually();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
-        if (!_isQuotationPage && !_showConfirmOrderButton) return;
-        debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
-        _showCheckoutModal(
-            actionMode: _isQuotationPage
-                ? CheckoutActionMode.quotation
-                : CheckoutActionMode.confirm);
+        debugPrint("⌨️ [BillingPage] Handling F2 -> confirm order");
+        _handleConfirmOrder();
       } else if (event.logicalKey == LogicalKeyboardKey.f3) {
         debugPrint(
             "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
@@ -3498,6 +3490,8 @@ class BillingPageState extends State<BillingPage>
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         List<LocalCartItem> cartItems = localProductProvider.getCartItems();
+        final showItemDiscount =
+            cartItems.any((item) => item.itemDiscountAmount > 0);
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: true);
         final appSettings = appSettingsProvider.appSettings;
@@ -3559,6 +3553,11 @@ class BillingPageState extends State<BillingPage>
                               flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_price'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
+                        if (showItemDiscount)
+                          _buildHeaderCell('billing.discount_label'.tr,
+                              flex: 1,
+                              alignment: Alignment.centerRight,
+                              fitText: true),
                         if (appSettings?.showTaxPos == true)
                           _buildHeaderCell('billing.table_tax_amount'.tr,
                               flex: 1, alignment: Alignment.centerLeft),
@@ -3993,6 +3992,22 @@ class BillingPageState extends State<BillingPage>
                                           flex: 1,
                                           alignment: Alignment.centerLeft,
                                         ),
+
+                                        if (showItemDiscount)
+                                          _buildContentCell(
+                                            Text(
+                                              AmountHelper.formatAmount(
+                                                  item.itemDiscountAmount),
+                                              key: ValueKey(
+                                                  'item-discount-${item.lineId}'),
+                                              style: TextStyle(
+                                                  fontSize: fontProvider
+                                                      .billingTableItemSize),
+                                              textAlign: TextAlign.right,
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerRight,
+                                          ),
 
                                         // Tax Amount
                                         if (appSettings?.showTaxPos == true)
@@ -4461,24 +4476,21 @@ class BillingPageState extends State<BillingPage>
   }
 
   Widget _buildHeaderCell(String text,
-      {required int flex, required Alignment alignment}) {
+      {required int flex, required Alignment alignment, bool fitText = false}) {
     final fontProvider = Provider.of<AppFontProvider>(context, listen: true);
+    final label = Text(
+      text,
+      textAlign:
+          alignment == Alignment.center ? TextAlign.center : TextAlign.left,
+      style: buildCustomStyle(FontWeightManager.bold,
+          fontProvider.billingTableHeaderSize, 0.21, ColorManager.textColor),
+    );
     return Expanded(
       flex: flex,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         alignment: alignment,
-        child: Text(
-          text,
-          textAlign:
-              alignment == Alignment.center ? TextAlign.center : TextAlign.left,
-          style: buildCustomStyle(
-            FontWeightManager.bold,
-            fontProvider.billingTableHeaderSize,
-            0.21,
-            ColorManager.textColor,
-          ),
-        ),
+        child: fitText ? FittedBox(fit: BoxFit.scaleDown, child: label) : label,
       ),
     );
   }
@@ -5599,7 +5611,7 @@ class BillingPageState extends State<BillingPage>
                                         },
                                         child: Container(
                                           color: isHighlighted
-                                              ? Colors.blue.shade50
+                                              ? ColorManager.kBrandBlue50
                                               : (hoverMap[index] == true
                                                   ? Colors.grey[200]
                                                   : Colors.white),
@@ -5611,7 +5623,7 @@ class BillingPageState extends State<BillingPage>
                                                 12,
                                                 0.27,
                                                 isHighlighted
-                                                    ? Colors.blue.shade800
+                                                    ? ColorManager.kBrandBlue800
                                                     : Colors.black
                                                         .withOpacity(.5),
                                               ),
@@ -6007,8 +6019,7 @@ class BillingPageState extends State<BillingPage>
                   child: _buildActionButton(
                     text: 'billing.confirm_order'.tr,
                     color: ColorManager.kButtonGreen,
-                    onPressed: () => _showCheckoutModal(
-                        actionMode: CheckoutActionMode.confirm),
+                    onPressed: _handleConfirmOrder,
                     isLoading: isLoadingConfirmOrder,
                     isDisabled: disableActions && !isLoadingConfirmOrder,
                     shortcutLabel: 'F2',
@@ -6544,10 +6555,8 @@ class BillingPageState extends State<BillingPage>
       paymentMethods: paymentMethods,
       paidMethods: paidMethods,
       balanceAmount: _balanceAmount.toString(),
-      couponId:
-          isCouponApplied && coupenCodeTextController.text.trim().isNotEmpty
-              ? coupenCodeTextController.text.trim()
-              : null,
+      couponId: localProducts.appliedCoupon?.id.toString(),
+      couponCode: isCouponApplied ? coupenCodeTextController.text.trim() : null,
       comment:
           _commentController.text.isNotEmpty ? _commentController.text : null,
       deliveryMethodId: deliveryMethodId.isNotEmpty ? deliveryMethodId : null,
@@ -6558,8 +6567,11 @@ class BillingPageState extends State<BillingPage>
       deliveryDate: deliveryDate,
       deliveryTime: deliveryTime,
       flatDiscount: priceSummary.flatDiscount,
-      percentageDiscount: priceSummary.percentageDiscount,
+      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary.discount,
+      grandTotal: _getEffectiveOrderTotal(),
+      roundOff: _getEffectiveOrderTotal() -
+          priceSummary.netTotal - _getDeliveryChargeForOrder(),
       toCustomerCredit: _toCustomerCreditEnabled,
       creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
           ? double.tryParse(_debitAmountController.text) ?? 0.0
@@ -6637,6 +6649,8 @@ class BillingPageState extends State<BillingPage>
   Future<void> _confirmLocalFirst(
       {required bool printReceipt, bool whatsappReceipt = false}) async {
     if (!_ensureAuthoritativeAppSettings()) return;
+    if (!ensureCouponValidForCheckout(
+        context, context.read<LocalProductProvider>())) return;
     if (!_ensurePaymentReadyForConfirm(
       printReceipt
           ? _createOrderAndPrint
@@ -6946,6 +6960,11 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  bool get _skipCheckoutOnConfirm =>
+      !_isQuotationPage &&
+      Provider.of<AppSettingsProvider>(context, listen: false)
+          .skipCheckoutOnConfirm;
+
   bool get _skipCheckoutOnConfirmAndPrint {
     if (_isQuotationPage) return false;
     return Provider.of<AppSettingsProvider>(context, listen: false)
@@ -6973,6 +6992,20 @@ class BillingPageState extends State<BillingPage>
           .appSettings
           ?.showConfirmWhatsappButton ??
       false;
+
+  Future<void> _handleConfirmOrder() async {
+    if (_isOrderActionBusy) return;
+    if (_isQuotationPage) {
+      _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
+      return;
+    }
+    if (!_showConfirmOrderButton) return;
+    if (_skipCheckoutOnConfirm) {
+      await _confirmAndPrintWithoutCheckoutModal(printReceipt: false);
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+  }
 
   Future<void> _handleConfirmAndWhatsapp() async {
     if (!_showConfirmAndWhatsappButton || _isOrderActionBusy) return;
@@ -7121,8 +7154,10 @@ class BillingPageState extends State<BillingPage>
     _applyDefaultDeliveryMethodIfNeeded();
   }
 
-  Future<void> _confirmAndPrintWithoutCheckoutModal(
-      {bool whatsappReceipt = false}) async {
+  Future<void> _confirmAndPrintWithoutCheckoutModal({
+    bool printReceipt = true,
+    bool whatsappReceipt = false,
+  }) async {
     if (_isOrderActionBusy) {
       debugPrint(
           "⌨️ [BillingPage] Direct confirm & print ignored because order action is busy");
@@ -7130,7 +7165,10 @@ class BillingPageState extends State<BillingPage>
     }
 
     debugPrint(
-        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & print");
+      printReceipt || whatsappReceipt
+          ? '⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & ${whatsappReceipt ? "WhatsApp" : "print"}'
+          : '⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM enabled -> direct confirm',
+    );
 
     await _prepareCheckoutDefaults(
       applyDefaultCustomer: true,
@@ -7167,8 +7205,10 @@ class BillingPageState extends State<BillingPage>
 
     if (whatsappReceipt) {
       await _confirmOrder(whatsappReceipt: true);
-    } else {
+    } else if (printReceipt) {
       await _createOrderAndPrint();
+    } else {
+      await _confirmOrder();
     }
   }
 
@@ -7365,6 +7405,8 @@ class BillingPageState extends State<BillingPage>
               : quotationCustomerPhoneForModal,
           initialQuotationDate: _quotationDate,
           initialQuotationExpiryDate: _quotationExpiryDate,
+          initialQuotationTerms: _quotationTerms,
+          onQuotationTermsUpdated: (terms) => _quotationTerms = terms,
           onQuotationDatesUpdated: (quotationDate, expiryDate) {
             _quotationDate = quotationDate;
             _quotationExpiryDate = expiryDate;
@@ -7475,7 +7517,7 @@ class BillingPageState extends State<BillingPage>
                 "⚠️ [CheckoutCustomer] Add customer finished without selectable customer");
             return null;
           },
-          onDiscountApplied: (code, isApplied, flat, percent) {
+          onDiscountApplied: (code, isApplied, flat, percent, {coupon}) {
             setState(() {
               isCouponApplied = isApplied;
               coupenCodeTextController.text = code;
@@ -7485,6 +7527,7 @@ class BillingPageState extends State<BillingPage>
                 localProductProvider.applyDiscount(
                   flatDiscount: flat,
                   percentageDiscount: percent,
+                  coupon: coupon,
                 );
               } else {
                 localProductProvider.clearDiscount();
@@ -7709,6 +7752,7 @@ class BillingPageState extends State<BillingPage>
         'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
         if (discountValue > 0) 'discount': discountValue,
         'comment': _commentController.text, // Reusing delivery comment as note
+        if (_quotationTerms.trim().isNotEmpty) 'terms': _quotationTerms.trim(),
         'items': localProductProvider.cartItems.map((item) {
           final productStockId = item.stockGroupIds.length == 1
               ? item.stockGroupIds.first
@@ -7747,6 +7791,7 @@ class BillingPageState extends State<BillingPage>
           final now = DateTime.now();
           _quotationDate = now;
           _quotationExpiryDate = now.add(const Duration(days: 30));
+          _quotationTerms = '';
           if (shouldPrint) {
             final quotationId = _extractCreatedQuotationId(response);
             debugPrint(
@@ -8681,7 +8726,7 @@ class BillingPageState extends State<BillingPage>
         initialCouponCode: coupenCodeTextController.text,
         isCouponApplied: isCouponApplied,
         onCouponAction: (couponCode, shouldApply,
-            {double? flatDiscount, double? percentageDiscount}) {
+            {double? flatDiscount, double? percentageDiscount, coupon}) {
           if (shouldApply) {
             // CouponModal validates the downloaded coupon details before
             // calling this action, just like Finalize Order.
@@ -8690,6 +8735,7 @@ class BillingPageState extends State<BillingPage>
             localProductProvider.applyDiscount(
               flatDiscount: flatDiscount ?? 0.0,
               percentageDiscount: percentageDiscount ?? 0.0,
+              coupon: coupon,
             );
 
             setState(() {
@@ -9347,6 +9393,8 @@ class BillingPageState extends State<BillingPage>
       // Add listeners
       deliveryMethodsProvider.addListener(_deliveryMethodListener!);
       appSettingsProvider.addListener(_deliveryMethodListener!);
+      _listenedDeliveryMethodsProvider = deliveryMethodsProvider;
+      _listenedAppSettingsProvider = appSettingsProvider;
 
       // Initial check
       updateDeliveryMethod();
@@ -9375,6 +9423,7 @@ class BillingPageState extends State<BillingPage>
       _paymentMethodListener = updatePaymentMethod;
 
       appSettingsProvider.addListener(_paymentMethodListener!);
+      _listenedAppSettingsProvider = appSettingsProvider;
       updatePaymentMethod();
     });
   }

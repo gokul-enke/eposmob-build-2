@@ -7,6 +7,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/payment_method_modal_wrapper.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class BillingWidget extends StatefulWidget {
   const BillingWidget({super.key});
@@ -252,8 +253,8 @@ class _BillingWidgetState extends State<BillingWidget> {
       child: ElevatedButton(
         onPressed: () => _showPaymentMethodModal(billingProvider),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue[100],
-          foregroundColor: Colors.blue[800],
+          backgroundColor: ColorManager.kBrandBlue100,
+          foregroundColor: ColorManager.kBrandBlue800,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -518,7 +519,7 @@ class _BillingWidgetState extends State<BillingWidget> {
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
+                      backgroundColor: ColorManager.kBrandBlue700,
                     ),
                     child: Text(
                       'billing.done'.tr,

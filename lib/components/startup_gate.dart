@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/config/brand_config.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/resources/recovery_text.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Paints before invoking initialization. A timed-out initializer can never
 /// replace the failure screen with a late successful application.
@@ -86,7 +88,8 @@ class _StartupGateState extends State<StartupGate> {
     if (_application != null) return _application!;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CLOUDPOS',
+      title: BrandConfig.title,
+      theme: ThemeData(colorScheme: ColorManager.brandColorScheme),
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Directionality(
@@ -101,11 +104,11 @@ class _StartupGateState extends State<StartupGate> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset('assets/logo/cloudpos-icon.png',
+                      Image.asset(BrandConfig.iconAsset,
                           width: 128,
                           height: 128,
                           fit: BoxFit.contain,
-                          semanticLabel: 'CloudPOS'),
+                          semanticLabel: BrandConfig.name),
                       const SizedBox(height: 32),
                       if (_error == null) ...[
                         const SizedBox(

@@ -123,7 +123,7 @@ class TablesPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF2563EB).withOpacity(0.05),
+                      ColorManager.kBlue2563EB.withOpacity(0.05),
                       Colors.transparent,
                     ],
                     begin: Alignment.topLeft,
@@ -141,14 +141,14 @@ class TablesPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withOpacity(0.1),
+                        color: ColorManager.kBlue2563EB.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         showTables
                             ? Icons.table_restaurant
                             : Icons.delivery_dining,
-                        color: const Color(0xFF2563EB),
+                        color: ColorManager.kBlue2563EB,
                         size: isCompact ? 14 : 16,
                       ),
                     ),
@@ -255,12 +255,12 @@ class TablesPanel extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A56DB).withOpacity(0.1),
+                    color: ColorManager.kBlue1A56DB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
                     Icons.delivery_dining,
-                    color: const Color(0xFF1A56DB),
+                    color: ColorManager.kBlue1A56DB,
                     size: isCompact ? 12 : 14,
                   ),
                 ),
@@ -281,7 +281,7 @@ class TablesPanel extends StatelessWidget {
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF1A56DB).withOpacity(0.6)),
+                        ColorManager.kBlue1A56DB.withOpacity(0.6)),
                   ),
                 ),
               ],
@@ -313,7 +313,7 @@ class TablesPanel extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.delivery_dining,
-                    color: const Color(0xFF1A56DB),
+                    color: ColorManager.kBlue1A56DB,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
@@ -369,12 +369,12 @@ class TablesPanel extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A56DB).withOpacity(0.1),
+                      color: ColorManager.kBlue1A56DB.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       Icons.delivery_dining,
-                      color: const Color(0xFF1A56DB),
+                      color: ColorManager.kBlue1A56DB,
                       size: isCompact ? 12 : 14,
                     ),
                   ),
@@ -442,19 +442,19 @@ class TablesPanel extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF1A56DB)
-              : const Color(0xFF1A56DB).withOpacity(0.07),
+              ? ColorManager.kBlue1A56DB
+              : ColorManager.kBlue1A56DB.withOpacity(0.07),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF1A56DB)
-                : const Color(0xFF1A56DB).withOpacity(0.3),
+                ? ColorManager.kBlue1A56DB
+                : ColorManager.kBlue1A56DB.withOpacity(0.3),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(8),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF1A56DB).withOpacity(0.25),
+                    color: ColorManager.kBlue1A56DB.withOpacity(0.25),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -467,7 +467,7 @@ class TablesPanel extends StatelessWidget {
             FontWeightManager.semiBold,
             fontSize,
             0.21,
-            isSelected ? Colors.white : const Color(0xFF1A56DB),
+            isSelected ? Colors.white : ColorManager.kBlue1A56DB,
           ),
           overflow: TextOverflow.ellipsis,
         ),
@@ -534,13 +534,13 @@ class TablesPanel extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _getTableBackgroundColor(table.status),
                 border: isActive
-                    ? Border.all(color: const Color(0xFF2563EB), width: 2.5)
+                    ? Border.all(color: ColorManager.kBlue2563EB, width: 2.5)
                     : Border.all(color: Colors.grey.shade200, width: 1),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color: isActive
-                        ? const Color(0xFF2563EB).withOpacity(0.15)
+                        ? ColorManager.kBlue2563EB.withOpacity(0.15)
                         : Colors.black.withOpacity(0.04),
                     blurRadius: isActive ? 10 : 6,
                     offset: const Offset(0, 3),
@@ -644,11 +644,11 @@ class TablesPanel extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFF2563EB).withOpacity(0.08)
+                          ? ColorManager.kBlue2563EB.withOpacity(0.08)
                           : _getTableBackgroundColor(table.status),
                       border: Border.all(
                         color: isActive
-                            ? const Color(0xFF2563EB)
+                            ? ColorManager.kBlue2563EB
                             : Colors.transparent,
                         width: 2,
                       ),
@@ -656,7 +656,7 @@ class TablesPanel extends StatelessWidget {
                       boxShadow: isActive
                           ? [
                               BoxShadow(
-                                color: const Color(0xFF2563EB).withOpacity(0.2),
+                                color: ColorManager.kBlue2563EB.withOpacity(0.2),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -775,13 +775,13 @@ class TablesPanel extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _getTableBackgroundColor(table.status),
                     border: isActive
-                        ? Border.all(color: const Color(0xFF2563EB), width: 3)
+                        ? Border.all(color: ColorManager.kBlue2563EB, width: 3)
                         : Border.all(color: Colors.grey.shade200, width: 1),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: isActive
-                            ? const Color(0xFF2563EB).withOpacity(0.15)
+                            ? ColorManager.kBlue2563EB.withOpacity(0.15)
                             : Colors.black.withOpacity(0.04),
                         blurRadius: isActive ? 12 : 8,
                         offset: const Offset(0, 4),
@@ -869,7 +869,7 @@ class TablesPanel extends StatelessWidget {
       case TableStatus.reserved:
         return const Color(0xFFFAF5FF); // Modern purple tint
       case TableStatus.cleaning:
-        return const Color(0xFFF0F9FF); // Modern blue tint
+        return ColorManager.kBlueF0F9FF; // Modern blue tint
       case TableStatus.maintenance:
         return const Color(0xFFFFF7ED); // Modern orange tint
     }
@@ -897,9 +897,9 @@ class TablesPanel extends StatelessWidget {
       case TableStatus.occupied:
         return const Color(0xFFD97706); // Modern amber
       case TableStatus.reserved:
-        return const Color(0xFF1A56DB); // Modern purple
+        return ColorManager.kBlue1A56DB; // Modern purple
       case TableStatus.cleaning:
-        return const Color(0xFF0EA5E9); // Modern blue
+        return ColorManager.kBlue0EA5E9; // Modern blue
       case TableStatus.maintenance:
         return const Color(0xFFDC2626); // Modern red
     }

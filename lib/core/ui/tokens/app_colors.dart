@@ -20,7 +20,7 @@ abstract final class AppColors {
   static const muted = Color(0xFF6D7175);
   static const hint = Color(0xFF9A9A9A);
 
-  static const softBlue = Color(0xFFEBF3FF);
+  static const softBlue = ColorManager.kBlueEBF3FF;
   static const softGreen = Color(0xFFE3F1DF);
   static const green = Color(0xFF2C6E49);
 

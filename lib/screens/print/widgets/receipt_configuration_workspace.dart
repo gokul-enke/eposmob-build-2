@@ -14,6 +14,7 @@ import 'package:pos_machine/screens/print/layouts/premium2_bilingual_receipt_lay
 import 'package:pos_machine/screens/print/layouts/receipt_configuration_contract.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 enum _PreviewLanguage { english, arabic, bilingual }
 
@@ -139,6 +140,7 @@ class _ReceiptConfigurationWorkspaceState
         'showRateExcTax',
         'showUnit',
         'showTaxHeader',
+        'showRowTotalTaxHeader',
         'showTotal',
         'showItemsCount',
         'showQuantityCount',
@@ -299,11 +301,11 @@ class _ReceiptConfigurationWorkspaceState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: (hasConfig ? Colors.blue : Colors.orange).withValues(alpha: .07),
+        color: (hasConfig ? ColorManager.kBrandBlue : Colors.orange).withValues(alpha: .07),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color:
-              (hasConfig ? Colors.blue : Colors.orange).withValues(alpha: .20),
+              (hasConfig ? ColorManager.kBrandBlue : Colors.orange).withValues(alpha: .20),
         ),
       ),
       child: Row(
@@ -314,7 +316,7 @@ class _ReceiptConfigurationWorkspaceState
                 ? Icons.info_outline_rounded
                 : Icons.warning_amber_rounded,
             size: 19,
-            color: hasConfig ? Colors.blue.shade700 : Colors.orange.shade800,
+            color: hasConfig ? ColorManager.kBrandBlue700 : Colors.orange.shade800,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -326,7 +328,7 @@ class _ReceiptConfigurationWorkspaceState
                 height: 1.35,
                 fontSize: 12,
                 color:
-                    hasConfig ? Colors.blue.shade900 : Colors.orange.shade900,
+                    hasConfig ? ColorManager.kBrandBlue900 : Colors.orange.shade900,
               ),
             ),
           ),
@@ -1041,10 +1043,10 @@ class _CommonReceiptPreviewState extends State<_CommonReceiptPreview> {
       customerType: widget.isB2B ? 'B2B' : 'B2C',
       zatcaVatNumber: zatcaVatNumber ?? '310000000000003',
       zatcaCrNumber: zatcaCrNumber ?? '1010123456',
-      zatcaCompanyName: zatcaCompanyName ?? 'CloudPOS Store',
+      zatcaCompanyName: zatcaCompanyName ?? '${BrandConfig.name} Store',
       netExcTax: '43.48',
       bankDetails: banks,
-      storeName: store?.storeName ?? 'CloudPOS Store',
+      storeName: store?.storeName ?? '${BrandConfig.name} Store',
       storeLocation: store?.location,
       storePhone: store?.phone ?? '+966 11 000 0000',
       storeEmail: store?.email ?? 'store@example.com',
@@ -1188,7 +1190,8 @@ class _ReceiptSample extends StatelessWidget {
           children: [
             if (_visible('showStoreName'))
               Text(
-                _label('showStoreName', 'CLOUDPOS STORE', 'متجر كلاود بوس'),
+                _label('showStoreName', '${BrandConfig.title} STORE',
+                    BrandConfig.apply('متجر كلاود بوس')),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                     fontWeight: FontWeight.w800, fontSize: 15, height: 1.15),
@@ -1422,6 +1425,7 @@ class _SourceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch (source) {
       _FieldSource.label => ('Custom text', Colors.purple),
+      // Category colour coding, not branding: needs a MaterialColor swatch.
       _FieldSource.order => ('Order data', Colors.blue),
       _FieldSource.store => ('Store data', Colors.teal),
       _FieldSource.calculated => ('Calculated', Colors.orange),

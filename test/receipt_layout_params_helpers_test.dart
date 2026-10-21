@@ -27,6 +27,7 @@ ReceiptLayoutParams _params(
   String? numberPrefix,
   String? terms,
   String? footer,
+  String? termsOverride,
   String orderNumber = '2-03-260916-0001',
 }) {
   return ReceiptLayoutParams(
@@ -51,6 +52,7 @@ ReceiptLayoutParams _params(
     customerPhone: customerPhone,
     isDefaultCustomer: isDefaultCustomer,
     hideDefaultCustomerPhone: hideDefaultCustomerPhone,
+    termsOverride: termsOverride,
   );
 }
 
@@ -134,6 +136,35 @@ void main() {
       _params(context, language: 'ar', options: const {}).invoiceNumberText,
       startsWith('رقم الفاتورة:'),
     );
+  });
+
+  testWidgets('per-document terms replace the configured terms',
+      (tester) async {
+    await pump(tester);
+
+    ReceiptLayoutParams build(String language,
+            {bool visible = true, String? termsOverride}) =>
+        _params(context,
+            language: language,
+            terms: 'Doc terms',
+            termsOverride: termsOverride,
+            options: {
+              'showTermsConditions':
+                  _option(language, 'EN TERMS', 'الشروط', visible: visible),
+            });
+
+    expect(build('en', termsOverride: '  Valid 7 days\nNo returns ').termsText,
+        'Valid 7 days\nNo returns');
+    expect(build('ar', termsOverride: 'Quote terms').termsText, 'Quote terms');
+    expect(build('en_ar', termsOverride: 'Quote terms').termsText,
+        'Quote terms');
+    expect(build('en', termsOverride: '   ').termsText, 'EN TERMS',
+        reason: 'blank entry keeps the document configuration terms');
+    expect(build('en', termsOverride: null).termsText, 'EN TERMS');
+    expect(
+        build('en', visible: false, termsOverride: 'Quote terms').termsText,
+        isEmpty,
+        reason: 'the template toggle still decides whether terms print');
   });
 
   testWidgets('terms and thank-you text resolve identically for every template',

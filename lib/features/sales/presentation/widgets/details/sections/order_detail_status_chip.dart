@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/helpers/ui_code_labels.dart';
 
 import 'order_detail_inputs.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class OrderDetailStatusChip extends StatelessWidget {
   const OrderDetailStatusChip(this.label, this.status,
@@ -28,8 +29,8 @@ class OrderDetailStatusChip extends StatelessWidget {
         textColor = Colors.red;
         break;
       case 'paid':
-        backgroundColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
+        backgroundColor = ColorManager.kBrandBlue.withOpacity(0.1);
+        textColor = ColorManager.kBrandBlue;
         break;
       default:
         backgroundColor = Colors.grey.withOpacity(0.1);

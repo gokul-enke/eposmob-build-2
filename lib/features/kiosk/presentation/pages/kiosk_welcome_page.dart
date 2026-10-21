@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/config/brand_config.dart';
+import 'package:pos_machine/widgets/product_image.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/kiosk/presentation/pages/kiosk_home_page.dart';
 import 'package:pos_machine/features/kiosk/presentation/widgets/kiosk_language_sheet.dart';
@@ -99,7 +101,7 @@ class _WelcomeTopBar extends StatelessWidget {
             border: Border.all(color: const Color(0xFFE3EAF4)),
           ),
           child: Image.asset(
-            'assets/logo/cloudposlogo.png',
+            BrandConfig.logoAsset,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Icon(
               Icons.storefront_rounded,
@@ -268,7 +270,7 @@ class _WelcomeMessage extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFDCE8F7)),
+            border: Border.all(color: ColorManager.kBlueDCE8F7),
           ),
           child: const Text(
             'ORDER HERE',
@@ -403,7 +405,6 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMarketProductImageUrl(product);
     final name = product.localizedName?.trim().isNotEmpty == true
         ? product.localizedName!.trim()
         : product.productName?.trim() ?? '';
@@ -414,21 +415,14 @@ class _ProductTile extends StatelessWidget {
         children: [
           ColoredBox(
             color: const Color(0xFFF1F5FA),
-            child: imageUrl == null
-                ? const Icon(
-                    Icons.inventory_2_outlined,
-                    color: ColorManager.kGreyColor,
-                    size: 58,
-                  )
-                : Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.inventory_2_outlined,
-                      color: ColorManager.kGreyColor,
-                      size: 58,
-                    ),
-                  ),
+            child: ProductImage(
+              product: product,
+              placeholder: const Icon(
+                Icons.inventory_2_outlined,
+                color: ColorManager.kGreyColor,
+                size: 58,
+              ),
+            ),
           ),
           if (name.isNotEmpty)
             Positioned(
@@ -498,7 +492,7 @@ class _WelcomeBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF8FBFF), Color(0xFFEAF3FF)],
+          colors: [Color(0xFFF8FBFF), ColorManager.kBlueEAF3FF],
         ),
       ),
       child: Stack(

@@ -323,11 +323,11 @@ class PaymentSummary extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0066CC)),
+                    color: ColorManager.kBlue0066CC),
               ),
               Switch(
                 value: billingProvider.toCustomerCreditEnabled,
-                activeColor: const Color(0xFF3B82F6),
+                activeColor: ColorManager.kBlue3B82F6,
                 onChanged: (value) {
                   billingProvider.setToCustomerCreditEnabled(value);
                   billingProvider.calculateBalance();
@@ -349,14 +349,14 @@ class PaymentSummary extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC)),
+                  color: ColorManager.kBlue0066CC),
             ),
             Text(
               '$currency ${getFormattedTotal()}',
               style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC)),
+                  color: ColorManager.kBlue0066CC),
             ),
           ],
         ),
