@@ -136,6 +136,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
   late TextEditingController _minMarginPriceController;
+  late TextEditingController _skuController;
+  bool _isGeneratingSku = false;
   late TextEditingController _rackController;
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
@@ -167,6 +169,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
+    _skuController = TextEditingController();
     _taxController = TextEditingController();
     _rackController = TextEditingController();
 
@@ -180,6 +183,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _purchasePriceController,
       _minMarginController,
       _minMarginPriceController,
+      _skuController,
       _taxController,
       _rackController,
     ]) {
@@ -308,6 +312,50 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  /// Fills an empty SKU from the backend's SKU generator.
+  Future<void> _generateSku() async {
+    if (_isGeneratingSku) return;
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'product_detail.auth_token_missing_login'.tr,
+      );
+      return;
+    }
+    final gridSelectionProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    setState(() => _isGeneratingSku = true);
+    try {
+      final sku =
+          await gridSelectionProvider.generateSku(accessToken: accessToken);
+      if (!mounted) return;
+      if (sku != null) {
+        // Text typed while the request ran wins over the generated SKU.
+        if (_skuController.text.trim().isEmpty) _skuController.text = sku;
+        showScaffold(
+          context: context,
+          message: 'product_form.sku_generated_success'.tr,
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingSku = false);
     }
   }
 
@@ -654,6 +702,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         formatProductDetailsNumeric(product.minMarginPercentage);
     _minMarginPriceController.text =
         formatProductDetailsNumeric(product.minMarginPrice);
+    _skuController.text = product.sku?.trim() ?? '';
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -728,6 +777,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final updatedPurchasePrice = _purchasePriceController.text.trim();
     final updatedMinMargin = _minMarginController.text.trim();
     final updatedMinMarginPrice = _minMarginPriceController.text.trim();
+    final updatedSku = _skuController.text.trim();
     final updatedRack = _rackController.text.trim();
 
     final priceForApi = updatedPriceString.isEmpty
@@ -796,6 +846,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         variants: variantsPayload,
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
+        sku: editedSkuForApi(original: product.sku, edited: updatedSku),
         accessToken: accessToken,
       );
 
@@ -915,6 +966,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             (updatedMinMarginPrice.isEmpty
                 ? product.minMarginPrice
                 : num.tryParse(updatedMinMarginPrice) ?? updatedMinMarginPrice),
+        sku: serverProduct?.sku ?? updatedSku,
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
         saleUnits: responseSaleUnits ?? product.saleUnits,
@@ -1003,6 +1055,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _purchasePriceController.dispose();
     _minMarginController.dispose();
     _minMarginPriceController.dispose();
+    _skuController.dispose();
     _rackController.dispose();
     for (final controller in _languageNameControllers.values) {
       controller.dispose();
@@ -1410,6 +1463,12 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   ? '$currency ${formatProductDetailsNumeric(product.minMarginPrice)}'
                   : 'general.na'.tr,
             ),
+            MobileDetailRow(
+              label: 'product_detail.sku'.tr,
+              value: (product.sku?.trim().isNotEmpty ?? false)
+                  ? product.sku!.trim()
+                  : 'general.na'.tr,
+            ),
           ],
         ),
         if (product.taxes != null && product.taxes!.isNotEmpty)
@@ -1561,6 +1620,45 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           : const Icon(Icons.translate, size: 20),
       color: ColorManager.kPrimaryColor,
       tooltip: 'product_detail.translate_from_english'.tr,
+    );
+  }
+
+  /// Optional SKU; the generate button is offered only while it is empty, so
+  /// a set SKU is never replaced by one tap.
+  Widget _buildSkuField() {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _skuController,
+      builder: (context, value, _) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _mobileTextField(
+              controller: _skuController,
+              label: 'product_detail.sku'.tr,
+              hint: 'general.optional'.tr,
+            ),
+          ),
+          if (value.text.trim().isEmpty) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: IconButton(
+                key: const ValueKey('mobile-product-details-generate-sku'),
+                onPressed: _isGeneratingSku ? null : _generateSku,
+                icon: _isGeneratingSku
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, size: 20),
+                color: ColorManager.kPrimaryColor,
+                tooltip: 'product_form.generate_sku'.tr,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1752,6 +1850,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
               ),
+              const SizedBox(height: 12),
+              _buildSkuField(),
             ],
           ),
           _buildVariantsSection(),
