@@ -2674,6 +2674,10 @@
   "product_form": {
     "supplier": "المورد",
     "select_supplier": "اختر المورد",
+    "sku": "رمز SKU",
+    "generate_sku": "إنشاء رمز SKU",
+    "sku_generated_success": "تم إنشاء رمز SKU بنجاح",
+    "failed_generate_sku": "فشل إنشاء رمز SKU",
     "title": "إنشاء منتج جديد",
     "subtitle": "إنشاء منتج جديد بباركود مخصص",
     "no_product_found_barcode": "لم يتم العثور على منتج بالباركود @barcode",

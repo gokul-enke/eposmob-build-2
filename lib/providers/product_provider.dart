@@ -117,6 +117,7 @@ class ProductProvider extends ChangeNotifier {
     List<Map<String, dynamic>>? saleUnits,
     String? minMarginPercentage,
     String? minMarginPrice,
+    String? sku,
     required String accessToken,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -167,6 +168,10 @@ class ProductProvider extends ChangeNotifier {
     // (instead of being dropped). The server requires a number, and 0 is
     // treated as "no floor" by the cart logic, so an erased field is sent as 0.
     // Added after removeWhere so a cleared value survives.
+    // SKU is optional and clearable: an erased field is sent as null.
+    if (sku != null) {
+      body['sku'] = sku.trim().isEmpty ? null : sku.trim();
+    }
     if (minMarginPercentage != null) {
       body['min_margin_percentage'] = minMarginPercentage.trim().isEmpty
           ? 0
@@ -198,6 +203,9 @@ class ProductProvider extends ChangeNotifier {
         uri,
         headers: {
           'Content-Type': 'application/json',
+          // Laravel then reports errors as JSON (with a message) instead of
+          // an HTML error page.
+          'Accept': 'application/json',
           'Authorization': 'Bearer $accessToken',
           'X-Tenant': apiKey,
         },

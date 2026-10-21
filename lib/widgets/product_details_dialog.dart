@@ -102,6 +102,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
   late TextEditingController _minMarginPriceController;
+  late TextEditingController _skuController;
+  bool _isGeneratingSku = false;
   late TextEditingController _rackController;
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
@@ -181,6 +183,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
     _minMarginPriceController = TextEditingController();
+    _skuController = TextEditingController();
     _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
     if (widget.product != null) {
@@ -565,6 +568,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         _formatNumericString(product.minMarginPercentage);
     _minMarginPriceController.text =
         _formatNumericString(product.minMarginPrice);
+    _skuController.text = product.sku?.trim() ?? '';
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -729,6 +733,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
     final String updatedMinMargin = _minMarginController.text.trim();
     final String updatedMinMarginPrice = _minMarginPriceController.text.trim();
+    final String updatedSku = _skuController.text.trim();
     final String updatedRack = _rackController.text.trim();
 
     final double priceForApi = updatedPriceString.isEmpty
@@ -844,6 +849,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         // server as null to clear it, rather than being omitted from the body.
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
+        // Only an edited SKU is sent, so a product whose SKU did not load
+        // here is never cleared by an unrelated save.
+        sku: updatedSku == (product.sku?.trim() ?? '') ? null : updatedSku,
         accessToken: accessToken,
       );
 
@@ -991,6 +999,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             (updatedMinMargin.isEmpty
                 ? product.minMarginPercentage
                 : num.tryParse(updatedMinMargin) ?? updatedMinMargin),
+        sku: serverProduct?.sku ?? updatedSku,
         minMarginPrice: serverProduct?.minMarginPrice ??
             (updatedMinMarginPrice.isEmpty
                 ? product.minMarginPrice
@@ -1083,6 +1092,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _purchasePriceController.dispose();
     _minMarginController.dispose();
     _minMarginPriceController.dispose();
+    _skuController.dispose();
     _rackController.dispose();
     for (final controller in _languageNameControllers.values) {
       controller.dispose();
@@ -1618,8 +1628,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           _formatNumericString(product.minMarginPrice).isNotEmpty
               ? '$currency ${_formatNumericString(product.minMarginPrice)}'
               : 'product.na'.tr),
-      _buildDetailRow('product_detail.sku'.tr,
-          product.sku ?? 'product_detail.not_available'.tr),
+      _buildDetailRow(
+          'product_detail.sku'.tr,
+          (product.sku?.trim().isNotEmpty ?? false)
+              ? product.sku!.trim()
+              : 'product_detail.not_available'.tr),
     ];
 
     final metaRows = <Widget>[
@@ -2513,6 +2526,50 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  /// Fills an empty SKU from the backend's SKU generator.
+  Future<void> _generateSku() async {
+    if (_isGeneratingSku) return;
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'product_detail.auth_token_missing_full'.tr,
+      );
+      return;
+    }
+    final gridSelectionProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    setState(() => _isGeneratingSku = true);
+    try {
+      final sku =
+          await gridSelectionProvider.generateSku(accessToken: accessToken);
+      if (!mounted) return;
+      if (sku != null) {
+        // Text typed while the request ran wins over the generated SKU.
+        if (_skuController.text.trim().isEmpty) _skuController.text = sku;
+        showScaffold(
+          context: context,
+          message: 'product_form.sku_generated_success'.tr,
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingSku = false);
+    }
+  }
+
   Future<void> _generateSaleUnitBarcode(TextEditingController target) async {
     final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
     if (token.isEmpty) return;
@@ -3004,7 +3061,71 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                         ),
                         spacing(),
-                        SizedBox(width: fieldWidth),
+                        SizedBox(
+                          width: fieldWidth,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _skuController,
+                            builder: (context, value, _) => Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: buildColumnWidgetForTextFields(
+                                    controller: _skuController,
+                                    size: size,
+                                    title: 'product_detail.sku'.tr,
+                                    hintText: 'general.optional'.tr,
+                                    width: double.infinity,
+                                    height: fieldHeight,
+                                    margin: EdgeInsets.zero,
+                                    readOnly: false,
+                                  ),
+                                ),
+                                // Offered only while empty, so a set SKU is
+                                // never replaced by one click.
+                                if (value.text.trim().isEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: fieldHeight,
+                                    width: fieldHeight,
+                                    child: Tooltip(
+                                      message: 'product_form.generate_sku'.tr,
+                                      child: ElevatedButton(
+                                        key: const ValueKey(
+                                            'product-details-generate-sku'),
+                                        onPressed: _isGeneratingSku
+                                            ? null
+                                            : _generateSku,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              ColorManager.kPrimaryColor,
+                                          padding: EdgeInsets.zero,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: _isGeneratingSku
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(Colors.white),
+                                                ),
+                                              )
+                                            : const Icon(Icons.refresh,
+                                                size: 18, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),

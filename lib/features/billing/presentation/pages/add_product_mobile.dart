@@ -47,6 +47,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   bool _isLoading = false;
   bool _isSaveAndCreateLoading = false;
   bool _isGeneratingBarcode = false;
+  bool _isGeneratingSku = false;
   bool _isCheckingDuplicateBarcode = false;
   bool _isValidatedOnce = false;
   bool _showAdvancedOptions = false;
@@ -82,6 +83,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   bool _suppliersRequested = false;
   bool _hasOpeningQuantity = false;
   final _itemCodeController = TextEditingController();
+  final _skuController = TextEditingController();
   final _minMarginController = TextEditingController();
   final _minMarginPriceController = TextEditingController();
   final _baseConversionRateController = TextEditingController(text: '1');
@@ -160,6 +162,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     _quantityController.dispose();
     _supplierSearchController.dispose();
     _itemCodeController.dispose();
+    _skuController.dispose();
     _minMarginController.dispose();
     _minMarginPriceController.dispose();
     _unitSearchController.dispose();
@@ -555,6 +558,47 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     });
   }
 
+  /// Fills the SKU field from the backend's SKU generator.
+  Future<void> _generateSku() async {
+    if (_isGeneratingSku) return;
+    final token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'product_detail.auth_token_missing_login'.tr,
+      );
+      return;
+    }
+    final gridProvider =
+        Provider.of<GridSelectionProvider>(context, listen: false);
+    setState(() => _isGeneratingSku = true);
+    try {
+      final sku = await gridProvider.generateSku(accessToken: token);
+      if (!mounted) return;
+      if (sku != null) {
+        setState(() => _skuController.text = sku);
+        showScaffold(
+          context: context,
+          message: 'product_form.sku_generated_success'.tr,
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'product_form.failed_generate_sku'.tr,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingSku = false);
+    }
+  }
+
   Future<void> _generateBarcode() async {
     if (_isGeneratingBarcode || widget.barcode != null) return;
     await _generateBarcodeIntoController(_barcodeController);
@@ -878,6 +922,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             ? _baseConversionRateController.text.trim()
             : '1',
         itemCode: itemCodeEnabled ? _itemCodeController.text.trim() : null,
+        sku: _skuController.text.trim(),
         minMarginPercentage: _minMarginController.text.trim().isNotEmpty
             ? _minMarginController.text.trim()
             : null,
@@ -963,6 +1008,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     _sellingPriceController.clear();
     _purchasePriceController.clear();
     _itemCodeController.clear();
+    _skuController.clear();
     _minMarginController.clear();
     _minMarginPriceController.clear();
     _baseConversionRateController.text = '1';
@@ -1677,6 +1723,20 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             controller: _minMarginPriceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalInputFormatter],
+          ),
+          const SizedBox(height: 18),
+          _buildInputField(
+            label: 'product_form.sku'.tr,
+            hintText: 'general.optional'.tr,
+            controller: _skuController,
+            suffixIcon: Tooltip(
+              message: 'product_form.generate_sku'.tr,
+              child: _buildSquareActionButton(
+                isLoading: _isGeneratingSku,
+                onPressed: _generateSku,
+                icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+              ),
+            ),
           ),
           if (multiSaleUnitEnabled && _showAdvancedOptions) ...[
             const SizedBox(height: 24),
