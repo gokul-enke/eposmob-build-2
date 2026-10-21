@@ -429,7 +429,8 @@ class AddProductFormHelpers {
       try {
         response = json.decode(body);
       } catch (_) {
-        return body;
+        // An HTML error page (server crash, proxy error) is not a message.
+        return body.startsWith('<') ? fallback : body;
       }
     }
 

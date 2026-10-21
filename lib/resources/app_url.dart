@@ -276,6 +276,7 @@ class APPUrl {
       '$baseURL/api/v1/cart/update-cart-item-status';
   static String get generateBarcode =>
       '$baseURL/api/v1/product/generate-barcode';
+  static String get generateSku => '$baseURL/api/v1/product/generate-sku';
   static String get updateAllOrderItemsStatus =>
       '$baseURL/api/v1/order/update-order-items-status';
 

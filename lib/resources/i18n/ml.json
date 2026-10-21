@@ -2681,6 +2681,10 @@
   "product_form": {
     "supplier": "സപ്ലയർ",
     "select_supplier": "സപ്ലയർ തിരഞ്ഞെടുക്കുക",
+    "sku": "SKU",
+    "generate_sku": "SKU സൃഷ്ടിക്കുക",
+    "sku_generated_success": "SKU വിജയകരമായി സൃഷ്ടിച്ചു",
+    "failed_generate_sku": "SKU സൃഷ്ടിക്കാനായില്ല",
     "title": "പുതിയ ഉൽപ്പന്നം സൃഷ്ടിക്കുക",
     "subtitle": "a പുതിയ ഉൽപ്പന്നം സഹിതം കസ്റ്റം ബാർകോഡ് സൃഷ്ടിക്കുക",
     "no_product_found_barcode": "ഉൽപ്പന്നം കണ്ടെത്തി സഹിതം ബാർകോഡ് @barcode ഇല്ല",

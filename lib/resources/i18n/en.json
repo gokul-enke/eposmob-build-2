@@ -2681,6 +2681,10 @@
   "product_form": {
     "supplier": "Supplier",
     "select_supplier": "Select Supplier",
+    "sku": "SKU",
+    "generate_sku": "Generate SKU",
+    "sku_generated_success": "SKU generated successfully",
+    "failed_generate_sku": "Failed to generate SKU",
     "title": "Create New Product",
     "subtitle": "Create a new product with custom barcode",
     "no_product_found_barcode": "No product found with barcode @barcode",
