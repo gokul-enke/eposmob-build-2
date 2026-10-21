@@ -11,6 +11,7 @@ import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/helpers/product_search_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class MobileProductAutocomplete extends StatefulWidget {
   final Size size;
@@ -319,7 +320,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                       ),
                       decoration: BoxDecoration(
                         color:
-                            isHighlighted ? Colors.blue.shade50 : Colors.white,
+                            isHighlighted ? ColorManager.kBrandBlue50 : Colors.white,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Material(
@@ -338,7 +339,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                             style: TextStyle(
                               fontSize: 14, // Slightly larger for mobile
                               color: isHighlighted
-                                  ? Colors.blue.shade800
+                                  ? ColorManager.kBrandBlue800
                                   : Colors.black87,
                               fontWeight: isHighlighted
                                   ? FontWeight.w500
@@ -353,7 +354,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: isHighlighted
-                                        ? Colors.blue.shade600
+                                        ? ColorManager.kBrandBlue600
                                         : Colors.grey.shade600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -365,7 +366,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: isHighlighted
-                                  ? Colors.blue.shade900
+                                  ? ColorManager.kBrandBlue900
                                   : Colors.black87,
                             ),
                           ),

@@ -45,9 +45,22 @@ if(NOT EXISTS "${BRAND_DIR}/brand.json")
   message(FATAL_ERROR "Unknown brand '${BRAND_ID}': ${BRAND_DIR}/brand.json not found.")
 endif()
 file(READ "${BRAND_DIR}/brand.json" BRAND_JSON)
-foreach(key BRAND_NAME BRAND_TITLE BRAND_COMPANY BRAND_PRODUCT_NAME BRAND_EXE_NAME)
+foreach(key BRAND_NAME BRAND_TITLE BRAND_COMPANY BRAND_PRODUCT_NAME BRAND_EXE_NAME
+    BRAND_SPLASH_TEXT_COLOR)
   string(JSON ${key} GET "${BRAND_JSON}" ${key})
 endforeach()
+# "0xAARRGGBB" -> decimal R, G, B for the native splash's RGB() macro.
+# CMake regexes have no {n} repeat.
+set(_hex "[0-9A-Fa-f]")
+if(NOT BRAND_SPLASH_TEXT_COLOR MATCHES "^0[xX]${_hex}${_hex}${_hex}${_hex}${_hex}${_hex}${_hex}${_hex}$")
+  message(FATAL_ERROR "BRAND_SPLASH_TEXT_COLOR must look like 0xFFRRGGBB.")
+endif()
+string(SUBSTRING "${BRAND_SPLASH_TEXT_COLOR}" 4 2 _r)
+string(SUBSTRING "${BRAND_SPLASH_TEXT_COLOR}" 6 2 _g)
+string(SUBSTRING "${BRAND_SPLASH_TEXT_COLOR}" 8 2 _b)
+math(EXPR BRAND_SPLASH_R "0x${_r}")
+math(EXPR BRAND_SPLASH_G "0x${_g}")
+math(EXPR BRAND_SPLASH_B "0x${_b}")
 # Prefix for the single-instance mutex, window props and classes. CloudPOS
 # keeps its historical "CLOUDPOS" so installed copies still see each other.
 if(BRAND_ID STREQUAL "cloudpos")

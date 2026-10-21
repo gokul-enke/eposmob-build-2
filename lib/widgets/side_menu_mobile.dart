@@ -25,6 +25,7 @@ import '../resources/style_manager.dart';
 import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
 import 'side_menu.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class SideMenuMobile extends StatefulWidget {
   const SideMenuMobile({super.key});
@@ -1285,7 +1286,7 @@ class _MobileDrawerFooter extends StatelessWidget {
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
               final version =
-                  snapshot.hasData ? 'v${snapshot.data!.version}' : 'CloudPOS';
+                  snapshot.hasData ? 'v${snapshot.data!.version}' : BrandConfig.name;
               return Center(
                 child: Text(
                   version,

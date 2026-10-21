@@ -742,8 +742,8 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
   Widget _buildTypeChip(String type) {
     Color backgroundColor = type.toLowerCase() == 'cash'
         ? Colors.green.withOpacity(0.1)
-        : Colors.blue.withOpacity(0.1);
-    Color textColor = type.toLowerCase() == 'cash' ? Colors.green : Colors.blue;
+        : ColorManager.kBrandBlue.withOpacity(0.1);
+    Color textColor = type.toLowerCase() == 'cash' ? Colors.green : ColorManager.kBrandBlue;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -768,8 +768,8 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
         textColor = Colors.red;
         break;
       case 'balanced':
-        backgroundColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
+        backgroundColor = ColorManager.kBrandBlue.withOpacity(0.1);
+        textColor = ColorManager.kBrandBlue;
         break;
       default:
         backgroundColor = Colors.grey.withOpacity(0.1);
@@ -825,13 +825,13 @@ class _CompanyAccountsScreenState extends State<CompanyAccountsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: ColorManager.kBrandBlue.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text.toUpperCase(),
         style: const TextStyle(
-          color: Colors.blue,
+          color: ColorManager.kBrandBlue,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),

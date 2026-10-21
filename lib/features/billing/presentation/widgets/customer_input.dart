@@ -368,7 +368,7 @@ class _CustomerInputState extends State<CustomerInput> {
                                         },
                                         child: Container(
                                           color: isHighlighted
-                                              ? Colors.blue.shade50
+                                              ? ColorManager.kBrandBlue50
                                               : (billingProvider
                                                           .hoverMap[index] ==
                                                       true
@@ -382,7 +382,7 @@ class _CustomerInputState extends State<CustomerInput> {
                                                 12,
                                                 0.27,
                                                 isHighlighted
-                                                    ? Colors.blue.shade800
+                                                    ? ColorManager.kBrandBlue800
                                                     : Colors.black
                                                         .withValues(alpha: 0.5),
                                               ),

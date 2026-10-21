@@ -17,6 +17,7 @@ import 'package:pos_machine/features/vouchers/domain/models/supplier_voucher.dar
 import 'package:pos_machine/features/vouchers/presentation/navigation/voucher_navigation.dart';
 import 'supplier_voucher_print_thermal.dart';
 import 'supplier_voucher_print_standard.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class SupplierVoucherPrintPage extends StatefulWidget {
   final SupplierVoucher voucher;
@@ -44,7 +45,7 @@ class _SupplierVoucherPrintPageState extends State<SupplierVoucherPrintPage> {
 
   DocumentConfig? _supplierVoucherDocumentConfig;
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

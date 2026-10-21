@@ -220,7 +220,7 @@ class OpenShiftFormView extends StatelessWidget {
                             ? null
                             : inputs.controller.saveOpeningDraft,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2196F3),
+                          backgroundColor: ColorManager.kBlue2196F3,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12),

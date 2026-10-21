@@ -22,6 +22,7 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/discount_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Consistent user-facing error and recovery copy for mobile billing flows.
 class BillingMobileErrorMessages {
@@ -2822,7 +2823,7 @@ class BillingMobileCustomerController {
 
   Color avatarColor(String initial) {
     const colors = [
-      Color(0xFF1D4ED8),
+      ColorManager.kBlue1D4ED8,
       Color(0xFF059669),
       Color(0xFFD97706),
       Color(0xFFDC2626),

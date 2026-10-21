@@ -2762,9 +2762,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: ColorManager.kBrandBlue50,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade200),
+                          border: Border.all(color: ColorManager.kBrandBlue200),
                         ),
                         child: Column(
                           children: [
@@ -2774,7 +2774,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 FontWeightManager.bold,
                                 FontSize.s20,
                                 0.30,
-                                Colors.blue.shade700,
+                                ColorManager.kBrandBlue700,
                               ),
                             ),
                             Text(
@@ -2783,7 +2783,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                 FontWeightManager.medium,
                                 FontSize.s12,
                                 0.27,
-                                Colors.blue.shade600,
+                                ColorManager.kBrandBlue600,
                               ),
                             ),
                           ],
@@ -3841,7 +3841,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                           FontWeightManager.regular,
                                           11,
                                           0.21,
-                                          Colors.blue.shade700,
+                                          ColorManager.kBrandBlue700,
                                         ),
                                       ),
                                     );
@@ -4091,7 +4091,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     FontWeightManager.regular,
                                     11,
                                     0.21,
-                                    Colors.blue.shade700,
+                                    ColorManager.kBrandBlue700,
                                   ),
                                 );
                               }
@@ -4410,7 +4410,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             'add_stock.total_items'.tr,
                             totalItems.toString(),
                             Icons.inventory_2_outlined,
-                            Colors.blue.shade600,
+                            ColorManager.kBrandBlue600,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -4460,7 +4460,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       'add_stock.total_items'.tr,
                       totalItems.toString(),
                       Icons.inventory_2_outlined,
-                      Colors.blue.shade600,
+                      ColorManager.kBrandBlue600,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -4743,7 +4743,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               decoration: BoxDecoration(
                                 color: item.isSuccessfullyAdded
                                     ? Colors.green
-                                    : Colors.blue,
+                                    : ColorManager.kBrandBlue,
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -4914,10 +4914,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                           height: 40,
                           width: 40,
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: ColorManager.kBrandBlue50,
                             borderRadius: BorderRadius.circular(5),
                             border: Border.all(
-                              color: Colors.blue.withOpacity(0.3),
+                              color: ColorManager.kBrandBlue.withOpacity(0.3),
                             ),
                             boxShadow: const [
                               BoxShadow(
@@ -4931,7 +4931,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                             icon: const Icon(
                               Icons.info_outline,
                               size: 18,
-                              color: Colors.blue,
+                              color: ColorManager.kBrandBlue,
                             ),
                             onPressed: () => _showProductDetailsModal(index),
                             padding: EdgeInsets.zero,
@@ -5252,7 +5252,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                                     item.salePrice)
                                 : item.salePrice,
                             Icons.sell,
-                            Colors.blue.shade600,
+                            ColorManager.kBrandBlue600,
                           ),
                         if (item.purchaseRate.isNotEmpty)
                           _buildDetailChip(
@@ -5405,7 +5405,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       decoration: BoxDecoration(
                         color: item.isSuccessfullyAdded
                             ? Colors.green
-                            : Colors.blue,
+                            : ColorManager.kBrandBlue,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -5568,9 +5568,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   height: 40,
                   width: 40,
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: ColorManager.kBrandBlue50,
                     borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    border: Border.all(color: ColorManager.kBrandBlue.withOpacity(0.3)),
                     boxShadow: const [
                       BoxShadow(
                         color: ColorManager.boxShadowColor,
@@ -5583,7 +5583,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     icon: const Icon(
                       Icons.info_outline,
                       size: 18,
-                      color: Colors.blue,
+                      color: ColorManager.kBrandBlue,
                     ),
                     onPressed: () => _showProductDetailsModal(index),
                     padding: EdgeInsets.zero,
@@ -7312,7 +7312,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               .toStringAsFixed(2) ??
                           '0.00',
                     ),
-                Colors.blue,
+                ColorManager.kBrandBlue,
                 item.taxInclude,
                 toggleLabel: 'add_stock.including_tax'.tr,
                 toggleValue: item.taxInclude,

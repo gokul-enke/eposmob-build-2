@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Minimum recommended touch target (WCAG / Material).
 const double kBillingMinTouchTarget = 44;
@@ -303,7 +304,7 @@ class BillingActionButtons extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
                     backgroundColor: hasItems
-                        ? const Color(0xFF0056B3)
+                        ? ColorManager.kBlue0056B3
                         : Colors.grey.shade300,
                     minimumSize: const Size(0, kBillingMinTouchTarget),
                     padding: const EdgeInsets.symmetric(vertical: 14),

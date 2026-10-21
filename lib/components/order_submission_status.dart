@@ -350,7 +350,7 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: warning ? const Color(0xFFFFF8EB) : const Color(0xFFEDF5FF),
+          color: warning ? const Color(0xFFFFF8EB) : ColorManager.kBlueEDF5FF,
           borderRadius: BorderRadius.circular(10)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(Icons.info_outline,
@@ -395,7 +395,7 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
                           Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                  color: const Color(0xFFEDF5FF),
+                                  color: ColorManager.kBlueEDF5FF,
                                   borderRadius: BorderRadius.circular(10)),
                               child: Icon(icon, color: _blue, size: 22)),
                           const SizedBox(width: 12),
@@ -696,8 +696,7 @@ class _OrdersToReviewPageState extends State<OrdersToReviewPage> {
                                                         const EdgeInsets.all(
                                                             12),
                                                     decoration: BoxDecoration(
-                                                        color: const Color(
-                                                            0xFFEDF5FF),
+                                                        color: ColorManager.kBlueEDF5FF,
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(12)),

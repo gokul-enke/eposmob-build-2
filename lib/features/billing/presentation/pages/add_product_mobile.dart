@@ -1259,7 +1259,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: Colors.blue.shade50,
+                                color: ColorManager.kBrandBlue50,
                                 width: 1.5,
                               ),
                               boxShadow: [
@@ -2050,7 +2050,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   Widget _buildSectionHeader(IconData icon, String title) {
     return Row(
       children: [
-        Icon(icon, color: Colors.blue.shade700, size: 22),
+        Icon(icon, color: ColorManager.kBrandBlue700, size: 22),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

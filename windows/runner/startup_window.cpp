@@ -122,7 +122,7 @@ LRESULT CALLBACK StartupWindow::WindowProc(HWND window, UINT message,
           FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
           CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
       HGDIOBJ previous = SelectObject(dc, font);
-      SetTextColor(dc, RGB(25, 103, 210));
+      SetTextColor(dc, BRAND_SPLASH_TEXT_RGB);
       const wchar_t* text = self && self->cancelled() ? L"Closing " BRAND_NAME L"..."
           : L"Opening " BRAND_NAME L"...\nPlease wait while the app starts.";
       DrawTextW(dc, text, -1, &rect, DT_CENTER | DT_WORDBREAK);

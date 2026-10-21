@@ -179,7 +179,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isSelected
-                          ? const Color(0xFF3B82F6)
+                          ? ColorManager.kBlue3B82F6
                           : Colors.grey.shade200,
                       width: isSelected ? 1.5 : 1,
                     ),
@@ -203,7 +203,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                               Icon(
                                 _controller.iconForItem(item),
                                 color: isSelected
-                                    ? const Color(0xFF0066CC)
+                                    ? ColorManager.kBlue0066CC
                                     : Colors.grey.shade700,
                                 size: 20,
                               ),
@@ -216,7 +216,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                                       ? FontWeight.bold
                                       : FontWeight.w500,
                                   color: isSelected
-                                      ? const Color(0xFF0066CC)
+                                      ? ColorManager.kBlue0066CC
                                       : Colors.black87,
                                 ),
                               ),
@@ -235,7 +235,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               color: isSelected
-                                  ? const Color(0xFF0066CC)
+                                  ? ColorManager.kBlue0066CC
                                   : Colors.black87,
                             ),
                             decoration: InputDecoration(
@@ -260,7 +260,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(
                                   color: isSelected
-                                      ? const Color(0xFF3B82F6)
+                                      ? ColorManager.kBlue3B82F6
                                       : ColorManager.kPrimaryColor,
                                   width: 1.5,
                                 ),
@@ -457,7 +457,7 @@ class _ToCustomerCreditSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: snapshot.toCustomerCreditEnabled
-                  ? const Color(0xFF3B82F6)
+                  ? ColorManager.kBlue3B82F6
                   : Colors.grey.shade200,
               width: snapshot.toCustomerCreditEnabled ? 1.5 : 1,
             ),
@@ -471,7 +471,7 @@ class _ToCustomerCreditSection extends StatelessWidget {
                   Icon(
                     Icons.account_balance_wallet_outlined,
                     color: snapshot.toCustomerCreditEnabled
-                        ? const Color(0xFF0066CC)
+                        ? ColorManager.kBlue0066CC
                         : Colors.grey.shade700,
                     size: 20,
                   ),
@@ -482,13 +482,13 @@ class _ToCustomerCreditSection extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0066CC),
+                        color: ColorManager.kBlue0066CC,
                       ),
                     ),
                   ),
                   Switch(
                     value: snapshot.toCustomerCreditEnabled,
-                    activeColor: const Color(0xFF3B82F6),
+                    activeColor: ColorManager.kBlue3B82F6,
                     onChanged: (value) {
                       controller.toggleToCustomerCredit(bp, value);
                     },
@@ -526,7 +526,7 @@ class _ToCustomerCreditSection extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0066CC),
+                    color: ColorManager.kBlue0066CC,
                   ),
                   decoration: InputDecoration(
                     hintText: 'billing.enter_customer_credit_amount'.tr,

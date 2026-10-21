@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/config/brand_config.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 const _requiredKeys = [
   'BRAND_ID',
@@ -17,6 +18,13 @@ const _requiredKeys = [
   'BRAND_APP_ID',
   'BRAND_LOGO_ASSET',
   'BRAND_ICON_ASSET',
+  'BRAND_WEBSITE',
+  'BRAND_PRIMARY_COLOR',
+  'BRAND_ACCENT_COLOR',
+  'BRAND_SECONDARY_COLOR',
+  'BRAND_BG_LIGHT_COLOR',
+  'BRAND_BG_DARK_COLOR',
+  'BRAND_SPLASH_TEXT_COLOR',
 ];
 
 Map<String, Map<String, dynamic>> _loadBrands() {
@@ -33,13 +41,16 @@ Map<String, Map<String, dynamic>> _loadBrands() {
 void main() {
   final brands = _loadBrands();
   final pubspec = File('pubspec.yaml').readAsStringSync();
+  // These check the plain CloudPOS build; CI also runs this file per brand.
+  final cloudposOnly =
+      BrandConfig.isDefault ? null : 'CloudPOS build only (default defines)';
 
   test('default build is the CloudPOS brand and leaves copy unchanged', () {
     expect(BrandConfig.id, 'cloudpos');
     expect(BrandConfig.title, 'CLOUDPOS');
     expect(BrandConfig.apply('Restart CloudPOS (cloudpos.exe)'),
         'Restart CloudPOS (cloudpos.exe)');
-  });
+  }, skip: cloudposOnly);
 
   test('CloudPOS keeps the identity of existing installs', () {
     // Changing any of these makes the next release install as a second app
@@ -51,7 +62,31 @@ void main() {
     expect(cloudpos['BRAND_EXE_NAME'], 'cloudpos.exe');
     expect(cloudpos['BRAND_LOGO_ASSET'], BrandConfig.logoAsset);
     expect(cloudpos['BRAND_ICON_ASSET'], BrandConfig.iconAsset);
-  });
+    expect(cloudpos['BRAND_WEBSITE'], BrandConfig.website);
+  }, skip: cloudposOnly);
+
+  test('CloudPOS brand file matches the palette a plain build uses', () {
+    // A plain `flutter run` uses ColorManager's defaults; the release build
+    // passes brands/cloudpos/brand.json. They must give the same colours.
+    final cloudpos = brands['cloudpos']!;
+    int color(String key) => int.parse(cloudpos[key] as String);
+    expect(color('BRAND_PRIMARY_COLOR'), ColorManager.kPrimaryColor.toARGB32());
+    expect(color('BRAND_ACCENT_COLOR'), ColorManager.kButtonBlue.toARGB32());
+    expect(
+        color('BRAND_SECONDARY_COLOR'), ColorManager.kSecondaryColor.toARGB32());
+    expect(color('BRAND_BG_LIGHT_COLOR'), ColorManager.kBgLightColor.toARGB32());
+    expect(color('BRAND_BG_DARK_COLOR'), ColorManager.kBgDarkColor.toARGB32());
+    // CloudPOS keeps Material's exact blue swatch.
+    expect(ColorManager.kBrandBlue.toARGB32(), 0xFF2196F3);
+    expect(ColorManager.kBrandBlue50.toARGB32(), 0xFFE3F2FD);
+    expect(ColorManager.kBrandBlue700.toARGB32(), 0xFF1976D2);
+    expect(ColorManager.primaryHex, '#3C92F5');
+    // Former hardcoded blues keep their exact CloudPOS values.
+    expect(ColorManager.kBlue2563EB.toARGB32(), 0xFF2563EB);
+    expect(ColorManager.kBlue0066CC.toARGB32(), 0xFF0066CC);
+    expect(ColorManager.kBlueEFF6FF.toARGB32(), 0xFFEFF6FF);
+    expect(ColorManager.kBlue1E88E5a1A.toARGB32(), 0x1A1E88E5);
+  }, skip: cloudposOnly);
 
   for (final entry in brands.entries) {
     test('brand ${entry.key} is complete and packageable', () {
@@ -71,6 +106,13 @@ void main() {
           isTrue,
           reason: 'BRAND_APP_ID must be a bare GUID');
       expect(brand['BRAND_EXE_NAME'], endsWith('.exe'));
+      for (final key in _requiredKeys.where((k) => k.endsWith('_COLOR'))) {
+        // Anything else silently falls back to the CloudPOS colour in Dart.
+        expect(RegExp(r'^0x[0-9A-Fa-f]{8}$').hasMatch(brand[key] as String),
+            isTrue,
+            reason: '$key must look like 0xFFRRGGBB');
+      }
+      expect(brand['BRAND_WEBSITE'], startsWith('https://'));
       for (final key in ['BRAND_LOGO_ASSET', 'BRAND_ICON_ASSET']) {
         final asset = brand[key] as String;
         expect(File(asset).existsSync(), isTrue, reason: '$asset missing');

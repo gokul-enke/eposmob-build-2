@@ -598,8 +598,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _SettingsCardWithIcon(
         title: 'settings.language'.tr,
         icon: FontAwesomeIcons.globe,
-        backgroundColor: const Color(0xFFE3F2FD),
-        iconColor: const Color(0xFF1565C0),
+        backgroundColor: ColorManager.kBlueE3F2FD,
+        iconColor: ColorManager.kBlue1565C0,
         onTap: () => _showLanguagePicker(context),
       ),
       Consumer<StoreSessionProvider>(
@@ -764,11 +764,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: label,
             icon: const Icon(
               Icons.view_week,
-              color: Color(0xFF1565C0),
+              color: ColorManager.kBlue1565C0,
               size: 22,
             ),
-            backgroundColor: const Color(0xFFE3F2FD),
-            iconColor: const Color(0xFF1565C0),
+            backgroundColor: ColorManager.kBlueE3F2FD,
+            iconColor: ColorManager.kBlue1565C0,
             onTap: () async {
               await _showNotificationPositionPicker();
             },

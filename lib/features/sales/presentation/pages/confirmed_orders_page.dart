@@ -19,6 +19,7 @@ import '../commands/show_local_sale_details.dart';
 import '../commands/show_local_sale_sync_log.dart';
 import '../commands/update_local_sale_identity.dart';
 import '../widgets/local_orders/local_sale_attention_card.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 enum _AttentionFilter { all, needsReview, rejected, notSent }
 
@@ -428,7 +429,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
         margin: const EdgeInsets.only(top: 14),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
+            color: ColorManager.kBlueEFF6FF,
             borderRadius: BorderRadius.circular(10)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Syncing orders · $_completed of $_total completed',
@@ -436,7 +437,7 @@ class _ConfirmedOrdersPageState extends State<ConfirmedOrdersPage> {
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F3D75))),
+                  color: ColorManager.kBlue0F3D75)),
           const SizedBox(height: 8),
           LinearProgressIndicator(
               value: _total == 0 ? 0 : _completed / _total,

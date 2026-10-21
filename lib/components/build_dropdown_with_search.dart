@@ -328,7 +328,7 @@ class _BuildDropDownWithSearchState<T>
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(7),
-                              borderSide: BorderSide(color: Colors.blue.shade600),
+                              borderSide: BorderSide(color: ColorManager.kBrandBlue600),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -381,11 +381,11 @@ class _BuildDropDownWithSearchState<T>
                                   margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: hasFocus || isSelected
-                                        ? Colors.blue.shade50
+                                        ? ColorManager.kBrandBlue50
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color: hasFocus ? Colors.blue.shade600 : Colors.transparent,
+                                      color: hasFocus ? ColorManager.kBrandBlue600 : Colors.transparent,
                                       width: 1,
                                     ),
                                   ),
@@ -394,7 +394,7 @@ class _BuildDropDownWithSearchState<T>
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: hasFocus || isSelected
-                                          ? Colors.blue.shade800
+                                          ? ColorManager.kBrandBlue800
                                           : Colors.black87,
                                       fontWeight: hasFocus || isSelected
                                           ? FontWeight.w600
@@ -437,7 +437,7 @@ class _BuildDropDownWithSearchState<T>
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.blue.shade600,
+                                      ColorManager.kBrandBlue600,
                                     ),
                                   ),
                                 ),

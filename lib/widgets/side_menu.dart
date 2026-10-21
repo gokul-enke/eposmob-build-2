@@ -37,6 +37,7 @@ import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
 import 'collapsible_sidebar.dart';
 import 'drawer_list_tile_expandable.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 export 'collapsible_sidebar.dart';
 
@@ -1271,7 +1272,7 @@ class _SideMenuState extends State<SideMenu> {
           if (isExpanded)
             Center(
               child: Text(
-                '2025 CloudPOS App',
+                '2025 ${BrandConfig.name} App',
                 style: buildCustomStyle(
                   FontWeightManager.medium,
                   FontSize.s11,

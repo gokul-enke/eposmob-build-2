@@ -213,17 +213,17 @@ class _LocalSaleAttentionCardState extends State<LocalSaleAttentionCard> {
         ),
       // Sends run one at a time, so a queued sale can wait for its turn.
       LocalSaleSyncState.queued when widget.submitting => (
-          const Color(0xFF2563EB),
+          ColorManager.kBlue2563EB,
           Icons.hourglass_top_outlined,
           'Waiting for earlier orders to finish sending…',
         ),
       LocalSaleSyncState.queued => (
-          const Color(0xFF2563EB),
+          ColorManager.kBlue2563EB,
           Icons.schedule_outlined,
           'Saved on this device and ready to sync.',
         ),
       LocalSaleSyncState.sending => (
-          const Color(0xFF2563EB),
+          ColorManager.kBlue2563EB,
           Icons.sync,
           'Sending to the server…',
         ),

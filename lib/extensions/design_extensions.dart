@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 extension Neumorphism on Widget {
   addNuemorphism({
@@ -6,7 +7,7 @@ extension Neumorphism on Widget {
     Offset offset = const Offset(5, 5),
     double blurRadius = 10,
     Color topShadowColor = Colors.white60,
-    Color bottomShadowColor = const Color(0x26234395),
+    Color bottomShadowColor = ColorManager.kBlue234395a26,
   }) {
     return Container(
       decoration: BoxDecoration(

@@ -58,7 +58,7 @@ class LocalOrderDetailView extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: ColorManager.kBlueEFF6FF,
                       borderRadius: BorderRadius.circular(12)),
                   child: const Icon(Icons.receipt_long_outlined,
                       color: ColorManager.kPrimaryColor),
@@ -335,10 +335,10 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-            color: emphasis ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+            color: emphasis ? ColorManager.kBlueEFF6FF : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(12),
             border:
-                Border.all(color: emphasis ? const Color(0xFFBFDBFE) : _line)),
+                Border.all(color: emphasis ? ColorManager.kBlueBFDBFE : _line)),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -355,7 +355,7 @@ class _Stat extends StatelessWidget {
                 child: Text(value,
                     style: TextStyle(
                         color: color ??
-                            (emphasis ? const Color(0xFF0F3D75) : _ink),
+                            (emphasis ? ColorManager.kBlue0F3D75 : _ink),
                         fontSize: emphasis ? 20 : 17,
                         fontWeight: FontWeight.w700,
                         fontFeatures: const [FontFeature.tabularFigures()])),

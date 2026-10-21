@@ -6,9 +6,16 @@
   "BRAND_PRODUCT_NAME": "pos_machine_easyerp",
   "BRAND_PUBLISHER": "ENKE",
   "BRAND_URL": "https://enke.ae/",
+  "BRAND_WEBSITE": "https://enke.ae/",
   "BRAND_EXE_NAME": "easyerp.exe",
   "BRAND_INSTALLER_NAME": "easyerp",
   "BRAND_APP_ID": "B156AA90-02B7-4556-BC61-96B9C828DE53",
   "BRAND_LOGO_ASSET": "assets/brands/easyerp/logo.png",
-  "BRAND_ICON_ASSET": "assets/brands/easyerp/icon.png"
+  "BRAND_ICON_ASSET": "assets/brands/easyerp/icon.png",
+  "BRAND_PRIMARY_COLOR": "0xFFE8590C",
+  "BRAND_ACCENT_COLOR": "0xFFD6336C",
+  "BRAND_SECONDARY_COLOR": "0xFFFFF7F2",
+  "BRAND_BG_LIGHT_COLOR": "0xFFFFF3EB",
+  "BRAND_BG_DARK_COLOR": "0xFFFDE8DA",
+  "BRAND_SPLASH_TEXT_COLOR": "0xFFE8590C"
 }

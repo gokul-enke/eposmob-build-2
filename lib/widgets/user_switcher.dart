@@ -163,8 +163,8 @@ class _UserSwitcherState extends State<UserSwitcher> {
                               fontSize: FontSize.s12,
                               height: MediaQuery.of(context).size.height * .05,
                               width: 120,
-                              textColor: Colors.blue,
-                              borderColor: Colors.blue,
+                              textColor: ColorManager.kBrandBlue,
+                              borderColor: ColorManager.kBrandBlue,
                               boxColor: Colors.white,
                               fct: () {
                                 Navigator.of(context).pop();

@@ -20,7 +20,7 @@ extension PurchaseOrderFormViewOperations2 on PurchaseOrderFormView {
                 width: 20,
                 height: 20,
                 decoration: const BoxDecoration(
-                  color: Colors.blue,
+                  color: ColorManager.kBrandBlue,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -121,7 +121,7 @@ extension PurchaseOrderFormViewOperations2 on PurchaseOrderFormView {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: ColorManager.kBrandBlue,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(

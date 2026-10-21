@@ -46,6 +46,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/keyboard_short
 import 'package:pos_machine/features/billing/presentation/widgets/dining_selection_modal.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/features/subscription/presentation/subscription_action_guard.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
@@ -725,7 +726,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       icon: Icons.restaurant_rounded,
                       title: 'restaurant.dining_label'.tr,
                       value: _counterDiningLabel(fallback: 'restaurant.select_table_short'.tr),
-                      color: const Color(0xFF2563EB),
+                      color: ColorManager.kBlue2563EB,
                       isSelected: _hasCounterDiningSelection,
                       onTap: _showDiningSelectionModal,
                     ),
@@ -954,7 +955,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       _buildCounterActionButton(
                         text: 'restaurant.confirm_and_print'.tr,
                         shortcutLabel: showShortcuts ? 'F6' : null,
-                        color: const Color(0xFF5B8DEF),
+                        color: ColorManager.kBlue5B8DEF,
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
                         onPressed: () {
@@ -1455,7 +1456,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             ),
             icon: Icon(
               _showTablesPanel ? Icons.menu_open_rounded : Icons.menu_rounded,
-              color: const Color(0xFF2563EB),
+              color: ColorManager.kBlue2563EB,
               size: isCompact ? 18 : 20,
             ),
             tooltip: _showTablesPanel
@@ -1473,7 +1474,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           //   decoration: BoxDecoration(
           //     color: isCounterEnabled
           //         ? const Color(0xFF059669).withOpacity(0.12)
-          //         : const Color(0xFF2563EB).withOpacity(0.10),
+          //         : ColorManager.kBlue2563EB.withOpacity(0.10),
           //     borderRadius: BorderRadius.circular(12),
           //   ),
           //   child: Icon(
@@ -1482,7 +1483,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           //         : Icons.restaurant_menu_rounded,
           //     color: isCounterEnabled
           //         ? const Color(0xFF059669)
-          //         : const Color(0xFF2563EB),
+          //         : ColorManager.kBlue2563EB,
           //     size: isCompact ? 16 : 19,
           //   ),
           // ),
@@ -1516,10 +1517,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: ColorManager.kBlueEFF6FF,
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: const Color(0xFFBFDBFE),
+                        color: ColorManager.kBlueBFDBFE,
                       ),
                     ),
                     child: Row(
@@ -1529,7 +1530,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           contextIcon,
                           size: 14,
                           color:
-                              isCounterEnabled ? const Color(0xFF047857) : const Color(0xFF2563EB),
+                              isCounterEnabled ? const Color(0xFF047857) : ColorManager.kBlue2563EB,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -1538,7 +1539,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                             FontWeightManager.semiBold,
                             FontSize.s12,
                             0.21,
-                            isCounterEnabled ? const Color(0xFF047857) : const Color(0xFF1D4ED8),
+                            isCounterEnabled ? const Color(0xFF047857) : ColorManager.kBlue1D4ED8,
                           ),
                         ),
                       ],
@@ -1583,7 +1584,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         _buildTopBarContextChip(
           icon: Icons.restaurant_rounded,
           label: _counterDiningLabel(fallback: 'restaurant.dining_label'.tr),
-          color: const Color(0xFF2563EB),
+          color: ColorManager.kBlue2563EB,
           isSelected: _hasCounterDiningSelection,
           onTap: _showDiningSelectionModal,
           isCompact: isCompact,
@@ -1719,7 +1720,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   icon: const Icon(
                     Icons.add_shopping_cart_rounded,
                     size: 18,
-                    color: Color(0xFF2563EB),
+                    color: ColorManager.kBlue2563EB,
                   ),
                   tooltip: 'billing.new_order'.tr,
                   onPressed: _startNewCounterOrder,
@@ -1756,7 +1757,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 Icon(
                   contextIcon,
                   size: 14,
-                  color: const Color(0xFF2563EB),
+                  color: ColorManager.kBlue2563EB,
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -2189,7 +2190,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 keyboardProvider.showKeyboardFeature ? Icons.keyboard_hide : Icons.keyboard,
                 size: iconSize,
                 color: keyboardProvider.showKeyboardFeature
-                    ? const Color(0xFF2563EB)
+                    ? ColorManager.kBlue2563EB
                     : Colors.grey.shade600,
               ),
               tooltip: keyboardProvider.showKeyboardFeature
@@ -2229,7 +2230,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 Icons.text_fields,
                 size: iconSize,
                 color:
-                    fontProvider.fontSizeLevel > 0 ? const Color(0xFF2563EB) : Colors.grey.shade600,
+                    fontProvider.fontSizeLevel > 0 ? ColorManager.kBlue2563EB : Colors.grey.shade600,
               ),
               tooltip:
                   '${'billing.font_prefix'.tr}${fontProvider.fontSizeLevelName}',
@@ -2290,7 +2291,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: ColorManager.kBlue2563EB,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 10),
@@ -2380,7 +2381,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               children: [
                 const Icon(
                   Icons.delivery_dining,
-                  color: Color(0xFF1A56DB),
+                  color: ColorManager.kBlue1A56DB,
                   size: 18,
                 ),
                 const SizedBox(width: 8),
@@ -2404,9 +2405,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1A56DB) : const Color(0xFF1A56DB).withOpacity(0.07),
+          color: isSelected ? ColorManager.kBlue1A56DB : ColorManager.kBlue1A56DB.withOpacity(0.07),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1A56DB) : const Color(0xFF1A56DB).withOpacity(0.3),
+            color: isSelected ? ColorManager.kBlue1A56DB : ColorManager.kBlue1A56DB.withOpacity(0.3),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -2417,7 +2418,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             FontWeightManager.semiBold,
             FontSize.s12,
             0.21,
-            isSelected ? Colors.white : const Color(0xFF1A56DB),
+            isSelected ? Colors.white : ColorManager.kBlue1A56DB,
           ),
           overflow: TextOverflow.ellipsis,
         ),
@@ -2443,7 +2444,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           child: Material(
-            color: const Color(0xFF2563EB),
+            color: ColorManager.kBlue2563EB,
             borderRadius: BorderRadius.circular(14),
             child: InkWell(
               onTap: () => setState(() => _currentMobileView = MobileView.orders),
@@ -2580,7 +2581,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required VoidCallback onTap,
     int badgeCount = 0,
   }) {
-    final color = isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B);
+    final color = isSelected ? ColorManager.kBlue2563EB : const Color(0xFF64748B);
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -2601,7 +2602,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF2563EB).withOpacity(0.10)
+                            ? ColorManager.kBlue2563EB.withOpacity(0.10)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -2712,7 +2713,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             children: [
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
+                icon: const Icon(Icons.arrow_back, color: ColorManager.kBlue2563EB),
                 tooltip: widget.storeMode
                     ? 'restaurant.back_to_products'.tr
                     : 'restaurant.back_to_tables'.tr,
@@ -2729,7 +2730,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     : _selectedDeliveryMethodId != null
                         ? Icons.local_shipping_rounded
                         : Icons.receipt_long,
-                color: const Color(0xFF2563EB),
+                color: ColorManager.kBlue2563EB,
                 size: 22,
               ),
               const SizedBox(width: 10),
@@ -2749,7 +2750,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               // Menu shortcut (also available in the bottom nav)
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
+                icon: const Icon(Icons.restaurant_menu, color: ColorManager.kBlue2563EB),
                 onPressed: () => _showProductsBottomSheet(context),
                 tooltip: _menuTitle,
               ),
@@ -2843,7 +2844,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         children: [
                           const Icon(
                             Icons.restaurant_menu_rounded,
-                            color: Color(0xFF2563EB),
+                            color: ColorManager.kBlue2563EB,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -2925,7 +2926,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
+                                  backgroundColor: ColorManager.kBlue2563EB,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(

@@ -51,7 +51,9 @@ if (-not (Test-Path $brandFile)) {
 $config = Get-Content $brandFile -Raw | ConvertFrom-Json
 $required = "BRAND_ID", "BRAND_NAME", "BRAND_TITLE", "BRAND_COMPANY",
   "BRAND_PRODUCT_NAME", "BRAND_PUBLISHER", "BRAND_URL", "BRAND_EXE_NAME",
-  "BRAND_INSTALLER_NAME", "BRAND_APP_ID", "BRAND_LOGO_ASSET", "BRAND_ICON_ASSET"
+  "BRAND_INSTALLER_NAME", "BRAND_APP_ID", "BRAND_LOGO_ASSET", "BRAND_ICON_ASSET",
+  "BRAND_WEBSITE", "BRAND_PRIMARY_COLOR", "BRAND_ACCENT_COLOR", "BRAND_SECONDARY_COLOR",
+  "BRAND_BG_LIGHT_COLOR", "BRAND_BG_DARK_COLOR", "BRAND_SPLASH_TEXT_COLOR"
 foreach ($key in $required) {
   $value = $config.PSObject.Properties[$key]
   if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value.Value)) {
@@ -66,6 +68,12 @@ if ($config.BRAND_ID -ne $Brand) {
 }
 if ($config.BRAND_APP_ID -notmatch '^[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$') {
   throw "BRAND_APP_ID must be a bare GUID (no braces)."
+}
+# A malformed colour silently falls back to the CloudPOS default in Dart.
+foreach ($key in $required | Where-Object { $_ -like '*_COLOR' }) {
+  if ($config.$key -notmatch '^0x[0-9A-Fa-f]{8}$') {
+    throw "$key in $brandFile must look like 0xFFRRGGBB (got '$($config.$key)')."
+  }
 }
 foreach ($asset in $config.BRAND_LOGO_ASSET, $config.BRAND_ICON_ASSET) {
   if (-not (Test-Path (Join-Path $projectRoot $asset))) {

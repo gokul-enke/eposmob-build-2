@@ -1477,7 +1477,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildStepIndicator(int stepIndex, String label, IconData icon,
       {required bool isActive, required bool isCompleted}) {
-    final primaryColor = const Color(0xFF2563EB);
+    final primaryColor = ColorManager.kBlue2563EB;
     final successColor = const Color(0xFF059669);
     final neutralColor = Colors.grey.shade400;
 
@@ -1550,7 +1550,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       height: 4,
       width: 40,
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+        color: isActive ? ColorManager.kBlue2563EB : const Color(0xFFE2E8F0),
         borderRadius: BorderRadius.circular(2),
       ),
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -1926,7 +1926,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFDDE7F3)),
+            border: Border.all(color: ColorManager.kBlueDDE7F3),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -2113,7 +2113,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFDDE7F3)),
+            border: Border.all(color: ColorManager.kBlueDDE7F3),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -2184,12 +2184,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
               padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFDDE7F3)),
+                border: Border.all(color: ColorManager.kBlueDDE7F3),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.calendar_today_outlined,
-                      size: 18, color: Color(0xFF2563EB)),
+                      size: 18, color: ColorManager.kBlue2563EB),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -2302,13 +2302,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF2563EB).withOpacity(0.1)
+                      ? ColorManager.kBlue2563EB.withOpacity(0.1)
                       : Colors.white,
                   border: Border.all(
                     color: isKeyboardFocused
                         ? const Color(0xFFF59E0B)
                         : (isSelected
-                            ? const Color(0xFF2563EB)
+                            ? ColorManager.kBlue2563EB
                             : Colors.grey.shade200),
                     width: (isKeyboardFocused || isSelected) ? 2 : 1,
                   ),
@@ -2321,7 +2321,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       height: _isDenseCheckout ? 24 : 28,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF2563EB)
+                            ? ColorManager.kBlue2563EB
                             : Colors.grey.shade300,
                         shape: BoxShape.circle,
                       ),
@@ -2404,7 +2404,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     if (isSelected)
                       Icon(
                         Icons.check_circle,
-                        color: const Color(0xFF2563EB),
+                        color: ColorManager.kBlue2563EB,
                         size: _isDenseCheckout ? 18 : 24,
                       ),
                   ],
@@ -2490,10 +2490,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         vertical: compact ? 2 : 3,
       ),
       decoration: BoxDecoration(
-        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        color: isB2B ? Colors.green.shade50 : ColorManager.kBrandBlue50,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+          color: isB2B ? Colors.green.shade300 : ColorManager.kBrandBlue300,
         ),
       ),
       child: Text(
@@ -2501,7 +2501,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         style: TextStyle(
           fontSize: compact ? 10 : 11,
           fontWeight: FontWeight.w600,
-          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
+          color: isB2B ? Colors.green.shade700 : ColorManager.kBrandBlue700,
         ),
       ),
     );
@@ -4033,10 +4033,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: ColorManager.kBlue2563EB.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+                  child: Icon(icon, color: ColorManager.kBlue2563EB, size: 22),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -4098,7 +4098,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 onPressed: canDone ? _closeSelectionOnlyModal : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: ColorManager.kBlue2563EB,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -4217,10 +4217,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       width: double.infinity,
                       fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                       boxColor: _canConfirmOrPrint
-                          ? const Color(0xFF2563EB)
+                          ? ColorManager.kBlue2563EB
                           : Colors.grey.shade400,
                       borderColor: _canConfirmOrPrint
-                          ? const Color(0xFF2563EB)
+                          ? ColorManager.kBlue2563EB
                           : Colors.grey.shade400,
                       radius: 12,
                     ),
@@ -4280,10 +4280,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     width: double.infinity,
                     fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                     boxColor: isNextEnabled
-                        ? const Color(0xFF2563EB)
+                        ? ColorManager.kBlue2563EB
                         : Colors.grey.shade400,
                     borderColor: isNextEnabled
-                        ? const Color(0xFF2563EB)
+                        ? ColorManager.kBlue2563EB
                         : Colors.grey.shade400,
                     radius: 12,
                   ),
@@ -4410,10 +4410,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
               ),
               _buildSummaryRow(
-                  'billing.total_payable'.tr, effectiveTotal, const Color(0xFF2563EB),
+                  'billing.total_payable'.tr, effectiveTotal, ColorManager.kBlue2563EB,
                   isBold: true,
                   large: true,
-                  labelColor: const Color(0xFF2563EB)),
+                  labelColor: ColorManager.kBlue2563EB),
               if (_localSelectedCustomer != null && !isDefaultCustomer) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildSummaryRow(
@@ -4660,14 +4660,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
         color: isCurrentStep
-            ? const Color(0xFF2563EB)
+            ? ColorManager.kBlue2563EB
             : isCompleted
                 ? const Color(0xFFF0FDF4)
                 : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrentStep
-              ? const Color(0xFF1D4ED8)
+              ? ColorManager.kBlue1D4ED8
               : isCompleted
                   ? const Color(0xFF22C55E)
                   : const Color(0xFFE2E8F0),
@@ -4676,7 +4676,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         boxShadow: [
           BoxShadow(
             color: isCurrentStep
-                ? const Color(0xFF2563EB).withOpacity(0.2)
+                ? ColorManager.kBlue2563EB.withOpacity(0.2)
                 : isCompleted
                     ? const Color(0xFF22C55E).withOpacity(0.05)
                     : Colors.black.withOpacity(0.03),
@@ -4827,7 +4827,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         fontWeight: FontWeight.w800,
                         color: isCurrentStep
                             ? Colors.white
-                            : const Color(0xFF2563EB),
+                            : ColorManager.kBlue2563EB,
                         letterSpacing: 0.2,
                       ),
                     ),

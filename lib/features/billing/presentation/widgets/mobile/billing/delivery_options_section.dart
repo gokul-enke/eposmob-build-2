@@ -130,11 +130,11 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                    color: isSelected ? ColorManager.kBlueEFF6FF : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isSelected
-                          ? const Color(0xFF3B82F6)
+                          ? ColorManager.kBlue3B82F6
                           : Colors.grey.shade200,
                       width: isSelected ? 1.5 : 1,
                     ),
@@ -144,7 +144,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                       Icon(
                         _deliveryController.iconForMethod(method.name),
                         color: isSelected
-                            ? const Color(0xFF0066CC)
+                            ? ColorManager.kBlue0066CC
                             : Colors.grey.shade700,
                         size: 20,
                       ),
@@ -157,7 +157,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                             fontWeight:
                                 isSelected ? FontWeight.bold : FontWeight.w500,
                             color: isSelected
-                                ? const Color(0xFF0066CC)
+                                ? ColorManager.kBlue0066CC
                                 : Colors.black87,
                           ),
                         ),

@@ -455,7 +455,7 @@ class _ReceiptCard extends StatelessWidget {
     if (invoiceCount > 0 && generalCount > 0) {
       label = 'receipt.type_mixed'.tr; bg = Colors.orange.withOpacity(0.1); fg = Colors.orange;
     } else if (invoiceCount > 0) {
-      label = 'receipt.type_invoice_payment'.tr; bg = Colors.blue.withOpacity(0.1); fg = Colors.blue;
+      label = 'receipt.type_invoice_payment'.tr; bg = ColorManager.kBrandBlue.withOpacity(0.1); fg = ColorManager.kBrandBlue;
     } else {
       label = 'receipt.type_general_payment'.tr; bg = Colors.green.withOpacity(0.1); fg = Colors.green;
     }

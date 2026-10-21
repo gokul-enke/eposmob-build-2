@@ -469,7 +469,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.blueAccent, // Or use your brand color
+            color: ColorManager.kBrandBlueAccent, // Or use your brand color
           ),
         ),
       ],
@@ -1292,7 +1292,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                               const Icon(
                                 Icons.discount_outlined,
                                 size: 18,
-                                color: Colors.blue,
+                                color: ColorManager.kBrandBlue,
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -1301,7 +1301,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                   FontWeightManager.medium,
                                   FontSize.s14,
                                   0.14,
-                                  Colors.blue,
+                                  ColorManager.kBrandBlue,
                                 ),
                               ),
                             ],
@@ -1486,7 +1486,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                       const Icon(
                                         Icons.discount_outlined,
                                         size: 18,
-                                        color: Colors.blue,
+                                        color: ColorManager.kBrandBlue,
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
@@ -1495,7 +1495,7 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                                           FontWeightManager.medium,
                                           FontSize.s14,
                                           0.14,
-                                          Colors.blue,
+                                          ColorManager.kBrandBlue,
                                         ),
                                       ),
                                     ],

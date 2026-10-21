@@ -150,11 +150,11 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  color: ColorManager.kBlue2563EB.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child:
-                    const Icon(Icons.edit, color: Color(0xFF2563EB), size: 20),
+                    const Icon(Icons.edit, color: ColorManager.kBlue2563EB, size: 20),
               ),
               const SizedBox(width: 12),
               Text(
@@ -209,7 +209,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide:
-                        const BorderSide(color: Color(0xFF2563EB), width: 2),
+                        const BorderSide(color: ColorManager.kBlue2563EB, width: 2),
                   ),
                   prefixText: ' ',
                   prefixStyle: const TextStyle(
@@ -251,7 +251,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   child: ElevatedButton(
                     onPressed: handleUpdate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: ColorManager.kBlue2563EB,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -520,7 +520,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withOpacity(0.08),
+                            color: ColorManager.kBlue2563EB.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: _loadingCartItems
@@ -531,7 +531,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                                   child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF2563EB),
+                                      ColorManager.kBlue2563EB,
                                     ),
                                   ),
                                 )
@@ -541,7 +541,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                                     FontWeightManager.bold,
                                     FontSize.s11,
                                     0.21,
-                                    const Color(0xFF2563EB),
+                                    ColorManager.kBlue2563EB,
                                   ),
                                 ),
                         ),
@@ -752,7 +752,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                         decoration: BoxDecoration(
                           color: (cartItem['comment'] != null &&
                                   cartItem['comment'].toString().isNotEmpty)
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
+                              ? ColorManager.kBlue2563EB.withOpacity(0.1)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -764,7 +764,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                           size: widget.isCompact ? 16 : 18,
                           color: (cartItem['comment'] != null &&
                                   cartItem['comment'].toString().isNotEmpty)
-                              ? const Color(0xFF2563EB)
+                              ? ColorManager.kBlue2563EB
                               : const Color(0xFF64748B),
                         ),
                       ),

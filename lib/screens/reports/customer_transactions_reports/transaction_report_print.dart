@@ -16,6 +16,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print_thermal.dart';
 import 'package:pos_machine/screens/reports/customer_transactions_reports/transaction_report_print_standard.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class TransactionReportPrintPage extends StatefulWidget {
   final List<dynamic> cartItems;
@@ -68,7 +69,7 @@ class _TransactionReportPrintPageState
 
   DocumentConfig? _customerStatementDocumentConfig;
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

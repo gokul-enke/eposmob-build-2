@@ -12,7 +12,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         FontWeightManager.bold,
         FontSize.s11,
         0.21,
-        const Color(0xFF2563EB),
+        ColorManager.kBlue2563EB,
       ),
     );
     final standardPrice = cartItem.standardUnitPrice;
@@ -112,7 +112,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withOpacity(0.08),
+                            color: ColorManager.kBlue2563EB.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: _buildCurrentCartUnitPrice(
@@ -270,7 +270,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         decoration: BoxDecoration(
                           color: cartItem.comment != null &&
                                   cartItem.comment!.isNotEmpty
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
+                              ? ColorManager.kBlue2563EB.withOpacity(0.1)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -282,7 +282,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                           size: widget.isCompact ? 16 : 18,
                           color: cartItem.comment != null &&
                                   cartItem.comment!.isNotEmpty
-                              ? const Color(0xFF2563EB)
+                              ? ColorManager.kBlue2563EB
                               : const Color(0xFF64748B),
                         ),
                       ),
@@ -403,7 +403,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         Expanded(
                           child: _buildCurrentCartFooterButton(
                             label: 'general.save'.tr,
-                            color: const Color(0xFF2563EB),
+                            color: ColorManager.kBlue2563EB,
                             isDisabled: cartItems.isEmpty ||
                                 (widget.tableId == null &&
                                     (widget.preselectedDeliveryMethodId ==
@@ -576,7 +576,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         FontWeightManager.semiBold,
                         FontSize.s14,
                         0.2,
-                        const Color(0xFF3B82F6),
+                        ColorManager.kBlue3B82F6,
                       ),
                     ),
                     const Spacer(),
@@ -588,14 +588,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                           FontWeightManager.bold,
                           FontSize.s16,
                           0.2,
-                          const Color(0xFF3B82F6),
+                          ColorManager.kBlue3B82F6,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: Color(0xFF3B82F6),
+                      color: ColorManager.kBlue3B82F6,
                     ),
                   ],
                 ),
@@ -632,7 +632,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                           FontWeightManager.semiBold,
                           FontSize.s16,
                           0.21,
-                          const Color(0xFF3B82F6),
+                          ColorManager.kBlue3B82F6,
                         ),
                       ),
                       const Spacer(),
@@ -644,14 +644,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                             FontWeightManager.bold,
                             FontSize.s18,
                             0.21,
-                            const Color(0xFF3B82F6),
+                            ColorManager.kBlue3B82F6,
                           ),
                         ),
                       ),
                       const SizedBox(width: 4),
                       const Icon(
                         Icons.keyboard_arrow_up_rounded,
-                        color: Color(0xFF3B82F6),
+                        color: ColorManager.kBlue3B82F6,
                         size: 18,
                       ),
                     ],
@@ -696,7 +696,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           _buildSummaryRow(
             'billing.total_payable_label'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
+            color: ColorManager.kBlue3B82F6,
             isBold: true,
             large: true,
           ),
@@ -1221,7 +1221,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                     icon: contextIcon,
                     label: contextLabel,
                     color: tableName != null
-                        ? const Color(0xFF2563EB)
+                        ? ColorManager.kBlue2563EB
                         : const Color(0xFF059669),
                   ),
                   if (customerLabel != null)

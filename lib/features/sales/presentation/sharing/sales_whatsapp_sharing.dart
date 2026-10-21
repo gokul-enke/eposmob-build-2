@@ -10,6 +10,7 @@ import 'package:pos_machine/resources/app_url.dart';
 
 import 'sales_page_services.dart';
 import 'sales_whatsapp_pdf.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 Future<void> shareSalesWhatsapp(BuildContext context,
     SalesPageServices services, ListOrderModelData order) async {
@@ -196,7 +197,7 @@ Future<void> shareSalesWhatsapp(BuildContext context,
               if (!context.mounted) return;
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: ColorManager.kBrandBlue,
               foregroundColor: Colors.white,
             ),
             child: Text('sales.btn_send_with_pdf'.tr),

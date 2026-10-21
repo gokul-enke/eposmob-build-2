@@ -21,6 +21,7 @@ import 'package:pos_machine/screens/print/receipt_document_config_resolver.dart'
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 import 'package:pos_machine/services/print_output_settings.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class ReturnBillPrintPage extends StatefulWidget {
   final List<OrderReturnItem> returnItems;
@@ -90,7 +91,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
   String get _themePrefsKey =>
       _isB2B ? 'billing_receipt_theme_b2b' : 'billing_receipt_theme';
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

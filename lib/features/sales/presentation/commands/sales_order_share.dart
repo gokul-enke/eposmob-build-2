@@ -132,8 +132,8 @@ Future<void> shareSalesOrder(
                 ListTile(
                   leading: const CircleAvatar(
                     radius: 18,
-                    backgroundColor: Color(0x1A1E88E5), // ~10% opacity blue
-                    child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                    backgroundColor: ColorManager.kBlue1E88E5a1A, // ~10% opacity blue
+                    child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                   ),
                   title: Text(
                     (customerEmail != null && customerEmail.isNotEmpty)

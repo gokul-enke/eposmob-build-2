@@ -2769,7 +2769,7 @@ class OrderPanelState extends State<OrderPanel> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
-          const primaryColor = Color(0xFF2563EB);
+          const primaryColor = ColorManager.kBlue2563EB;
           const textColor = Color(0xFF1E293B);
           final availableWidth = MediaQuery.sizeOf(context).width - 48;
           final dialogWidth = availableWidth.clamp(300.0, 480.0).toDouble();
@@ -2804,7 +2804,7 @@ class OrderPanelState extends State<OrderPanel> {
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: ColorManager.kBlueEFF6FF,
                             borderRadius: BorderRadius.circular(11),
                           ),
                           child: const Icon(Icons.chat_bubble_outline,
@@ -2903,7 +2903,7 @@ class OrderPanelState extends State<OrderPanel> {
                                                 horizontal: 10, vertical: 7),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? const Color(0xFFEFF6FF)
+                                                  ? ColorManager.kBlueEFF6FF
                                                   : const Color(0xFFF8FAFC),
                                               borderRadius:
                                                   BorderRadius.circular(10),
@@ -2948,8 +2948,7 @@ class OrderPanelState extends State<OrderPanel> {
                                                         FontSize.s12,
                                                         0.21,
                                                         isSelected
-                                                            ? const Color(
-                                                                0xFF1D4ED8)
+                                                            ? ColorManager.kBlue1D4ED8
                                                             : const Color(
                                                                 0xFF334155)),
                                                   ),
@@ -3458,7 +3457,7 @@ class OrderPanelState extends State<OrderPanel> {
           _buildSummaryRow(
             'order_panel.total_payable'.tr,
             '$currency ${totalPayable.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
+            color: ColorManager.kBlue3B82F6,
             isBold: true,
             large: true,
           ),
@@ -3724,13 +3723,13 @@ class OrderPanelState extends State<OrderPanel> {
                           setState(() => _showSavedOrdersView = true);
                         },
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF1D4ED8),
-                          backgroundColor: const Color(0xFFEFF6FF),
+                          foregroundColor: ColorManager.kBlue1D4ED8,
+                          backgroundColor: ColorManager.kBlueEFF6FF,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: Color(0xFFBFDBFE)),
+                            side: const BorderSide(color: ColorManager.kBlueBFDBFE),
                           ),
                         ),
                         icon: const Icon(Icons.receipt_long_rounded, size: 16),
@@ -3740,7 +3739,7 @@ class OrderPanelState extends State<OrderPanel> {
                               FontWeightManager.semiBold,
                               widget.isCompact ? FontSize.s11 : FontSize.s12,
                               0.21,
-                              const Color(0xFF1D4ED8)),
+                              ColorManager.kBlue1D4ED8),
                         ),
                       ),
                     ],
@@ -3947,7 +3946,7 @@ class OrderPanelState extends State<OrderPanel> {
             const SizedBox(height: 8),
             // Ongoing Orders Section (backend orders, independent scroll)
             _buildPanelHeader(
-                'restaurant.ongoing_orders'.tr, Icons.receipt, Colors.blue,
+                'restaurant.ongoing_orders'.tr, Icons.receipt, ColorManager.kBrandBlue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -4265,13 +4264,13 @@ class OrderPanelState extends State<OrderPanel> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.1),
+                              color: ColorManager.kBlue2563EB.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.print,
                               size: widget.isCompact ? 16 : 18,
-                              color: const Color(0xFF2563EB),
+                              color: ColorManager.kBlue2563EB,
                             ),
                           ),
                         ),
@@ -5113,7 +5112,7 @@ class OrderPanelState extends State<OrderPanel> {
       case 'PREPARING':
       case 'COOKING':
       case 'IN_PROGRESS':
-        return const Color(0xFF2563EB); // blue
+        return ColorManager.kBlue2563EB; // blue
       case 'READY':
         return const Color(0xFF059669); // green
       case 'SERVED':
@@ -5320,7 +5319,7 @@ class OrderPanelState extends State<OrderPanel> {
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
+                color: selected ? ColorManager.kBlue3B82F6 : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: focused ? const Color(0xFFF59E0B) : Colors.transparent,
@@ -5365,7 +5364,7 @@ class OrderPanelState extends State<OrderPanel> {
                       decoration: BoxDecoration(
                         color: selected
                             ? Colors.white.withOpacity(0.18)
-                            : const Color(0xFFEFF6FF),
+                            : ColorManager.kBlueEFF6FF,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -5374,7 +5373,7 @@ class OrderPanelState extends State<OrderPanel> {
                           FontWeightManager.bold,
                           FontSize.s10,
                           0.21,
-                          selected ? Colors.white : const Color(0xFF2563EB),
+                          selected ? Colors.white : ColorManager.kBlue2563EB,
                         ),
                       ),
                     ),
@@ -5400,7 +5399,7 @@ class OrderPanelState extends State<OrderPanel> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                const Color(0xFF3B82F6).withOpacity(0.05),
+                ColorManager.kBlue3B82F6.withOpacity(0.05),
                 Colors.transparent,
               ],
               begin: Alignment.topLeft,
@@ -5751,7 +5750,7 @@ class OrderPanelState extends State<OrderPanel> {
                                 : allItemsServed
                                     ? (_isLoadingConfirm
                                         ? const Color(0xFF94A3B8)
-                                        : const Color(0xFF2563EB))
+                                        : ColorManager.kBlue2563EB)
                                     : (_isMarkingServed
                                         ? const Color(0xFF94A3B8)
                                         : const Color(
@@ -5763,7 +5762,7 @@ class OrderPanelState extends State<OrderPanel> {
                                 ? [
                                     BoxShadow(
                                       color: (allItemsServed
-                                              ? const Color(0xFF2563EB)
+                                              ? ColorManager.kBlue2563EB
                                               : const Color(0xFF059669))
                                           .withOpacity(0.3),
                                       blurRadius: 8,
@@ -5894,7 +5893,7 @@ class OrderPanelState extends State<OrderPanel> {
           _buildSummaryRow(
             'order_panel.total_payable'.tr,
             '$currency ${finalOrderTotal.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
+            color: ColorManager.kBlue3B82F6,
             isBold: true,
             large: true,
           ),

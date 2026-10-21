@@ -174,7 +174,8 @@ Future<void> _prepareForRestart() => _restartPreparation ??= () async {
       // network/printer operations: never pretend closing Hive alone drains those.
       if (_appReady) {
         throw StateError(
-            'This CloudPOS copy is active. Close it normally first.');
+            BrandConfig.apply(
+            'This CloudPOS copy is active. Close it normally first.'));
       }
       await _startupWork.stopAndDrain();
       await _startupProducts?.flushPersistence();
@@ -822,6 +823,7 @@ class StartupFailureApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: BrandConfig.title,
+      theme: ThemeData(colorScheme: ColorManager.brandColorScheme),
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -1103,6 +1105,10 @@ ThemeData _buildAppTheme(bool focusHighlightEnabled) {
   }
 
   return ThemeData(
+    // White-label brands seed Material's own widgets (checkboxes, switches,
+    // progress, selection) from their palette. CloudPOS keeps its original
+    // default scheme so its look does not change.
+    colorScheme: ColorManager.brandColorScheme,
     // `focusColor` is what InkWell / InkResponse splash uses when its host
     // FocusNode has primary focus.
     focusColor: Colors.transparent,

@@ -5,6 +5,7 @@ import 'package:pos_machine/config/brand_config.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/resources/recovery_text.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Paints before invoking initialization. A timed-out initializer can never
 /// replace the failure screen with a late successful application.
@@ -88,6 +89,7 @@ class _StartupGateState extends State<StartupGate> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: BrandConfig.title,
+      theme: ThemeData(colorScheme: ColorManager.brandColorScheme),
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Directionality(

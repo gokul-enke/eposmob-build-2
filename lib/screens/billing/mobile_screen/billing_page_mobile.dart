@@ -7,6 +7,7 @@ import 'package:pos_machine/screens/billing/mobile_screen/widgets/billing_widget
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/home_widget.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/order_list_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class BillingPageMobile extends StatefulWidget {
   const BillingPageMobile({super.key});
@@ -82,7 +83,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
       // appBar: AppBar(
       //   title: _getAppBarTitle(),
       //   centerTitle: true, // This centers the title
-      //   backgroundColor: Colors.blue[800],
+      //   backgroundColor: ColorManager.kBrandBlue800,
       //   foregroundColor: Colors.white,
       //   elevation: 4,
       //   actions: [
@@ -108,7 +109,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           backgroundColor: Colors.white,
-          selectedItemColor: Colors.blue[800],
+          selectedItemColor: ColorManager.kBrandBlue800,
           unselectedItemColor: Colors.grey[600],
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w700,

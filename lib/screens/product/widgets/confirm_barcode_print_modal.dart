@@ -211,7 +211,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
           height: 45,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.blue.shade300),
+            border: Border.all(color: ColorManager.kBrandBlue300),
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonHideUnderline(
@@ -288,7 +288,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
           height: 45,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.blue.shade300),
+            border: Border.all(color: ColorManager.kBrandBlue300),
             borderRadius: BorderRadius.circular(8),
           ),
           child: DropdownButtonHideUnderline(
@@ -607,9 +607,9 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                   const SizedBox(width: 12),
                   CustomRoundButton(
                     title: 'product_barcode.confirm_btn'.tr,
-                    boxColor: const Color(0xFF2962FF),
+                    boxColor: ColorManager.kBlue2962FF,
                     textColor: Colors.white,
-                    borderColor: const Color(0xFF2962FF),
+                    borderColor: ColorManager.kBlue2962FF,
                     fct: () {
                       if (!_validateBeforeConfirm()) return;
                       final safeStickersPerRow =

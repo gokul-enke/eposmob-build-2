@@ -4107,7 +4107,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                         },
                                         child: Container(
                                           color: isHighlighted
-                                              ? Colors.blue.shade50
+                                              ? ColorManager.kBrandBlue50
                                               : (hoverMap[index] == true
                                                   ? Colors.grey[200]
                                                   : Colors.white),
@@ -4119,7 +4119,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                 12,
                                                 0.27,
                                                 isHighlighted
-                                                    ? Colors.blue.shade800
+                                                    ? ColorManager.kBrandBlue800
                                                     : Colors.black
                                                         .withOpacity(.5),
                                               ),

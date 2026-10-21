@@ -1585,7 +1585,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         key.contains('transfer') ||
         key.contains('neft') ||
         key.contains('cheque')) {
-      return const Color(0xFF2563EB);
+      return ColorManager.kBlue2563EB;
     }
     if (key.contains('card')) return const Color(0xFF7C3AED);
     if (key.contains('upi') || key.contains('qr') || key.contains('wallet')) {
@@ -3575,9 +3575,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: ColorManager.kBrandBlue50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
+        border: Border.all(color: ColorManager.kBrandBlue200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

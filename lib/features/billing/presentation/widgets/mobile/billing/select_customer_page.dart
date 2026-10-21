@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/add_customer_mobile_page.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Full-screen "Select Customer" page matching the Figma design.
 /// Displays a search bar, a scrollable customer list with radio selection,
@@ -229,10 +230,10 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        color: isB2B ? Colors.green.shade50 : ColorManager.kBrandBlue50,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+          color: isB2B ? Colors.green.shade300 : ColorManager.kBrandBlue300,
         ),
       ),
       child: Text(
@@ -240,7 +241,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
+          color: isB2B ? Colors.green.shade700 : ColorManager.kBrandBlue700,
         ),
       ),
     );
@@ -281,7 +282,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF1D4ED8),
+                        color: ColorManager.kBlue1D4ED8,
                       ),
                     )
                   : _errorMessage != null
@@ -357,7 +358,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           ? null
           : FloatingActionButton(
               onPressed: _onAddCustomer,
-              backgroundColor: const Color(0xFF1D4ED8),
+              backgroundColor: ColorManager.kBlue1D4ED8,
               elevation: 4,
               child: const Icon(Icons.person_add, color: Colors.white),
             ),
@@ -462,7 +463,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF1D4ED8).withValues(alpha: 0.04)
+              ? ColorManager.kBlue1D4ED8.withValues(alpha: 0.04)
               : null,
           border: Border(
             bottom: BorderSide(color: Colors.grey.shade100, width: 1),

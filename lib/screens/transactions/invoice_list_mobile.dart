@@ -357,7 +357,7 @@ class InvoiceMobileView extends StatelessWidget {
             children: [
               _bulkButton(
                 title: 'invoice.sync_all'.tr,
-                color: Colors.blueAccent,
+                color: ColorManager.kBrandBlueAccent,
                 syncType: 'all',
               ),
               const SizedBox(width: 8),
@@ -733,8 +733,8 @@ class _InvoiceCard extends StatelessWidget {
       fg = Colors.red;
     } else if (isPending) {
       label = 'invoice.zatca_status_pending'.tr;
-      bg = Colors.blue.withOpacity(0.12);
-      fg = Colors.blue;
+      bg = ColorManager.kBrandBlue.withOpacity(0.12);
+      fg = ColorManager.kBrandBlue;
     }
 
     return Container(

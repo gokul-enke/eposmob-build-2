@@ -1944,7 +1944,7 @@ class _CompanyAdminDashboardState extends State<CompanyAdminDashboard> {
               title: 'company_admin.reports'.tr,
               gradient: const LinearGradient(
                 colors: [
-                  Color(0xFF4facfe),
+                  ColorManager.kBlue4FACFE,
                   Color(0xFF00f2fe),
                 ],
                 begin: Alignment.topLeft,

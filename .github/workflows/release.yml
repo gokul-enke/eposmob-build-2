@@ -42,6 +42,9 @@ jobs:
       - name: Create .env file
         run: echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
 
+      - name: Check brand config (${{ matrix.brand }})
+        run: flutter test --dart-define-from-file=brands/${{ matrix.brand }}/brand.json test/config/
+
       - name: Build app (${{ matrix.brand }})
         shell: pwsh
         run: ./scripts/build_brand.ps1 -Brand ${{ matrix.brand }} -BaseUrl https://eeezeeerp.cloudposai.com -SkipInstaller

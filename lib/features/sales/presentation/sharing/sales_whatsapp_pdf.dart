@@ -13,6 +13,7 @@ import 'package:pos_machine/services/print_service.dart';
 
 import 'sales_document_files.dart';
 import 'sales_page_services.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 Future<void> sendSalesWhatsappPdf(
     BuildContext context,
@@ -255,7 +256,7 @@ Thank you for your purchase!
 
 Please find your invoice attached.
 ---
-Powered by CloudPOS''',
+Powered by ${BrandConfig.name}''',
       showSuccessMessage: false, // Handle success message ourselves
     );
     if (!context.mounted) return;
@@ -305,7 +306,7 @@ PDF invoice has been generated and saved.
 We appreciate your business!
 
 ---
-Powered by CloudPOS''',
+Powered by ${BrandConfig.name}''',
           pdfFile: pdfFile,
         );
         if (!context.mounted) return;

@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'customer_voucher_print_thermal.dart';
 import 'customer_voucher_print_standard.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class CustomerVoucherPrintPage extends StatefulWidget {
   final CustomerVoucher voucher;
@@ -42,7 +43,7 @@ class _CustomerVoucherPrintPageState extends State<CustomerVoucherPrintPage> {
   DocumentConfig? _voucherDocumentConfig;
 
   // Color scheme - matching print.dart
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

@@ -95,7 +95,7 @@ class _LocalSaleRequestEditorState extends State<LocalSaleRequestEditor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.data_object, color: Color(0xFF0F3D75)),
+              const Icon(Icons.data_object, color: ColorManager.kBlue0F3D75),
               const SizedBox(width: 10),
               const Expanded(
                   child: Text('Edit request JSON',

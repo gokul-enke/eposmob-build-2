@@ -28,6 +28,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 import 'package:pos_machine/services/print_output_settings.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -544,7 +545,7 @@ class _PrintPageState extends State<PrintPage> {
   DocumentConfig? _billDocumentConfig;
   DocumentConfig? _returnBillDocumentConfig;
 
-  static const Color primaryColor = Color(0XFF3C92F5);
+  static const Color primaryColor = ColorManager.kPrimaryColor;
   static const Color accentColor = Color(0xFF4CAF50);
   static const Color textPrimaryColor = Color(0xFF2C3E50);
   static const Color textSecondaryColor = Color(0xFF7F8C8D);

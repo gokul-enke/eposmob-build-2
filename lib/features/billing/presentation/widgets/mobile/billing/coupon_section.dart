@@ -461,7 +461,7 @@ class _CouponSectionState extends State<CouponSection> {
                 child: const Text(
                   'Clear',
                   style: TextStyle(
-                    color: Color(0xFF0066CC),
+                    color: ColorManager.kBlue0066CC,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -473,7 +473,7 @@ class _CouponSectionState extends State<CouponSection> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: const Color(0xFF0066CC),
+                  backgroundColor: ColorManager.kBlue0066CC,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),

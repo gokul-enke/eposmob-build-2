@@ -109,7 +109,7 @@ class ViewOrders extends StatelessWidget {
                   IconButton(
                     onPressed: () => _printOrder(context, order),
                     icon: const Icon(Icons.print, size: 20),
-                    color: Colors.blue,
+                    color: ColorManager.kBrandBlue,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),

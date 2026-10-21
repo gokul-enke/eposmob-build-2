@@ -80,7 +80,7 @@ extension PurchaseOrderFormViewOperations4 on PurchaseOrderFormView {
                     .replaceAll('@base', retailExclusive.toStringAsFixed(2))
                     .replaceAll('@tax', retailTax.toStringAsFixed(2)),
                 retailTax,
-                Colors.blue,
+                ColorManager.kBrandBlue,
                 includeTax,
               ),
             ),

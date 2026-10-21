@@ -270,7 +270,7 @@ class _WelcomeMessage extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFDCE8F7)),
+            border: Border.all(color: ColorManager.kBlueDCE8F7),
           ),
           child: const Text(
             'ORDER HERE',
@@ -492,7 +492,7 @@ class _WelcomeBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF8FBFF), Color(0xFFEAF3FF)],
+          colors: [Color(0xFFF8FBFF), ColorManager.kBlueEAF3FF],
         ),
       ),
       child: Stack(

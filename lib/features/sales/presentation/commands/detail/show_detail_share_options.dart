@@ -8,6 +8,7 @@ import 'package:pos_machine/features/sales/presentation/state/sales_order_detail
 import 'share_detail_pdf.dart';
 import 'share_detail_via_email.dart';
 import 'share_detail_via_whats_app.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 Future<void> showDetailShareOptions(BuildContext context,
     SalesOrderDetailController controller, SalesPageServices services) async {
@@ -67,8 +68,8 @@ Future<void> showDetailShareOptions(BuildContext context,
               ListTile(
                 leading: const CircleAvatar(
                   radius: 18,
-                  backgroundColor: Color(0x1A1E88E5),
-                  child: Icon(Icons.email, color: Color(0xFF1E88E5)),
+                  backgroundColor: ColorManager.kBlue1E88E5a1A,
+                  child: Icon(Icons.email, color: ColorManager.kBlue1E88E5),
                 ),
                 title: Text(
                   customerDetails?.email != null &&

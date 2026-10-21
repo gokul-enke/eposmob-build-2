@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class LocalizationService {
   static const String _prefsKey = 'app_locale_code';
@@ -118,7 +119,8 @@ class LocalizationService {
         result.addAll(_flattenJson(value, newKey));
       } else {
         // Convert value to string and store
-        result[newKey] = value.toString();
+        // Built-in copy names CloudPOS; white-label builds show their own name.
+        result[newKey] = BrandConfig.apply(value.toString());
       }
     });
 

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Quotation date pickers and inline new-customer fields for mobile quotation
 /// billing. Mirrors desktop checkout modal `_buildQuotationDatesPanel`.
@@ -236,11 +237,11 @@ class _InlineField extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F3)),
+              borderSide: const BorderSide(color: ColorManager.kBlueDDE7F3),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F3)),
+              borderSide: const BorderSide(color: ColorManager.kBlueDDE7F3),
             ),
           ),
         ),
@@ -285,12 +286,12 @@ class _DateField extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFDDE7F3)),
+                border: Border.all(color: ColorManager.kBlueDDE7F3),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.calendar_today_outlined,
-                      size: 16, color: Color(0xFF2563EB)),
+                      size: 16, color: ColorManager.kBlue2563EB),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

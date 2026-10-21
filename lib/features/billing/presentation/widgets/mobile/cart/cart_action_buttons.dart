@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class CartActionButtons extends StatelessWidget {
   const CartActionButtons({
@@ -31,7 +32,7 @@ class CartActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: hasItems ? onProceedToPayment : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E69C8),
+                backgroundColor: ColorManager.kBlue2E69C8,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -53,8 +54,8 @@ class CartActionButtons extends StatelessWidget {
         const SizedBox(width: 12),
         _IconActionButton(
           icon: Icons.receipt_long_outlined,
-          backgroundColor: Colors.blue.shade50,
-          iconColor: const Color(0xFF2E69C8),
+          backgroundColor: ColorManager.kBrandBlue50,
+          iconColor: ColorManager.kBlue2E69C8,
           isLoading: isSavingOrder,
           semanticsLabel: 'billing.save_order'.tr,
           onTap: (hasItems && !_isCartActionBusy) ? onSaveOrder : null,

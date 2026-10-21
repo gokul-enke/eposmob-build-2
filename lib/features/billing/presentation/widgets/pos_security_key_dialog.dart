@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Provides the optional cashier guard for destructive POS cart actions.
 ///
@@ -101,7 +102,7 @@ class _PosSecurityKeyDialogState extends State<_PosSecurityKeyDialog> {
       key: const ValueKey('pos_security_key_dialog'),
       title: Row(
         children: [
-          Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
+          Icon(Icons.lock_outline, color: ColorManager.kBlue2563EB),
           SizedBox(width: 10),
           Expanded(child: Text('security_key.title'.tr)),
         ],

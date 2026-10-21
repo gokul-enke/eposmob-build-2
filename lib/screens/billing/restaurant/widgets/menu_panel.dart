@@ -1047,13 +1047,13 @@ class MenuPanelState extends State<MenuPanel> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: active
-                                              ? const Color(0xFF2563EB)
+                                              ? ColorManager.kBlue2563EB
                                               : Colors.grey.shade50,
                                           borderRadius:
                                               BorderRadius.circular(24),
                                           border: Border.all(
                                             color: active
-                                                ? const Color(0xFF2563EB)
+                                                ? ColorManager.kBlue2563EB
                                                 : Colors.grey.shade200,
                                             width: 1,
                                           ),
@@ -1061,7 +1061,7 @@ class MenuPanelState extends State<MenuPanel> {
                                               ? [
                                                   BoxShadow(
                                                     color:
-                                                        const Color(0xFF2563EB)
+                                                        ColorManager.kBlue2563EB
                                                             .withOpacity(0.3),
                                                     blurRadius: 8,
                                                     offset: const Offset(0, 2),
@@ -1445,13 +1445,13 @@ class MenuPanelState extends State<MenuPanel> {
                                   height: 26,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2563EB)
+                                    color: ColorManager.kBlue2563EB
                                         .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Icon(
                                     Icons.info_outline,
-                                    color: Color(0xFF2563EB),
+                                    color: ColorManager.kBlue2563EB,
                                     size: 15,
                                   ),
                                 ),
@@ -1810,13 +1810,13 @@ class MenuPanelState extends State<MenuPanel> {
                                   padding: EdgeInsets.all(
                                       extraDense ? 3 : (compact ? 3 : 4)),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2563EB)
+                                    color: ColorManager.kBlue2563EB
                                         .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Icon(
                                     Icons.info_outline,
-                                    color: const Color(0xFF2563EB),
+                                    color: ColorManager.kBlue2563EB,
                                     size: extraDense ? 11 : (compact ? 12 : 14),
                                   ),
                                 ),
@@ -1891,7 +1891,7 @@ class MenuPanelState extends State<MenuPanel> {
         ];
       default:
         // If it's some other food type, show it as is
-        return [_buildCompactTag(foodType, const Color(0xFF2563EB), compact)];
+        return [_buildCompactTag(foodType, ColorManager.kBlue2563EB, compact)];
     }
   }
 

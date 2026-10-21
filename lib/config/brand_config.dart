@@ -24,15 +24,25 @@ abstract final class BrandConfig {
   static const String iconAsset = String.fromEnvironment('BRAND_ICON_ASSET',
       defaultValue: 'assets/logo/cloudpos-icon.png');
 
+  /// Opened by "Register here" on the API key screen.
+  static const String website = String.fromEnvironment('BRAND_WEBSITE',
+      defaultValue: 'https://cloudposai.com');
+
+  /// True for the CloudPOS brand. Colours derived for other brands keep
+  /// CloudPOS on its exact original palette.
+  static const bool isDefault = id == 'cloudpos';
+
   /// Installed executable name, as shown in Task Manager's Details tab.
   static const String exeName =
       String.fromEnvironment('BRAND_EXE_NAME', defaultValue: 'cloudpos.exe');
 
   /// Swaps the CloudPOS name in built-in copy for this brand's name.
-  static String apply(String text) => id == 'cloudpos'
+  static String apply(String text) => isDefault
       ? text
       : text
           .replaceAll('cloudpos.exe', exeName)
           .replaceAll('CLOUDPOS', title)
-          .replaceAll('CloudPOS', name);
+          .replaceAll('CloudPOS', name)
+          // Arabic transliteration used in receipt previews.
+          .replaceAll('كلاود بوس', name);
 }

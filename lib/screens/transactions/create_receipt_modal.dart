@@ -1673,7 +1673,7 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                                         child: const Padding(
                                           padding: EdgeInsets.all(4.0),
                                           child: Icon(Icons.edit,
-                                              size: 18, color: Colors.blue),
+                                              size: 18, color: ColorManager.kBrandBlue),
                                         ),
                                       ),
                                       const SizedBox(width: 8),

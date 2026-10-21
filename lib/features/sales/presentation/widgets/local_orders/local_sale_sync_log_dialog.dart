@@ -6,6 +6,7 @@ import 'package:pos_machine/core/ui/feedback/app_toast.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/services/local_sale_sync_service.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 /// Shows every server attempt for one local sale: the exact request body, the
 /// raw response and the outcome. Updates live while a retry is in flight.
@@ -40,7 +41,7 @@ class LocalSaleSyncLogDialog extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F3D75),
+                        color: ColorManager.kBlue0F3D75,
                       ),
                     ),
                   ),
@@ -122,7 +123,7 @@ class _AttemptTile extends StatelessWidget {
       'synced' => ('Synced', const Color(0xFF16764A)),
       'rejected' => ('Rejected', const Color(0xFFB42318)),
       'needs_review' => ('Needs review', const Color(0xFFB45309)),
-      null => ('Waiting for response', const Color(0xFF2563EB)),
+      null => ('Waiting for response', ColorManager.kBlue2563EB),
       final other => (other, const Color(0xFF6B7280)),
     };
     final status = attempt.httpStatus != null

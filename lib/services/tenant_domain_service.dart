@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../resources/app_url.dart';
 import 'preferences_file_guard.dart';
 import 'tenant_config_store.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class TenantDomainException implements Exception {
   const TenantDomainException(this.message, {this.serverRejected = true});
@@ -56,8 +57,8 @@ class TenantDomainService {
 
       // A gateway error or captive-portal page is not an answer about the key.
       if (response.statusCode >= 500 || payload == null) {
-        throw const TenantDomainException(
-          'The CloudPOS server is not responding. Try again shortly.',
+        throw TenantDomainException(
+          'The ${BrandConfig.name} server is not responding. Try again shortly.',
           serverRejected: false,
         );
       }

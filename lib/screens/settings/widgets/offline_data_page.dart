@@ -261,8 +261,8 @@ class _OfflineDataList extends StatelessWidget {
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.tags,
-          iconColor: const Color(0xFF1565C0),
-          backgroundColor: const Color(0xFFE3F2FD),
+          iconColor: ColorManager.kBlue1565C0,
+          backgroundColor: ColorManager.kBlueE3F2FD,
           title: 'offline_data.tile_categories'.tr,
           subtitle: 'offline_data.tile_categories_sub'.tr,
           value: _countLabel(categoryCount,
@@ -417,8 +417,8 @@ class _OfflineDataList extends StatelessWidget {
         ),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.users,
-          iconColor: const Color(0xFF0277BD),
-          backgroundColor: const Color(0xFFE1F5FE),
+          iconColor: ColorManager.kBlue0277BD,
+          backgroundColor: ColorManager.kBlueE1F5FE,
           title: 'offline_data.tile_customers'.tr,
           subtitle: 'offline_data.tile_customers_sub'.tr,
           value: _countLabel(customerCount,
@@ -593,8 +593,8 @@ class _OfflineDataList extends StatelessWidget {
         _SectionHeader(title: 'offline_data.section_drafts'.tr),
         _OfflineDataTile(
           faIcon: FontAwesomeIcons.cartShopping,
-          iconColor: const Color(0xFF1565C0),
-          backgroundColor: const Color(0xFFE3F2FD),
+          iconColor: ColorManager.kBlue1565C0,
+          backgroundColor: ColorManager.kBlueE3F2FD,
           title: 'offline_data.tile_cart'.tr,
           subtitle: 'offline_data.tile_cart_sub'.tr,
           value: _countLabel(_cartItemsCount(),

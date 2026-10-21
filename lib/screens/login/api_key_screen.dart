@@ -17,6 +17,7 @@ import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/services/preferences_file_guard.dart';
 import 'package:pos_machine/services/tenant_domain_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:pos_machine/config/brand_config.dart';
 
 class ApiKeyScreen extends StatefulWidget {
   const ApiKeyScreen({
@@ -303,7 +304,7 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                           ),
                           GestureDetector(
                             onTap: () async {
-                              final uri = Uri.parse('https://cloudposai.com');
+                              final uri = Uri.parse(BrandConfig.website);
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri,
                                     mode: LaunchMode.externalApplication);
