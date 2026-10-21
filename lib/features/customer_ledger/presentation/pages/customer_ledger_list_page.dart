@@ -3,7 +3,7 @@ import '../state/customer_ledger_list_controller.dart';
 import '../widgets/customer_ledger_filters.dart';
 import '../widgets/customer_ledger_rows.dart';
 import '../export/customer_ledger_excel.dart';
-import 'package:pos_machine/screens/transactions/transaction_list/customer_ledger_row_actions.dart';
+import '../state/customer_ledger_details_action.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
