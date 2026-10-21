@@ -60,6 +60,23 @@ class PluExportService {
     autoWriteDelay = const Duration(seconds: 2);
   }
 
+  /// Completes once no automatic write is scheduled or running, so tests
+  /// wait on the work itself rather than a wall-clock guess.
+  @visibleForTesting
+  Future<void> idleForTest() async {
+    while (true) {
+      while (_pending?.isActive ?? false) {
+        await Future<void>.delayed(autoWriteDelay);
+      }
+      final inFlight = _inFlight;
+      if (inFlight != null) await inFlight;
+      // A write that found another running reschedules itself; wait again.
+      if (!(_pending?.isActive ?? false) && identical(inFlight, _inFlight)) {
+        return;
+      }
+    }
+  }
+
   void bind(LocalProductProvider catalog) {
     if (identical(_catalog, catalog)) return;
     _catalog?.removeListener(_catalogChanged);
