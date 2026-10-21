@@ -13,14 +13,21 @@ Scope: architecture only, originally started from `mubashir-dev` at `798ba40c`, 
 
 No new P0/P1/P2/P3 regression was identified in these checks. This is evidence about the exercised cases, not a guarantee for every backend response or interaction.
 
+## Findings fixed during staging review
+
+The four P2 issues this extraction reproduced were fixed on top of it, each with a regression test in `receipt_inner_pages_test.dart`:
+
+| Severity | Trigger | Fix |
+| --- | --- | --- |
+| P2 | Press Submit twice while its first request is pending. | `_submitReceipt` ignores a second call until the first finishes. |
+| P2 | Add two payments of 15 for an invoice whose balance is 20. | Add and Submit compare the running total for that invoice against its balance. |
+| P2 | In Edit, clear the selected invoice (previously threw `StateError`). | The editor resets the invoice and balance amounts instead of looking up null. |
+| P2 | In Edit, select an invoice with a different balance and Save. | `_saveItemEditor` also copies `balanceAmountController`. |
+
 ## Unchanged findings
 
 | Severity | Trigger and result | Current location |
 | --- | --- | --- |
-| P2 | Press Submit twice while its first request is pending. Both calls reach `addReceipt`. Backend duplicate prevention was not tested. | `presentation/state/receipt_create_controller.dart`, `_submitReceipt` |
-| P2 | Add two payments of 15 for an invoice whose balance is 20. Each row passes individually, and submission sends 30 for the same invoice. | `receipt_create_controller.dart`, add/submit balance validation |
-| P2 | In Edit, clear the selected invoice. Its nullable change callback calls `firstWhere` with null and throws `StateError`. | `presentation/widgets/receipt_create_dialog.dart`, editor invoice `onChanged` |
-| P2 | In Edit, select an invoice with a different balance and Save. Save copies the invoice selection/amount but not `balanceAmountController`; reopening and submission use the old balance. | `receipt_create_controller.dart`, `_saveItemEditor` |
 | P3 | At 600px viewport width, the existing Create layout overflows horizontally by 5.9px. Original and extracted editors reproduce it. | `receipt_create_dialog.dart`, existing layout |
 
 Additional existing validation boundaries: Submit does not require a saved row; amounts are not checked for positivity/finiteness and unparsable text maps to zero; a cleared/unavailable payment method maps to null. Missing authentication leaves lookup loading labels active, and a null payment-method response does not clear its loading label. A HTTP 200 body is treated as submission success without inspecting its business status. Whether the server rejects these payloads or prevents duplicates has not been verified. These rules were retained under the instruction not to change logic or UI.
@@ -36,4 +43,4 @@ Hot restart before checking the extracted code.
 5. Select Invoice Payment for the chosen customer. Confirm the invoice number, amount and balance, then check that an amount above its balance is rejected when adding.
 6. If submitting in the demo, use one valid saved payment and press Submit once. Confirm the receipt appears in the list. Open Details and check number, customer, company, amount, status, reference, payment date, method and invoice/general description. Close and reopen an existing receipt too.
 
-The existing issues above are not resolved by this extraction.
+The P3 layout overflow and the validation boundaries above are not resolved by this extraction.

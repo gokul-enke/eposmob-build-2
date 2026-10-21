@@ -27,6 +27,9 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
   List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
 
+  // Blocks a second Submit while the first request is pending.
+  bool _isSubmitting = false;
+
   ReceiptEditorRepository get _repository => ReceiptEditorRepository(
         invoices: context.read<InvoiceProvider>(),
         customers: context.read<CustomerProvider>(),
@@ -268,12 +271,21 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
                   ? '0'
                   : _newItemCard.balanceAmountController.text.trim()) ??
           0.0;
-      if (paid > balance) {
+      // Rows already saved against the same invoice share its balance.
+      final alreadyPaid = _receiptItemCards
+          .where((c) =>
+              c.selectedItemType == "Invoice Payment" &&
+              c.selectedInvoice == _newItemCard.selectedInvoice)
+          .fold<double>(
+              0.0,
+              (sum, c) =>
+                  sum + (double.tryParse(c.amountController.text.trim()) ?? 0.0));
+      if (paid + alreadyPaid > balance) {
         showScaffoldError(
           context: context,
           message: 'receipt.paid_exceeds_balance'
               .tr
-              .replaceAll('@paid', paid.toStringAsFixed(2))
+              .replaceAll('@paid', (paid + alreadyPaid).toStringAsFixed(2))
               .replaceAll('@balance', balance.toStringAsFixed(2)),
         );
         return;
@@ -369,6 +381,8 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
 
   // Submit the receipt data
   void _submitReceipt() async {
+    if (_isSubmitting) return;
+
     // Get the InvoiceProvider and AuthModel instances
     final repository = _repository;
     final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -398,6 +412,8 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
 
     // Create receipt items list from the form data
     List<Map<String, dynamic>> receiptItems = [];
+    // Running total per invoice so split rows cannot exceed its balance.
+    final paidByInvoice = <String?, double>{};
     for (var card in _receiptItemCards) {
       // Validate item fields
       if (card.selectedItemType == null || card.selectedItemType!.isEmpty) {
@@ -431,13 +447,16 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
                     ? '0'
                     : card.balanceAmountController.text.trim()) ??
             0.0;
-        if (paid > balance) {
+        final invoicePaid =
+            (paidByInvoice[card.selectedInvoice] ?? 0.0) + paid;
+        paidByInvoice[card.selectedInvoice] = invoicePaid;
+        if (invoicePaid > balance) {
           if (mounted) {
             showScaffoldError(
               context: context,
               message: 'receipt.paid_exceeds_balance_currency'
                   .tr
-                  .replaceAll('@paid', paid.toStringAsFixed(2))
+                  .replaceAll('@paid', invoicePaid.toStringAsFixed(2))
                   .replaceAll('@balance', balance.toStringAsFixed(2)),
             );
           }
@@ -450,6 +469,7 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
       ));
     }
 
+    _isSubmitting = true;
     try {
       debugPrint(
           '🧾 Submitting receipt for customer $_selectedCustomer with ${receiptItems.length} item(s) and status paid');
@@ -490,6 +510,8 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
               .replaceAll('@error', e.toString()),
         );
       }
+    } finally {
+      _isSubmitting = false;
     }
   }
 
@@ -533,6 +555,8 @@ abstract class _ReceiptCreateController extends State<CreateReceiptModal> {
         existing.amountController.text = tempCard.amountController.text;
         existing.invoiceAmountController.text =
             tempCard.invoiceAmountController.text;
+        existing.balanceAmountController.text =
+            tempCard.balanceAmountController.text;
       } else {
         _receiptItemCards.add(tempCard);
         tempCard.amountController.addListener(_calculateTotalAmount);

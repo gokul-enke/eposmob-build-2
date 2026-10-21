@@ -209,9 +209,19 @@ class _CreateReceiptModalState extends _ReceiptCreateController {
                                   onChanged: (value) {
                                     setState(() {
                                       tempCard.selectedInvoice = value;
-                                      final invoice = _invoiceList.firstWhere(
-                                        (inv) => inv.id.toString() == value,
-                                      );
+                                      final invoice = _invoiceList
+                                          .where((inv) =>
+                                              inv.id.toString() == value)
+                                          .firstOrNull;
+                                      // Cleared selection: reset amounts
+                                      // instead of throwing on a null lookup.
+                                      if (invoice == null) {
+                                        tempCard.invoiceAmountController.text =
+                                            "0.00";
+                                        tempCard.balanceAmountController.text =
+                                            "0.00";
+                                        return;
+                                      }
                                       tempCard.invoiceAmountController.text =
                                           invoice.amount;
 

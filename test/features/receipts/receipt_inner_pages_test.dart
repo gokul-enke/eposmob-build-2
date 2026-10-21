@@ -97,15 +97,14 @@ class _Invoices extends InvoiceProvider {
   int snapshotCalls = 0, createCalls = 0;
   String? customer, status, token, reference;
   List<Map<String, dynamic>>? items;
+  List<Invoice> snapshot = [invoice(11, 1), invoice(22, 2)];
   @override
   Future<List<Invoice>> fetchAllInvoicesSnapshot(
       {required String accessToken,
       int perPage = 1000,
       http.Client? client}) async {
     snapshotCalls++;
-    return pending == null
-        ? [invoice(11, 1), invoice(22, 2)]
-        : await pending!.future;
+    return pending == null ? snapshot : await pending!.future;
   }
 
   @override
@@ -449,6 +448,87 @@ void main() {
     invoices.submission!.complete({'status': 'success'});
     await tester.pumpAndSettle();
     expect(find.text('Open'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  Future<void> addInvoice(WidgetTester tester, String id, String amount) async {
+    dropdown(tester, 1).onChanged('Invoice Payment');
+    await tester.pumpAndSettle();
+    dropdown(tester, 2).onChanged(id);
+    await tester.pumpAndSettle();
+    tester
+        .widgetList<TextFormField>(find.byType(TextFormField))
+        .elementAt(2)
+        .controller!
+        .text = amount;
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('second Submit while pending sends only one request',
+      (tester) async {
+    final invoices = _Invoices()..submission = Completer<dynamic>();
+    await mount(tester, _Customers(), _Methods(), invoices);
+    dropdown(tester, 0).onChanged('1');
+    await tester.pumpAndSettle();
+    await addGeneral(tester, '10');
+    button(tester, 'receipt.submit_button');
+    await tester.pump();
+    button(tester, 'receipt.submit_button');
+    await tester.pump();
+    expect(invoices.createCalls, 1);
+    invoices.submission!.complete({'status': 'success'});
+    await tester.pumpAndSettle();
+    expect(find.byType(CreateReceiptModal), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('split rows for one invoice cannot exceed its balance',
+      (tester) async {
+    final invoices = _Invoices();
+    await mount(tester, _Customers(), _Methods(), invoices);
+    dropdown(tester, 0).onChanged('1');
+    await tester.pumpAndSettle();
+    await addInvoice(tester, '11', '15');
+    expect(find.byIcon(Icons.edit), findsOneWidget);
+    await addInvoice(tester, '11', '15');
+    expect(find.byIcon(Icons.edit), findsOneWidget);
+    await addInvoice(tester, '11', '5');
+    expect(find.byIcon(Icons.edit), findsNWidgets(2));
+    button(tester, 'receipt.submit_button');
+    await tester.pumpAndSettle();
+    expect(invoices.items!.map((i) => i['paid_amount']), [15.0, 5.0]);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('edit: clearing invoice does not throw; new invoice balance kept',
+      (tester) async {
+    final invoices = _Invoices()
+      ..snapshot = [invoice(11, 1), invoice(33, 1, balance: '50.00')];
+    await mount(tester, _Customers(), _Methods(), invoices);
+    dropdown(tester, 0).onChanged('1');
+    await tester.pumpAndSettle();
+    await addInvoice(tester, '11', '15');
+    await tester.tap(find.byIcon(Icons.edit));
+    await tester.pumpAndSettle();
+    final editorInvoice = find.byType(CustomDropDownWithSearch<String>).last;
+    tester
+        .widget<CustomDropDownWithSearch<String>>(editorInvoice)
+        .onChanged(null);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester
+        .widget<CustomDropDownWithSearch<String>>(editorInvoice)
+        .onChanged('33');
+    await tester.pumpAndSettle();
+    tester
+        .widgetList<TextFormField>(find.byType(TextFormField))
+        .last
+        .controller!
+        .text = '40';
+    button(tester, 'general.save');
+    await tester.pumpAndSettle();
+    button(tester, 'receipt.submit_button');
+    await tester.pumpAndSettle();
+    expect(invoices.items!.single['invoice_id'], '33');
+    expect(invoices.items!.single['paid_amount'], 40.0);
     expect(tester.takeException(), isNull);
   });
   for (final values in [
