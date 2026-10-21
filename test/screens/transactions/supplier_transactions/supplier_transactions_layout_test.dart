@@ -334,6 +334,63 @@ void main() {
     });
   }
 
+  testWidgets('View and close preserve filters, page and loaded provider state',
+      (tester) async {
+    final provider = await mount(tester, const Size(1440, 900));
+    await tester.enterText(find.byType(TextField).at(1), 'Test Supplier');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.pumpAndSettle();
+    final requests = List<Map<String, Object?>>.of(provider.requests);
+    final exportFetches = provider.exportFetches;
+    await tester.tap(find.text('View'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(provider.requests, requests);
+    expect(provider.exportFetches, exportFetches);
+    expect(provider.page, 2);
+    expect(tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+        'Test Supplier');
+    expect(find.text('INV-TEST-001'), findsOneWidget);
+    await tester.tap(find.text('View'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsNothing);
+    expect(provider.requests, requests);
+    await tester.tap(find.text('Test Supplier').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsNothing);
+    expect(provider.requests, requests);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile card View opens the selected transaction and returns',
+      (tester) async {
+    final provider = await mount(tester, const Size(390, 800));
+    final requests = List<Map<String, Object?>>.of(provider.requests);
+    await tester.ensureVisible(find.text('View'));
+    await tester.tap(find.text('View'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(CommonDetailsDialog),
+            matching: find.text('INV-TEST-001')),
+        findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommonDetailsDialog), findsNothing);
+    expect(provider.requests, requests);
+    expect(find.text('INV-TEST-001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
       'desktop keeps its table below 1200 pixels and scrolls to actions',
       (tester) async {
