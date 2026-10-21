@@ -178,9 +178,8 @@ void main() {
     late _FakeCatalog catalog;
     File plu() => File('${defaultPath()}${Platform.pathSeparator}PLU.csv');
 
-    // Lets the shortened write delay pass and the file I/O finish.
-    Future<void> settle() =>
-        Future<void>.delayed(const Duration(milliseconds: 300));
+    // Waits for the shortened write delay and any file I/O to finish.
+    Future<void> settle() => service.idleForTest();
 
     setUp(() async {
       service.autoWriteDelay = const Duration(milliseconds: 10);
