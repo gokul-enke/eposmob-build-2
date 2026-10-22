@@ -110,6 +110,12 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         case SideBarController.consumedStocksReportScreenIndex:
           ReportNavigation.openConsumedStocksReport();
           break;
+        case SideBarController.salesReportScreenIndex:
+          ReportNavigation.openSalesReport();
+          break;
+        case SideBarController.discountSaleReportScreenIndex:
+          ReportNavigation.openDiscountSaleReport();
+          break;
         default:
           sideBarController.index.value = index;
       }
@@ -580,6 +586,10 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             .currentUserHasPermissionSync('menu.reports.non_stock.access');
         final hasConsumedStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.reports.consumed_stock.access');
+        final hasSalesReportPermission =
+            roleProvider.currentUserCanAccessSalesReportSync();
+        final hasDiscountSaleReportPermission =
+            roleProvider.currentUserCanAccessDiscountSaleReportSync();
         final isCompanyAdmin = userRole == 'company_admin';
         final hasStockReportPermission = roleProvider
                 .currentUserHasPermissionSync('menu.reports.stock.access') ||
@@ -595,6 +605,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             !hasStockReportPermission &&
             !hasNonStockPermission &&
             !hasConsumedStockPermission &&
+            !hasSalesReportPermission &&
+            !hasDiscountSaleReportPermission &&
             !isCompanyAdmin) {
           return const SizedBox.shrink();
         }
@@ -620,6 +632,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   68,
                   SideBarController.nonStockReportScreenIndex,
                   SideBarController.consumedStocksReportScreenIndex,
+                  SideBarController.salesReportScreenIndex,
+                  SideBarController.discountSaleReportScreenIndex,
                   85,
                   SideBarController.stockReportScreenIndex,
                 ].contains(sideBarController.index.value),
@@ -628,6 +642,24 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     _MobileDrawerSubItem(
                       title: 'nav.sales_executive_reports'.tr,
                       onTap: () => navigate(58),
+                    ),
+                  if (hasSalesReportPermission)
+                    _MobileDrawerSubItem(
+                      title: 'nav.sales_report'.tr,
+                      onTap: () =>
+                          navigate(SideBarController.salesReportScreenIndex),
+                    ),
+                  if (hasDiscountSaleReportPermission)
+                    _MobileDrawerSubItem(
+                      title: 'nav.discount_sale_report'.tr,
+                      onTap: () => navigate(
+                          SideBarController.discountSaleReportScreenIndex),
+                    ),
+                  if (hasProductSalesPermission)
+                    _MobileDrawerSubItem(
+                      title: 'nav.product_sales_report'.tr,
+                      onTap: () => navigate(
+                          SideBarController.productSalesReportScreenIndex),
                     ),
                   if (canViewExecutiveSummary)
                     _MobileDrawerSubItem(
@@ -644,12 +676,6 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       title: 'nav.supplier_transaction_reports'.tr,
                       onTap: () => navigate(SideBarController
                           .supplierTransactionsReportScreenIndex),
-                    ),
-                  if (hasProductSalesPermission)
-                    _MobileDrawerSubItem(
-                      title: 'nav.product_sales_report'.tr,
-                      onTap: () => navigate(
-                          SideBarController.productSalesReportScreenIndex),
                     ),
                   if (hasStockReportPermission)
                     _MobileDrawerSubItem(

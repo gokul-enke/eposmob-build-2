@@ -16,12 +16,25 @@ class NonStockReportPicker extends StatefulWidget {
       required this.onChanged,
       required this.label,
       required this.allLabel,
-      required this.icon});
+      required this.icon,
+      this.loading = false,
+      this.enabled = true});
+
+  /// Key → shown label; [value] and [onChanged] use the key.
   final Map<String, String> options;
   final String? value;
   final String label, allLabel;
   final IconData icon;
+
+  /// The picked option's key, or null for All.
   final ValueChanged<String?> onChanged;
+
+  /// The options are still loading: a spinner instead of the menu, so an
+  /// empty list is never mistaken for "nothing to pick".
+  final bool loading;
+
+  /// False shows the value as a fixed, unchangeable filter.
+  final bool enabled;
 
   @override
   State<NonStockReportPicker> createState() => _NonStockReportPickerState();
@@ -38,7 +51,9 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
   int? _highlight;
   bool _selecting = false;
   String get _all => widget.allLabel;
-  String get _selectedLabel => widget.options[widget.value] ?? _all;
+  // A picked key whose name has not arrived yet shows nothing, not All.
+  String get _selectedLabel =>
+      widget.value == null ? _all : widget.options[widget.value] ?? '';
   String _label(String id) => id.isEmpty ? _all : widget.options[id]!;
 
   @override
@@ -50,8 +65,10 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
   @override
   void didUpdateWidget(covariant NonStockReportPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // The picked option's name may arrive after it was selected.
     final changed = oldWidget.value != widget.value ||
-        oldWidget.allLabel != widget.allLabel;
+        oldWidget.allLabel != widget.allLabel ||
+        oldWidget.options[oldWidget.value] != widget.options[widget.value];
     if (changed) {
       _text.text = _selectedLabel;
       _query = '';
@@ -82,6 +99,7 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
   }
 
   void _open() {
+    if (widget.loading || !widget.enabled) return;
     setState(() {
       _query = '';
       _selecting = false;
@@ -107,7 +125,7 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
     _selecting = true;
     _text.text = _label(id);
     _menu.close();
-    widget.onChanged(id.isEmpty ? null : widget.options[id]);
+    widget.onChanged(id.isEmpty ? null : id);
   }
 
   /// Closing without a selection discards typed search text, so the field
@@ -232,19 +250,39 @@ class _NonStockReportPickerState extends State<NonStockReportPicker> {
               controller: _text,
               focusNode: _focus,
               style: AppTextStyles.input,
+              readOnly: widget.loading,
+              enabled: widget.enabled,
               onTap: _open,
               onChanged: _search,
-              decoration: AppInputDecoration.filter(
-                  label: widget.label,
-                  hint: _all,
-                  icon: widget.icon,
-                  suffix: ExcludeFocus(
-                      child: IconButton(
+              decoration: _decoration(controller),
+            ),
+          ));
+
+  InputDecoration _decoration(MenuController controller) {
+    final decoration = AppInputDecoration.filter(
+        label: widget.label,
+        // A picked key whose name has not arrived shows nothing, not All.
+        hint: widget.value == null ? _all : null,
+        icon: widget.icon,
+        suffix: widget.loading
+            ? const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2)))
+            : !widget.enabled
+                ? const Padding(
+                    padding: EdgeInsets.all(AppSpacing.md),
+                    child: Icon(Icons.lock_outline,
+                        size: 18, color: AppColors.muted))
+                : ExcludeFocus(
+                    child: IconButton(
                     tooltip: widget.label,
                     icon: const Icon(Icons.arrow_drop_down),
                     onPressed: () =>
                         controller.isOpen ? controller.close() : _open(),
-                  ))),
-            ),
-          ));
+                  )));
+    // A fixed filter keeps the usual outline; the lock says it is fixed.
+    return decoration.copyWith(disabledBorder: decoration.enabledBorder);
+  }
 }
