@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/order_submission_guard.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/state/ai_assistant_controller.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/responsive.dart';
@@ -27,6 +28,17 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     sideBarController = Get.find();
+    // The floating AI assistant button only shows inside the signed-in app.
+    // After the frame, because the overlay rebuilds in response.
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => AiAssistantController.instance.attachShell());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => AiAssistantController.instance.detachShell());
+    super.dispose();
   }
 
   /// Handles mobile Back in platform order: dismiss an open keyboard first,

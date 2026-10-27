@@ -6552,5 +6552,31 @@
     "hide_filters": "Hide Filters",
     "export": "Export",
     "exporting": "Exporting..."
+  },
+  "ai_assistant": {
+    "launcher_tooltip": "Ask CloudPOS AI",
+    "title": "AI Assistant",
+    "subtitle": "Ask about your store or how to use CloudPOS",
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "thinking": "Thinking",
+    "history": "Your chats",
+    "back_to_chat": "Back to chat",
+    "new_chat": "New chat",
+    "close": "Close",
+    "welcome_title": "How can I help?",
+    "welcome_body": "I can analyse your sales, products, stock and customers, explain the page you have open, or show you how to do something in CloudPOS.",
+    "suggest_this_page": "Explain what I am looking at",
+    "suggest_sales_week": "How did sales go this week?",
+    "suggest_low_stock": "Which items are low or out of stock?",
+    "suggest_top_products": "What are my top 5 products this month?",
+    "suggest_how_printer": "How do I set up a receipt printer?",
+    "using_page": "Using this page: @page",
+    "using_page_hint": "Include the open screen with your question",
+    "no_history": "No chats yet.",
+    "history_note": "Chats are saved to your CloudPOS login for 180 days.",
+    "delete": "Delete",
+    "delete_confirm": "Delete this chat?",
+    "cancel": "Cancel"
   }
 }

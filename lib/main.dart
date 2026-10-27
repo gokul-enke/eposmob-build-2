@@ -95,6 +95,8 @@ import 'package:pos_machine/features/subscription/presentation/subscription_prov
 import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/config/sentry_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/state/ai_page_context.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/widgets/ai_assistant_overlay.dart';
 
 // ---------------------------------------------------------------------------
 // Startup
@@ -1017,6 +1019,7 @@ class MyApp extends StatelessWidget {
                     debugShowCheckedModeBanner: false,
                     navigatorObservers: [
                       SentryNavigatorObserver(),
+                      AiPageContext.instance.observer,
                     ],
                     title: BrandConfig.title,
                     theme: _buildAppTheme(focusHighlightProvider.enabled),
@@ -1031,10 +1034,17 @@ class MyApp extends StatelessWidget {
                       GlobalCupertinoLocalizations.delegate,
                     ],
                     builder: (context, child) {
-                      final content = GlobalKeyboardDismissRegion(
-                        child: OrderSubmissionStatus(
-                          child: child ?? const SizedBox.shrink(),
-                        ),
+                      // The AI assistant floats above every page, so it can be
+                      // opened from anywhere without leaving the current work.
+                      final content = Stack(
+                        children: [
+                          GlobalKeyboardDismissRegion(
+                            child: OrderSubmissionStatus(
+                              child: child ?? const SizedBox.shrink(),
+                            ),
+                          ),
+                          const AiAssistantOverlay(),
+                        ],
                       );
                       final screenSize = MediaQuery.of(context).size;
                       final platform = Theme.of(context).platform;

@@ -6552,5 +6552,31 @@
     "hide_filters": "إخفاء الفلاتر",
     "export": "تصدير",
     "exporting": "جارٍ التصدير..."
+  },
+  "ai_assistant": {
+    "launcher_tooltip": "اسأل CloudPOS AI",
+    "title": "المساعد الذكي",
+    "subtitle": "اسأل عن متجرك أو عن استخدام CloudPOS",
+    "placeholder": "اسأل أي شيء…",
+    "send": "إرسال",
+    "thinking": "جارٍ التفكير",
+    "history": "محادثاتك",
+    "back_to_chat": "العودة إلى المحادثة",
+    "new_chat": "محادثة جديدة",
+    "close": "إغلاق",
+    "welcome_title": "كيف يمكنني مساعدتك؟",
+    "welcome_body": "يمكنني تحليل مبيعاتك ومنتجاتك ومخزونك وعملائك، وشرح الصفحة المفتوحة، أو توضيح كيفية القيام بأي شيء في CloudPOS.",
+    "suggest_this_page": "اشرح ما أراه الآن",
+    "suggest_sales_week": "كيف كانت المبيعات هذا الأسبوع؟",
+    "suggest_low_stock": "ما الأصناف منخفضة أو نافدة المخزون؟",
+    "suggest_top_products": "ما أفضل 5 منتجات هذا الشهر؟",
+    "suggest_how_printer": "كيف أُعِدّ طابعة الإيصالات؟",
+    "using_page": "استخدام هذه الصفحة: @page",
+    "using_page_hint": "تضمين الشاشة المفتوحة مع سؤالك",
+    "no_history": "لا توجد محادثات بعد.",
+    "history_note": "تُحفظ المحادثات في حساب CloudPOS لمدة 180 يومًا.",
+    "delete": "حذف",
+    "delete_confirm": "حذف هذه المحادثة؟",
+    "cancel": "إلغاء"
   }
 }

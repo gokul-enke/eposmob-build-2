@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/state/ai_assistant_controller.dart';
 import 'package:pos_machine/features/weigh_machine/data/plu_export_service.dart';
 import 'package:pos_machine/features/offers/data/product_offer_repository.dart';
 import 'package:pos_machine/providers/admin_settings_provider.dart';
@@ -161,6 +162,9 @@ class SessionResetService {
     try {
       await context.read<RealtimeSyncProvider>().stop();
     } catch (_) {}
+
+    // The next user must not see this user's assistant chat or session.
+    AiAssistantController.instance.reset();
 
     // Before prefs.clear() below: the saved PLU folder is still readable, and
     // the old tenant's items must not stay where the weigh machine imports.

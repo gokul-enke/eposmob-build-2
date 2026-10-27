@@ -1,3 +1,4 @@
+import 'package:pos_machine/features/ai_assistant/presentation/state/ai_page_context.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,8 +76,38 @@ class _SalesOrderDetailsPageState extends State<SalesOrderDetailsPage> {
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
 
+  /// What the AI assistant should know when the user asks about "this order".
+  String? _aiDetails() {
+    final data = orderDetailsModelData;
+    if (data == null) return null;
+    final items = (cartItems ?? const [])
+        .take(15)
+        .map((i) => '${i.productName ?? 'item'} x${i.quantity ?? ''}')
+        .join(', ');
+    return [
+      'Order $orderNumber',
+      if (data.orderNumber != null) 'backend ${data.orderNumber}',
+      if (data.orderDate != null) 'date ${data.orderDate}',
+      if (customerDetails?.name != null) 'customer ${customerDetails!.name}',
+      if (data.orderStatus != null) 'status ${data.orderStatus}',
+      if (data.paymentStatus != null) 'payment ${data.paymentStatus}',
+      if (items.isNotEmpty) 'items: $items',
+      if (priceSummary?.discount != null) 'discount ${priceSummary!.discount}',
+      if (priceSummary?.totalTax != null) 'tax ${priceSummary!.totalTax}',
+      if (priceSummary?.netPayable != null) 'net payable ${priceSummary!.netPayable}',
+    ].join('; ');
+  }
+
   @override
   Widget build(BuildContext context) {
+    return AiPageContextScope(
+      screen: 'Sales order details',
+      details: _aiDetails(),
+      child: _buildPage(context),
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final isMobile = ResponsiveWidget.isMobile(context);
 
