@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -5,39 +7,40 @@ import 'package:pos_machine/core/ui/ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/ai_models.dart';
+import 'ai_attachment_views.dart';
 import 'ai_visual_view.dart';
 
 /// One chat turn: the user's bubble, or the assistant's steps, charts and answer.
 class AiMessageView extends StatelessWidget {
-  const AiMessageView({super.key, required this.message});
+  const AiMessageView({super.key, required this.message, this.loadAttachment});
 
   final AiMessage message;
+
+  /// Loads the bytes of an attachment sent earlier (reloaded chats).
+  final Future<Uint8List> Function(String id)? loadAttachment;
 
   @override
   Widget build(BuildContext context) {
     if (message.role == AiRole.user) {
-      return Align(
-        alignment: AlignmentDirectional.centerEnd,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 320),
-          margin: const EdgeInsets.only(
-              bottom: AppSpacing.md, left: AppSpacing.xxl),
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadiusDirectional.only(
-              topStart: Radius.circular(14),
-              topEnd: Radius.circular(14),
-              bottomStart: Radius.circular(14),
-              bottomEnd: Radius.circular(4),
-            ),
-          ),
-          child: SelectableText(message.text,
-              style: AppTextStyles.body.copyWith(color: AppColors.onPrimary)),
+      return Padding(
+        padding:
+            const EdgeInsets.only(bottom: AppSpacing.md, left: AppSpacing.xxl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (message.attachments.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(
+                    bottom: message.text.isEmpty ? 0 : AppSpacing.xs),
+                child: AiMessageAttachments(
+                    attachments: message.attachments, load: loadAttachment),
+              ),
+            if (message.text.isNotEmpty) _userBubble(),
+          ],
         ),
       );
     }
+    var docImages = 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Column(
@@ -60,7 +63,12 @@ class AiMessageView extends StatelessWidget {
                 ],
               ),
             ),
-          for (final visual in message.visuals) AiVisualView(visual: visual),
+          for (final visual in message.visuals)
+            if (visual is AiDocImage)
+              AiDocImageView(
+                  key: ValueKey('ai-doc-image-${docImages++}'), image: visual)
+            else
+              AiVisualView(visual: visual),
           if (message.text.isNotEmpty) AiMarkdown(text: message.text),
           if (message.error != null)
             Container(
@@ -76,6 +84,23 @@ class AiMessageView extends StatelessWidget {
       ),
     );
   }
+
+  Widget _userBubble() => Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadiusDirectional.only(
+            topStart: Radius.circular(14),
+            topEnd: Radius.circular(14),
+            bottomStart: Radius.circular(14),
+            bottomEnd: Radius.circular(4),
+          ),
+        ),
+        child: SelectableText(message.text,
+            style: AppTextStyles.body.copyWith(color: AppColors.onPrimary)),
+      );
 }
 
 class _StepChip extends StatelessWidget {

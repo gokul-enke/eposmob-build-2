@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,6 +98,7 @@ class AiAssistantApi {
   String? _sessionFor;
 
   static const _timeout = Duration(seconds: 20);
+  static const _uploadTimeout = Duration(seconds: 90);
 
   Uri _uri(String path) => _base.replace(path: path);
 
@@ -172,15 +174,63 @@ class AiAssistantApi {
       throw const _SessionExpired();
     if (status >= 400) {
       throw AiAssistantException(
-          '${body['error'] ?? 'Something went wrong (HTTP $status).'}');
+          '${body['error'] ?? 'Something went wrong (HTTP $status).'}',
+          signInRequired: body['code'] == 'sign_in_required');
     }
   }
 
-  /// Streams the assistant's progress, charts and answer for [message].
+  /// Uploads one image or PDF for the next question (multipart "file").
+  /// PDFs are read server-side, so this can take a while.
+  Future<AiAttachment> upload(
+          {required List<int> bytes, required String filename}) =>
+      _authed((token) async {
+        final request = http.MultipartRequest('POST', _uri('/api/uploads'))
+          ..headers.addAll(_headers(token))
+          ..files.add(
+              http.MultipartFile.fromBytes('file', bytes, filename: filename));
+        final res = await http.Response.fromStream(
+            await _client.send(request).timeout(_uploadTimeout));
+        final body = _decode(res.body);
+        _check(res.statusCode, body);
+        final attachment = AiAttachment.fromJson(body['attachment']);
+        if (attachment == null) {
+          throw const AiAssistantException('Upload failed. Please try again.');
+        }
+        return attachment;
+      });
+
+  final Map<String, Future<Uint8List>> _files = {};
+
+  /// The bytes of an uploaded file (owner only), e.g. thumbnails of earlier
+  /// questions. Kept in memory for the app session; failures are retried.
+  Future<Uint8List> attachmentBytes(String id) {
+    final cached = _files[id];
+    if (cached != null) return cached;
+    final load = _authed((token) async {
+      final res = await _client
+          .get(_uri('/api/uploads/${Uri.encodeComponent(id)}'),
+              headers: _headers(token))
+          .timeout(_timeout);
+      if (res.statusCode != 200) {
+        _check(res.statusCode, _decode(res.body));
+        throw const AiAssistantException('This file is no longer available.');
+      }
+      return res.bodyBytes;
+    });
+    _files[id] = load;
+    load.then((_) {}, onError: (Object _) {
+      _files.remove(id);
+    });
+    return load;
+  }
+
+  /// Streams the assistant's progress, charts and answer for [message], with
+  /// the uploaded [attachments] (ids from [upload]).
   Stream<AiChatEvent> chat(
       {required String message,
       String? conversationId,
-      AiPageInfo? page}) async* {
+      AiPageInfo? page,
+      List<String> attachments = const []}) async* {
     final response = await _authed((token) async {
       final request = http.Request('POST', _uri('/api/chat'))
         ..headers.addAll({
@@ -191,6 +241,7 @@ class AiAssistantApi {
         ..body = jsonEncode({
           'message': message,
           if (conversationId != null) 'conversationId': conversationId,
+          if (attachments.isNotEmpty) 'attachments': attachments,
           if (page != null) 'context': page.toJson(),
         });
       final res = await _client.send(request).timeout(_timeout);
@@ -239,6 +290,7 @@ class AiAssistantApi {
   void reset() {
     _session = null;
     _sessionFor = null;
+    _files.clear();
   }
 }
 

@@ -1,11 +1,18 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 
 import '../../domain/ai_models.dart';
 import '../state/ai_assistant_controller.dart';
 import 'ai_assistant_launcher.dart';
+import 'ai_attachment_views.dart';
 import 'ai_message_view.dart';
 
 /// The assistant panel, floating above every signed-in page (added once in
@@ -221,7 +228,8 @@ class _MessageListState extends State<_MessageList> {
       controller: _scroll,
       padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: messages.length,
-      itemBuilder: (context, i) => AiMessageView(message: messages[i]),
+      itemBuilder: (context, i) => AiMessageView(
+          message: messages[i], loadAttachment: widget.chat.attachmentBytes),
     );
   }
 }
@@ -280,6 +288,8 @@ class _ComposerState extends State<_Composer> {
   final _input = TextEditingController();
   final _focus = FocusNode();
 
+  static const _extensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+
   @override
   void dispose() {
     _input.dispose();
@@ -289,16 +299,94 @@ class _ComposerState extends State<_Composer> {
 
   void _send() {
     final text = _input.text;
-    if (text.trim().isEmpty || widget.chat.busy) return;
+    if (!widget.chat.canSend(text)) return;
     _input.clear();
-    widget.chat.send(text);
+    widget.chat.send(text, withAttachments: true);
     _focus.requestFocus();
+  }
+
+  Future<void> _pick() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _extensions,
+        allowMultiple: true,
+        withData: true,
+      );
+      if (result == null) return;
+      widget.chat.addFiles([
+        for (final f in result.files)
+          if (f.bytes != null) (bytes: f.bytes!, name: f.name),
+      ]);
+    } catch (e) {
+      debugPrint('AI attach: file picker failed: $e');
+    } finally {
+      _focus.requestFocus();
+    }
+  }
+
+  /// Ctrl+V / Cmd+V: an image (or copied image/PDF files on desktop) on the
+  /// clipboard is attached; otherwise the text pastes as usual.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    final keys = HardwareKeyboard.instance;
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyV ||
+        !(keys.isControlPressed || keys.isMetaPressed) ||
+        keys.isShiftPressed ||
+        keys.isAltPressed) {
+      return KeyEventResult.ignored;
+    }
+    _paste();
+    return KeyEventResult.handled;
+  }
+
+  Future<void> _paste() async {
+    if (await _pasteFiles()) return;
+    final context = _focus.context;
+    if (context != null && context.mounted) {
+      Actions.maybeInvoke(
+          context, const PasteTextIntent(SelectionChangedCause.keyboard));
+    }
+  }
+
+  Future<bool> _pasteFiles() async {
+    try {
+      // Office apps put a picture of copied cells/text next to the text;
+      // whenever there is text, paste the text.
+      final text = await Clipboard.getData(Clipboard.kTextPlain);
+      if (text?.text?.isNotEmpty ?? false) return false;
+      final image = await Pasteboard.image;
+      if (image != null && image.isNotEmpty) {
+        widget.chat.addFiles([(bytes: image, name: null)]);
+        return true;
+      }
+      if (kIsWeb ||
+          !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+        return false;
+      }
+      final paths = (await Pasteboard.files())
+          .where((p) => _extensions.contains(p.split('.').last.toLowerCase()))
+          .toList();
+      if (paths.isEmpty) return false;
+      widget.chat.addFiles([
+        for (final p in paths)
+          (
+            bytes: await File(p).readAsBytes(),
+            name: p.split(RegExp(r'[\\/]')).last
+          ),
+      ]);
+      return true;
+    } catch (_) {
+      // No clipboard plugin (tests) or unreadable data: paste text instead.
+      return false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final page = chat.currentPage;
+    final drafts = chat.attachments;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
@@ -328,32 +416,64 @@ class _ComposerState extends State<_Composer> {
                 tooltip: 'ai_assistant.using_page_hint'.tr,
               ),
             ),
+          if (drafts.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: AiAttachmentStrip(
+                attachments: drafts,
+                onRemove: chat.removeAttachment,
+                onRetry: chat.retryAttachment,
+              ),
+            ),
+          if (chat.attachNote != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Text(chat.attachNote!,
+                  key: const ValueKey('ai-attachment-note'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.red)),
+            ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              IconButton(
+                key: const ValueKey('ai-attach-button'),
+                tooltip: 'ai_assistant.attach'.tr,
+                onPressed: _pick,
+                icon: const Icon(Icons.attach_file_rounded,
+                    color: AppColors.muted),
+              ),
+              const SizedBox(width: AppSpacing.xxs),
               Expanded(
-                child: TextField(
-                  key: const ValueKey('ai-assistant-input'),
-                  controller: _input,
-                  focusNode: _focus,
-                  autofocus: true,
-                  minLines: 1,
-                  maxLines: 5,
-                  maxLength: 4000,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _send(),
-                  style: AppTextStyles.input,
-                  decoration: InputDecoration(
-                    hintText: 'ai_assistant.placeholder'.tr,
-                    counterText: '',
-                    isDense: true,
-                    filled: true,
-                    fillColor: AppColors.canvas,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.md),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.control),
-                        borderSide: BorderSide.none),
+                child: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onKeyEvent: _onKey,
+                  child: TextField(
+                    key: const ValueKey('ai-assistant-input'),
+                    controller: _input,
+                    focusNode: _focus,
+                    autofocus: true,
+                    minLines: 1,
+                    maxLines: 5,
+                    maxLength: 4000,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    style: AppTextStyles.input,
+                    decoration: InputDecoration(
+                      hintText: 'ai_assistant.placeholder'.tr,
+                      counterText: '',
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppColors.canvas,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                      border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.control),
+                          borderSide: BorderSide.none),
+                    ),
                   ),
                 ),
               ),
@@ -361,9 +481,12 @@ class _ComposerState extends State<_Composer> {
               IconButton.filled(
                 key: const ValueKey('ai-assistant-send'),
                 tooltip: 'ai_assistant.send'.tr,
-                onPressed: chat.busy ? null : _send,
-                style: IconButton.styleFrom(backgroundColor: AppColors.primary),
-                icon: chat.busy
+                onPressed: chat.busy || chat.uploading ? null : _send,
+                style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor:
+                        AppColors.primary.withValues(alpha: 0.45)),
+                icon: chat.busy || chat.uploading
                     ? const SizedBox(
                         width: 18,
                         height: 18,

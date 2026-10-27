@@ -1,8 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../data/ai_assistant_api.dart';
+import '../../data/ai_image_shrink.dart';
 import '../../domain/ai_models.dart';
 import 'ai_page_context.dart';
 
@@ -13,15 +15,40 @@ enum AiPanelState { closed, open }
 /// session, so closing the panel or changing page never loses the chat; an
 /// answer keeps streaming while the panel is closed.
 class AiAssistantController extends ChangeNotifier {
-  AiAssistantController(
-      {AiAssistantApi? api, AiPageInfo? Function()? pageContext})
-      : _api = api ?? AiAssistantApi(),
-        _pageContext = pageContext ?? AiPageContext.instance.current;
+  AiAssistantController({
+    AiAssistantApi? api,
+    AiPageInfo? Function()? pageContext,
+    Future<Uint8List> Function(Uint8List bytes)? shrinkImage,
+  })  : _api = api ?? AiAssistantApi(),
+        _pageContext = pageContext ?? AiPageContext.instance.current,
+        _shrinkImage = shrinkImage ?? shrinkAiImage;
 
   static final AiAssistantController instance = AiAssistantController();
 
   final AiAssistantApi _api;
   final AiPageInfo? Function() _pageContext;
+  final Future<Uint8List> Function(Uint8List bytes) _shrinkImage;
+
+  final List<AiDraftAttachment> _drafts = [];
+  int _nextDraftKey = 1;
+  String? _attachNote;
+
+  /// Files waiting in the composer for the next question.
+  List<AiDraftAttachment> get attachments => List.unmodifiable(_drafts);
+
+  /// A short note about files that were refused or failed to upload.
+  String? get attachNote => _attachNote;
+
+  /// Send waits until every file has finished uploading.
+  bool get uploading =>
+      _drafts.any((d) => d.status == AiUploadStatus.uploading);
+
+  /// Whether the composer can send [text] with the attached files.
+  bool canSend(String text) =>
+      !_busy &&
+      !uploading &&
+      (text.trim().isNotEmpty ||
+          _drafts.any((d) => d.status == AiUploadStatus.ready));
 
   AiPanelState _state = AiPanelState.closed;
   final List<AiMessage> _messages = [];
@@ -104,14 +131,130 @@ class AiAssistantController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> send(String text) async {
+  /// Adds picked or pasted files to the composer and starts uploading them.
+  /// Unsupported files and files over the per-message limits are refused
+  /// with a note. A [name] of null means a pasted image.
+  void addFiles(List<({Uint8List bytes, String? name})> files) {
+    final notes = <String>{};
+    for (final file in files) {
+      final kind = file.name == null
+          ? AiAttachmentKind.image
+          : sniffAiAttachment(file.bytes);
+      final name = file.name ?? 'ai_assistant.pasted_image'.tr;
+      if (kind == null) {
+        notes.add('ai_assistant.attach_unsupported'.trParams({'name': name}));
+        continue;
+      }
+      final image = kind == AiAttachmentKind.image;
+      final count = _drafts.where((d) => d.kind == kind).length;
+      if (count >=
+          (image
+              ? AiUploadLimits.imagesPerMessage
+              : AiUploadLimits.pdfsPerMessage)) {
+        notes.add((image
+                ? 'ai_assistant.attach_too_many_images'
+                : 'ai_assistant.attach_too_many_pdfs')
+            .trParams({
+          'count':
+              '${image ? AiUploadLimits.imagesPerMessage : AiUploadLimits.pdfsPerMessage}'
+        }));
+        continue;
+      }
+      if (!image && file.bytes.length > AiUploadLimits.pdfBytes) {
+        notes.add('ai_assistant.attach_pdf_too_large'.trParams({'name': name}));
+        continue;
+      }
+      final draft = AiDraftAttachment(
+          key: _nextDraftKey++,
+          kind: kind,
+          name: name,
+          bytes: file.bytes,
+          preview: image ? file.bytes : null);
+      _drafts.add(draft);
+      _upload(draft);
+    }
+    _attachNote = notes.isEmpty ? null : notes.join(' ');
+    _notify();
+  }
+
+  Future<void> _upload(AiDraftAttachment draft) async {
+    draft
+      ..status = AiUploadStatus.uploading
+      ..error = null;
+    _notify();
+    try {
+      var bytes = draft.bytes;
+      var filename = draft.name;
+      if (draft.kind == AiAttachmentKind.image) {
+        try {
+          bytes = await _shrinkImage(draft.bytes);
+        } catch (_) {
+          throw AiAssistantException('ai_assistant.attach_unreadable'.tr);
+        }
+        if (bytes.length > AiUploadLimits.imageBytes) {
+          throw AiAssistantException('ai_assistant.attach_image_too_large'.tr);
+        }
+        draft.preview = bytes;
+        filename = '${draft.name.replaceFirst(RegExp(r'\.\w+$'), '')}.jpg';
+      }
+      final uploaded = await _api.upload(bytes: bytes, filename: filename);
+      draft
+        ..uploaded = uploaded.withPreview(draft.preview)
+        ..status = AiUploadStatus.ready;
+    } catch (e) {
+      draft
+        ..status = AiUploadStatus.failed
+        ..error = _describe(e);
+    }
+    if (!_drafts.contains(draft)) return;
+    final failed = _drafts.where((d) => d.status == AiUploadStatus.failed);
+    if (failed.isNotEmpty) {
+      _attachNote = '${failed.last.name}: ${failed.last.error}';
+    }
+    _notify();
+  }
+
+  void retryAttachment(int key) {
+    final draft = _drafts.where((d) => d.key == key).firstOrNull;
+    if (draft == null || draft.status != AiUploadStatus.failed) return;
+    _attachNote = null;
+    _upload(draft);
+  }
+
+  void removeAttachment(int key) {
+    _drafts.removeWhere((d) => d.key == key);
+    if (!_drafts.any((d) => d.status == AiUploadStatus.failed)) {
+      _attachNote = null;
+    }
+    _notify();
+  }
+
+  void _clearDrafts() {
+    _drafts.clear();
+    _attachNote = null;
+  }
+
+  /// Bytes of a file sent earlier (thumbnails of reloaded chats).
+  Future<Uint8List> attachmentBytes(String id) => _api.attachmentBytes(id);
+
+  /// Sends [text]; [withAttachments] also sends the composer's uploaded files
+  /// (suggestion chips never do). Text may be empty when files are attached.
+  Future<void> send(String text, {bool withAttachments = false}) async {
     final message = text.trim();
-    if (message.isEmpty || _busy) return;
+    if (_busy || (withAttachments && uploading)) return;
+    final files = withAttachments
+        ? _drafts
+            .where((d) => d.status == AiUploadStatus.ready)
+            .map((d) => d.uploaded!)
+            .toList()
+        : const <AiAttachment>[];
+    if (message.isEmpty && files.isEmpty) return;
+    if (withAttachments) _clearDrafts();
     _busy = true;
     _showHistory = false;
     final answer = AiMessage(role: AiRole.assistant, pending: true);
     _messages
-      ..add(AiMessage(role: AiRole.user, text: message))
+      ..add(AiMessage(role: AiRole.user, text: message, attachments: files))
       ..add(answer);
     _notify();
 
@@ -131,6 +274,7 @@ class AiAssistantController extends ChangeNotifier {
         message: message,
         conversationId: _conversationId,
         page: _usePageContext ? _pageContext() : null,
+        attachments: [for (final f in files) f.id],
       );
       _stream = events.listen(
         (event) {
@@ -227,6 +371,7 @@ class AiAssistantController extends ChangeNotifier {
     _stream?.cancel();
     _stream = null;
     _api.reset();
+    _clearDrafts();
     _messages.clear();
     _conversationId = null;
     _history = const [];

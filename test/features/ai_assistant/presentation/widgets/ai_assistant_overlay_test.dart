@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +121,57 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('ai-assistant-launcher')));
     await tester.pump();
     expect(find.byKey(const ValueKey('ai-assistant-unread')), findsNothing);
+  });
+
+  testWidgets(
+      'attached files show above the input and can be sent without text',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Map<String, dynamic>? chat;
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/session/exchange') {
+        return http.Response('{"token":"s"}', 200);
+      }
+      if (request.url.path == '/api/uploads') {
+        return http.Response(
+            '{"attachment":{"id":"a1","kind":"pdf","name":"menu.pdf","size":3,"pages":4}}',
+            200);
+      }
+      chat = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('data: {"type":"answer","text":"A menu."}\n\n', 200);
+    });
+    final c = AiAssistantController(
+      api: AiAssistantApi(
+          client: client,
+          credentials: () async =>
+              const AiAppCredentials(tenantKey: 'K', accessToken: 't'),
+          baseUrl: 'https://ai.test'),
+      pageContext: () => null,
+      shrinkImage: (b) async => b,
+    )
+      ..attachShell()
+      ..open();
+    await tester.pumpWidget(_app(c));
+    expect(find.byKey(const ValueKey('ai-attach-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ai-attachment-strip')), findsNothing);
+    final send = find.byKey(const ValueKey('ai-assistant-send'));
+
+    c.addFiles(
+        [(bytes: Uint8List.fromList('%PDF-1.4'.codeUnits), name: 'menu.pdf')]);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ai-attachment-strip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ai-attachment-tile-0')), findsOneWidget);
+    expect(tester.widget<IconButton>(send).onPressed, isNotNull);
+
+    await tester.tap(send);
+    await tester.pumpAndSettle();
+    expect(chat!['attachments'], ['a1']);
+    expect(find.byKey(const ValueKey('ai-attachment-strip')), findsNothing);
+    expect(
+        find.byKey(const ValueKey('ai-message-attachment-0')), findsOneWidget);
+    expect(find.text('A menu.'), findsOneWidget);
   });
 
   testWidgets('fills the screen on phones', (tester) async {

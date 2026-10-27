@@ -1,9 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/core/ui/ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/ai_models.dart';
+import 'ai_attachment_views.dart';
 
 /// Chart colours: the app primary first, then distinct supporting hues.
 const _palette = [
@@ -36,7 +39,9 @@ class AiVisualView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (visual case final AiDocImage image) return AiDocImageView(image: image);
     final body = switch (visual) {
+      AiDocImage() => const SizedBox.shrink(), // handled above
       AiTable table => _TableView(table: table),
       AiChart chart when chart.type == AiChartType.pie =>
         _PieView(chart: chart),
@@ -67,6 +72,116 @@ class AiVisualView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A docs screenshot: the image (tap to enlarge), its caption and a link to
+/// the docs page.
+class AiDocImageView extends StatelessWidget {
+  const AiDocImageView({super.key, required this.image});
+
+  final AiDocImage image;
+
+  @override
+  Widget build(BuildContext context) {
+    final caption = image.alt.isNotEmpty ? image.alt : image.page;
+    final link = image.link;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => showAiImageViewer(context,
+                image: NetworkImage(image.src), caption: caption),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.zoomIn,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: Image.network(
+                    image.src,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    semanticLabel: image.alt,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                            ? child
+                            : const _ImagePlaceholder(
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary))),
+                    errorBuilder: (context, error, stack) => _ImagePlaceholder(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.broken_image_outlined,
+                              size: 18, color: AppColors.muted),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text('ai_assistant.image_unavailable'.tr,
+                              style: AppTextStyles.caption),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(caption,
+                    style: AppTextStyles.caption,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              if (link != null)
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs)),
+                  onPressed: () => launchUrl(Uri.parse(link),
+                      mode: LaunchMode.externalApplication),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                  label: Text('ai_assistant.open_page'.tr,
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.primary)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 140,
+        width: double.infinity,
+        color: AppColors.canvas,
+        alignment: Alignment.center,
+        child: child,
+      );
 }
 
 bool _isTimeLike(List<String> labels) =>

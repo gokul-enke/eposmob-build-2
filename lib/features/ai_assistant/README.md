@@ -10,9 +10,11 @@ The AI itself runs on Cloudflare: `ai.cloudposai.com`, code in the
 
 ```text
 features/ai_assistant/
-├── domain/ai_models.dart            events, charts/tables, messages, page info
+├── domain/ai_models.dart            events, charts/tables/screenshots, messages,
+│                                    attachments, upload limits, page info
 ├── data/
-│   ├── ai_assistant_api.dart        HTTP: login exchange, chat stream, history
+│   ├── ai_assistant_api.dart        HTTP: login exchange, uploads, chat stream, history
+│   ├── ai_image_shrink.dart         images → JPEG ≤1600 px on an isolate
 │   └── ai_sse_parser.dart           text/event-stream → AiChatEvent
 └── presentation/
     ├── state/
@@ -20,8 +22,9 @@ features/ai_assistant/
     │   └── ai_page_context.dart          which screen is open (+ AiPageContextScope)
     └── widgets/
         ├── ai_assistant_overlay.dart     panel / minimised bubble (in main.dart's builder)
+        ├── ai_attachment_views.dart      composer strip, sent files, full-screen image viewer
         ├── ai_message_view.dart          bubbles, progress steps, markdown answer
-        └── ai_visual_view.dart           fl_chart charts and tables
+        └── ai_visual_view.dart           fl_chart charts, tables, docs screenshots
 ```
 
 ## How it fits in
@@ -55,3 +58,23 @@ features/ai_assistant/
   180 days and appear under "Your chats".
 - Abuse and cost limits are enforced server-side: 30 messages a minute and
   500 a day per user. Errors from the backend are shown on the answer.
+- **Images and PDFs.** The paperclip (file_picker) or Ctrl+V / Cmd+V (the
+  `pasteboard` package; when the clipboard has text, the text pastes as usual)
+  adds JPG, PNG, WebP or PDF files. Each one uploads straight away to
+  `POST /api/uploads` (multipart `file`, AI session bearer) and shows as a tile
+  above the input with progress, retry and remove; Send waits for uploads and
+  works with files and no text. Images are first re-encoded as a JPEG of at
+  most 1600 px (quality 85, EXIF dropped) on an isolate, like the web chat.
+  Limits mirror the backend's `UPLOAD_LIMITS`: 4 images and 2 PDFs per message,
+  PDFs up to 10 MB and 30 pages, images up to 4 MB, 40 uploads a day. The ids
+  go in the chat body as `attachments`. Reloaded chats load their thumbnails
+  from `GET /api/uploads/{id}` (owner only; files are kept for 30 days).
+- **Docs screenshots.** How-to answers usually carry `{kind: "image"}` visuals
+  (https only), shown as a card with caption and an "Open page" link; tap to
+  enlarge. The enlarged view lives in the assistant's own `Overlay`, because
+  the panel sits above the app's Navigator.
+- Test keys: `ai-attach-button`, `ai-attachment-strip`,
+  `ai-attachment-tile-<i>`, `ai-attachment-remove-<i>`,
+  `ai-attachment-retry-<i>`, `ai-attachment-note`,
+  `ai-message-attachment-<i>`, `ai-doc-image-<i>`, `ai-image-viewer`,
+  `ai-image-viewer-close`.
