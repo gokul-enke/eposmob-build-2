@@ -182,4 +182,24 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(dropdownValue(tester, 1), '7973');
   });
+
+  // Methods in memory may belong to another store or language; the provider
+  // decides whether its cache is still good, so the form always asks it.
+  testWidgets('methods already in memory are still checked with the provider',
+      (tester) async {
+    final methods = FakePaymentMethods();
+    await openOrderModal(
+      tester,
+      methods,
+      ChangePaymentStatusModal(
+        currentPaymentStatus: 'pending',
+        grandTotal: '215.000',
+        paymentMethodCode: 'CASH',
+        onConfirm: (_, __, ___) {},
+      ),
+    );
+
+    expect(methods.fetches, 1);
+    expect(dropdownValue(tester, 1), '7974');
+  });
 }

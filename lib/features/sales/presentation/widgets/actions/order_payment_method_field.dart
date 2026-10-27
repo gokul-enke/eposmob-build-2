@@ -41,9 +41,10 @@ class _OrderPaymentMethodFieldState extends State<OrderPaymentMethodField> {
   }
 
   Future<void> _loadPaymentMethods() async {
-    if (_master.paymentMethods == null || _master.paymentMethods!.isEmpty) {
-      await _master.fetchPaymentMethods();
-    }
+    // Always ask: the provider returns its cache when it still belongs to the
+    // active store and language, and refetches otherwise, so a store switch
+    // never sends another store's method id.
+    await _master.fetchPaymentMethods();
     if (!mounted) return;
     setState(() {
       _isLoadingMethods = false;
