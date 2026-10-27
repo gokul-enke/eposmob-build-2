@@ -236,6 +236,10 @@ class APPUrl {
   static String get salesReport => '$baseURL/api/v1/reports/sales-report';
   static String get supplierSalesReport =>
       '$baseURL/api/v1/reports/supplier-sales-report';
+  // Web-style order reports (Sales Report, Discount Sale Report).
+  static String get orderSalesReport => '$baseURL/api/v1/sales-report';
+  static String get discountSaleReport =>
+      '$baseURL/api/v1/discount-sales-report';
   static String get applyCoupon => '$baseURL/api/v1/discount/apply-coupon';
   static String get listDiscounts => '$baseURL/api/v1/discount/list-discounts';
   static String get posOfferSync => '$baseURL/api/v1/offers/pos-sync';

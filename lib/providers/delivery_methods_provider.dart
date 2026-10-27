@@ -16,10 +16,17 @@ class DeliveryMethodsProvider with ChangeNotifier {
   int? _loadedStoreId;
   bool _isLoading = false;
   bool _hasFetchedOnce = false; // Track if we've ever successfully loaded data
+  int? _fetchedStoreId; // Store of the last successful load
 
   List<DeliveryMethod> get deliveryMethods => _deliveryMethods;
   bool get isLoading => _isLoading;
   bool get hasMethods => _deliveryMethods.isNotEmpty;
+
+  /// The current list was loaded for its store (from the API or the cache),
+  /// so an empty [deliveryMethods] means the store has none rather than a
+  /// failed load. A failed load after a store switch is not hidden by an
+  /// earlier store's success.
+  bool get loadedForStore => _hasFetchedOnce && _fetchedStoreId == _loadedStoreId;
 
   /// Default delivery method: the store-takeaway one when present, else the
   /// first available.
@@ -135,6 +142,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
       if (cachedMethods.isNotEmpty) {
         _setDeliveryMethods(cachedMethods, activeStoreId);
         _hasFetchedOnce = true;
+        _fetchedStoreId = activeStoreId;
         debugPrint(
             '$_tag ✅ Loaded ${cachedMethods.length} methods from LOCAL CACHE (SharedPreferences)');
         notifyListeners();
@@ -196,6 +204,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
           _setDeliveryMethods(
               _parseDeliveryMethods(data['data']), activeStoreId);
           _hasFetchedOnce = true;
+          _fetchedStoreId = activeStoreId;
           await _saveDeliveryMethodsToLocalCache(
             prefs,
             activeStoreId,
@@ -234,6 +243,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
     if (cachedMethods.isNotEmpty) {
       _setDeliveryMethods(cachedMethods, activeStoreId);
       _hasFetchedOnce = true;
+      _fetchedStoreId = activeStoreId;
       debugPrint(
           '$_tag 📦 Fallback: Using ${cachedMethods.length} methods from LOCAL CACHE (reason: $reason)');
     } else if (_deliveryMethods.isNotEmpty && _loadedStoreId == activeStoreId) {
@@ -317,6 +327,7 @@ class DeliveryMethodsProvider with ChangeNotifier {
     _setDeliveryMethods([], null);
     DeliveryMethodRegistry.clear();
     _hasFetchedOnce = false;
+    _fetchedStoreId = null;
     notifyListeners();
     debugPrint('$_tag Cleared delivery methods cache');
   }

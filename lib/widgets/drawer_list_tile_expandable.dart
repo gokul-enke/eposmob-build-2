@@ -7,6 +7,16 @@ import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import 'collapsible_sidebar.dart';
 
+/// A sub-item beyond the eight numbered ones of
+/// [DrawerListTileExpandableColumn].
+class DrawerSubItem {
+  const DrawerSubItem(
+      {required this.title, required this.onTap, this.show = true});
+  final String title;
+  final VoidCallback onTap;
+  final bool show;
+}
+
 class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? iconPath;
   final FaIconData? icon;
@@ -45,6 +55,9 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
   final bool? showTitle7;
   final bool? showTitle8;
 
+  /// Shown after the numbered items, in order.
+  final List<DrawerSubItem> extraItems;
+
   const DrawerListTileExpandableColumn({
     super.key,
     this.iconPath,
@@ -78,6 +91,7 @@ class DrawerListTileExpandableColumn extends StatefulWidget {
     this.showTitle6 = true,
     this.showTitle7 = true,
     this.showTitle8 = true,
+    this.extraItems = const [],
     this.iconSize,
     this.horizontalGap,
   });
@@ -383,6 +397,38 @@ class _DrawerListTileExpandableColumnState
       ));
     }
 
+    for (var i = 0; i < widget.extraItems.length; i++) {
+      final extra = widget.extraItems[i];
+      if (!extra.show) continue;
+      items.add(PopupMenuItem<String>(
+        value: 'extra$i',
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                extra.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
+    }
+
     final choice = await showMenu<String>(
       context: ctx,
       position: position,
@@ -420,6 +466,13 @@ class _DrawerListTileExpandableColumnState
         widget.onTapTitle8?.call();
         break;
       default:
+        final extra = int.tryParse(choice?.replaceFirst('extra', '') ?? '');
+        if (choice != null &&
+            choice.startsWith('extra') &&
+            extra != null &&
+            extra < widget.extraItems.length) {
+          widget.extraItems[extra].onTap();
+        }
         break;
     }
   }
@@ -859,6 +912,9 @@ class _DrawerListTileExpandableColumnState
                             ),
                           ),
                         ),
+                      for (var i = 0; i < widget.extraItems.length; i++)
+                        if (widget.extraItems[i].show)
+                          _extraTile(8 + i, widget.extraItems[i]),
                     ],
                   ),
                 ),
@@ -921,6 +977,38 @@ class _DrawerListTileExpandableColumnState
   }
 
   // Helper method to build sub-item tiles for panel
+
+  /// Same look as the numbered sub-items.
+  Widget _extraTile(int index, DrawerSubItem item) => Container(
+        margin: const EdgeInsets.symmetric(vertical: 1),
+        decoration: BoxDecoration(
+          color: _selectedTileIndex == index
+              ? ColorManager.kPrimaryColor.withValues(alpha: 0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListTile(
+            selected: _selectedTileIndex == index,
+            contentPadding: const EdgeInsets.only(left: 20, right: 10),
+            horizontalTitleGap: 8.0,
+            visualDensity: const VisualDensity(vertical: -4, horizontal: 0),
+            minVerticalPadding: 0,
+            onTap: () => _onTapTile(index, item.onTap),
+            leading: const BubbleIcon(),
+            title: Text(
+              item.title,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.21,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class BubbleIcon extends StatelessWidget {

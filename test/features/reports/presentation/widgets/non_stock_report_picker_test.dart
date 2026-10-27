@@ -180,4 +180,80 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+  testWidgets('picking an option reports its key, not its label',
+      (tester) async {
+    String? value;
+    Widget picker() => MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+                width: 300,
+                child: NonStockReportPicker(
+                    options: const {'1060': 'SALESMEDINA', '4': 'Alex'},
+                    value: value,
+                    onChanged: (id) => value = id,
+                    label: 'Executive',
+                    allLabel: 'All',
+                    icon: Icons.badge_outlined))));
+    await tester.pumpWidget(picker());
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SALESMEDINA'));
+    await tester.pumpAndSettle();
+    expect(value, '1060');
+    await tester.pumpWidget(picker());
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'SALESMEDINA');
+  });
+  testWidgets('a fixed filter shows its name and cannot be changed',
+      (tester) async {
+    Widget picker(Map<String, String> options) => MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+                width: 300,
+                child: NonStockReportPicker(
+                    options: options,
+                    value: '4',
+                    onChanged: (_) => fail('a fixed filter never changes'),
+                    label: 'Executive',
+                    allLabel: 'All',
+                    icon: Icons.badge_outlined,
+                    enabled: false))));
+    String text() =>
+        tester.widget<TextField>(find.byType(TextField)).controller!.text;
+    // The name may arrive after the value: the field follows it, and never
+    // claims All meanwhile.
+    await tester.pumpWidget(picker(const {}));
+    expect(text(), '');
+    expect(find.text('All'), findsNothing, reason: 'not even as the hint');
+    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_drop_down), findsNothing);
+    await tester.pumpWidget(picker(const {'4': 'Asha'}));
+    await tester.pumpAndSettle();
+    expect(text(), 'Asha');
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    await tester.tap(find.byType(TextField), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuItemButton), findsNothing);
+  });
+  testWidgets('while its list loads the picker spins and does not open',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+                width: 300,
+                child: NonStockReportPicker(
+                    options: const {},
+                    value: null,
+                    onChanged: (_) {},
+                    label: 'Customer',
+                    allLabel: 'All',
+                    icon: Icons.person_outline,
+                    loading: true)))));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.tap(find.byType(TextField));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(MenuItemButton), findsNothing);
+    expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
+  });
 }

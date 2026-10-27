@@ -466,3 +466,90 @@ Focused contract and widget tests cover filter/reset/reload sequences, failures,
 late responses, account changes, workbook contents, shared controls, and
 English/Arabic/Malayalam layouts. Live backend and native save/share need manual
 QA; these tests do not guarantee absence of every possible defect.
+
+## Sales Report and Discount Sale Report (web parity)
+
+Two order-based reports that copy the web admin panel's filters and columns.
+Like the other reports, each has its own self-contained files; only small
+generic helpers named `report_*` are shared.
+
+APIs (Shabab's `reports-api`):
+
+- `GET /api/v1/sales-report`: `period` = `this_month` (default) |
+  `last_month` | `last_3_months` | `custom` + `from`/`to` (`yyyy-MM-dd`);
+  comma-separated `store_ids`, `sales_executive_ids`, `payment_method_ids`
+  (master-data ids), `delivery_method_ids`, `category_ids`, `product_ids`,
+  `customer_ids`; `sort_direction` (`desc` default); `per_page` 1–100.
+  Summary: `orders`, `order_value`.
+- `GET /api/v1/discount-sales-report`: `sales_date_range` = `today` | `week` |
+  `month` (default) | `custom` + `from`/`to`; single `executive_id`,
+  `customer_id`, `store_id`; `discount_type` = `items` | `order`;
+  `order_number` (partial, also matches the offline receipt number). Rows:
+  `item_discount`, `discount`, `total_discount`, `executive_name`,
+  `discount_type` ("Cart items level" / "Overall order level"). Summary:
+  `orders`, `item_discount`, `discount`, `total_discount`.
+
+Both read `data.data`, `data.summary` and `data.pagination`. The server works
+out the preset ranges; only Custom sends dates, and Custom needs both dates.
+Other roles see every store and executive unless they pick one. A sales
+executive (`RoleProvider.currentUserRole == 'sales_executive'`) has the
+Executive filter locked to themselves (`AuthModel.userId`) and the Store filter
+locked to the store they are logged into (`StoreSessionProvider.activeStore`):
+the controllers' `locked` selections are sent with every request, kept by
+Reset and shown as disabled pickers. This only narrows what the app asks
+for; the API itself should enforce it too.
+
+Files per report (`sales_report` / `discount_sale_report`):
+
+- `domain/<report>_query.dart`: parameter names, period codes, the filter
+  enum (`SalesReportFilter`, `DiscountSaleReportFilter`; Discount also has
+  `DiscountType`) and the session scope. `domain/models/<report>.dart`: the
+  row and the response (`SalesReportResponse`, `DiscountSaleReportResponse`).
+- `data/<report>_api.dart`: injectable GET with tenant headers and
+  `page`/`per_page`, plus the Sales Executives directory.
+  `data/<report>_snapshot.dart`: all-pages export read (100 per page) that
+  fails on overlaps, moving pagination or missing rows (max 1,000 pages).
+- `presentation/state/<report>_controller.dart`: Date Range (default This
+  Month), filter selections, 25-row pages, newer-request-wins, a page beyond
+  the new last page reloads that page, a failed reload keeps rows with Retry,
+  export checks for filter/session/permission changes (paging meanwhile is
+  fine). Filter options load per filter with a spinner; a failed list shows
+  at once and Retry reloads only the failed ones. Executives seen in report
+  rows join the Executive picker, since `list-sales-executives` only lists
+  users with the sales-executive role. Both reports pick one option per
+  filter with the same searchable picker (`NonStockReportPicker`, as the
+  Non-Stock report), sending its id. Sales adds the sort; Discount adds
+  Discount Type and the debounced order number.
+- `presentation/pages/<report>_page.dart`: builds `ListPageScaffold` directly
+  (header Filters → Export → Refresh, error bars, table/cards, pagination with
+  the summary) and loads the filter options from the app's providers
+  (payment methods are fetched when the registry is empty; an empty delivery
+  list is valid only when `DeliveryMethodsProvider.loadedForStore`).
+- `presentation/export/<report>_export.dart` and
+  `presentation/widgets/<report>/` (filters, results: columns and card).
+- Shared helpers: `domain/report_period.dart` (Date Range options),
+  `domain/report_values.dart` (tolerant JSON readers),
+  `presentation/widgets/report_date_field.dart`, `report_error_bar.dart`, and
+  the picker `non_stock_report/non_stock_report_picker.dart` (reports the
+  picked option's key; spinner while its list loads).
+- Navigation: sidebar slots 102/103 through `ReportNavigation`. Reports menu
+  order: Sales Executive, Sales Report, Discount Sale Report, Product Sales,
+  Executive Summary, Customer and Supplier Transactions, Stock, then Non-Stock
+  and Consumed Stocks via `DrawerListTileExpandableColumn.extraItems`. The
+  desktop Reports header opens the first report the role can see.
+- Permissions: only the role's App Permission shows each report
+  (`menu.reports.sales_report.access`, `menu.reports.discount_sales.access`),
+  for every role including company admin; web page permissions do not
+  count. Export follows the same permission.
+- Translations: each report's own section (`order_sales_report`,
+  `discount_sale_report`), plus `report_filters` for the shared date field
+  and `report_period`.
+
+Tests: `test/features/reports/domain/<report>_test.dart`,
+`data/<report>_api_test.dart`,
+`presentation/state/<report>_controller_test.dart`,
+`presentation/pages/<report>_page_test.dart`, `domain/report_shared_test.dart`,
+`presentation/widgets/non_stock_report_picker_test.dart`,
+`report_date_field_test.dart`, `sales_discount_report_permission_test.dart`,
+`test/reports_menu_header_test.dart` and
+`test/widgets/drawer_list_tile_extra_items_test.dart`.

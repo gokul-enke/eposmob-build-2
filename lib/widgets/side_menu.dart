@@ -712,6 +712,10 @@ class _SideMenuState extends State<SideMenu> {
               final hasConsumedStockPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.consumed_stock.access');
+              final hasSalesReportPermission =
+                  roleProvider.currentUserCanAccessSalesReportSync();
+              final hasDiscountSaleReportPermission =
+                  roleProvider.currentUserCanAccessDiscountSaleReportSync();
               final hasStockReportPermission =
                   roleProvider.currentUserHasPermissionSync(
                           'menu.reports.stock.access') ||
@@ -735,6 +739,8 @@ class _SideMenuState extends State<SideMenu> {
                   !hasStockReportPermission &&
                   !hasNonStockPermission &&
                   !hasConsumedStockPermission &&
+                  !hasSalesReportPermission &&
+                  !hasDiscountSaleReportPermission &&
                   !isCompanyAdmin) {
                 return const SizedBox.shrink();
               }
@@ -745,49 +751,109 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value =
                           SideBarController.mySalesReportScreenIndex;
                     },
-                    onTapTitle2: () {
+                    // Order: Sales Executive, Sales Report, Discount Sale
+                    // Report, Product Sales, Executive Summary, Customer and
+                    // Supplier Transactions, Stock, Non-Stock, Consumed.
+                    onTapTitle2: ReportNavigation.openSalesReport,
+                    onTapTitle3: ReportNavigation.openDiscountSaleReport,
+                    onTapTitle4: () {
+                      ReportNavigation.openProductSalesReport();
+                    },
+                    onTapTitle5: () {
                       sideBarController.index.value = 85;
                     },
-                    onTapTitle3: () {
+                    onTapTitle6: () {
                       sideBarController.index.value = SideBarController
                           .customerTransactionsReportScreenIndex;
                     },
-                    onTapTitle4: () {
+                    onTapTitle7: () {
                       ReportNavigation.openSupplierTransactionsReport();
                     },
-                    onTapTitle5: () {
-                      ReportNavigation.openProductSalesReport();
-                    },
-                    onTapTitle6: () {
+                    onTapTitle8: () {
                       ReportNavigation.openStockReport();
                     },
-                    onTapTitle7: () {
-                      ReportNavigation.openNonStockReport();
-                    },
-                    onTapTitle8: () {
-                      ReportNavigation.openConsumedStocksReport();
-                    },
                     listTitle1: 'nav.sales_executive_reports'.tr,
-                    listTitle2: 'nav.executive_reports'.tr,
-                    listTitle3: 'nav.customer_transaction_reports'.tr,
-                    listTitle4: 'nav.supplier_transaction_reports'.tr,
-                    listTitle5: 'nav.product_sales_report'.tr,
-                    listTitle6: 'nav.stock_report'.tr,
-                    listTitle7: 'nav.non_stock_report'.tr,
-                    listTitle8: 'nav.consumed_stocks_report'.tr,
+                    listTitle2: 'nav.sales_report'.tr,
+                    listTitle3: 'nav.discount_sale_report'.tr,
+                    listTitle4: 'nav.product_sales_report'.tr,
+                    listTitle5: 'nav.executive_reports'.tr,
+                    listTitle6: 'nav.customer_transaction_reports'.tr,
+                    listTitle7: 'nav.supplier_transaction_reports'.tr,
+                    listTitle8: 'nav.stock_report'.tr,
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
-                    showTitle2: canViewExecutiveSummary,
-                    showTitle3: hasCustomerTransactionsPermission,
-                    showTitle4: hasSupplierTransactionsPermission,
-                    showTitle5: hasProductSalesPermission,
-                    showTitle6: hasStockReportPermission,
-                    showTitle7: hasNonStockPermission,
-                    showTitle8: hasConsumedStockPermission,
+                    showTitle2: hasSalesReportPermission,
+                    showTitle3: hasDiscountSaleReportPermission,
+                    showTitle4: hasProductSalesPermission,
+                    showTitle5: canViewExecutiveSummary,
+                    showTitle6: hasCustomerTransactionsPermission,
+                    showTitle7: hasSupplierTransactionsPermission,
+                    showTitle8: hasStockReportPermission,
+                    extraItems: [
+                      DrawerSubItem(
+                          title: 'nav.non_stock_report'.tr,
+                          onTap: ReportNavigation.openNonStockReport,
+                          show: hasNonStockPermission),
+                      DrawerSubItem(
+                          title: 'nav.consumed_stocks_report'.tr,
+                          onTap: ReportNavigation.openConsumedStocksReport,
+                          show: hasConsumedStockPermission),
+                    ],
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'nav.reports'.tr,
                     onTap: () {
-                      sideBarController.index.value = isCompanyAdmin ? 85 : 58;
+                      if (isCompanyAdmin || hasSalesExecutiveReportsPermission) {
+                        sideBarController.index.value =
+                            isCompanyAdmin ? 85 : 58;
+                        return;
+                      }
+                      // Otherwise the first report this role can open, in
+                      // menu order.
+                      final first = <(bool, VoidCallback)>[
+                        (
+                          hasSalesReportPermission,
+                          ReportNavigation.openSalesReport
+                        ),
+                        (
+                          hasDiscountSaleReportPermission,
+                          ReportNavigation.openDiscountSaleReport
+                        ),
+                        (
+                          hasProductSalesPermission,
+                          ReportNavigation.openProductSalesReport
+                        ),
+                        (
+                          canViewExecutiveSummary,
+                          () => sideBarController.index.value = 85
+                        ),
+                        (
+                          hasCustomerTransactionsPermission,
+                          () => sideBarController.index.value =
+                              SideBarController
+                                  .customerTransactionsReportScreenIndex
+                        ),
+                        (
+                          hasSupplierTransactionsPermission,
+                          ReportNavigation.openSupplierTransactionsReport
+                        ),
+                        (
+                          hasStockReportPermission,
+                          ReportNavigation.openStockReport
+                        ),
+                        (
+                          hasNonStockPermission,
+                          ReportNavigation.openNonStockReport
+                        ),
+                        (
+                          hasConsumedStockPermission,
+                          ReportNavigation.openConsumedStocksReport
+                        ),
+                      ].where((item) => item.$1).firstOrNull;
+                      if (first == null) {
+                        sideBarController.index.value = 58;
+                      } else {
+                        first.$2();
+                      }
                     },
                     selected: sideBarController.index.value == 39 ||
                         sideBarController.index.value ==
@@ -803,6 +869,10 @@ class _SideMenuState extends State<SideMenu> {
                             SideBarController.nonStockReportScreenIndex ||
                         sideBarController.index.value ==
                             SideBarController.consumedStocksReportScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController.salesReportScreenIndex ||
+                        sideBarController.index.value ==
+                            SideBarController.discountSaleReportScreenIndex ||
                         sideBarController.index.value == 85 ||
                         sideBarController.index.value ==
                             SideBarController.stockReportScreenIndex),
