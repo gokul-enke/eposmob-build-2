@@ -358,6 +358,17 @@ void main() {
         isTrue);
   });
 
+  testWidgets('the To date starts at 23:59 like the shared field rule',
+      (tester) async {
+    await mount(tester);
+    final dates = tester
+        .widget<FilterPanel>(
+            find.byKey(CustomerTransactionsReportPage.filtersKey))
+        .fields
+        .whereType<DateTimeFilterField>();
+    expect(dates.map((field) => field.until), [false, true]);
+  });
+
   testWidgets('coming back from View opens an unfiltered report',
       (tester) async {
     final customers = _FakeCustomers();

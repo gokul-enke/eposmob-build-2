@@ -143,12 +143,8 @@ void main() {
     Get.reset();
   });
 
-  Future<void> verifyDesktopFiltersCollapse(
-    WidgetTester tester, {
-    required Widget screen,
-    required Key filterKey,
-    Size surfaceSize = const Size(1440, 900),
-  }) async {
+  Future<void> pumpScreen(WidgetTester tester, Widget screen,
+      {Size surfaceSize = const Size(1440, 900)}) async {
     tester.view.physicalSize = surfaceSize;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -179,6 +175,15 @@ void main() {
       ),
     );
     await tester.pump();
+  }
+
+  Future<void> verifyDesktopFiltersCollapse(
+    WidgetTester tester, {
+    required Widget screen,
+    required Key filterKey,
+    Size surfaceSize = const Size(1440, 900),
+  }) async {
+    await pumpScreen(tester, screen, surfaceSize: surfaceSize);
 
     expect(find.byKey(filterKey), findsOneWidget);
     expect(hasFilterToggle(), isTrue);
@@ -188,6 +193,46 @@ void main() {
 
     expect(find.byKey(filterKey), findsNothing);
     expect(hasFilterToggle(), isTrue);
+  }
+
+  // The manager's rule: a new pick covers the whole day, From 00:00 and
+  // To 23:59 (to its last second), unless the user changes the time.
+  for (final (name, screen, prefix) in [
+    ('Invoice List', const InvoiceListScreen() as Widget, 'invoice'),
+    ('Receipt List', const ReceiptListScreen() as Widget, 'receipt'),
+    (
+      'Customer Voucher',
+      const CustomerVoucherListPage() as Widget,
+      'customer_voucher'
+    ),
+  ]) {
+    testWidgets('$name date filters start at 00:00 and 23:59', (tester) async {
+      await pumpScreen(tester, screen);
+      for (final from in [true, false]) {
+        final field = find
+            .widgetWithText(
+                TextField, '$prefix.${from ? 'from' : 'to'}_date'.tr)
+            .first;
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('15').last);
+        await tester.pumpAndSettle();
+        expect(
+            tester
+                .widget<TimePickerDialog>(find.byType(TimePickerDialog))
+                .initialTime,
+            from
+                ? const TimeOfDay(hour: 0, minute: 0)
+                : const TimeOfDay(hour: 23, minute: 59));
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text,
+            endsWith(from ? '-15 00:00:00' : '-15 23:59:59'));
+      }
+      // Let any search feedback finish.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+    });
   }
 
   testWidgets('Invoice List collapses its real desktop filter panel',
