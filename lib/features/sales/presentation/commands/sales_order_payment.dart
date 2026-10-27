@@ -17,12 +17,16 @@ Future<void> paymentSalesOrder(
     Future<void> Function() refresh) async {
   Navigator.pop(ctx);
   if (!context.mounted) return;
+  if (ChangePaymentStatusModal.blockIfPaid(context, order.paymentStatus)) {
+    return;
+  }
   showDialog(
     context: context,
     builder: (dialogCtx) => ChangePaymentStatusModal(
       currentPaymentStatus: order.paymentStatus ?? 'unpaid',
       grandTotal: order.grantTotal?.toString() ?? '0',
-      onConfirm: (newStatus, amount) async {
+      paymentMethodCode: order.paymentMethods.firstOrNull,
+      onConfirm: (newStatus, amount, paymentMethod) async {
         try {
           final authModel = services.auth;
           final salesProvider = services.sales;
@@ -32,6 +36,7 @@ Future<void> paymentSalesOrder(
             orderId: order.id.toString(),
             status: newStatus,
             amount: amount,
+            paymentMethod: paymentMethod,
           );
 
           if (context.mounted) {

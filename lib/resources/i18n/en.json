@@ -42,6 +42,7 @@
     "hint_refund_amount": "Enter refund amount"
   },
   "change_payment_status": {
+    "payment_method": "Payment Method",
     "title": "Update Payment Status",
     "status": "Status",
     "amount": "Amount",
@@ -2012,6 +2013,9 @@
     "payment_pending": "Pending",
     "payment_paid": "Paid",
     "payment_refunded": "Refunded",
+    "payment_failed": "Failed",
+    "payment_already_paid": "This order is already paid",
+    "paid_amount_above_zero": "Amount must be greater than 0 to mark as paid",
     "status": "Status",
     "select_status": "Please select a status",
     "reset_filters": "Reset Filters",

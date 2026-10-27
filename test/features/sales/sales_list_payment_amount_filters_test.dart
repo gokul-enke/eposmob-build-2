@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/core/ui/display/app_badge.dart';
 import 'package:pos_machine/features/sales/data/sales_list_repository.dart';
 import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
 import 'package:pos_machine/features/sales/domain/sales_list_query.dart';
@@ -80,6 +81,9 @@ void main() {
     expect(code('paid'), 'paid');
     expect(code(' PAID '), 'paid');
     expect(code('refunded'), 'refunded');
+    // Update Payment Status can set Failed; it must not read as Pending.
+    expect(code('failed'), 'failed');
+    expect(code(' FAILED '), 'failed');
     for (final pending in [
       null,
       '',
@@ -98,6 +102,18 @@ void main() {
             body: salesPaymentStatus(
                 ListOrderModelData(paymentStatus: 'paid')))));
     expect(find.text('sales.payment_paid'.tr), findsOneWidget);
+  });
+
+  testWidgets('a failed payment shows a red Failed badge', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: salesPaymentStatus(
+                ListOrderModelData(paymentStatus: 'failed')))));
+    final label = 'sales.payment_failed'.tr;
+    expect(label, 'Failed');
+    expect(find.text(label), findsOneWidget);
+    expect(tester.widget<AppBadge>(find.byType(AppBadge)).tone,
+        AppBadgeTone.danger);
   });
 
   test('Arabic-Indic digits are accepted and inverted ranges are swapped', () {

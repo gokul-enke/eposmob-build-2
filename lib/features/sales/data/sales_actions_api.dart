@@ -82,15 +82,19 @@ class SalesActionsApi {
     required String accessToken,
     required String orderId,
     required String status,
-    required double amount,
+    double? amount,
+    String? paymentMethod,
   }) async {
     final url = Uri.parse(APPUrl.orderChangePaymentStatusUrl);
 
     final headers = await salesHeaders(session, accessToken);
+    // The server needs the method (the master-data id) for every status.
+    // Failed records no money, so it is sent without an amount.
     final requestBody = {
       'order_id': orderId,
       'status': status,
-      'amount': amount,
+      if (amount != null) 'amount': amount,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
     };
 
     final response = await _postRequest(
