@@ -3,8 +3,8 @@ import 'package:pos_machine/features/reports/data/product_sales_snapshot.dart';
 import 'package:pos_machine/features/reports/domain/models/product_sales_report.dart';
 import '../support/product_sales_fixtures.dart';
 
-GetProductSalesReportResponse _withPagination(int page,
-    ProductSalesReportPagination Function(int page) pagination,
+GetProductSalesReportResponse _withPagination(
+    int page, ProductSalesReportPagination Function(int page) pagination,
     {int rows = 1}) {
   final data = productReport(page).data;
   return GetProductSalesReportResponse(
@@ -33,10 +33,12 @@ void main() {
         throwsStateError);
   });
   test('later page HTTP failure propagates without partial success', () async {
-    await expectLater(productSalesSnapshot((page) async {
-      if (page == 2) throw StateError('network');
-      return productReport(page);
-    }, pageSize: 250), throwsStateError);
+    await expectLater(
+        productSalesSnapshot((page) async {
+          if (page == 2) throw StateError('network');
+          return productReport(page);
+        }, pageSize: 250),
+        throwsStateError);
   });
   test('incomplete count and changing pagination fail', () async {
     await expectLater(

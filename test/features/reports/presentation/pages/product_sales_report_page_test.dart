@@ -288,9 +288,11 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(app(FakeReports(), CapturingExport()));
       // Only the first frame: no post-frame callback has run yet.
-      expect(find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
+      expect(
+          find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
       await tester.pumpAndSettle();
-      expect(find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
+      expect(
+          find.byType(FilterPanel), expanded ? findsOneWidget : findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }

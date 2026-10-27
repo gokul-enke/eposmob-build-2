@@ -39,15 +39,13 @@ void main() {
     final admin = _PermissionRoleProvider({}, role: 'company_admin');
     expect(admin.currentUserCanAccessSalesReportSync(), isFalse);
     expect(admin.currentUserCanAccessDiscountSaleReportSync(), isFalse);
-    final ticked = _PermissionRoleProvider(
-        {'menu.reports.sales_report.access'},
+    final ticked = _PermissionRoleProvider({'menu.reports.sales_report.access'},
         role: 'company_admin');
     expect(ticked.currentUserCanAccessSalesReportSync(), isTrue);
     expect(ticked.currentUserCanAccessDiscountSaleReportSync(), isFalse);
   });
 
   test('unrelated permissions do not show them', () {
-
     final other = _PermissionRoleProvider({'menu.reports.product_sales.access'},
         role: 'sales_executive');
     expect(other.currentUserCanAccessSalesReportSync(), isFalse);
