@@ -522,13 +522,14 @@ extension ReceiptSections on ReceiptLayoutParams {
           return sum + amounts.discountedTotal + amounts.orderDiscount;
         });
 
-  /// Add back the inclusive order discount for the subtotal row: the footer
-  /// subtracts it once before adding the final VAT. This also reconciles
-  /// delivery/round-off already included in the payable amount. Older API
-  /// versions disagree on whether net_exc_tax includes the discount.
+  /// Taxable amount: what the customer pays minus VAT, so SUBT + VAT = Net.
+  /// With a discount this is the amount after it (the Discount row is
+  /// informational); delivery/round-off already sit inside the payable
+  /// amount. Older API versions disagree on whether net_exc_tax includes
+  /// the discount, so it is not trusted then.
   double get subtotalExcTax {
     if (discountAmountValue > 0) {
-      return netAmountValue + discountAmountValue - totalTax;
+      return netAmountValue - totalTax;
     }
     final api = double.tryParse((netExcTax ?? '').replaceAll(',', ''));
     if (api != null) return api;

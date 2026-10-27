@@ -138,7 +138,7 @@ void main() {
       expect(amounts.originalRate, 20);
       expect(amounts.totalDiscount, 3);
       expect(amounts.discountedTotal, 17);
-      expect(amounts.formattedRateExcTax, '16.95');
+      expect(amounts.formattedRateExcTax, '14.41');
     }
     final explicitZero = ReceiptLineDiscount.fromItem({
       'quantity': '1',
@@ -259,7 +259,20 @@ void main() {
         reason: 'the item discount is already included in line prices');
   });
 
-  test('discounted historical VAT does not invent a gross ex-tax rate', () {
+  test('ex-tax rate is the discounted row total minus its VAT', () {
+    // Tester case: 20 at 18% inclusive, 5 off, pays 15 with 2.29 VAT.
+    final coupon = ReceiptLineDiscount.fromItem({
+      'quantity': '1',
+      'unit_price': '20',
+      'total_price': '20',
+      'line_discount': '5',
+      'tax_amount': '2.29',
+      'tax_rate': '18',
+    });
+    expect(coupon.originalRate, 20);
+    expect(coupon.discountedTotal, 15);
+    expect(coupon.formattedRateExcTax, '12.71');
+
     final row = {
       'quantity': 1,
       'unit_price': '3',
@@ -269,9 +282,9 @@ void main() {
       'discounted_base_amount': '0.25',
       'tax_amount': '0.02',
     };
-    expect(ReceiptLineDiscount.fromItem(row).formattedRateExcTax, '-');
+    expect(ReceiptLineDiscount.fromItem(row).formattedRateExcTax, '0.25');
     row['tax_rate'] = '15';
-    expect(ReceiptLineDiscount.fromItem(row).formattedRateExcTax, '2.61');
+    expect(ReceiptLineDiscount.fromItem(row).formattedRateExcTax, '0.25');
   });
 
   testWidgets('discount column reaches every production PDF and thermal layout',
@@ -359,11 +372,10 @@ void main() {
     expect(english.netAmountValue, 149);
     expect(english.discountAmountValue, 16);
     expect(english.totalTax, 18.78);
-    expect(english.subtotalExcTax, closeTo(146.22, 0.001));
-    expect(
-        english.subtotalExcTax - english.discountAmountValue + english.totalTax,
+    expect(english.subtotalExcTax, closeTo(130.22, 0.001));
+    expect(english.subtotalExcTax + english.totalTax,
         closeTo(english.netAmountValue, 0.001));
-    expect(english.itemLines.single.rateExcTax, '86.96');
+    expect(english.itemLines.single.rateExcTax, '62.61');
     expect(english.itemLines.single.rate, '100.00');
     expect(english.itemLines.single.total, '144.00');
     final ar = params('classic', 'ar', 'A4');

@@ -56,14 +56,15 @@ class ReceiptLineDiscount {
         : rate;
     final tax = money(read('tax_amount', 'taxAmount', (i) => i.taxAmount)) ?? 0;
     final taxRate = money(read('tax_rate', 'taxRate', (i) => i.taxRate));
-    // Both Rate columns precede item and order reductions. Discounted VAT
-    // cannot identify the original tax rate reliably, especially after a
-    // large coupon reduction.
-    final rateExcTax = taxRate != null
-        ? originalRate / (1 + taxRate / 100)
-        : itemDiscount > 0 || orderDiscount > 0
-            ? null
-            : originalRate - (quantity > 0 ? tax / quantity : 0);
+    // The ex-tax rate is the taxable unit price after every reduction, so
+    // E-RATE + unit VAT always equals the row total (15 → 12.71 + 2.29 at
+    // 18%). Line VAT is computed on the discounted total; the rate only
+    // fills in when the row carries no VAT amount.
+    final rateExcTax = quantity <= 0
+        ? null
+        : tax > 0 || taxRate == null
+            ? (discountedTotal - tax) / quantity
+            : discountedTotal / (1 + taxRate / 100) / quantity;
     return ReceiptLineDiscount(
       itemDiscount: itemDiscount,
       orderDiscount: orderDiscount,

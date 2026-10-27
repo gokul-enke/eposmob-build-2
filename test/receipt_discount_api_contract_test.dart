@@ -56,7 +56,7 @@ void main() {
     expect(offer.itemDiscount, 40);
     expect(offer.orderDiscount, 16);
     expect(offer.discountedTotal, 144);
-    expect(offer.formattedRateExcTax, '86.96');
+    expect(offer.formattedRateExcTax, '62.61');
     expect(manual.itemDiscount, 5);
     expect(manual.orderDiscount, 4.5);
     expect(manual.discountedTotal, 40.5);
