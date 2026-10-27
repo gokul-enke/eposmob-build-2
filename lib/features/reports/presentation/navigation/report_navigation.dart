@@ -17,6 +17,12 @@ abstract final class ReportNavigation {
   static void openStockReport() =>
       _sidebar.index.value = SideBarController.stockReportScreenIndex;
 
+  static void openSalesReport() =>
+      _sidebar.index.value = SideBarController.salesReportScreenIndex;
+
+  static void openDiscountSaleReport() =>
+      _sidebar.index.value = SideBarController.discountSaleReportScreenIndex;
+
   static void openConsumedStocksReport() =>
       _sidebar.index.value = SideBarController.consumedStocksReportScreenIndex;
 

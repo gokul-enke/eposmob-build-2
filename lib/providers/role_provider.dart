@@ -134,6 +134,19 @@ class RoleProvider extends ChangeNotifier {
     return hasPermission(_currentUserRole!, permission);
   }
 
+  /// Web-style order reports: only the role's App Permission (Reports →
+  /// Sales Report / Discount Sales) shows them, for every role including
+  /// company admin; the web page permissions do not count.
+  static const salesReportPermission = 'menu.reports.sales_report.access';
+  static const discountSaleReportPermission =
+      'menu.reports.discount_sales.access';
+
+  bool currentUserCanAccessSalesReportSync() =>
+      currentUserHasPermissionSync(salesReportPermission);
+
+  bool currentUserCanAccessDiscountSaleReportSync() =>
+      currentUserHasPermissionSync(discountSaleReportPermission);
+
   /// Supports both the current menu permission and the legacy permission
   /// present in existing role payloads while those roles are migrated.
   bool currentUserCanAccessProductSalesReportSync() {
