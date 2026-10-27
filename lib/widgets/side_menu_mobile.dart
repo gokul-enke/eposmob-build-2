@@ -222,20 +222,16 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 ],
               ),
             ),
-            // AI assistant: closes the drawer, then opens over the page.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: AiAssistantLauncher(
-                  onOpen: () {
-                    Navigator.pop(context);
-                    AiAssistantController.instance.open();
-                  },
-                ),
+            _MobileDrawerFooter(
+              onLogout: handleLogout,
+              // AI assistant: closes the drawer, then opens over the page.
+              assistant: AiAssistantLauncher(
+                onOpen: () {
+                  Navigator.pop(context);
+                  AiAssistantController.instance.open();
+                },
               ),
             ),
-            _MobileDrawerFooter(onLogout: handleLogout),
           ],
         ),
       ),
@@ -1287,7 +1283,10 @@ class _MobileDrawerTile extends StatelessWidget {
 class _MobileDrawerFooter extends StatelessWidget {
   final Future<void> Function() onLogout;
 
-  const _MobileDrawerFooter({required this.onLogout});
+  /// Sits at the end of the logout row, so it never covers the menu.
+  final Widget assistant;
+
+  const _MobileDrawerFooter({required this.onLogout, required this.assistant});
 
   @override
   Widget build(BuildContext context) {
@@ -1316,11 +1315,21 @@ class _MobileDrawerFooter extends StatelessWidget {
             },
           ),
           const SizedBox(height: 4),
-          _MobileDrawerTile(
-            icon: Icons.logout_rounded,
-            title: 'nav.logout'.tr,
-            selected: false,
-            onTap: () => onLogout(),
+          Row(
+            children: [
+              Expanded(
+                child: _MobileDrawerTile(
+                  icon: Icons.logout_rounded,
+                  title: 'nav.logout'.tr,
+                  selected: false,
+                  onTap: () => onLogout(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: assistant,
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           FutureBuilder<PackageInfo>(
