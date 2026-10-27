@@ -9,6 +9,10 @@ import 'package:pos_machine/features/sales/presentation/widgets/actions/change_p
 Future<void> changeDetailPaymentStatus(BuildContext context,
     SalesOrderDetailController controller, SalesPageServices services) async {
   final orderDetailsModelData = controller.data;
+  if (ChangePaymentStatusModal.blockIfPaid(
+      context, orderDetailsModelData?.paymentStatus)) {
+    return;
+  }
 
   final priceSummary = controller.priceSummary;
 
@@ -17,7 +21,12 @@ Future<void> changeDetailPaymentStatus(BuildContext context,
     builder: (dialogCtx) => ChangePaymentStatusModal(
       currentPaymentStatus: orderDetailsModelData?.paymentStatus ?? 'unpaid',
       grandTotal: priceSummary?.netPayable?.toString() ?? '0',
-      onConfirm: (newStatus, amount) async {
+      // The details join several methods as "CASH, CARD": take the first.
+      paymentMethodCode: orderDetailsModelData?.paymentDetails?.paymentMethod
+          ?.split(',')
+          .first
+          .trim(),
+      onConfirm: (newStatus, amount, paymentMethod) async {
         try {
           final authModel = services.auth;
           final salesProvider = services.sales;
@@ -26,6 +35,7 @@ Future<void> changeDetailPaymentStatus(BuildContext context,
             orderId: orderDetailsModelData?.ordersId?.toString() ?? '',
             status: newStatus,
             amount: amount,
+            paymentMethod: paymentMethod,
           );
           if (context.mounted) {
             showScaffold(

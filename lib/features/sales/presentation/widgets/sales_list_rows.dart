@@ -30,6 +30,7 @@ Widget salesPaymentStatus(ListOrderModelData row) {
       tone: switch (code) {
         'paid' => AppBadgeTone.success,
         'refunded' => AppBadgeTone.neutral,
+        'failed' => AppBadgeTone.danger,
         _ => AppBadgeTone.warning,
       });
 }

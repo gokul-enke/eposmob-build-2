@@ -129,13 +129,13 @@ class ListOrderModelData {
     return [value.toString()];
   }
 
-  /// Payment status as the admin panel shows it: `paid`, `refunded`, or
-  /// `pending` (which also covers empty, `unpaid`, `partial` and
-  /// `partially_paid`).
-  String get paymentStatusCode =>
-      switch (paymentStatus?.trim().toLowerCase()) {
+  /// Payment status as the admin panel shows it: `paid`, `refunded`,
+  /// `failed` (set from Update Payment Status), or `pending` (which also
+  /// covers empty, `unpaid`, `partial` and `partially_paid`).
+  String get paymentStatusCode => switch (paymentStatus?.trim().toLowerCase()) {
         'paid' => 'paid',
         'refunded' => 'refunded',
+        'failed' => 'failed',
         _ => 'pending',
       };
 

@@ -42,6 +42,7 @@
     "update_status": "تحديث الحالة"
   },
   "change_payment_status": {
+    "payment_method": "طريقة الدفع",
     "hint_status": "اختر الحالة",
     "hint_amount": "أدخل المبلغ",
     "amount": "المبلغ",
@@ -2011,6 +2012,9 @@
     "payment_pending": "معلق",
     "payment_paid": "مدفوع",
     "payment_refunded": "مسترد",
+    "payment_failed": "فشل",
+    "payment_already_paid": "هذا الطلب مدفوع بالفعل",
+    "paid_amount_above_zero": "يجب أن يكون المبلغ أكبر من 0 لتعيينه كمدفوع",
     "status": "الحالة",
     "select_status": "اختر الحالة",
     "reset_filters": "إعادة تعيين الفلاتر",

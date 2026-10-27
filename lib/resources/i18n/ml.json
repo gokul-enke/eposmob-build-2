@@ -42,6 +42,7 @@
     "hint_refund_amount": "റീഫണ്ട് തുക നൽകുക"
   },
   "change_payment_status": {
+    "payment_method": "പേയ്‌മെന്റ് രീതി",
     "title": "പേയ്‌മെന്റ് സ്റ്റാറ്റസ് അപ്‌ഡേറ്റ് ചെയ്യുക",
     "status": "സ്റ്റാറ്റസ്",
     "amount": "തുക",
@@ -2012,6 +2013,9 @@
     "payment_pending": "തീർപ്പാക്കാത്തത്",
     "payment_paid": "അടച്ചു",
     "payment_refunded": "റീഫണ്ട് ചെയ്തു",
+    "payment_failed": "പരാജയം",
+    "payment_already_paid": "ഈ ഓർഡർ ഇതിനകം പണമടച്ചതാണ്",
+    "paid_amount_above_zero": "പണമടച്ചതായി മാറ്റാൻ തുക 0-ൽ കൂടുതലായിരിക്കണം",
     "status": "സ്റ്റാറ്റസ്",
     "select_status": "സ്റ്റാറ്റസ് തിരഞ്ഞെടുക്കുക",
     "reset_filters": "ഫിൽട്ടറുകൾ റീസെറ്റ്",

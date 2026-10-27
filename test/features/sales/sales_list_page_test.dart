@@ -538,6 +538,22 @@ void main() {
     expect(rows[1][2]!.value, TextCellValue('00001'));
     expect(rows[1][6]!.value, const DoubleCellValue(100.25));
   });
+  test('workbook payment status column names Failed and Pending apart',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('sales-excel-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = await exportSalesListExcel([
+      ListOrderModelData(
+          id: 1, orderNumber: 'ORD-001', paymentStatus: 'failed'),
+      ListOrderModelData(
+          id: 2, orderNumber: 'ORD-002', paymentStatus: 'unpaid'),
+    ], outputDirectory: dir);
+    final rows =
+        Excel.decodeBytes(await file.readAsBytes()).tables.values.single.rows;
+    expect(rows[0][8]!.value, TextCellValue('sales.payment_status_filter'.tr));
+    expect(rows[1][8]!.value, TextCellValue('sales.payment_failed'.tr));
+    expect(rows[2][8]!.value, TextCellValue('sales.payment_pending'.tr));
+  });
   test('online workbook uses the online list title and file prefix', () async {
     final dir = await Directory.systemTemp.createTemp('online-excel-');
     addTearDown(() => dir.deleteSync(recursive: true));

@@ -19,6 +19,8 @@ class OrderDetailOverview extends StatelessWidget {
     final isMobile = ResponsiveWidget.isMobile(context);
     final currency = inputs.currency ?? "";
     final effectivePriceSummary = inputs.data.effectivePriceSummary()!;
+    // Already inside the Net Total (and its tax inside the Tax Amount).
+    final deliveryCharge = inputs.data.orderDetailsModelData?.deliveryCharge;
     return BuildBoxShadowContainer(
       circleRadius: 7,
       padding: EdgeInsets.all(isMobile ? 12 : 20),
@@ -41,6 +43,13 @@ class OrderDetailOverview extends StatelessWidget {
               child: Column(
                 children: [
                   // Displaying Price Summary
+                  if ((deliveryCharge ?? 0) > 0)
+                    BuildPaymentRow(
+                      amount:
+                          "$currency ${inputs.data.formatAmount(deliveryCharge)}",
+                      title: 'sales_order_details.label_delivery_charge'.tr,
+                      color: ColorManager.textColor,
+                    ),
                   BuildPaymentRow(
                     amount:
                         "$currency ${inputs.data.formatAmount(effectivePriceSummary.netTotal)}",
