@@ -183,3 +183,13 @@ Official references:
 
 - [Marionette MCP](https://github.com/leanflutter/marionette)
 - [Cloudflare Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)
+
+## 6. FunzCart demo (documentation and testing)
+
+The FunzCart company is a demo tenant made for writing the CloudPOS docs and for testing. It is safe to sign in, create sales, returns and other test data there.
+
+- Admin panel: https://eposdemo.yougoit.in/FUNZCART
+- Admin login: in `Agent.local.md` (gitignored; ask the team for it)
+- POS app backend: https://erpdemo.cloudposai.com (tenant FUNZCART, company_id 2, store 2)
+- Sales executive used in the debug app: `salesexecutive2@funzcart.in`
+- Roles and permissions: see the backend in `enkepos/` (Laravel). Do not edit `enkepos/`; see CLAUDE.md.

@@ -82,3 +82,6 @@ Todo.md
 # Local Python verification scripts
 /tool/*.py
 /tool/__pycache__/
+
+# Local-only agent notes (credentials)
+Agent.local.md
