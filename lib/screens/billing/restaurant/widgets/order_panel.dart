@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/ui/form/controller_owner.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/features/billing/controllers/coupon_context.dart';
 import 'package:flutter/services.dart';
@@ -2553,7 +2554,8 @@ class OrderPanelState extends State<OrderPanel> {
       // Load discount information if available
       final flatDiscount = order['flat_discount'];
       final percentageDiscount = order['percentage_discount'];
-      final couponCode = (order['coupon_code'] ?? order['coupon_id'] ?? '').toString();
+      final couponCode =
+          (order['coupon_code'] ?? order['coupon_id'] ?? '').toString();
 
       setState(() {
         _flatDiscount = double.tryParse(flatDiscount?.toString() ?? '0') ?? 0.0;
@@ -2767,310 +2769,327 @@ class OrderPanelState extends State<OrderPanel> {
     final controller = TextEditingController(text: commentParts.join(', '));
     final result = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          const primaryColor = ColorManager.kBlue2563EB;
-          const textColor = Color(0xFF1E293B);
-          final availableWidth = MediaQuery.sizeOf(context).width - 48;
-          final dialogWidth = availableWidth.clamp(300.0, 480.0).toDouble();
-          final hasAnyNote =
-              selectedOptionIds.isNotEmpty || controller.text.trim().isNotEmpty;
+      builder: (dialogContext) => ControllerOwner(
+        controllers: [controller],
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            const primaryColor = ColorManager.kBlue2563EB;
+            const textColor = Color(0xFF1E293B);
+            final availableWidth = MediaQuery.sizeOf(context).width - 48;
+            final dialogWidth = availableWidth.clamp(300.0, 480.0).toDouble();
+            final hasAnyNote = selectedOptionIds.isNotEmpty ||
+                controller.text.trim().isNotEmpty;
 
-          void toggleOption(int optionId) {
-            setDialogState(() {
-              if (!selectedOptionIds.add(optionId)) {
-                selectedOptionIds.remove(optionId);
-              }
-            });
-          }
+            void toggleOption(int optionId) {
+              setDialogState(() {
+                if (!selectedOptionIds.add(optionId)) {
+                  selectedOptionIds.remove(optionId);
+                }
+              });
+            }
 
-          return Dialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: SizedBox(
-              width: dialogWidth,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 14, 16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: ColorManager.kBlueEFF6FF,
-                            borderRadius: BorderRadius.circular(11),
-                          ),
-                          child: const Icon(Icons.chat_bubble_outline,
-                              color: primaryColor, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'order_panel.item_note_title'.tr,
-                                style: buildCustomStyle(FontWeightManager.bold,
-                                    FontSize.s16, 0.21, textColor),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'order_panel.item_note_subtitle'.tr,
-                                style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s12,
-                                    0.21,
-                                    const Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          tooltip: 'general.close'.tr,
-                          icon: const Icon(Icons.close,
-                              size: 20, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+            return Dialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              child: SizedBox(
+                width: dialogWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 14, 16),
+                      child: Row(
                         children: [
-                          if (noteOptions.isNotEmpty) ...[
-                            Row(
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: ColorManager.kBlueEFF6FF,
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: const Icon(Icons.chat_bubble_outline,
+                                color: primaryColor, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    'order_panel.quick_notes'.tr,
-                                    style: buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s13,
-                                        0.21,
-                                        const Color(0xFF334155)),
-                                  ),
+                                Text(
+                                  'order_panel.item_note_title'.tr,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.bold,
+                                      FontSize.s16,
+                                      0.21,
+                                      textColor),
                                 ),
-                                if (selectedOptionIds.isNotEmpty)
-                                  Text(
-                                    'order_panel.selected_count'.trParams({
-                                      'count':
-                                          selectedOptionIds.length.toString(),
-                                    }),
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s11,
-                                        0.21,
-                                        primaryColor),
-                                  ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'order_panel.item_note_subtitle'.tr,
+                                  style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s12,
+                                      0.21,
+                                      const Color(0xFF64748B)),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final optionWidth = constraints.maxWidth >= 390
-                                    ? (constraints.maxWidth - 10) / 2
-                                    : constraints.maxWidth;
-                                return Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: noteOptions.map((option) {
-                                    final isSelected =
-                                        selectedOptionIds.contains(option.id);
-                                    return SizedBox(
-                                      width: optionWidth,
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: InkWell(
-                                          onTap: () => toggleOption(option.id),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 150),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 7),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? ColorManager.kBlueEFF6FF
-                                                  : const Color(0xFFF8FAFC),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              border: Border.all(
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            tooltip: 'general.close'.tr,
+                            icon: const Icon(Icons.close,
+                                size: 20, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (noteOptions.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'order_panel.quick_notes'.tr,
+                                      style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s13,
+                                          0.21,
+                                          const Color(0xFF334155)),
+                                    ),
+                                  ),
+                                  if (selectedOptionIds.isNotEmpty)
+                                    Text(
+                                      'order_panel.selected_count'.trParams({
+                                        'count':
+                                            selectedOptionIds.length.toString(),
+                                      }),
+                                      style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s11,
+                                          0.21,
+                                          primaryColor),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final optionWidth =
+                                      constraints.maxWidth >= 390
+                                          ? (constraints.maxWidth - 10) / 2
+                                          : constraints.maxWidth;
+                                  return Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: noteOptions.map((option) {
+                                      final isSelected =
+                                          selectedOptionIds.contains(option.id);
+                                      return SizedBox(
+                                        width: optionWidth,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: () =>
+                                                toggleOption(option.id),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 150),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 7),
+                                              decoration: BoxDecoration(
                                                 color: isSelected
-                                                    ? primaryColor
-                                                    : const Color(0xFFE2E8F0),
+                                                    ? ColorManager.kBlueEFF6FF
+                                                    : const Color(0xFFF8FAFC),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? primaryColor
+                                                      : const Color(0xFFE2E8F0),
+                                                ),
                                               ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                SizedBox(
-                                                  width: 28,
-                                                  height: 28,
-                                                  child: Checkbox(
-                                                    value: isSelected,
-                                                    activeColor: primaryColor,
-                                                    side: const BorderSide(
-                                                        color:
-                                                            Color(0xFF94A3B8),
-                                                        width: 1.5),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
+                                              child: Row(
+                                                children: [
+                                                  SizedBox(
+                                                    width: 28,
+                                                    height: 28,
+                                                    child: Checkbox(
+                                                      value: isSelected,
+                                                      activeColor: primaryColor,
+                                                      side: const BorderSide(
+                                                          color:
+                                                              Color(0xFF94A3B8),
+                                                          width: 1.5),
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
+                                                      ),
+                                                      onChanged: (_) =>
+                                                          toggleOption(
+                                                              option.id),
                                                     ),
-                                                    onChanged: (_) =>
-                                                        toggleOption(option.id),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 7),
-                                                Expanded(
-                                                  child: Text(
-                                                    optionLabel(option),
-                                                    style: buildCustomStyle(
-                                                        isSelected
-                                                            ? FontWeightManager
-                                                                .semiBold
-                                                            : FontWeightManager
-                                                                .medium,
-                                                        FontSize.s12,
-                                                        0.21,
-                                                        isSelected
-                                                            ? ColorManager.kBlue1D4ED8
-                                                            : const Color(
-                                                                0xFF334155)),
+                                                  const SizedBox(width: 7),
+                                                  Expanded(
+                                                    child: Text(
+                                                      optionLabel(option),
+                                                      style: buildCustomStyle(
+                                                          isSelected
+                                                              ? FontWeightManager
+                                                                  .semiBold
+                                                              : FontWeightManager
+                                                                  .medium,
+                                                          FontSize.s12,
+                                                          0.21,
+                                                          isSelected
+                                                              ? ColorManager
+                                                                  .kBlue1D4ED8
+                                                              : const Color(
+                                                                  0xFF334155)),
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                          Text(
-                            'order_panel.custom_note'.tr,
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s13, 0.21, const Color(0xFF334155)),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: controller,
-                            autofocus: noteOptions.isEmpty,
-                            minLines: 2,
-                            maxLines: 3,
-                            onChanged: (_) => setDialogState(() {}),
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: 'order_panel.custom_note_hint'.tr,
-                              hintStyle: buildCustomStyle(
-                                  FontWeightManager.regular,
+                                      );
+                                    }).toList(),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+                            Text(
+                              'order_panel.custom_note'.tr,
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
                                   FontSize.s13,
                                   0.21,
-                                  const Color(0xFF94A3B8)),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    const BorderSide(color: Color(0xFFCBD5E1)),
+                                  const Color(0xFF334155)),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: controller,
+                              autofocus: noteOptions.isEmpty,
+                              minLines: 2,
+                              maxLines: 3,
+                              onChanged: (_) => setDialogState(() {}),
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'order_panel.custom_note_hint'.tr,
+                                hintStyle: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s13,
+                                    0.21,
+                                    const Color(0xFF94A3B8)),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFFCBD5E1)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: primaryColor, width: 1.5),
+                                ),
+                                contentPadding: const EdgeInsets.all(13),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(
-                                    color: primaryColor, width: 1.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                      child: Row(
+                        children: [
+                          if (hasAnyNote)
+                            TextButton.icon(
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedOptionIds.clear();
+                                  controller.clear();
+                                });
+                              },
+                              icon: const Icon(Icons.delete_outline, size: 18),
+                              label: Text('order_panel.clear_all'.tr),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFFDC2626),
                               ),
-                              contentPadding: const EdgeInsets.all(13),
+                            ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 13),
+                            ),
+                            child: Text('general.cancel'.tr,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s14,
+                                    0.21,
+                                    const Color(0xFF64748B))),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              final selectedLabels = noteOptions
+                                  .where((option) =>
+                                      selectedOptionIds.contains(option.id))
+                                  .map(optionLabel);
+                              final customNote = controller.text.trim();
+                              final comment = [
+                                ...selectedLabels,
+                                if (customNote.isNotEmpty) customNote,
+                              ].join(', ');
+                              Navigator.of(dialogContext).pop(comment);
+                            },
+                            icon: const Icon(Icons.check, size: 18),
+                            label: Text('order_panel.save_note'.tr),
+                            style: ElevatedButton.styleFrom(
+                              elevation: 0,
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 13),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9)),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-                    child: Row(
-                      children: [
-                        if (hasAnyNote)
-                          TextButton.icon(
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedOptionIds.clear();
-                                controller.clear();
-                              });
-                            },
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            label: Text('order_panel.clear_all'.tr),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFFDC2626),
-                            ),
-                          ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 13),
-                          ),
-                          child: Text('general.cancel'.tr,
-                              style: buildCustomStyle(FontWeightManager.medium,
-                                  FontSize.s14, 0.21, const Color(0xFF64748B))),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            final selectedLabels = noteOptions
-                                .where((option) =>
-                                    selectedOptionIds.contains(option.id))
-                                .map(optionLabel);
-                            final customNote = controller.text.trim();
-                            final comment = [
-                              ...selectedLabels,
-                              if (customNote.isNotEmpty) customNote,
-                            ].join(', ');
-                            Navigator.of(dialogContext).pop(comment);
-                          },
-                          icon: const Icon(Icons.check, size: 18),
-                          label: Text('order_panel.save_note'.tr),
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 13),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
-    controller.dispose();
 
     if (result == null || !mounted) return; // Cancelled
     final comment = result.isEmpty ? null : result;
@@ -3729,7 +3748,8 @@ class OrderPanelState extends State<OrderPanel> {
                               horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: ColorManager.kBlueBFDBFE),
+                            side: const BorderSide(
+                                color: ColorManager.kBlueBFDBFE),
                           ),
                         ),
                         icon: const Icon(Icons.receipt_long_rounded, size: 16),
@@ -3945,8 +3965,8 @@ class OrderPanelState extends State<OrderPanel> {
           if (!isNonTableOrderContext) ...[
             const SizedBox(height: 8),
             // Ongoing Orders Section (backend orders, independent scroll)
-            _buildPanelHeader(
-                'restaurant.ongoing_orders'.tr, Icons.receipt, ColorManager.kBrandBlue,
+            _buildPanelHeader('restaurant.ongoing_orders'.tr, Icons.receipt,
+                ColorManager.kBrandBlue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -6428,7 +6448,9 @@ class OrderPanelState extends State<OrderPanel> {
       final coupon = _isCouponApplied && _couponCode.isNotEmpty
           ? (currentCoupon?.couponCode == _couponCode
               ? currentCoupon
-              : context.read<DiscountProvider>().findDiscountByCode(_couponCode))
+              : context
+                  .read<DiscountProvider>()
+                  .findDiscountByCode(_couponCode))
           : null;
 
       debugPrint(
@@ -6528,15 +6550,19 @@ class OrderPanelState extends State<OrderPanel> {
         if (item['offer_id'] != null || item['discount_origin'] != null) {
           final matching = localProductProvider.cartItems.where((line) =>
               line.product.productId == productId &&
-              line.variantId == variantId && line.saleUnitId == saleUnitId &&
+              line.variantId == variantId &&
+              line.saleUnitId == saleUnitId &&
               line.selectedStock?.id == selectedStock?.id);
           if (matching.isNotEmpty) {
             final line = matching.first;
             line.offerId = item['discount_origin'] == 'manual'
-                ? null : int.tryParse(item['offer_id']?.toString() ?? '');
-            line.offerVersion = int.tryParse(item['offer_version']?.toString() ?? '');
+                ? null
+                : int.tryParse(item['offer_id']?.toString() ?? '');
+            line.offerVersion =
+                int.tryParse(item['offer_version']?.toString() ?? '');
             line.offerDetails = ItemDiscountDetails.fromJson(item);
-            final standard = double.tryParse(item['standard_unit_price']?.toString() ?? '');
+            final standard =
+                double.tryParse(item['standard_unit_price']?.toString() ?? '');
             if (standard != null && standard.isFinite && standard >= 0) {
               line.standardUnitPrice = standard / conversionRate;
             }
@@ -7368,12 +7394,12 @@ class OrderPanelState extends State<OrderPanel> {
     double? customerCurrentBalance,
   }) async {
     Future<bool> printOnce() => const PrintService().printSavedOrder(
-      context,
-      savedOrder,
-      customerOldBalance: customerOldBalance,
-      customerCurrentBalance: customerCurrentBalance,
-      fallbackDeliveryMethod: _deliveryMethod,
-    );
+          context,
+          savedOrder,
+          customerOldBalance: customerOldBalance,
+          customerCurrentBalance: customerCurrentBalance,
+          fallbackDeliveryMethod: _deliveryMethod,
+        );
     final billWatch = Stopwatch()..start();
     debugPrint(
       '[Confirm&Print] Bill: printing orderNumber=${savedOrder.orderNumber} '
@@ -7560,7 +7586,8 @@ class OrderPanelState extends State<OrderPanel> {
       deliveryDate: _deliveryDate,
       deliveryTime: _deliveryTime,
       flatDiscount: priceSummary?.flatDiscount ?? _flatDiscount,
-      percentageDiscount: localProducts.getCurrentDiscount()['percentageDiscount'],
+      percentageDiscount:
+          localProducts.getCurrentDiscount()['percentageDiscount'],
       discountAmount: priceSummary?.discount,
       toCustomerCredit: _toCustomerCreditEnabled,
       creditSaleAmount: !_toCustomerCreditEnabled && _isDebitSelected
@@ -8287,9 +8314,8 @@ class OrderPanelState extends State<OrderPanel> {
     bool allowSkipCheckout = true,
     bool printBill = true,
   }) {
-    final skipCheckout = printBill
-        ? _skipCheckoutOnConfirmAndPrint
-        : _skipCheckoutOnConfirm;
+    final skipCheckout =
+        printBill ? _skipCheckoutOnConfirmAndPrint : _skipCheckoutOnConfirm;
     if (printBill) {
       debugPrint(
         '[Confirm&Print] Offline start: skipCheckout=$skipCheckout '

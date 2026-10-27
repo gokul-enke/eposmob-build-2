@@ -24,6 +24,7 @@ export 'form/app_form_fields.dart';
 export 'form/app_input_decoration.dart';
 export 'form/app_radio_group_field.dart';
 export 'form/app_search_dropdown_field.dart';
+export 'form/controller_owner.dart';
 export 'form/form_actions_bar.dart';
 export 'layout/app_surface.dart';
 export 'layout/detail_page_scaffold.dart';
