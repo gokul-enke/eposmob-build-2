@@ -147,6 +147,7 @@ class DateTimeFilterField extends FilterFieldDef {
     this.icon = Icons.calendar_today_outlined,
     this.firstDate,
     this.lastDate,
+    this.until = false,
     this.key,
   });
 
@@ -155,6 +156,10 @@ class DateTimeFilterField extends FilterFieldDef {
   final IconData icon;
   final DateTime? value;
   final ValueChanged<DateTime?> onChanged;
+
+  /// A To field: a new pick starts at 23:59 instead of 00:00, and the picked
+  /// minute is covered to its last second.
+  final bool until;
 
   /// Turns the selected moment into display text.
   final String Function(DateTime value) format;
@@ -185,11 +190,13 @@ class DateTimeFilterField extends FilterFieldDef {
         if (date == null || !context.mounted) return;
         final time = await showTimePicker(
           context: context,
-          initialTime: TimeOfDay.fromDateTime(initial),
+          initialTime: current == null
+              ? TimeOfDay(hour: until ? 23 : 0, minute: until ? 59 : 0)
+              : TimeOfDay.fromDateTime(current),
         );
         if (time == null) return;
-        onChanged(
-            DateTime(date.year, date.month, date.day, time.hour, time.minute));
+        onChanged(DateTime(date.year, date.month, date.day, time.hour,
+            time.minute, until ? 59 : 0));
       },
       child: InputDecorator(
         isEmpty: current == null,

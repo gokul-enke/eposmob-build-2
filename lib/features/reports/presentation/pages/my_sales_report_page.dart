@@ -147,6 +147,7 @@ class _MySalesReportPageState extends State<MySalesReportPage> {
             value: _report.range.to,
             format: _dateFormat.format,
             onChanged: _report.setTo,
+            until: true,
           ),
         ],
       );

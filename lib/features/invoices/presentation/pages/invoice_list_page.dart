@@ -247,10 +247,14 @@ class _InvoiceListPageState extends State<InvoiceListPage>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
+    // The time starts at the whole day: 00:00 (From) or 23:59 (To).
+    final defaultTime = isFromDate
+        ? const TimeOfDay(hour: 0, minute: 0)
+        : const TimeOfDay(hour: 23, minute: 59);
     if (pickedDate != null && mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: this.context,
-        initialTime: TimeOfDay.now(),
+        initialTime: defaultTime,
         builder: (BuildContext context, Widget? child) {
           return Theme(
             data: ThemeData.light().copyWith(
@@ -264,11 +268,7 @@ class _InvoiceListPageState extends State<InvoiceListPage>
         },
       );
       if (!mounted) return;
-      // Time is optional — use picked time or default
-      final TimeOfDay resolvedTime = pickedTime ??
-          (isFromDate
-              ? const TimeOfDay(hour: 0, minute: 0)
-              : const TimeOfDay(hour: 23, minute: 59));
+      final TimeOfDay resolvedTime = pickedTime ?? defaultTime;
 
       final DateTime fullDateTime = DateTime(
         pickedDate.year,
@@ -276,6 +276,8 @@ class _InvoiceListPageState extends State<InvoiceListPage>
         pickedDate.day,
         resolvedTime.hour,
         resolvedTime.minute,
+        // The picker has no seconds; a To covers its whole minute.
+        isFromDate ? 0 : 59,
       );
       final formattedDateTime =
           invoiceFilterDateTimeFormat.format(fullDateTime);
