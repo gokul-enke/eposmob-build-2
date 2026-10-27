@@ -185,8 +185,9 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(sales.calls, hasLength(2));
+    // A new From pick starts at the beginning of the day.
     expect(sales.calls.last.from,
-        matches(RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:00$')));
+        matches(RegExp(r'^\d{4}-\d{2}-\d{2} 00:00:00$')));
     expect(sales.calls.last.to, isNull);
 
     final values = await exportRows(tester);
@@ -199,6 +200,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(sales.calls.last.from, isNull);
     expect(sales.calls.last.to, isNull);
+  });
+
+  testWidgets('a new To pick starts at 23:59 and covers the whole day',
+      (tester) async {
+    final sales = await mount(tester);
+    await tester.tap(find.byKey(MySalesReportPage.toKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TimePickerDialog>(find.byType(TimePickerDialog))
+            .initialTime,
+        const TimeOfDay(hour: 23, minute: 59));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(
+        sales.calls.last.to, matches(RegExp(r'^\d{4}-\d{2}-\d{2} 23:59:59$')));
   });
 
   testWidgets('a currency change updates without refetching', (tester) async {

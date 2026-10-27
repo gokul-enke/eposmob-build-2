@@ -129,12 +129,16 @@ class _AdminExecutiveReportPageState extends State<AdminExecutiveReportPage> {
         firstDate: DateTime(2000),
         lastDate: DateTime(2100));
     if (!mounted || date == null || revision != _report.revision) return;
+    // A new pick starts at the whole day: 00:00 (From) or 23:59 (To).
     final time = await showTimePicker(
         context: context,
-        initialTime: TimeOfDay.fromDateTime(current ?? DateTime.now()));
+        initialTime: current == null
+            ? TimeOfDay(hour: from ? 0 : 23, minute: from ? 0 : 59)
+            : TimeOfDay.fromDateTime(current));
     if (!mounted || time == null || revision != _report.revision) return;
-    final value =
-        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    // The picker has no seconds; a To covers its whole minute.
+    final value = DateTime(
+        date.year, date.month, date.day, time.hour, time.minute, from ? 0 : 59);
     await _report.setRange(_report.range.copyWith(
         from: from ? () => value : null, to: from ? null : () => value));
   }

@@ -144,8 +144,12 @@ class SalesDateFilter extends StatelessWidget {
             onChanged(date);
             return;
           }
+          // A new pick starts at the whole day: 00:00 (From) or 23:59 (To).
           final time = await showTimePicker(
-              context: context, initialTime: TimeOfDay.fromDateTime(current));
+              context: context,
+              initialTime: value == null
+                  ? TimeOfDay(hour: until ? 23 : 0, minute: until ? 59 : 0)
+                  : TimeOfDay.fromDateTime(value!));
           if (!context.mounted) return;
           onChanged(DateTime(
               date.year,

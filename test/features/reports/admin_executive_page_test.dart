@@ -253,6 +253,36 @@ void main() {
     expect(queries.length, 3);
     expect(t.takeException(), isNull);
   });
+  testWidgets('a new pick starts at 00:00 (From) and 23:59 (To)', (t) async {
+    final selected = DateTime(DateTime.now().year, 10, 1);
+    final queries = <ReportDateRange>[];
+    await mount(
+        t,
+        Source(scope, (r) async {
+          queries.add(r);
+          return rows();
+        }));
+    for (final from in [true, false]) {
+      await t.tap(find.byKey(from
+          ? AdminExecutiveReportPage.fromKey
+          : AdminExecutiveReportPage.toKey));
+      await t.pumpAndSettle();
+      t
+          .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
+          .onDateChanged(selected);
+      await t.pumpAndSettle();
+      expect(
+          t.widget<TimePickerDialog>(find.byType(TimePickerDialog)).initialTime,
+          from
+              ? const TimeOfDay(hour: 0, minute: 0)
+              : const TimeOfDay(hour: 23, minute: 59));
+      await t.tap(find.text('OK').last);
+      await t.pumpAndSettle();
+    }
+    expect(queries.last.apiFrom, '${selected.year}-10-01 00:00:00');
+    expect(queries.last.apiTo, '${selected.year}-10-01 23:59:59');
+    expect(t.takeException(), isNull);
+  });
   testWidgets('falls back to persisted store and role like the legacy screen',
       (t) async {
     SharedPreferences.setMockInitialValues({
