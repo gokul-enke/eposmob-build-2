@@ -11,6 +11,34 @@ String get aiAssistantIconAsset => BrandConfig.isDefault
     ? 'assets/logo/cloudpos-mark.png'
     : BrandConfig.iconAsset;
 
+/// Small "AI" pill on the launcher's top-right edge.
+class _AiBadge extends StatelessWidget {
+  const _AiBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('ai-assistant-badge'),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.surface, width: 1.5),
+      ),
+      child: const Text(
+        'AI',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          height: 1.2,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
 /// Round CloudPOS button that opens the assistant panel. It sits in the
 /// sidebar's footer, so it only shows while the sidebar does and never covers
 /// page content. A ring spins while an answer streams; a green dot marks an
@@ -63,9 +91,15 @@ class AiAssistantLauncher extends StatelessWidget {
                         strokeWidth: 2.5, color: AppColors.primary),
                   ),
                 ),
+              // Marks the logo as the AI assistant rather than a brand link.
+              const Positioned(
+                top: -4,
+                right: -8,
+                child: IgnorePointer(child: _AiBadge()),
+              ),
               if (chat.hasUnread && !chat.busy)
                 Positioned(
-                  top: 0,
+                  bottom: 0,
                   right: 0,
                   child: Container(
                     key: const ValueKey('ai-assistant-unread'),
