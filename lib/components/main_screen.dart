@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:pos_machine/features/ai_assistant/presentation/state/ai_assistant_controller.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/widgets/ai_assistant_launcher.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/responsive.dart';
@@ -175,10 +176,12 @@ class _MainScreenState extends State<MainScreen> {
           mobile: content,
           desktop: CollapsibleSidebar(
             sidebarContent: const SideMenu(),
+            footer: const _AiAssistantSidebarFooter(),
             child: content,
           ),
           tablet: CollapsibleSidebar(
             sidebarContent: const SideMenu(),
+            footer: const _AiAssistantSidebarFooter(),
             child: content,
           ),
           // desktop: Row(
@@ -240,6 +243,23 @@ class _MainScreenState extends State<MainScreen> {
       canPop: false,
       onPopInvokedWithResult: _handleMobileBack,
       child: scaffold,
+    );
+  }
+}
+
+/// The AI assistant button at the bottom-left of the sidebar. It only shows
+/// while the sidebar is expanded, so it never covers page content.
+class _AiAssistantSidebarFooter extends StatelessWidget {
+  const _AiAssistantSidebarFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: AiAssistantLauncher(),
+      ),
     );
   }
 }

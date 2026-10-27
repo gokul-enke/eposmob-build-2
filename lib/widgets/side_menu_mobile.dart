@@ -25,6 +25,8 @@ import '../resources/style_manager.dart';
 import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
 import 'side_menu.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/state/ai_assistant_controller.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/widgets/ai_assistant_launcher.dart';
 import 'package:pos_machine/config/brand_config.dart';
 
 class SideMenuMobile extends StatefulWidget {
@@ -218,6 +220,19 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   ),
                   _buildSettingsSection(sideBarController, navigate),
                 ],
+              ),
+            ),
+            // AI assistant: closes the drawer, then opens over the page.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: AiAssistantLauncher(
+                  onOpen: () {
+                    Navigator.pop(context);
+                    AiAssistantController.instance.open();
+                  },
+                ),
               ),
             ),
             _MobileDrawerFooter(onLogout: handleLogout),
@@ -1311,8 +1326,9 @@ class _MobileDrawerFooter extends StatelessWidget {
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
-              final version =
-                  snapshot.hasData ? 'v${snapshot.data!.version}' : BrandConfig.name;
+              final version = snapshot.hasData
+                  ? 'v${snapshot.data!.version}'
+                  : BrandConfig.name;
               return Center(
                 child: Text(
                   version,

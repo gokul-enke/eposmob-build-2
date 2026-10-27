@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:pos_machine/config/brand_config.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 
 import '../../domain/ai_models.dart';
 import '../state/ai_assistant_controller.dart';
+import 'ai_assistant_launcher.dart';
 import 'ai_message_view.dart';
 
-/// The brand's mark for the floating button: the CloudPOS cloud for the
-/// default brand, otherwise the white-label brand's own icon.
-String get aiAssistantIconAsset => BrandConfig.isDefault
-    ? 'assets/logo/cloudpos-mark.png'
-    : BrandConfig.iconAsset;
-
-/// Floats the assistant above every signed-in page (added once in the app
-/// builder). Closed: a draggable round CloudPOS button. Open: a docked panel
-/// on tablets/desktop, full screen on phones. The chat survives both.
+/// The assistant panel, floating above every signed-in page (added once in
+/// the app builder): docked bottom-right on tablets/desktop, full screen on
+/// phones. It opens from [AiAssistantLauncher] in the sidebar; closing keeps
+/// the chat.
 class AiAssistantOverlay extends StatelessWidget {
   const AiAssistantOverlay({super.key, this.controller});
 
@@ -58,29 +53,8 @@ class _Layout extends StatelessWidget {
       builder: (context, _) {
         final size = MediaQuery.sizeOf(context);
         final phone = size.width < 640;
-        if (chat.state == AiPanelState.closed) {
-          // Home corner is bottom-right; the offset is where the user dragged it.
-          const margin = 20.0;
-          final maxX = size.width - _Launcher.size - margin * 2;
-          final maxY = size.height - _Launcher.size - margin * 2;
-          // Offsets are ≤ 0 (left/up of home) and kept on screen.
-          Offset clamp(Offset o) => Offset(
-                o.dx.clamp(maxX < 0 ? 0.0 : -maxX, 0.0),
-                o.dy.clamp(maxY < 0 ? 0.0 : -maxY, 0.0),
-              );
-          final offset = clamp(chat.launcherOffset);
-          return Stack(children: [
-            Positioned(
-              right: margin - offset.dx,
-              bottom: margin - offset.dy,
-              child: _Launcher(
-                chat: chat,
-                onDrag: (delta) =>
-                    chat.setLauncherOffset(clamp(offset + delta)),
-              ),
-            ),
-          ]);
-        }
+        // Closed: nothing here; the button lives in the sidebar footer.
+        if (chat.state == AiPanelState.closed) return const SizedBox.shrink();
         final panel = _Panel(chat: chat, phone: phone);
         if (phone) return Positioned.fill(child: panel);
         return Stack(children: [
@@ -93,73 +67,6 @@ class _Layout extends StatelessWidget {
           ),
         ]);
       },
-    );
-  }
-}
-
-/// Round CloudPOS button: tap to open, drag to move out of the way. A ring
-/// spins while an answer streams; a green dot means an unseen answer.
-class _Launcher extends StatelessWidget {
-  const _Launcher({required this.chat, required this.onDrag});
-
-  static const double size = 56;
-
-  final AiAssistantController chat;
-  final ValueChanged<Offset> onDrag;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'ai_assistant.launcher_tooltip'.tr,
-      child: GestureDetector(
-        key: const ValueKey('ai-assistant-launcher'),
-        onTap: chat.open,
-        onPanUpdate: (d) => onDrag(d.delta),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Material(
-                  elevation: 6,
-                  shape: const CircleBorder(
-                      side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Center(
-                    child: Image.asset(aiAssistantIconAsset,
-                        width: 38,
-                        height: 38,
-                        filterQuality: FilterQuality.medium),
-                  ),
-                ),
-                if (chat.busy)
-                  const Positioned.fill(
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: AppColors.primary),
-                  ),
-                if (chat.hasUnread && !chat.busy)
-                  Positioned(
-                    top: 2,
-                    right: 2,
-                    child: Container(
-                      key: const ValueKey('ai-assistant-unread'),
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8EC63D),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.surface, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -9,11 +9,16 @@ class CollapsibleSidebar extends StatefulWidget {
   final Widget sidebarContent;
   final SharedPreferenceProvider? preferences;
 
+  /// Pinned below the menu, shown only while the sidebar is expanded (pinned
+  /// open or revealed by hover), never on the collapsed icon rail.
+  final Widget? footer;
+
   const CollapsibleSidebar({
     super.key,
     required this.child,
     required this.sidebarContent,
     this.preferences,
+    this.footer,
   });
 
   /// Subscribes menu widgets to presentation changes without remounting them.
@@ -170,7 +175,19 @@ class CollapsibleSidebarState extends State<CollapsibleSidebar> {
                       child: _SidebarPresentation(
                         isExpanded: isExpanded,
                         isPinnedExpanded: _isPinnedExpanded,
-                        child: widget.sidebarContent,
+                        child: widget.footer == null
+                            ? widget.sidebarContent
+                            : Column(
+                                children: [
+                                  Expanded(child: widget.sidebarContent),
+                                  if (isExpanded)
+                                    KeyedSubtree(
+                                      key: const ValueKey(
+                                          'navigation-sidebar-footer'),
+                                      child: widget.footer!,
+                                    ),
+                                ],
+                              ),
                       ),
                     ),
                   ),

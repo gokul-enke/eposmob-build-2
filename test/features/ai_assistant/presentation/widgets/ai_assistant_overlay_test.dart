@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:pos_machine/features/ai_assistant/data/ai_assistant_api.dart';
 import 'package:pos_machine/features/ai_assistant/domain/ai_models.dart';
 import 'package:pos_machine/features/ai_assistant/presentation/state/ai_assistant_controller.dart';
+import 'package:pos_machine/features/ai_assistant/presentation/widgets/ai_assistant_launcher.dart';
 import 'package:pos_machine/features/ai_assistant/presentation/widgets/ai_assistant_overlay.dart';
 
 AiAssistantController _controller() {
@@ -42,20 +43,32 @@ Widget _app(AiAssistantController c, {Size size = const Size(1280, 800)}) =>
       home: MediaQuery(
         data: MediaQueryData(size: size),
         child: Stack(children: [
-          const Scaffold(body: Text('Current page')),
+          // The launcher normally sits in the sidebar footer.
+          Scaffold(
+            body: Stack(children: [
+              const Text('Current page'),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: AiAssistantLauncher(controller: c),
+              ),
+            ]),
+          ),
           AiAssistantOverlay(controller: c)
         ]),
       ),
     );
 
 void main() {
-  testWidgets('nothing shows until the signed-in shell is up', (tester) async {
-    final c = _controller();
+  testWidgets('the panel only shows inside the signed-in app', (tester) async {
+    final c = _controller()..open();
     await tester.pumpWidget(_app(c));
-    expect(find.byKey(const ValueKey('ai-assistant-launcher')), findsNothing);
+    expect(find.byKey(const ValueKey('ai-assistant-panel')), findsNothing);
     c.attachShell();
     await tester.pump();
-    expect(find.byKey(const ValueKey('ai-assistant-launcher')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ai-assistant-panel')), findsOneWidget);
+    c.detachShell();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('ai-assistant-panel')), findsNothing);
   });
 
   testWidgets(
@@ -96,26 +109,17 @@ void main() {
     expect(c.messages, hasLength(2));
   });
 
-  testWidgets('the button can be dragged but never leaves the screen',
+  testWidgets('an answer that arrives while closed puts a dot on the button',
       (tester) async {
-    tester.view.physicalSize = const Size(1280, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
     final c = _controller()..attachShell();
     await tester.pumpWidget(_app(c));
-    final launcher = find.byKey(const ValueKey('ai-assistant-launcher'));
-    final home = tester.getCenter(launcher);
-    await tester.drag(launcher, const Offset(-300, -200));
+    expect(find.byKey(const ValueKey('ai-assistant-unread')), findsNothing);
+    await c.send('How does kiosk mode work?');
     await tester.pump();
-    final moved = tester.getCenter(launcher);
-    // The first few pixels are touch slop before the drag starts.
-    expect(home.dx - moved.dx, inInclusiveRange(250, 300));
-    expect(home.dy - moved.dy, inInclusiveRange(150, 200));
-    await tester.drag(launcher, const Offset(-5000, -5000));
+    expect(find.byKey(const ValueKey('ai-assistant-unread')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('ai-assistant-launcher')));
     await tester.pump();
-    final corner = tester.getTopLeft(launcher);
-    expect(corner.dx, greaterThanOrEqualTo(0));
-    expect(corner.dy, greaterThanOrEqualTo(0));
+    expect(find.byKey(const ValueKey('ai-assistant-unread')), findsNothing);
   });
 
   testWidgets('fills the screen on phones', (tester) async {

@@ -6,7 +6,7 @@ import '../../data/ai_assistant_api.dart';
 import '../../domain/ai_models.dart';
 import 'ai_page_context.dart';
 
-/// [closed]: only the floating CloudPOS button shows. [open]: the panel shows.
+/// [closed]: only the CloudPOS button in the sidebar shows. [open]: the panel.
 enum AiPanelState { closed, open }
 
 /// App-wide state of the assistant. One instance lives for the whole app
@@ -58,10 +58,6 @@ class AiAssistantController extends ChangeNotifier {
   int _shells = 0;
   bool get available => _shells > 0;
 
-  /// How far the user dragged the floating button from its home corner.
-  Offset get launcherOffset => _launcherOffset;
-  Offset _launcherOffset = Offset.zero;
-
   void _notify() {
     if (!_disposed) notifyListeners();
   }
@@ -94,11 +90,6 @@ class AiAssistantController extends ChangeNotifier {
   }
 
   void toggle() => _state == AiPanelState.open ? close() : open();
-
-  void setLauncherOffset(Offset offset) {
-    _launcherOffset = offset;
-    _notify();
-  }
 
   void setUsePageContext(bool value) {
     _usePageContext = value;
