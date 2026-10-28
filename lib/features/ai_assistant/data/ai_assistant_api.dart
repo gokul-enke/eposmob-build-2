@@ -24,6 +24,8 @@ class AiAppCredentials {
     this.role,
     this.timeZone,
     this.stores = const [],
+    this.vatNumber,
+    this.crNumber,
   });
 
   final String tenantKey;
@@ -33,6 +35,11 @@ class AiAppCredentials {
   final String? role;
   final String? timeZone;
   final List<({int id, String name})> stores;
+
+  /// Company ZATCA numbers saved at sign-in, which receipts print; the
+  /// assistant uses them to explain why a VAT/CR number is (not) printing.
+  final String? vatNumber;
+  final String? crNumber;
 
   /// Same login and store means the cached AI session is still valid.
   String get identity => '$tenantKey|$accessToken|${storeId ?? ''}';
@@ -63,6 +70,8 @@ class AiAppCredentials {
       role: prefs.getString('user_role') ?? prefs.getString('userRole'),
       timeZone: prefs.getString('time_zone'),
       stores: stores,
+      vatNumber: prefs.getString('zatca_vat_number'),
+      crNumber: prefs.getString('zatca_cr_number'),
     );
   }
 }
@@ -129,6 +138,9 @@ class AiAssistantApi {
               'stores': [
                 for (final s in creds.stores) {'id': s.id, 'name': s.name}
               ],
+              // Always sent, empty when unset: tells the assistant they are empty.
+              'vatNumber': creds.vatNumber ?? '',
+              'crNumber': creds.crNumber ?? '',
             },
           }),
         )

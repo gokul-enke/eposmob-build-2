@@ -14,6 +14,7 @@ const _creds = AiAppCredentials(
   storeId: 7,
   company: 'Acme',
   stores: [(id: 7, name: 'Main')],
+  vatNumber: '300000000000003',
 );
 
 String _sse(List<Map<String, Object?>> events) =>
@@ -175,6 +176,9 @@ void main() {
           expect((json['hints'] as Map)['stores'], [
             {'id': 7, 'name': 'Main'}
           ]);
+          // The receipt check needs to know the CR number is empty, not unknown.
+          expect((json['hints'] as Map)['vatNumber'], '300000000000003');
+          expect((json['hints'] as Map)['crNumber'], '');
           return http.StreamedResponse(
               Stream.value(utf8.encode('{"token":"ai-session"}')), 200);
         }
