@@ -253,7 +253,8 @@ class KotThermalPrinter {
       // Time - smallest in this section
       if (showDateTime) {
         rows.add(_KotTextRow(
-          '$timeLabel: $orderTime',
+          // Isolate the time so an Arabic label cannot split "07:30 PM".
+          '$timeLabel: \u2066$orderTime\u2069',
           scale: getSecondaryScale(is58mm),
           center: true,
         ));

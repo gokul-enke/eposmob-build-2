@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/sales/presentation/sharing/sales_invoice_pdf_share.dart';
 import 'package:pos_machine/features/sales/presentation/sharing/sales_page_services.dart';
 import 'package:pos_machine/features/sales/presentation/state/sales_order_detail_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -149,64 +150,40 @@ Future<void> shareDetailPdf(BuildContext context,
       return;
     }
 
-    if (Platform.isWindows) {
-      try {
-        final enhancedXFile = XFile(
-          pdfFile.path,
-          name: 'Invoice_$orderNumber.pdf',
-          mimeType: 'application/pdf',
-          length: await pdfFile.length(),
-        );
+    final result = await shareInvoicePdf(
+      pdfFile,
+      text: 'sales_order_details.msg_share_pdf_text'
+          .trParams({'orderNumber': orderNumber}),
+      subject: 'Invoice #$orderNumber',
+    );
+    if (!context.mounted) return;
 
-        final params = ShareParams(
-          files: [enhancedXFile],
-        );
-
-        final result = await SharePlus.instance.share(params);
-        if (!context.mounted) return;
-
-        if (result.status == ShareResultStatus.success) {
-          debugPrint('Windows file sharing succeeded!');
-          if (!context.mounted) return;
-        } else if (result.status == ShareResultStatus.dismissed) {
-          if (context.mounted) {
-            showScaffold(
-              context: context,
-              message: 'sales_order_details.msg_sharing_cancelled'.tr,
-            );
-          }
-          return;
-        } else {
-          handleDetailWindowsSharing(context, controller, services, pdfFile);
-          return;
-        }
-      } catch (e) {
-        debugPrint('ShareParams API failed: $e');
+    if (result == null) {
+      if (Platform.isWindows) {
         handleDetailWindowsSharing(context, controller, services, pdfFile);
-        return;
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'sales_order_details.msg_pdf_share_error'.tr,
+        );
       }
-    } else {
-      final enhancedXFile = XFile(
-        pdfFile.path,
-        name: 'Invoice_$orderNumber.pdf',
-        mimeType: 'application/pdf',
-      );
-
-      final params = ShareParams(
-        text: 'sales_order_details.msg_share_pdf_text'
-            .trParams({'orderNumber': orderNumber}),
-        files: [enhancedXFile],
-      );
-
-      await SharePlus.instance.share(params);
-      if (!context.mounted) return;
+      return;
     }
 
-    if (context.mounted) {
-      showScaffold(
-        context: context,
-        message: 'sales_order_details.msg_pdf_shared'.tr,
-      );
+    // Windows never reports the outcome (always unavailable).
+    switch (result.status) {
+      case ShareResultStatus.success:
+        showScaffold(
+          context: context,
+          message: 'sales_order_details.msg_pdf_shared'.tr,
+        );
+      case ShareResultStatus.dismissed:
+        showScaffold(
+          context: context,
+          message: 'sales_order_details.msg_sharing_cancelled'.tr,
+        );
+      case ShareResultStatus.unavailable:
+        break;
     }
   } catch (e) {
     if (Navigator.canPop(context)) {

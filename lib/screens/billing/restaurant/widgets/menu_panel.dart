@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/billing/domain/sales_category_memory.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -70,6 +71,19 @@ class MenuPanelState extends State<MenuPanel> {
   int _focusedMenuItemIndex = 0;
   int _gridColumnCount = 1;
   double _gridRowExtent = 120;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reopened on the remembered Favourites tab: make sure its list is loaded.
+    if (widget.activeCategoryId == -1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Provider.of<GridSelectionProvider>(context, listen: false)
+            .listQuickAccessProducts();
+      });
+    }
+  }
 
   bool get _focusOutlineEnabled {
     try {
@@ -780,7 +794,12 @@ class MenuPanelState extends State<MenuPanel> {
         }
 
         final categories = categoryProvider.category ?? [];
-        final selectedCategoryId = widget.activeCategoryId ?? 0;
+        // A remembered category may be gone (store switch, resync): show All.
+        final selectedCategoryId = SalesCategoryMemory.resolveCategoryId(
+          widget.activeCategoryId ?? 0,
+          categories.map((c) => c.categoryId),
+          allowFavourites: true,
+        );
         final isFavouritesSelected = selectedCategoryId == -1;
         final bool isProductsLoading = (isFavouritesSelected
                 ? gridProvider.isLoading

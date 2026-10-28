@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/domain/sales_category_memory.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/billing_product_price.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/widgets/product_image.dart';
@@ -74,15 +75,16 @@ class _SideBarProductListState extends State<SideBarProductList> {
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _productFocusNode = FocusNode();
   final FocusNode _productGridFocusNode = FocusNode();
-  // Track selection for sidebar UI including the injected 'ALL' at index 0
-  int _selectedUiCategoryIndex = 0;
+  // Selected category id (0 = the injected 'ALL'); remembered across visits
+  int _selectedCategoryId = SalesCategoryMemory.categoryId;
   int _focusedProductIndex = 0;
   late bool _isCategorySectionExpanded;
 
   @override
   void initState() {
     super.initState();
-    _isCategorySectionExpanded = widget.categorySectionInitiallyExpanded;
+    _isCategorySectionExpanded =
+        widget.categorySectionInitiallyExpanded || _selectedCategoryId != 0;
 
     // Add focus listeners for debugging
     _categoryFocusNode.addListener(() {
@@ -99,18 +101,39 @@ class _SideBarProductListState extends State<SideBarProductList> {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Ensure categories are loaded for the sidebar
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
-      debugPrint("📥 [SidebarProductList] Ensuring categories are loaded...");
-      categoryProvider.ensureCategoriesLoaded();
-
-      Provider.of<LocalProductProvider>(context, listen: false)
-          .refreshProducts();
+      _applyProductFilter();
       _requestGridFocusIfNeeded();
+
+      debugPrint("📥 [SidebarProductList] Ensuring categories are loaded...");
+      await categoryProvider.ensureCategoriesLoaded();
+      if (!mounted || _selectedCategoryId == 0) return;
+      // Drop a remembered category that no longer exists (store switch, resync)
+      final validId = SalesCategoryMemory.resolveCategoryId(
+        _selectedCategoryId,
+        (categoryProvider.category ?? []).map((c) => c.categoryId),
+      );
+      if (validId != _selectedCategoryId) _selectCategoryId(validId);
     });
+  }
+
+  void _selectCategoryId(int categoryId) {
+    SalesCategoryMemory.categoryId = categoryId;
+    setState(() => _selectedCategoryId = categoryId);
+    _applyProductFilter();
+  }
+
+  /// Filters the product grid by the selected category plus the search text,
+  /// so adding an item or clearing search keeps the chosen category.
+  void _applyProductFilter() {
+    Provider.of<LocalProductProvider>(context, listen: false).listAllProducts(
+      categoryId: _selectedCategoryId,
+      filterName: _searchProductController.text,
+    );
   }
 
   @override
@@ -134,7 +157,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
     if (!mounted) return;
 
     _searchProductController.clear();
-    Provider.of<LocalProductProvider>(context, listen: false).refreshProducts();
+    _applyProductFilter();
     setState(() => _focusedProductIndex = 0);
     _productFocusNode.requestFocus();
 
@@ -402,43 +425,24 @@ class _SideBarProductListState extends State<SideBarProductList> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemBuilder: (context, index) {
                               final category = categories[index];
-                              // Use local UI selection to allow selecting 'ALL' visually
+                              // Match by id so the highlight survives category
+                              // search and reopening the screen
                               final isSelected =
-                                  index == _selectedUiCategoryIndex;
+                                  category.categoryId == _selectedCategoryId;
 
                               return GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () {
                                   // Handle ALL locally without changing provider selected index
-                                  if (category.categoryId == 0) {
-                                    Provider.of<LocalProductProvider>(context,
-                                            listen: false)
-                                        .refreshProducts();
-                                    setState(() {
-                                      _selectedUiCategoryIndex =
-                                          index; // highlight ALL
-                                    });
-                                    return;
+                                  if (category.categoryId != 0) {
+                                    // Map UI index to provider index by offsetting -1
+                                    categoryProvider.selectCategory(
+                                      index - 1,
+                                      category.categoryName ?? '',
+                                      category.productsCount ?? 0,
+                                    );
                                   }
-
-                                  // Map UI index to provider index by offsetting -1
-                                  final providerIndex = index - 1;
-                                  categoryProvider.selectCategory(
-                                    providerIndex,
-                                    category.categoryName ?? '',
-                                    category.productsCount ?? 0,
-                                  );
-
-                                  // Filter products by specific category
-                                  Provider.of<LocalProductProvider>(context,
-                                          listen: false)
-                                      .listAllProducts(
-                                          categoryId: category.categoryId);
-
-                                  setState(() {
-                                    _selectedUiCategoryIndex =
-                                        index; // highlight selected
-                                  });
+                                  _selectCategoryId(category.categoryId ?? 0);
                                 },
                                 child: Container(
                                   width: 85,
@@ -599,10 +603,8 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               );
 
                               // If product was created successfully, refresh the product list
-                              if (result != null) {
-                                Provider.of<LocalProductProvider>(context,
-                                        listen: false)
-                                    .refreshProducts();
+                              if (result != null && mounted) {
+                                _applyProductFilter();
                               }
                             },
                             child: Container(
@@ -657,9 +659,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               _productFocusNode.requestFocus();
                             },
                             onchanged: (query) {
-                              Provider.of<LocalProductProvider>(context,
-                                      listen: false)
-                                  .listAllProducts(filterName: query);
+                              _applyProductFilter();
                               setState(
                                   () {}); // Update to show/hide clear button
                             },
@@ -677,9 +677,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
                               icon: const Icon(Icons.clear, size: 18),
                               onPressed: () {
                                 _searchProductController.clear();
-                                Provider.of<LocalProductProvider>(context,
-                                        listen: false)
-                                    .refreshProducts();
+                                _applyProductFilter();
                                 setState(() {});
                               },
                             ),

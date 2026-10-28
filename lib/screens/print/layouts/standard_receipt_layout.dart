@@ -296,6 +296,17 @@ class StandardReceiptLayout implements ReceiptLayout {
     final documentHeader = params.documentText(billDocumentConfig.header);
     final documentSubheader = params.documentText(billDocumentConfig.subheader);
 
+    // B2B/B2C invoice title, directly below the logo.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitleText = params.invoiceTitleText;
+
+      if (invoiceTitleText.isNotEmpty) {
+        rows.add(
+            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.1));
+        rows.add(SpacingRow(2));
+      }
+    }
+
     if (documentHeader.isNotEmpty) {
       rows.add(TextRow(documentHeader,
           isBold: true, scale: 1.1, verticalPadding: 3, verticalOffset: 1));
@@ -349,18 +360,6 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (addressText.isNotEmpty) {
       rows.add(FieldTextRow(params.storeFieldLine('showStoreAddress'),
           scale: 0.85, isBold: true));
-    }
-
-    // Invoice Title (Moved above Tax/Fssai Info)
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitleText = params.invoiceTitleText;
-
-      if (invoiceTitleText.isNotEmpty) {
-        rows.add(SpacingRow(5));
-        rows.add(
-            TextRow(invoiceTitleText.toUpperCase(), isBold: true, scale: 1.1));
-        rows.add(SpacingRow(2));
-      }
     }
 
     // Extra Heading 1
@@ -501,19 +500,15 @@ class StandardReceiptLayout implements ReceiptLayout {
     if (params.isVisible('showDate')) {
       final dateLabel = inlineBilingualLabel(
           withoutTrailingLabelColons(params.fieldLabel('showDate')));
-      // Isolate the date/time as LTR so an RTL receipt does not reorder it to
+      // FieldTextRow paints the date/time LTR even without a caption; a plain
+      // TextRow inherits the RTL receipt direction and prints
       // "AM 09:40 23-09-2026".
-      final dateTimeText = params.orderDateTimeText;
       rows.add(SpacingRow(3));
-      if (dateLabel.isNotEmpty) {
-        rows.add(FieldTextRow(
-            ReceiptTextLine.field(
-                ReceiptConfigurationContract.withoutTrailingColon(dateLabel),
-                dateTimeText),
-            scale: 0.85));
-      } else {
-        rows.add(TextRow(dateTimeText, scale: 0.85));
-      }
+      rows.add(FieldTextRow(
+          ReceiptTextLine.field(
+              ReceiptConfigurationContract.withoutTrailingColon(dateLabel),
+              params.orderDateTimeText),
+          scale: 0.85));
     }
 
     rows.add(SpacingRow(_itemGap));

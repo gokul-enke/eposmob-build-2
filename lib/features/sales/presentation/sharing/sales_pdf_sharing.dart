@@ -11,6 +11,7 @@ import 'package:pos_machine/services/print_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'sales_document_files.dart';
+import 'sales_invoice_pdf_share.dart';
 import 'sales_page_services.dart';
 import 'sales_windows_sharing.dart';
 
@@ -168,35 +169,24 @@ Future<void> shareSalesPdf(BuildContext context, SalesPageServices services,
       return;
     }
 
-    // Debug information
+    final result = await shareInvoicePdf(
+      pdfFile,
+      text: 'Please find attached the invoice for order #${order.orderNumber}',
+      subject: 'Invoice #${order.orderNumber}',
+    );
+    if (!context.mounted) return;
 
-    // Share the PDF file using modern ShareParams API
-
-    if (Platform.isWindows) {
-      // The native Windows Share sheet (used by share_plus) only works for
-      // packaged (MSIX) apps. For this unpackaged Win32 build it returns
-      // ShareResultStatus.unavailable and shows an OS "Try that again" dialog.
-      // Go straight to our own sharing options dialog instead.
-      showSalesWindowsSharing(context, services, pdfFile, order);
+    if (result == null) {
+      if (Platform.isWindows) {
+        showSalesWindowsSharing(context, services, pdfFile, order);
+      } else {
+        showScaffoldError(context: context, message: 'sales.err_share_pdf'.tr);
+      }
       return;
-    } else {
-      // On other platforms, use enhanced sharing with context
-      final enhancedXFile = XFile(
-        pdfFile.path,
-        name: 'Invoice_${order.orderNumber}.pdf',
-        mimeType: 'application/pdf',
-      );
-
-      final params = ShareParams(
-        text:
-            'Please find attached the invoice for order #${order.orderNumber}',
-        files: [enhancedXFile],
-      );
-      await SharePlus.instance.share(params);
-      if (!context.mounted) return;
     }
 
-    if (context.mounted) {
+    // Windows never reports the outcome (always unavailable).
+    if (result.status == ShareResultStatus.success) {
       showScaffold(
         context: context,
         message: 'sales.pdf_shared_success'.tr,

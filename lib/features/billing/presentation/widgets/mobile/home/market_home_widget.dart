@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/domain/sales_category_memory.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_grid.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/new_order_button.dart';
 import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
@@ -36,7 +37,8 @@ class MarketHomeWidget extends StatefulWidget {
 
 class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   static const _controller = BillingMobileMarketController();
-  String _selectedCategory = BillingMobileMarketController.allProductsCategory;
+  String _selectedCategory = SalesCategoryMemory.categoryName ??
+      BillingMobileMarketController.allProductsCategory;
   String _searchQuery = '';
   ProductViewMode _viewMode = ProductViewMode.grid;
   bool _isResyncingProducts = false;
@@ -153,14 +155,18 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                 final itemCodeEnabled =
                     context.select<AppSettingsProvider, bool>(
                         (p) => p.appSettings?.itemCodeEnabled ?? false);
+                final categories = _controller.categories(sellableProducts);
+                // A remembered category may be gone (store switch, resync).
+                final selectedCategory = categories.contains(_selectedCategory)
+                    ? _selectedCategory
+                    : BillingMobileMarketController.allProductsCategory;
                 final products = filterMarketHomeProducts(
                   controller: _controller,
                   products: sellableProducts,
                   query: _searchQuery,
-                  selectedCategory: _selectedCategory,
+                  selectedCategory: selectedCategory,
                   itemCodeEnabled: itemCodeEnabled,
                 );
-                final categories = _controller.categories(sellableProducts);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,8 +232,9 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                     const SizedBox(height: 24),
                     _CategoryChips(
                       categories: categories,
-                      selectedCategory: _selectedCategory,
+                      selectedCategory: selectedCategory,
                       onSelected: (category) {
+                        SalesCategoryMemory.categoryName = category;
                         setState(() => _selectedCategory = category);
                       },
                     ),

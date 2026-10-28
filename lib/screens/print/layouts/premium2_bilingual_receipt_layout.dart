@@ -349,6 +349,15 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
       isBilingual: isBilingual,
     );
 
+    // B2B/B2C invoice title, directly below the logo.
+    if (displayConfig?['showInvoiceTitle']?.visible == true) {
+      final invoiceTitle = params.invoiceTitleText;
+      debugPrint(
+          "[Premium2BilingualReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
+      rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
+      rows.add(SpacingRow(2));
+    }
+
     if (documentHeader.isNotEmpty) {
       rows.add(TextRow(documentHeader,
           isBold: true, scale: 1.1, verticalPadding: 3, verticalOffset: 1));
@@ -420,16 +429,6 @@ class Premium2BilingualReceiptLayout implements ReceiptLayout {
     if (storeAddress.isNotEmpty) {
       rows.add(FieldTextRow(params.storeFieldLine('showStoreAddress'),
           scale: 0.85, isBold: true));
-    }
-
-    // Invoice Title (Moved above Tax/Fssai Info)
-    if (displayConfig?['showInvoiceTitle']?.visible == true) {
-      final invoiceTitle = params.invoiceTitleText;
-      debugPrint(
-          "[Premium2BilingualReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
-      rows.add(SpacingRow(5));
-      rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
-      rows.add(SpacingRow(2));
     }
 
     // Location info (like "Al Qasim, Saudi Arabia" in reference)

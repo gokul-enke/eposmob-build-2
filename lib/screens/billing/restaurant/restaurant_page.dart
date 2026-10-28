@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/features/billing/domain/non_stock_visibility.dart';
+import 'package:pos_machine/features/billing/domain/sales_category_memory.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -75,7 +76,9 @@ enum MobileView { tables, orders, products }
 
 class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
-  int? _activeCategoryId;
+  // Backed by SalesCategoryMemory so reopening the page keeps the category.
+  int? get _activeCategoryId => SalesCategoryMemory.categoryId;
+  set _activeCategoryId(int? id) => SalesCategoryMemory.categoryId = id ?? 0;
   dynamic _selectedOrderFromOrderPanel; // New state to hold selected order
   int? _refreshCounter; // Counter to trigger refreshes without creating new objects
   final GlobalKey<OrderPanelState> _orderPanelKey =
