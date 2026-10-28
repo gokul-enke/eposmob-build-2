@@ -61,6 +61,8 @@ class PageSource implements SalesListSource {
           receiptNumber: '00000$page',
           orderDate: DateTime(2026, 10, 8),
           grantTotal: '10.25',
+          // Cart total before the bill discount; the refund must not use it.
+          priceSummary: PriceSummary(grandTotal: '20.25'),
           status: query.status == 'all' ? 'confirmed' : query.status,
           paymentStatus: unpaidCod ? 'pending' : 'paid',
           paymentMethods: unpaidCod ? ['COD'] : ['CASH'],

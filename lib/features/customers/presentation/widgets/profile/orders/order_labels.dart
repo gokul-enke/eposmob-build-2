@@ -15,8 +15,10 @@ abstract final class OrderLabels {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  /// The order's grand_total (after bill discount); the cart summary total
+  /// is the item sum before it.
   static String grandTotal(ListOrderModelData order) =>
-      order.priceSummary?.grandTotal ?? order.grantTotal ?? '0.00';
+      order.grantTotal ?? order.priceSummary?.grandTotal ?? '0.00';
 
   static String money(String currency, String? value) =>
       '$currency${value ?? '0.00'}';

@@ -21,7 +21,8 @@ ListOrderModelData _order(int page, int i) => ListOrderModelData(
       status: i.isEven ? 'pending' : 'completed',
       paymentStatus: 'paid',
       grantTotal: '${i}0.00',
-      priceSummary: PriceSummary(grandTotal: '${i}0.00', taxTotal: '1.50'),
+      // Cart total before the bill discount; the order total wins.
+      priceSummary: PriceSummary(grandTotal: '${i}9.00', taxTotal: '1.50'),
       cartItems: [
         CartItem(productName: 'Tea', quantity: 2, totalPrice: '9.00')
       ],

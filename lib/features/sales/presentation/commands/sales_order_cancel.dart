@@ -21,8 +21,10 @@ Future<void> cancelSalesOrder(
     context: context,
     builder: (dialogCtx) => CancelOrderModal(
       isUnpaidCod: order.isUnpaidCod,
+      // The order's grand_total is what the customer paid. The cart's
+      // price_summary.grand_total is the item sum before any bill discount.
       initialRefundAmount:
-          order.priceSummary?.grandTotal ?? order.grantTotal ?? '',
+          order.grantTotal ?? order.priceSummary?.grandTotal ?? '',
       onConfirm:
           (paymentMethodId, refundAmount, deliveryChargeRefundable) async {
         try {
