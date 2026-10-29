@@ -190,6 +190,28 @@ class SideBarController extends GetxController {
   static const int addCategoryScreenIndex = 16;
   static const int editCategoryScreenIndex = 34;
 
+  /// Quotation listing and the details screen it opens.
+  static const int quotationListScreenIndex = 87;
+  static const int quotationDetailsScreenIndex = 88;
+
+  /// List screens kept alive while one of their own detail screens is shown,
+  /// so going back keeps the user's filters, page and scroll.
+  static const Map<int, Set<int>> listDetailScreens = {
+    salesScreenIndex: {salesOrderDetailsScreenIndex},
+    onlineSalesScreenIndex: {salesOrderDetailsScreenIndex},
+    dailySalesCloseListScreenIndex: {dailySalesCloseDetailScreenIndex},
+    adminDailySalesCloseListScreenIndex: {dailySalesCloseDetailScreenIndex},
+    quotationListScreenIndex: {quotationDetailsScreenIndex},
+    categoryListScreenIndex: {addCategoryScreenIndex, editCategoryScreenIndex},
+    purchaseOrderListScreenIndex: {purchaseDetailsScreenIndex},
+    customerTransactionsReportScreenIndex: {
+      customerTransactionDetailsScreenIndex
+    },
+    supplierTransactionsReportScreenIndex: {
+      supplierTransactionDetailsScreenIndex
+    },
+  };
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;

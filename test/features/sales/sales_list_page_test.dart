@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/features/sales/data/sales_list_repository.dart';
@@ -110,6 +111,7 @@ void main() {
       {double width = 1280,
       bool isOnlineSales = false,
       ValueNotifier<bool>? mode,
+      ValueNotifier<bool>? shown,
       String locale = 'en',
       AuthModel? auth,
       SalesProvider? sales,
@@ -137,21 +139,54 @@ void main() {
             home: Scaffold(
                 body: RepaintBoundary(
                     key: const ValueKey('sales-preview'),
-                    child: mode == null
-                        ? SalesListPage(
-                            isOnlineSales: isOnlineSales,
-                            source: source,
-                            exportController: exporter,
-                            createWorkbook: create)
-                        : ValueListenableBuilder<bool>(
-                            valueListenable: mode,
-                            builder: (_, online, __) => SalesListPage(
-                                isOnlineSales: online,
+                    child: shown != null
+                        ? ValueListenableBuilder<bool>(
+                            valueListenable: shown,
+                            builder: (_, visible, page) => ScreenVisibility(
+                                visible: visible, child: page!),
+                            child: SalesListPage(
+                                isOnlineSales: isOnlineSales,
                                 source: source,
                                 exportController: exporter,
-                                createWorkbook: create)))))));
+                                createWorkbook: create))
+                        : mode == null
+                            ? SalesListPage(
+                                isOnlineSales: isOnlineSales,
+                                source: source,
+                                exportController: exporter,
+                                createWorkbook: create)
+                            : ValueListenableBuilder<bool>(
+                                valueListenable: mode,
+                                builder: (_, online, __) => SalesListPage(
+                                    isOnlineSales: online,
+                                    source: source,
+                                    exportController: exporter,
+                                    createWorkbook: create)))))));
     await tester.pumpAndSettle();
   }
+
+  // Kept behind an order's details, the list reloads its page on return so
+  // status/payment changes made there show, keeping filters and page.
+  testWidgets('shown again after details it reloads the same page',
+      (tester) async {
+    final source = PageSource();
+    final shown = ValueNotifier(true);
+    addTearDown(shown.dispose);
+    await mount(tester, source, shown: shown);
+    await tester.tap(find.byTooltip('pagination.next_page'.tr));
+    await tester.pumpAndSettle();
+    final loads = source.queries.length;
+    expect(source.pages.last, 2);
+
+    shown.value = false;
+    await tester.pumpAndSettle();
+    expect(source.queries.length, loads);
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(source.queries.length, loads + 1);
+    expect(source.pages.last, 2);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   for (final locale in ['en', 'ar', 'ml']) {
     for (final width in [390.0, 768.0, 1280.0]) {
