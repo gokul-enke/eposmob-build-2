@@ -194,6 +194,21 @@ class DayCloseFormController extends ChangeNotifier {
   num get cashSales =>
       num.tryParse((summary?.cashSales ?? '0').replaceAll(',', '')) ?? 0;
 
+  num get onlineSales =>
+      num.tryParse((summary?.onlineSales ?? '0').replaceAll(',', '')) ?? 0;
+
+  /// The methods behind [onlineSales] (Card, UPI, Online...) from the
+  /// summary's breakdown, in its order. Cash, credit (its own total) and
+  /// zero amounts are left out.
+  Map<String, num> get onlineBreakdown => {
+        for (final entry
+            in (summary?.paymentMethodBreakdown ?? const {}).entries)
+          if (!const {'CASH', 'CREDIT'}
+              .contains(entry.key.trim().toUpperCase()))
+            if ((num.tryParse(entry.value.replaceAll(',', '')) ?? 0) > 0)
+              entry.key: num.parse(entry.value.replaceAll(',', '')),
+      };
+
   num get cashExpensesForFormula => summary?.cashExpenses ?? 0;
 
   // expected_closing_cash = opening_cash_in_hand + cash_sales
