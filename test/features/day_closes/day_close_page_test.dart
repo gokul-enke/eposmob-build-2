@@ -165,7 +165,8 @@ void main() {
       if (size.width >= 850) {
         final table = tester.widget<AppDataTable<DailySalesCloseData>>(
             find.byType(AppDataTable<DailySalesCloseData>));
-        expect(table.fitToContent, isTrue);
+        // The shared list layout lets the table fill the height.
+        expect(table.fitToContent, isFalse);
         expect(table.minWidth, 1720);
         expect(table.horizontalController, isNotNull);
         final toggle = find.byKey(const ValueKey('day-close-filter-toggle'));

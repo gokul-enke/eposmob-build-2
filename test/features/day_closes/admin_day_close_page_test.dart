@@ -273,16 +273,18 @@ void main() {
     expect(find.text('daily_sales_close.list_load_failed'.tr), findsOneWidget);
     expect(action(tester, AdminDayCloseListPage.exportKey).onPressed, isNull);
   });
-  testWidgets('short table fits rows; blue View calls original callback',
+  testWidgets(
+      'short table fills the list area; blue View calls original callback',
       (tester) async {
     final source = FakeAdminSource()
       ..fetchPage = (p, q) async => adminPage(p, q, total: 1);
     var views = 0;
     await mount(tester, source, viewed: () => views++);
     final table = find.byType(AppDataTable<DailySalesCloseData>);
+    // The shared list layout lets the table fill the height.
     expect(tester.widget<AppDataTable<DailySalesCloseData>>(table).fitToContent,
-        isTrue);
-    expect(tester.getSize(table).height, lessThan(200));
+        isFalse);
+    expect(tester.getSize(table).height, greaterThan(200));
     final scroll = tester
         .widget<AdminDayCloseListPage>(find.byType(AdminDayCloseListPage));
     expect(scroll.onView, isNotNull);

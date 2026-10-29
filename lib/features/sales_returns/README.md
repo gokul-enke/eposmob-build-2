@@ -73,8 +73,10 @@ Fractional quantities are summed without the old per-item integer truncation.
 The list displays a dash for missing transaction dates instead of a fabricated
 current date; export rejects missing dates. Desktop tables have a horizontal
 scrollbar, and mobile layouts use shared cards and header actions.
-The shared desktop layout fits short tables to their rows and places pagination
-directly below; long tables remain bounded and scroll vertically.
+The shared desktop layout fills the available height with the table (rows at
+the top, pagination at the bottom); in a short window, where the page itself
+scrolls, a short table fits its rows with the pagination directly below. Long
+tables remain bounded and scroll vertically.
 
 ## Navigation
 

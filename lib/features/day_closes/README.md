@@ -22,7 +22,8 @@ submission, Open Shift, and View details remain in the Sales feature.
   Authentication, scope, filter, or reload changes cancel an obsolete export.
   Old records with no business date keep that cell blank; recorded closing
   periods and opening/closing dates are included without inventing a date.
-- Desktop uses the shared horizontal scrollbar and content-fitting table;
+- Desktop uses the shared horizontal scrollbar and a table that fills the
+  list area (fitted to its rows only in short windows);
   mobile uses shared cards and collapsible filters. Open Shift and Day Close
   use shared labeled buttons in the header. View uses the shared blue action.
   Windows export uses the shared Save As service; other platforms use sharing.
@@ -54,6 +55,6 @@ shift.
   IDs and executive IDs are separate text columns; phones retain leading
   zeroes, amounts are numeric, and legacy missing business dates stay blank.
   Query/scope/reload changes cancel obsolete export delivery.
-- Shared header, filter panel, table/cards, content-fitting frame, and
+- Shared header, filter panel, table/cards, list-filling frame, and
   horizontal scrollbar preserve existing admin columns, including executive
   ID and closing period. No operator shift actions are added to this list.

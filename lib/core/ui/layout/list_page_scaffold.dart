@@ -20,7 +20,11 @@ abstract final class ListLayoutBreakpoints {
   static const double cardsBelow = 720;
 
   /// Widest the page content grows before it is centred.
-  static const double maxContentWidth = 1440;
+  static const double maxContentWidth = 1920;
+
+  /// Narrowest a wide table (Products, Stock report) gets before it scrolls
+  /// sideways.
+  static const double wideTableMinWidth = 1440;
 
   /// Below this height the whole page scrolls instead of squeezing the list.
   static const double minimumHeight = 600;
@@ -110,7 +114,7 @@ class ListPageScaffold<T> extends StatelessWidget {
         onRefresh: onRefresh,
       );
 
-  Widget _table() => AppDataTable<T>(
+  Widget _table({required bool fit}) => AppDataTable<T>(
         items: items,
         columns: columns,
         emptyState: emptyState,
@@ -119,25 +123,30 @@ class ListPageScaffold<T> extends StatelessWidget {
         onRefresh: onRefresh,
         minWidth: minTableWidth,
         horizontalController: tableScrollController,
-        fitToContent: true,
+        fitToContent: fit,
       );
 
-  Widget _listWithPagination({required bool forceCards}) {
+  /// The list fills the height, with the pagination at the bottom, however
+  /// few rows a page has. With [fitRows] (a short window, where the page
+  /// itself scrolls) a short table shrinks to its rows instead, keeping the
+  /// pagination right below them and in view.
+  Widget _listWithPagination(
+      {required bool forceCards, required bool fitRows}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useCards = forceCards ||
             constraints.maxWidth < ListLayoutBreakpoints.cardsBelow;
-        final fitTable = !isLoading && !useCards && items.isNotEmpty;
+        final fitTable = fitRows && !isLoading && !useCards && items.isNotEmpty;
         final content = Column(
           mainAxisSize: fitTable ? MainAxisSize.min : MainAxisSize.max,
           children: [
             if (fitTable)
-              Flexible(child: _table())
+              Flexible(child: _table(fit: true))
             else
               Expanded(
                 child: isLoading
                     ? const AppLoadingView()
-                    : (useCards ? _cards() : _table()),
+                    : (useCards ? _cards() : _table(fit: false)),
               ),
             if (pagination != null) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -196,7 +205,8 @@ class ListPageScaffold<T> extends StatelessWidget {
     ];
   }
 
-  Widget _page({required bool mobile, required double height}) {
+  Widget _page(
+      {required bool mobile, required double height, required bool short}) {
     final gap = mobile ? AppSpacing.md : AppSpacing.lg;
     final column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -204,7 +214,8 @@ class ListPageScaffold<T> extends StatelessWidget {
         header,
         ..._filterAndToolbar(mobile: mobile, height: height, gap: gap),
         SizedBox(height: gap),
-        Expanded(child: _listWithPagination(forceCards: mobile)),
+        Expanded(
+            child: _listWithPagination(forceCards: mobile, fitRows: short)),
       ],
     );
     if (mobile) {
@@ -237,7 +248,7 @@ class ListPageScaffold<T> extends StatelessWidget {
                 bounds.maxHeight < ListLayoutBreakpoints.minimumHeight;
             final height =
                 short ? ListLayoutBreakpoints.minimumHeight : bounds.maxHeight;
-            final page = _page(mobile: mobile, height: height);
+            final page = _page(mobile: mobile, height: height, short: short);
             if (!short) return page;
             return SingleChildScrollView(
               child:

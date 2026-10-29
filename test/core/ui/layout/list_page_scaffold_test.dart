@@ -82,6 +82,26 @@ void main() {
     expect(find.byType(CollapsibleFilterTile), findsNothing);
   });
 
+  // Big monitors: the page fills the area up to 1920 wide, then centres.
+  testWidgets('big screens fill the width up to the content limit',
+      (tester) async {
+    await setSize(tester, const Size(1800, 900));
+    await tester.pumpWidget(scaffold());
+    expect(tester.getSize(find.byType(PageHeader)).width,
+        1800 - 2 * AppSpacing.xl);
+    expect(tester.getTopLeft(find.byType(PageHeader)).dx, AppSpacing.xl);
+  });
+
+  testWidgets('wider than the limit the page stays centred at the limit',
+      (tester) async {
+    await setSize(tester, const Size(2600, 900));
+    await tester.pumpWidget(scaffold());
+    expect(tester.getSize(find.byType(PageHeader)).width,
+        ListLayoutBreakpoints.maxContentWidth);
+    expect(tester.getTopLeft(find.byType(PageHeader)).dx,
+        (2600 - ListLayoutBreakpoints.maxContentWidth) / 2);
+  });
+
   testWidgets('phones collapse the filters and show cards', (tester) async {
     await setSize(tester, const Size(375, 812));
     await tester.pumpWidget(scaffold());
@@ -99,22 +119,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('short tables fit the rows and keep pagination directly below',
+  // The table card fills the page height, so big screens show no blank
+  // area under a short page; the pagination sits at the bottom.
+  testWidgets('short tables fill the height and keep pagination at the bottom',
       (tester) async {
     await setSize(tester, const Size(1280, 900));
     await tester.pumpWidget(scaffold(showFilters: false));
     final frame =
         tester.getRect(find.byKey(const ValueKey('app_data_table_frame')));
-    final lastRowBottom = tester.getBottomLeft(find.text('22 Bob')).dy;
-    final footerTop =
-        tester.getTopLeft(find.byKey(const ValueKey('app_pagination_bar'))).dy;
-    expect(frame.bottom - lastRowBottom, closeTo(13, 1));
-    expect(footerTop - frame.bottom, closeTo(AppSpacing.sm, 1));
-    expect(frame.height, lessThan(200));
+    final pagination =
+        tester.getRect(find.byKey(const ValueKey('app_pagination_bar')));
+    expect(pagination.bottom, closeTo(900 - AppSpacing.xl, 1));
+    expect(pagination.top - frame.bottom, closeTo(AppSpacing.sm, 1));
+    expect(frame.height, greaterThan(600));
+    // The rows stay at the top of the card.
+    expect(
+        tester.getTopLeft(find.text('21 Ann')).dy - frame.top, lessThan(120));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('wide table scrolling retains content height and aligned columns',
+  testWidgets('wide table scrolling fills the height and keeps columns aligned',
       (tester) async {
     await setSize(tester, const Size(800, 900));
     final horizontal = ScrollController();
@@ -125,7 +149,7 @@ void main() {
         tableScrollController: horizontal));
     final frame =
         tester.getRect(find.byKey(const ValueKey('app_data_table_frame')));
-    expect(frame.height, lessThan(200));
+    expect(frame.height, greaterThan(600));
     expect(horizontal.position.maxScrollExtent, greaterThan(0));
     horizontal.jumpTo(horizontal.position.maxScrollExtent);
     await tester.pump();
@@ -149,16 +173,20 @@ void main() {
     await tester.pump();
     expect(find.text('120 Person 99'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    // Back to a short page: the card still fills the same height.
     await tester.pumpWidget(scaffold(showFilters: false));
     expect(
         tester
             .getSize(find.byKey(const ValueKey('app_data_table_frame')))
             .height,
-        lessThan(200));
+        frame.height);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('short desktop window scrolls the page with a fitted table',
+  // A short window scrolls the page, so a short table keeps fitting its
+  // rows and the pagination stays right below them, in view.
+  testWidgets(
+      'short desktop window keeps a fitted table and pagination in view',
       (tester) async {
     await setSize(tester, const Size(1280, 350));
     await tester.pumpWidget(scaffold(showFilters: false));
@@ -167,6 +195,8 @@ void main() {
             .getSize(find.byKey(const ValueKey('app_data_table_frame')))
             .height,
         lessThan(200));
+    expect(find.byKey(const ValueKey('app_pagination_bar')).hitTestable(),
+        findsOneWidget);
     expect(find.text('2 people'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

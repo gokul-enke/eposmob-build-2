@@ -194,7 +194,7 @@ class _StockReportPageState extends State<StockReportPage> {
           columns: stockReportColumns(showCosts: showCosts),
           cardBuilder: (r, number) =>
               StockReportCard(row: r, number: number, showCosts: showCosts),
-          minTableWidth: ListLayoutBreakpoints.maxContentWidth,
+          minTableWidth: ListLayoutBreakpoints.wideTableMinWidth,
           tableScrollController: _scroll,
           emptyState: AppEmptyState(
               icon: Icons.inventory_2_outlined, title: _tr('no_data_found')),

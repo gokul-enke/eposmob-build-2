@@ -250,6 +250,15 @@ void main() {
         (tester) async {
       await mount(tester, size: size);
       expect(tester.takeException(), isNull);
+      // Wide lists grow to 1920, but this table still scrolls below 1440.
+      if (size.width == 1280) {
+        expect(
+            tester
+                .widget<AppDataTable<StockReportData>>(
+                    find.byType(AppDataTable<StockReportData>))
+                .minWidth,
+            1440);
+      }
       expect(page(tester).items.single.name, 'Crayons camel small');
       await tapFilterToggle(tester, key: StockReportPage.filterToggleKey);
       await tester.pumpAndSettle();
