@@ -21,11 +21,11 @@
     "description": "Select a payment method and refund amount for this order.",
     "unpaid_cod_description": "This unpaid Cash on Delivery order can be cancelled without refund details.",
     "refund_amount": "Refund Amount",
-    "original_total": "Original total: @amount",
+    "paid_amount": "Amount paid: @amount",
     "delivery_charge_refundable": "Delivery Charge Refundable",
     "delivery_charge_refundable_hint": "Turn off to exclude the delivery charge from the refund.",
     "refund_amount_positive": "Refund amount must be greater than 0",
-    "refund_amount_exceeds_total": "Refund amount cannot exceed the original total"
+    "refund_amount_exceeds_paid": "Refund amount cannot exceed the amount paid"
   },
   "change_order_status": {
     "title": "Update Order Status",

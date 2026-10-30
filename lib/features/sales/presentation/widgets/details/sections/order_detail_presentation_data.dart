@@ -1,6 +1,7 @@
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/delivery_method_display.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/services/print_service.dart';
 
 class OrderDetailPresentationData {
   final OrderDetailsModelData? orderDetailsModelData;
@@ -165,10 +166,10 @@ class OrderDetailPresentationData {
     }
   }
 
-  double calculateTotalPayments(Map<String, dynamic> payments) {
-    return payments.values.fold(
-        0.0, (sum, value) => sum + (double.tryParse(value.toString()) ?? 0.0));
-  }
+  /// Paid total without the CREDIT (unpaid) entry, so a 24.50 bill with 15
+  /// paid shows Total Paid 15, as the printed receipt does.
+  double calculateTotalPayments(Map<String, dynamic> payments) =>
+      PrintService.paidAmountFromPayments(payments) ?? 0.0;
 
   String fmt(dynamic val) {
     if (val == null) return '0.00';

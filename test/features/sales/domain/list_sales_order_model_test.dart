@@ -71,4 +71,41 @@ void main() {
 
     expect(order.isUnpaidCod, isFalse);
   });
+
+  test('paid amount leaves out the unpaid credit balance', () {
+    // Shape from list-orders: BALANCE is a JSON-encoded string.
+    final order = ListOrderModelData.fromJson({
+      'grand_total': '200.000',
+      'order_props': [
+        {'code': 'ORDER_TOKEN_NUMBER', 'value': '136'},
+        {'code': 'BALANCE', 'value': '"50"'},
+      ],
+    });
+
+    expect(order.paidAmount, '150.000');
+  });
+
+  test('paid amount is the order total when nothing is on credit', () {
+    final order = ListOrderModelData.fromJson({
+      'grand_total': '10.25',
+      'order_props': [
+        {'code': 'BALANCE', 'value': '"0"'},
+      ],
+    });
+
+    expect(order.paidAmount, '10.25');
+    expect(ListOrderModelData.fromJson({'grand_total': '10.25'}).paidAmount,
+        '10.25');
+  });
+
+  test('paid amount is zero for a fully credit sale', () {
+    final order = ListOrderModelData.fromJson({
+      'grand_total': '24.5',
+      'order_props': [
+        {'code': 'BALANCE', 'value': '"24.5"'},
+      ],
+    });
+
+    expect(order.paidAmount, '0.000');
+  });
 }

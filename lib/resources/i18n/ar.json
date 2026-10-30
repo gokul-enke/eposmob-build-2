@@ -22,9 +22,9 @@
     "title": "إلغاء الطلب",
     "description": "اختر طريقة دفع ومبلغ استرداد لهذا الطلب.",
     "unpaid_cod_description": "يمكن إلغاء طلب الدفع عند الاستلام غير المدفوع بدون تفاصيل الاسترداد.",
-    "original_total": "الإجمالي الأصلي: @amount",
+    "paid_amount": "المبلغ المدفوع: @amount",
     "refund_amount": "مبلغ الاسترداد",
-    "refund_amount_exceeds_total": "لا يمكن أن يتجاوز مبلغ الاسترداد الإجمالي الأصلي",
+    "refund_amount_exceeds_paid": "لا يمكن أن يتجاوز مبلغ الاسترداد المبلغ المدفوع",
     "refund_amount_positive": "يجب أن يكون مبلغ الاسترداد أكبر من 0"
   },
   "change_order_status": {

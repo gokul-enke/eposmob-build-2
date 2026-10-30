@@ -149,6 +149,30 @@ class ListOrderModelData {
         (normalizedStatus == 'pending' || normalizedStatus == 'unpaid');
   }
 
+  /// What the customer actually paid: the order total minus the unpaid
+  /// credit the backend keeps in the BALANCE order prop. A 200 credit sale
+  /// with 150 paid gives 150, the amount the cancel voucher refunds.
+  String get paidAmount {
+    final total = grantTotal ?? priceSummary?.grandTotal ?? '';
+    final parsedTotal = double.tryParse(total.replaceAll(',', '').trim());
+    final balance = _creditBalance;
+    if (parsedTotal == null || balance == null || balance <= 0) return total;
+    final paid = parsedTotal - balance;
+    // Rounded so 200 - 50.1 does not submit 149.89999999999998.
+    return (paid < 0 ? 0.0 : paid).toStringAsFixed(3);
+  }
+
+  /// The BALANCE prop value arrives JSON-encoded, e.g. `"9.5"` with quotes.
+  double? get _creditBalance {
+    final props = orderProps ?? const <OrderProp>[];
+    final raw = props
+        .lastWhere((prop) => prop.propsId == 'BALANCE',
+            orElse: () => OrderProp())
+        .propsValue;
+    if (raw == null) return null;
+    return double.tryParse(raw.replaceAll('"', '').replaceAll(',', '').trim());
+  }
+
   static bool _isCodPaymentMethod(String method) {
     final resolvedCode = SalesPaymentCodes.resolve(method);
     final candidate = resolvedCode ?? method;

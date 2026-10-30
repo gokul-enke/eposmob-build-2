@@ -18,7 +18,7 @@ void main() {
     Get.addTranslations({
       'en_US': {
         'cancel_order_modal.title': 'Cancel Order',
-        'cancel_order_modal.original_total': 'Original total: @amount',
+        'cancel_order_modal.paid_amount': 'Amount paid: @amount',
       },
     });
   });
@@ -44,7 +44,7 @@ void main() {
 
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
         '4.190');
-    expect(find.text('Original total: 4.190'), findsOneWidget);
+    expect(find.text('Amount paid: 4.190'), findsOneWidget);
 
     await tester.tap(find.byType(DropdownButton<String>));
     await tester.pumpAndSettle();

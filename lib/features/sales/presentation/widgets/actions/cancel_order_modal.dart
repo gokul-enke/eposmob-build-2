@@ -37,20 +37,20 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
   bool _deliveryChargeRefundable = true;
   late final TextEditingController _refundAmountController;
 
-  double? get _originalTotal {
+  double? get _paidAmount {
     final amount =
         double.tryParse(widget.initialRefundAmount.replaceAll(',', '').trim());
     return amount != null && amount.isFinite ? amount : null;
   }
 
-  String get _formattedOriginalTotal =>
-      _originalTotal?.toStringAsFixed(3) ?? widget.initialRefundAmount;
+  String get _formattedPaidAmount =>
+      _paidAmount?.toStringAsFixed(3) ?? widget.initialRefundAmount;
 
   @override
   void initState() {
     super.initState();
     _refundAmountController =
-        TextEditingController(text: _formattedOriginalTotal);
+        TextEditingController(text: _formattedPaidAmount);
     if (widget.isUnpaidCod) {
       _isLoading = false;
     } else {
@@ -215,8 +215,8 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                   widget.initialRefundAmount.trim().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'cancel_order_modal.original_total'.trParams({
-                    'amount': _formattedOriginalTotal,
+                  'cancel_order_modal.paid_amount'.trParams({
+                    'amount': _formattedPaidAmount,
                   }),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
@@ -309,8 +309,8 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                             _refundAmountController.text.trim();
                         final enteredValue = double.tryParse(enteredAmount);
                         final displayedTotal =
-                            double.tryParse(_formattedOriginalTotal);
-                        final isFullRefund = _originalTotal != null &&
+                            double.tryParse(_formattedPaidAmount);
+                        final isFullRefund = _paidAmount != null &&
                             enteredValue != null &&
                             enteredValue == displayedTotal;
                         final refundAmount = isFullRefund
@@ -348,12 +348,12 @@ class _CancelOrderModalState extends State<CancelOrderModal> {
                           return;
                         }
 
-                        if (_originalTotal != null &&
-                            parsedRefundAmount > _originalTotal!) {
+                        if (_paidAmount != null &&
+                            parsedRefundAmount > _paidAmount!) {
                           showScaffoldError(
                             context: context,
                             message:
-                                'cancel_order_modal.refund_amount_exceeds_total'
+                                'cancel_order_modal.refund_amount_exceeds_paid'
                                     .tr,
                           );
                           return;
