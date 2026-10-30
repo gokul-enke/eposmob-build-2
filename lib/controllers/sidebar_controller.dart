@@ -90,6 +90,8 @@ import 'package:pos_machine/features/vouchers/presentation/pages/create_supplier
 import 'package:pos_machine/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/create_expense_page.dart';
 import 'package:pos_machine/features/expenses/presentation/pages/view_expense_page.dart';
+import 'package:pos_machine/features/general_payments/presentation/pages/general_payment_create_page.dart';
+import 'package:pos_machine/features/general_payments/presentation/pages/general_payment_list_page.dart';
 
 import '../screens/product/widgets/stock_details.dart';
 import 'package:pos_machine/features/sales/presentation/pages/sales_order_details_page.dart';
@@ -144,6 +146,11 @@ class SideBarController extends GetxController {
   static const int expenseListScreenIndex = 93;
   static const int createExpenseScreenIndex = 94;
   static const int viewExpenseScreenIndex = 95;
+
+  /// Accounts screens in [screens]. Navigate through
+  /// [GeneralPaymentNavigation].
+  static const int generalPaymentListScreenIndex = 104;
+  static const int generalPaymentCreateScreenIndex = 105;
 
   /// Customer and supplier voucher routes, including Transactions aliases.
   static const int customerVoucherListScreenIndex = 70;
@@ -334,5 +341,7 @@ class SideBarController extends GetxController {
     WeighMachineExportPage(), // 101 weighMachineExportIndex
     SalesReportPage(), // 102 salesReportScreenIndex
     DiscountSaleReportPage(), // 103 discountSaleReportScreenIndex
+    GeneralPaymentListPage(), // 104 generalPaymentListScreenIndex
+    GeneralPaymentCreatePage(), // 105 generalPaymentCreateScreenIndex
   ];
 }
