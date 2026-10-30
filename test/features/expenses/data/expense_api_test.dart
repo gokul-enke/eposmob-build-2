@@ -19,10 +19,63 @@ void main() {
         });
     final result = await api.fetchGeneralPayments(accessToken: 'token');
     expect(result!.length, 2);
-    expect(
-        requests.first.queryParameters, {'type': 'EXPENSE', 'store_id': '7'});
+    expect(requests.first.queryParameters,
+        {'type': 'EXPENSE', 'store_id': '7', 'per_page': '100'});
     expect(requests.last.queryParameters['page'], '2');
+    expect(requests.last.queryParameters['per_page'], '100');
   });
+  // The live API: rows in `data`, paging in a separate `pagination` object.
+  // It used to be read as one page, so the list stopped at the first 10.
+  Map<String, dynamic> apiPage(int current, {int last = 3, int? total}) => {
+        'success': true,
+        'data': [row(current)],
+        'pagination': {
+          'current_page': current,
+          'last_page': last,
+          'per_page': 1,
+          'total': total ?? last,
+          'has_more_pages': current < last,
+        },
+      };
+
+  test('a separate pagination object loads every page', () async {
+    final pages = <String?>[];
+    final api = ExpenseApi(
+        session: const FakeTenantSession(storeId: 7),
+        httpGet: (url, {headers}) async {
+          pages.add(url.queryParameters['page']);
+          return jsonResponse(apiPage(pages.length));
+        });
+    final result = await api.fetchGeneralPayments(accessToken: 'token');
+    expect(result!.map((e) => e.referenceNumber), ['0001', '0002', '0003']);
+    expect(pages, [null, '2', '3']);
+  });
+
+  test('a single-page pagination object loads once', () async {
+    var requests = 0;
+    final api = ExpenseApi(
+        session: const FakeTenantSession(),
+        httpGet: (url, {headers}) async {
+          requests++;
+          return jsonResponse(apiPage(1, last: 1));
+        });
+    expect((await api.fetchGeneralPayments(accessToken: 't'))!.length, 1);
+    expect(requests, 1);
+  });
+
+  test('inconsistent pagination is still rejected', () async {
+    var requests = 0;
+    final api = ExpenseApi(
+        session: const FakeTenantSession(),
+        httpGet: (url, {headers}) async {
+          requests++;
+          // Page 2 reports a different total than page 1.
+          return jsonResponse(apiPage(requests, total: requests == 1 ? 3 : 5));
+        });
+    await expectLater(api.fetchGeneralPayments(accessToken: 't'),
+        throwsA(isA<FormatException>()));
+  });
+
   test('stale request stops before fetching another page', () async {
     var current = true;
     var requests = 0;

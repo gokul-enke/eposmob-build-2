@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
+import 'package:pos_machine/features/general_payments/presentation/navigation/general_payment_navigation.dart';
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/features/sales/presentation/navigation/sales_navigation.dart';
 import 'package:pos_machine/features/sales/presentation/state/sales_provider.dart';
@@ -117,6 +118,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
           break;
         case SideBarController.discountSaleReportScreenIndex:
           ReportNavigation.openDiscountSaleReport();
+          break;
+        case SideBarController.generalPaymentListScreenIndex:
+          GeneralPaymentNavigation.openList();
           break;
         default:
           sideBarController.index.value = index;
@@ -744,8 +748,10 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             hasSupplierVouchersPermission ||
             hasProformaPermission;
         final hasPartyAccounts = hasPartyCustomer || hasPartySupplier;
+        final hasGeneralPayments =
+            roleProvider.currentUserCanAccessGeneralPaymentsSync();
 
-        if (!hasTransactions && !hasPartyAccounts) {
+        if (!hasTransactions && !hasPartyAccounts && !hasGeneralPayments) {
           return const SizedBox.shrink();
         }
 
@@ -809,6 +815,18 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       onTap: () => navigate(93),
                     ),
                   ],
+                ),
+              ),
+            // Already under the Accounts heading, so a plain tile.
+            if (hasGeneralPayments)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.account_balance_outlined,
+                  title: 'nav.general_payments'.tr,
+                  selected: GeneralPaymentNavigation.sectionIndices
+                      .contains(sideBarController.index.value),
+                  onTap: () => navigate(
+                      SideBarController.generalPaymentListScreenIndex),
                 ),
               ),
             if (hasPartyAccounts)
