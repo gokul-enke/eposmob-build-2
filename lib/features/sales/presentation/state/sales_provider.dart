@@ -126,13 +126,15 @@ class SalesProvider extends ChangeNotifier
     required String accessToken,
     required String orderId,
     required String status,
-    required double amount,
+    double? amount,
+    String? paymentMethod,
   }) async {
     await repository.actions.changePaymentStatus(
         accessToken: accessToken,
         orderId: orderId,
         status: status,
-        amount: amount);
+        amount: amount,
+        paymentMethod: paymentMethod);
     notifyListeners();
   }
 }

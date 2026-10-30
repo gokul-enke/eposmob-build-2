@@ -521,6 +521,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(selected, DateTime(2026, 10, 9));
   });
+  // The manager's rule: a new pick covers the whole day, From 00:00 and
+  // To 23:59, unless the user changes the time.
+  for (final until in [false, true]) {
+    testWidgets(
+        'a new ${until ? 'To' : 'From'} time starts at '
+        '${until ? '23:59' : '00:00'}', (tester) async {
+      DateTime? selected;
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: SalesDateFilter(
+                  label: 'Date',
+                  value: null,
+                  includeTime: true,
+                  until: until,
+                  onChanged: (date) => selected = date))));
+      await tester.tap(find.text('common.select_date'.tr));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15').last);
+      await tester.pumpAndSettle();
+
+      expect(
+          tester
+              .widget<TimePickerDialog>(find.byType(TimePickerDialog))
+              .initialTime,
+          until
+              ? const TimeOfDay(hour: 23, minute: 59)
+              : const TimeOfDay(hour: 0, minute: 0));
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(
+          [selected!.day, selected!.hour, selected!.minute, selected!.second],
+          until ? [15, 23, 59, 59] : [15, 0, 0, 0]);
+    });
+  }
+  testWidgets('a chosen time is shown again when the picker reopens',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SalesDateFilter(
+                label: 'To',
+                value: DateTime(2026, 10, 8, 14, 30, 59),
+                includeTime: true,
+                until: true,
+                onChanged: (_) {}))));
+    await tester.tap(find.text('2026-10-08 14:30:59'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('9').last);
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TimePickerDialog>(find.byType(TimePickerDialog))
+            .initialTime,
+        const TimeOfDay(hour: 14, minute: 30));
+  });
   test('workbook keeps receipt identifiers as text and amount as number',
       () async {
     final dir = await Directory.systemTemp.createTemp('sales-excel-');
@@ -537,6 +591,22 @@ void main() {
     expect(rows[1][1]!.value, TextCellValue('ORD-001'));
     expect(rows[1][2]!.value, TextCellValue('00001'));
     expect(rows[1][6]!.value, const DoubleCellValue(100.25));
+  });
+  test('workbook payment status column names Failed and Pending apart',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('sales-excel-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final file = await exportSalesListExcel([
+      ListOrderModelData(
+          id: 1, orderNumber: 'ORD-001', paymentStatus: 'failed'),
+      ListOrderModelData(
+          id: 2, orderNumber: 'ORD-002', paymentStatus: 'unpaid'),
+    ], outputDirectory: dir);
+    final rows =
+        Excel.decodeBytes(await file.readAsBytes()).tables.values.single.rows;
+    expect(rows[0][8]!.value, TextCellValue('sales.payment_status_filter'.tr));
+    expect(rows[1][8]!.value, TextCellValue('sales.payment_failed'.tr));
+    expect(rows[2][8]!.value, TextCellValue('sales.payment_pending'.tr));
   });
   test('online workbook uses the online list title and file prefix', () async {
     final dir = await Directory.systemTemp.createTemp('online-excel-');

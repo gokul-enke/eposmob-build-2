@@ -35,6 +35,18 @@ void main() {
         deliveryLogistics: '8');
     await api.changePaymentStatus(
         accessToken: 'token', orderId: '12', status: 'paid', amount: 4.19);
+    await api.changePaymentStatus(
+        accessToken: 'token',
+        orderId: '12',
+        status: 'paid',
+        amount: 4.19,
+        paymentMethod: '7974');
+    // Failed records no money: no amount key at all.
+    await api.changePaymentStatus(
+        accessToken: 'token',
+        orderId: '12',
+        status: 'failed',
+        paymentMethod: '7974');
     expect(bodies, [
       {
         'order_id': '12',
@@ -51,6 +63,13 @@ void main() {
         'delivery_logistics': '8'
       },
       {'order_id': '12', 'status': 'paid', 'amount': 4.19},
+      {
+        'order_id': '12',
+        'status': 'paid',
+        'amount': 4.19,
+        'payment_method': '7974'
+      },
+      {'order_id': '12', 'status': 'failed', 'payment_method': '7974'},
     ]);
   });
 }

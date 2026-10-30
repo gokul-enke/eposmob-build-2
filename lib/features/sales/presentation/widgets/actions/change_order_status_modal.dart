@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:provider/provider.dart';
 
+import 'order_payment_method_field.dart';
 import 'order_status_refund_field.dart';
 
 class ChangeOrderStatusModal extends StatefulWidget {
@@ -34,7 +32,6 @@ class ChangeOrderStatusModal extends StatefulWidget {
 }
 
 class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
-  late final MasterDataProvider _master;
   static const List<String> _statusOptions = [
     'init',
     'new',
@@ -48,14 +45,12 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
   String? _selectedStatus;
   String? _selectedPaymentMethodId;
   bool _deliveryChargeRefundable = true;
-  bool _isLoadingMethods = false;
   late final TextEditingController _refundAmountController;
   late final TextEditingController _deliveryLogisticsController;
 
   @override
   void initState() {
     super.initState();
-    _master = context.read<MasterDataProvider>();
     _refundAmountController = TextEditingController(text: '0');
     _deliveryLogisticsController = TextEditingController();
 
@@ -65,10 +60,6 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
       _selectedStatus = _statusOptions.firstWhere(
           (s) => s.toLowerCase() == widget.currentStatus.toLowerCase());
     }
-
-    if (_selectedStatus == 'cancelled') {
-      _loadPaymentMethods();
-    }
   }
 
   @override
@@ -76,21 +67,6 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
     _refundAmountController.dispose();
     _deliveryLogisticsController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadPaymentMethods() async {
-    setState(() {
-      _isLoadingMethods = true;
-    });
-    final provider = _master;
-    if (provider.paymentMethods == null || provider.paymentMethods!.isEmpty) {
-      await provider.fetchPaymentMethods();
-    }
-    if (mounted) {
-      setState(() {
-        _isLoadingMethods = false;
-      });
-    }
   }
 
   String _capitalize(String s) =>
@@ -182,9 +158,6 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                         setState(() {
                           _selectedStatus = newValue;
                         });
-                        if (newValue == 'cancelled') {
-                          _loadPaymentMethods();
-                        }
                       },
                     ),
                   ),
@@ -236,45 +209,14 @@ class _ChangeOrderStatusModalState extends State<ChangeOrderStatusModal> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _isLoadingMethods
-                      ? const Center(
-                          child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        ))
-                      : Consumer<MasterDataProvider>(
-                          builder: (context, provider, child) {
-                            final methods = provider.paymentMethods ?? [];
-                            return Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  hint: Text(
-                                      'change_order_status.hint_payment_method'
-                                          .tr),
-                                  value: _selectedPaymentMethodId,
-                                  items: methods.map((MasterDataValue method) {
-                                    return DropdownMenuItem<String>(
-                                      value: method.id.toString(),
-                                      child: Text(method.value),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    setState(() {
-                                      _selectedPaymentMethodId = newValue;
-                                    });
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                  OrderPaymentMethodField(
+                    value: _selectedPaymentMethodId,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedPaymentMethodId = newValue;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 20),
                   OrderStatusRefundField(controller: _refundAmountController),
                   const SizedBox(height: 20),

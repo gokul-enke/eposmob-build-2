@@ -53,7 +53,9 @@ import 'package:pos_machine/screens/reports/sales_report/sales_report.dart';
 import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales_report.dart';
 import 'package:pos_machine/features/reports/presentation/pages/my_sales_report_page.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
+import 'package:pos_machine/features/reports/presentation/pages/discount_sale_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/non_stock_report_page.dart';
+import 'package:pos_machine/features/reports/presentation/pages/sales_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/stock_report_page.dart';
 import 'package:pos_machine/features/reports/presentation/pages/consumed_stocks_report_page.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
@@ -131,6 +133,8 @@ class SideBarController extends GetxController {
   static const int mySalesReportScreenIndex = 58;
   static const int nonStockReportScreenIndex = 77;
   static const int consumedStocksReportScreenIndex = 80;
+  static const int salesReportScreenIndex = 102;
+  static const int discountSaleReportScreenIndex = 103;
   static const int customerTransactionsReportScreenIndex = 65;
   static const int customerTransactionDetailsScreenIndex = 66;
   static const int supplierTransactionsReportScreenIndex = 67;
@@ -328,5 +332,7 @@ class SideBarController extends GetxController {
     PurchaseReturnListPage(), // 99 purchaseReturnListScreenIndex
     CreatePurchaseReturnPage(), // 100 createPurchaseReturnScreenIndex
     WeighMachineExportPage(), // 101 weighMachineExportIndex
+    SalesReportPage(), // 102 salesReportScreenIndex
+    DiscountSaleReportPage(), // 103 discountSaleReportScreenIndex
   ];
 }

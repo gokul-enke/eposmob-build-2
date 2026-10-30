@@ -15,7 +15,10 @@ import 'package:hive/hive.dart';
 class KeyboardProvider extends ChangeNotifier {
   final bool _enablePersistence;
   bool _showKeyboard = false;
-  bool _showKeyboardFeature = true;
+  // Off by default so the platform keyboard is used until the user opts in;
+  // the floating virtual keyboard covered the login fields on iPhone/iPad
+  // (App Store Guideline 4 rejection).
+  bool _showKeyboardFeature = false;
   String _keyboardType = 'text';
   TextEditingController? _controller;
   bool _shouldReplaceOnFirstInput = false;
@@ -47,7 +50,7 @@ class KeyboardProvider extends ChangeNotifier {
   // Constructor – load persisted preferences
   KeyboardProvider({bool enablePersistence = true})
       : _enablePersistence = enablePersistence {
-    // The in-memory default is enabled, so apply it synchronously. Waiting for
+    // Apply the in-memory default synchronously. Waiting for
     // Hive left a startup window in which Android's IME could open first.
     _applySystemKeyboardPolicy();
     _startListeningToFocus();

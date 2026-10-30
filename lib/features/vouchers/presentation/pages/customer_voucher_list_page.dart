@@ -113,10 +113,14 @@ class _CustomerVoucherListPageState extends State<CustomerVoucherListPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
+    // The time starts at the whole day: 00:00 (From) or 23:59 (To).
+    final defaultTime = isFromDate
+        ? const TimeOfDay(hour: 0, minute: 0)
+        : const TimeOfDay(hour: 23, minute: 59);
     if (pickedDate != null && mounted && context.mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
-        initialTime: TimeOfDay.now(),
+        initialTime: defaultTime,
         builder: (BuildContext context, Widget? child) {
           return Theme(
             data: ThemeData.light().copyWith(
@@ -130,16 +134,15 @@ class _CustomerVoucherListPageState extends State<CustomerVoucherListPage> {
         },
       );
       if (!mounted) return;
-      final TimeOfDay resolvedTime = pickedTime ??
-          (isFromDate
-              ? const TimeOfDay(hour: 0, minute: 0)
-              : const TimeOfDay(hour: 23, minute: 59));
+      final TimeOfDay resolvedTime = pickedTime ?? defaultTime;
       final DateTime fullDateTime = DateTime(
         pickedDate.year,
         pickedDate.month,
         pickedDate.day,
         resolvedTime.hour,
         resolvedTime.minute,
+        // The picker has no seconds; a To covers its whole minute.
+        isFromDate ? 0 : 59,
       );
       final formattedDateTime =
           DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
