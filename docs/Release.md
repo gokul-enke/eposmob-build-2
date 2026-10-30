@@ -37,6 +37,8 @@ DEMO_FUNZCART_vqguo7a24ezI8a69o2q0FlQsPXPZRzrw
 salesexecutive2@funzcart.in
 123456
 
+Admin!@1243
+admin@funzcart.in
 kitchenmaster@funzcart.in
 attender@funzcart.in
 restaurantsales@funzcart.in
