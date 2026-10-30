@@ -14,11 +14,16 @@ class CategoryListController extends ChangeNotifier {
   List<CategoryListEntry> _directory = const [], rows = const [];
   String applied = '';
   int page = 1;
+
+  /// The page the user chose. A reload can briefly empty the directory and
+  /// clamp [page] to 1; once rows return, this page is shown again.
+  int _wantedPage = 1;
   Object? error;
   bool _fetching = true, _disposed = false;
   Future<void>? _inFlight;
   Timer? _debounce;
   bool get loading => _fetching || source.isBusy();
+  bool get isEmptyDirectory => _directory.isEmpty;
   int get totalPages =>
       ((rows.length + pageSize - 1) ~/ pageSize).clamp(1, 999999);
   List<CategoryListEntry> get pageRows {
@@ -54,7 +59,8 @@ class CategoryListController extends ChangeNotifier {
       if (changed) {
         _directory = List.unmodifiable(entries);
         rows = filterCategoryEntries(_directory, applied);
-        page = page.clamp(1, totalPages);
+        page = _wantedPage.clamp(1, totalPages);
+        if (_directory.isNotEmpty) _wantedPage = page;
       }
     }
     _notify();
@@ -72,7 +78,7 @@ class CategoryListController extends ChangeNotifier {
     }
     applied = search.text;
     rows = filterCategoryEntries(_directory, applied);
-    page = 1;
+    page = _wantedPage = 1;
     _notify();
     return true;
   }
@@ -82,13 +88,13 @@ class CategoryListController extends ChangeNotifier {
     search.clear();
     applied = '';
     rows = filterCategoryEntries(_directory, applied);
-    page = 1;
+    page = _wantedPage = 1;
     _notify();
   }
 
   void goToPage(int target) {
     if (_disposed || loading || flushSearch()) return;
-    page = target.clamp(1, totalPages);
+    page = _wantedPage = target.clamp(1, totalPages);
     _notify();
   }
 

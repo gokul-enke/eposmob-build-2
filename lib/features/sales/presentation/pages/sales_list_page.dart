@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/features/sales/domain/models/list_sales_order.dart';
@@ -45,6 +46,8 @@ class _SalesListPageState extends State<SalesListPage> {
   late final AppSettingsProvider _settings;
   late final SalesListController _controller;
   late final ExportController _export;
+  // Hidden while an order's details are open (see ScreenVisibility).
+  bool _shown = true;
   final _scroll = ScrollController();
   bool _preparing = false, _wasBootstrapping = false;
   String? _sessionKey;
@@ -90,6 +93,16 @@ class _SalesListPageState extends State<SalesListPage> {
 
   void _rebuild() {
     if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Back from an order's details, where its status or payment may have
+    // changed: the list was kept with its filters and page, so reload it.
+    final shown = ScreenVisibility.of(context);
+    if (shown && !_shown) _realtimeRefresh();
+    _shown = shown;
   }
 
   @override

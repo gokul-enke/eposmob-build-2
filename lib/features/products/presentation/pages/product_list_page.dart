@@ -269,7 +269,7 @@ class _ProductListPageState extends State<ProductListPage> {
                   'product_list.count'.trParams({'count': '${rows.length}'})),
           onRowTap: _view,
           onRefresh: _list.refresh,
-          minTableWidth: ListLayoutBreakpoints.maxContentWidth,
+          minTableWidth: ListLayoutBreakpoints.wideTableMinWidth,
           tableScrollController: _tableScroll,
         );
       });
