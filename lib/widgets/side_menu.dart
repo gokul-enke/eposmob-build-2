@@ -9,6 +9,7 @@ import 'package:pos_machine/features/categories/presentation/navigation/category
 import 'package:pos_machine/features/products/presentation/navigation/product_list_navigation.dart';
 import 'package:pos_machine/features/customers/presentation/navigation/customer_navigation.dart';
 import 'package:pos_machine/features/expenses/presentation/navigation/expense_navigation.dart';
+import 'package:pos_machine/features/general_payments/presentation/navigation/general_payment_navigation.dart';
 import 'package:pos_machine/features/purchase_returns/presentation/navigation/purchase_return_navigation.dart';
 import 'package:pos_machine/features/purchases/presentation/navigation/purchase_navigation.dart';
 import 'package:pos_machine/features/sales/presentation/navigation/sales_navigation.dart';
@@ -985,6 +986,26 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value ==
                             SideBarController.viewExpenseScreenIndex ||
                         sideBarController.index.value == 30),
+              );
+            },
+          ),
+          // 9b. ACCOUNTS [EXPANDABLE]: General Payments, as on the web.
+          Consumer<RoleProvider>(
+            key: const ValueKey('sidebar-accounts'),
+            builder: (context, roleProvider, child) {
+              if (!roleProvider.currentUserCanAccessGeneralPaymentsSync()) {
+                return const SizedBox.shrink();
+              }
+              return Obx(
+                () => DrawerListTileExpandableColumn(
+                  icon: fa.FontAwesomeIcons.buildingColumns,
+                  title: 'nav.accounts'.tr,
+                  listTitle1: 'nav.general_payments'.tr,
+                  onTapTitle1: GeneralPaymentNavigation.openList,
+                  onTap: GeneralPaymentNavigation.openList,
+                  selected: GeneralPaymentNavigation.sectionIndices
+                      .contains(sideBarController.index.value),
+                ),
               );
             },
           ),

@@ -147,6 +147,14 @@ class RoleProvider extends ChangeNotifier {
   bool currentUserCanAccessDiscountSaleReportSync() =>
       currentUserHasPermissionSync(discountSaleReportPermission);
 
+  /// Accounts → General Payments: only the role's App Permission shows it,
+  /// for every role including company admin.
+  static const generalPaymentsPermission =
+      'menu.accounts.general_payments.access';
+
+  bool currentUserCanAccessGeneralPaymentsSync() =>
+      currentUserHasPermissionSync(generalPaymentsPermission);
+
   /// Supports both the current menu permission and the legacy permission
   /// present in existing role payloads while those roles are migrated.
   bool currentUserCanAccessProductSalesReportSync() {
