@@ -40,6 +40,9 @@ class ExpenseApi {
         queryParameters: {
           'type': type,
           if (storeId != null) 'store_id': '$storeId',
+          // The API defaults to 10 rows a page; 100 keeps the list to a few
+          // requests. Every page asks for the same size so pages line up.
+          'per_page': '100',
           // Preserve the existing first request for non-paginated responses.
           if (page > 1) 'page': '$page',
         },
@@ -58,14 +61,18 @@ class ExpenseApi {
           body['success'] == false) {
         throw const FormatException('Invalid expense response.');
       }
+      // The current API sends rows in `data` and paging in a separate
+      // `pagination` object; read it so every page loads, not just the first.
+      final pagination = body['pagination'];
+      final paging = pagination is Map ? pagination : body;
       final data = body['data'] is List &&
-              (body.containsKey('current_page') ||
-                  body.containsKey('last_page'))
+              (paging.containsKey('current_page') ||
+                  paging.containsKey('last_page'))
           ? {
               'data': body['data'],
-              'current_page': body['current_page'],
-              'last_page': body['last_page'],
-              'total': body['total']
+              'current_page': paging['current_page'],
+              'last_page': paging['last_page'],
+              'total': paging['total']
             }
           : body['data'];
       final List rows;
