@@ -65,7 +65,11 @@ class _MainScreenState extends State<MainScreen> {
     final isMobile = ResponsiveWidget.isMobile(context);
     Widget content = Obx(() => CheckoutNavigationHost(
         index: sideBarController.index.value,
-        screen: (index) => sideBarController.screens[index]));
+        screen: (index) => sideBarController.screens[index],
+        keepListFor: SideBarController.listDetailScreens,
+        onListHidden: () {
+          if (mounted) context.read<KeyboardProvider>().hide();
+        }));
 
     final scaffold = Scaffold(
       key: _scaffoldKey,

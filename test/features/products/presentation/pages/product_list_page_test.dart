@@ -76,6 +76,8 @@ void main() {
       (tester) async {
     await pump(tester, 1280);
     final table = find.byType(AppDataTable<GetProduct>);
+    // Wide lists grow to 1920, but this table still scrolls below 1440.
+    expect(tester.widget<AppDataTable<GetProduct>>(table).minWidth, 1440);
     final scrollbarFinder =
         find.descendant(of: table, matching: find.byType(Scrollbar));
     expect(scrollbarFinder, findsOneWidget);

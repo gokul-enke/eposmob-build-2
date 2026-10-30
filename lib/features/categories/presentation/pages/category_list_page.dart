@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/order_submission_guard.dart';
 import 'package:pos_machine/core/ui/ui.dart';
 import 'package:pos_machine/core/export/file_export_service.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -29,6 +30,8 @@ class _CategoryListPageState extends State<CategoryListPage> {
   late final bool _ownsExport;
   bool? _showFilters;
   bool _openingEdit = false;
+  // Hidden while Add/Edit is open (see ScreenVisibility).
+  bool _shown = true;
   @override
   void initState() {
     super.initState();
@@ -48,6 +51,16 @@ class _CategoryListPageState extends State<CategoryListPage> {
     _ownsExport = widget.exportController == null;
     _export = widget.exportController ?? ExportController();
     Future.microtask(_load);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Back from Add/Edit: the list was kept. If the reload after a save left
+    // it empty (e.g. it failed), load it again.
+    final shown = ScreenVisibility.of(context);
+    if (shown && !_shown && _controller.isEmptyDirectory) _load();
+    _shown = shown;
   }
 
   Future<void> _load() async {

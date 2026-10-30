@@ -60,6 +60,9 @@ class DailySalesCloseSummary {
   String? totalReturns;
   String? totalRefunds;
 
+  /// Amount per payment method code, e.g. {"CARD": "1.00", "CASH": "0.00"}.
+  Map<String, String>? paymentMethodBreakdown;
+
   DailySalesCloseSummary({
     this.userName,
     this.storeId,
@@ -89,6 +92,7 @@ class DailySalesCloseSummary {
     this.creditCollected,
     this.totalReturns,
     this.totalRefunds,
+    this.paymentMethodBreakdown,
   });
 
   DailySalesCloseSummary.fromJson(Map<String, dynamic> json) {
@@ -126,6 +130,11 @@ class DailySalesCloseSummary {
     creditCollected = _stringValue(json['credit_collected']);
     totalReturns = _stringValue(json['total_returns']);
     totalRefunds = _stringValue(json['total_refunds']);
+    final breakdown = json['payment_method_breakdown'];
+    paymentMethodBreakdown = breakdown is Map
+        ? breakdown.map((code, amount) =>
+            MapEntry(code.toString(), amount?.toString() ?? '0'))
+        : null;
   }
 
   static String? _stringValue(dynamic value) => value?.toString();

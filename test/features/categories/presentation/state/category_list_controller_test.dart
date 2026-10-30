@@ -116,6 +116,21 @@ void main() {
     expect(controller.rows.single.name, 'Category fresh');
     expect(controller.page, 1);
   });
+  // A list kept behind Add/Edit: the reload after a save clears the cache,
+  // so the directory is briefly empty. The user's page comes back with it.
+  test('a reload that briefly empties the list returns to the chosen page',
+      () async {
+    await controller.load();
+    controller.goToPage(3);
+    final full = directory.entries;
+    directory.entries = [];
+    directory.signal();
+    expect(controller.page, 1);
+    expect(controller.isEmptyDirectory, isTrue);
+    directory.entries = full;
+    directory.signal();
+    expect(controller.page, 3);
+  });
   test('failure retains rows/page, retry handles an empty success', () async {
     await controller.load();
     controller.goToPage(2);
