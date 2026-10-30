@@ -438,6 +438,63 @@ void main() {
     expect(line.isManualPriceOverride, isFalse);
   });
 
+  SavedOrder quotationDraft(GetProduct item, Stock batch, double price) =>
+      SavedOrder(
+        id: 'quotation-5',
+        orderNumber: 'QTN-00005',
+        items: [
+          LocalCartItem(
+            product: item,
+            price: price,
+            quantity: 2,
+            taxRate: 0,
+            taxAmount: 0,
+            selectedStock: batch,
+            isManualPriceOverride: true,
+          ),
+        ],
+        createdAt: offerTestNow.toIso8601String(),
+        total: price * 2,
+        quotationId: 5,
+      );
+
+  test('a quotation converted at its offer price gets the offer back', () {
+    final provider = providerWith([tenPercent]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.loadQuotationDraftForEditing(quotationDraft(item, batch, 90));
+
+    final line = provider.cartItems.single;
+    expect(line.price, 90);
+    expect(line.offerId, 9);
+    expect(line.offerVersion, 3);
+    expect(line.displayStandardPrice, 100);
+    expect(line.isManualPriceOverride, isFalse);
+    expect(line.itemDiscountAmount, 20);
+    expect(provider.cartTotal, 180);
+    final payload = provider.buildOrderItemsPayload().single;
+    expect(payload['offer_id'], 9);
+    expect(payload['standard_unit_price'], 100);
+  });
+
+  test('a quotation converted after its offer ended keeps the quoted price',
+      () {
+    final provider = providerWith([]);
+    final batch = stock();
+    final item = product(stocks: [batch]);
+    provider.initializeProducts([item]);
+    provider.loadQuotationDraftForEditing(quotationDraft(item, batch, 90));
+
+    final line = provider.cartItems.single;
+    expect(line.price, 90);
+    expect(line.hasOffer, isFalse);
+    expect(line.isManualPriceOverride, isTrue);
+    expect(line.standardUnitPrice, 100);
+    expect(line.itemDiscountAmount, 20);
+    expect(provider.cartTotal, 180);
+  });
+
   test('a stock spill at the offer price is not discounted twice', () {
     final provider = providerWith([tenPercent])
       ..setActiveStockGroupingFields({'price', 'mrp', 'unit'});

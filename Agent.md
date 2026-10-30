@@ -188,8 +188,10 @@ Official references:
 
 The FunzCart company is a demo tenant made for writing the CloudPOS docs and for testing. It is safe to sign in, create sales, returns and other test data there.
 
+**Standing permission (from the project owner):** FunzCart is a demo made only for agent testing. Agents may sign in on their own, without asking, to the FunzCart admin panel and to the POS app as the FunzCart sales executive, using the credentials in `Agent.local.md`. They may also create and change test data there: offers, products, quotations, orders. This applies to FunzCart only, never to another tenant or a production store.
+
 - Admin panel: https://eposdemo.yougoit.in/FUNZCART
-- Admin login: in `Agent.local.md` (gitignored; ask the team for it)
+- Admin login: in `Agent.local.md` (gitignored; ask the team for it). Keep passwords out of this tracked file.
 - POS app backend: https://erpdemo.cloudposai.com (tenant FUNZCART, company_id 2, store 2)
 - Sales executive used in the debug app: `salesexecutive2@funzcart.in`
 - Roles and permissions: see the backend in `enkepos/` (Laravel). Do not edit `enkepos/`; see CLAUDE.md.

@@ -1698,6 +1698,24 @@ class LocalProductProvider extends ChangeNotifier {
     item.taxAmount = _calculateTaxAmount(item.price ?? 0.0, item.taxRate ?? 0);
   }
 
+  /// Quotation lines arrive at their quoted price without an offer reference.
+  /// A line quoted at the price the offer engine charges now gets the offer
+  /// back (tag, crossed-out standard price, discount) and stays automatic like
+  /// any offer line. Any other line keeps its quoted price and tax as a manual
+  /// price, with the standard price as its discount reference.
+  void _restoreQuotationLineOffer(LocalCartItem item) {
+    final quotedPrice = item.price;
+    if (!item.isManualPriceOverride || quotedPrice == null) return;
+    final quotedTax = item.taxAmount;
+    item.isManualPriceOverride = false;
+    _applyOfferPricingToExplicitPrice(item, quotedPrice);
+    if (item.hasOffer) return;
+    item
+      ..isManualPriceOverride = true
+      ..price = quotedPrice
+      ..taxAmount = quotedTax;
+  }
+
   void _clampManualCartItemToMinimumPrice(LocalCartItem item) {
     if (!item.isManualPriceOverride) return;
     final minimumPrice = minimumSalePriceForCartItem(item);
@@ -5742,6 +5760,8 @@ class LocalProductProvider extends ChangeNotifier {
 
       _cartItems.clear();
       _cartItems.addAll(draft.items.map(_cloneLocalCartItem));
+      _cartItems.forEach(_restoreQuotationLineOffer);
+      _scheduleOfferBoundaryTimer();
       _currentOrder = draft;
       _cartSessionId = 'draft:${draft.id}';
 
